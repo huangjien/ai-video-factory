@@ -95,7 +95,6 @@ describe("runs + retry + resume (todo 12) — §62.1 / §62.2", () => {
   it("omits provider/model fields (v0.1 has no external model calls) — record shape honors §62.2", async () => {
     const root = tmpRoot();
     const record = baseRecord();
-    const list = await listRuns(root).then(() => null);
     await writeRun(root, record);
     expect(record).not.toHaveProperty("provider");
     expect(record).not.toHaveProperty("model");

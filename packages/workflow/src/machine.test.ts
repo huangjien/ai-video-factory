@@ -9,13 +9,14 @@ import {
   STATES,
   stagesInvalidatedBy,
   transition,
+  type MachineState,
   writeProjectState,
 } from "./index.js";
 
 describe("transition (todo 11) — §18.1", () => {
   it("DRAFT → GENERATING → VALIDATING → WAITING_REVIEW chain succeeds", () => {
-    const init = { status: "DRAFT" as const, stage: "init" as const };
-    let cur = init;
+    const init: MachineState = { status: "DRAFT", stage: "init" };
+    let cur: MachineState = init;
     cur = transition(cur, { kind: "start" }, makeCtx()).state;
     expect(cur.status).toBe("GENERATING");
     cur = transition(cur, { kind: "validate_ok" }, makeCtx()).state;
@@ -25,13 +26,16 @@ describe("transition (todo 11) — §18.1", () => {
   });
 
   it("WAITING_REVIEW → APPROVED → DRAFT (next stage)", () => {
-    const cur = { status: "WAITING_REVIEW" as const, stage: "storyboard" as const };
+    const cur: MachineState = {
+      status: "WAITING_REVIEW",
+      stage: "storyboard",
+    };
     const approved = transition(cur, { kind: "approve" }, makeCtx()).state;
     expect(approved.status).toBe("APPROVED");
   });
 
   it("VALIDATING → FAILED → GENERATING retry chain", () => {
-    const cur = { status: "VALIDATING" as const, stage: "compile" as const };
+    const cur: MachineState = { status: "VALIDATING", stage: "compile" };
     const failed = transition(cur, { kind: "validate_fail" }, makeCtx()).state;
     expect(failed.status).toBe("FAILED");
     const retry = transition(failed, { kind: "retry" }, makeCtx()).state;
@@ -39,7 +43,7 @@ describe("transition (todo 11) — §18.1", () => {
   });
 
   it("VALIDATING → BLOCKED (non-retriable)", () => {
-    const cur = { status: "VALIDATING" as const, stage: "compile" as const };
+    const cur: MachineState = { status: "VALIDATING", stage: "compile" };
     const blocked = transition(
       cur,
       { kind: "block", reason: "missing asset" },
@@ -49,18 +53,21 @@ describe("transition (todo 11) — §18.1", () => {
   });
 
   it("rejects illegal transitions", () => {
-    const cur = { status: "DRAFT" as const, stage: "init" as const };
-    expect(() =>
-      transition(cur, { kind: "approve" }, makeCtx()),
-    ).toThrow(/illegal transition/);
-    const reviewing = { status: "WAITING_REVIEW" as const, stage: "storyboard" as const };
+    const cur: MachineState = { status: "DRAFT", stage: "init" };
+    expect(() => transition(cur, { kind: "approve" }, makeCtx())).toThrow(
+      /illegal transition/,
+    );
+    const reviewing: MachineState = {
+      status: "WAITING_REVIEW",
+      stage: "storyboard",
+    };
     expect(() =>
       transition(reviewing, { kind: "final_approve" }, makeCtx()),
     ).toThrow(/illegal/);
   });
 
   it("every transition returns a TransitionRecord with run_id, actor, timestamps", () => {
-    const cur = { status: "DRAFT" as const, stage: "init" as const };
+    const cur: MachineState = { status: "DRAFT", stage: "init" };
     const { record } = transition(cur, { kind: "start" }, makeCtx("run-1"));
     expect(record.run_id).toBe("run-1");
     expect(record.actor).toBe("agent");

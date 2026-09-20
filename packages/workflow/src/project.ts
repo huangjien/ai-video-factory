@@ -43,7 +43,7 @@ export async function appendCheckpoint(
   const dir = path.join(projectRoot, "checkpoints");
   await mkdir(dir, { recursive: true });
   const file = path.join(dir, `${record.stage}.yaml`);
-  const existing: CheckpointRecord = await readFile(file, "utf8")
+  const existing: CheckpointRecord | null = await readFile(file, "utf8")
     .then((t) => parseYaml(t) as CheckpointRecord)
     .catch((err) => {
       if ((err as NodeJS.ErrnoException).code === "ENOENT") return null;

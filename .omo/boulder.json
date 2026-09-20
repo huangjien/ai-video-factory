@@ -1,15 +1,44 @@
 {
   "schema_version": 2,
-  "active_work_id": "storyboard-agent",
+  "active_work_id": "voice-subtitle",
   "works": {
+    "voice-subtitle": {
+      "work_id": "voice-subtitle",
+      "active_plan": null,
+      "plan_name": "voice-subtitle",
+      "session_ids": [
+        "codex:ses_f410a3994ffeKWO6ijEd5JCQyh"
+      ],
+      "status": "completed",
+      "worktree_path": null,
+      "note": "v0.2 phase 4 (Voice + Subtitle per doc \u00a756/Phase 6) \u2014 pattern established, executing directly"
+    },
     "storyboard-agent": {
       "work_id": "storyboard-agent",
-      "active_plan": ".omo/plans/storyboard-agent.md",
+      "active_plan": null,
       "plan_name": "storyboard-agent",
-      "session_ids": ["codex:ses_f410a3994ffeKWO6ijEd5JCQyh"],
-      "status": "active",
+      "session_ids": [],
+      "status": "completed",
       "worktree_path": null,
-      "note": "v0.2 phase 1 on top of feat/video-agent-v01; same deviation: no worker subagents in this harness, root executes directly with full discipline"
+      "note": "shipped"
+    },
+    "research-agent": {
+      "work_id": "research-agent",
+      "active_plan": null,
+      "plan_name": "research-agent",
+      "session_ids": [],
+      "status": "completed",
+      "worktree_path": null,
+      "note": "shipped"
+    },
+    "script-agent": {
+      "work_id": "script-agent",
+      "active_plan": null,
+      "plan_name": "script-agent",
+      "session_ids": [],
+      "status": "completed",
+      "worktree_path": null,
+      "note": "shipped"
     }
   }
 }

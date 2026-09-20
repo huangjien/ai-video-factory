@@ -74,6 +74,38 @@ writes a YAML record to `runs/<run-id>.yaml` and updates `state.yaml`.
 See `ARCHITECTURE.md` — maps each design-doc section to the package and
 file that implements it, plus the v0.2+ roadmap.
 
+
+## Storyboard Agent (v0.2)
+
+`vf storyboard` drafts a VDSL storyboard from a topic by calling an LLM
+(MiniMax by default, GLM as fallback). The draft lands at
+`projects/<slug>/storyboard/storyboard.yaml` for human review before
+`vf preview` ever touches it.
+
+```bash
+export MINIMAX_API_KEY=...   # required for the default MiniMax provider
+export GLM_API_KEY=...        # enables fallback to GLM if MiniMax fails
+
+node packages/cli/dist/index.js storyboard "AI 思维链" --duration 40
+# → scaffolds projects/ai-思维链/, drafts storyboard.yaml, writes runs/<id>.yaml
+# → next: edit, then `vf approve storyboard`, then `vf preview`
+```
+
+The CLI never logs the key, never writes it to disk, and never includes
+it in `runs/<id>.yaml` (verified by an integration test that greps the
+whole project tree).
+
+### Which provider?
+Default from `llm.config.yaml` if present, otherwise `minimax` for
+`storyboard` role with `glm` as fallback (matches doc §6 example). Pass
+`--model minimax` or `--model glm` to override for one command.
+
+### What's intentionally NOT here yet
+Per doc §66 dev order, v0.2 phase 1 ships ONLY the Storyboard Agent.
+Research Agent (§55), Script Agent (§55), Voice/Subtitle (§56),
+Review Agent (§57), and Pi Extension (§58) are subsequent phases —
+each gets its own plan.
+
 ## Benchmark
 
 `projects/benchmark-v01/` is the canonical v0.1 video: 6 scenes, 39 seconds,

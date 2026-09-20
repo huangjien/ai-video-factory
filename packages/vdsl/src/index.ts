@@ -14,3 +14,8 @@ export {
   type ComponentRegistryEntry,
   type ValidateProjectOptions,
 } from "./validate-project.js";
+export {
+  compileStoryboard,
+  type RenderPlan,
+  type RenderPlanScene,
+} from "./compile.js";

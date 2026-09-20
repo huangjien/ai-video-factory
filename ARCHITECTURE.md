@@ -37,12 +37,42 @@ draft to `storyboard/storyboard.yaml`, and records the call with
 **Invariant tested:** no value matching the API key appears anywhere in the
 project tree after a `vf storyboard` run — grep test in the integration suite.
 
+
+
+## v0.2 Phase 2 — Research Agent (shipped)
+
+| Package | Doc section | Role |
+| --- | --- | --- |
+| `@vf/research` | §55 | Research Agent: zod schemas for sources/claims/output; `MiniMaxWebSearch` tool (MiniMax Coding Plan `/v1/coding_plan/search` with bounded retry); `callResearch` agent that produces `markdown` + `sources` + `claims` + `meta` with fact/opinion callouts and "Needs human review" surfacing. Web failure degrades to model knowledge with `web_search_failed: true` flag. |
+
+CLI verb `vf research <topic> [--no-web] [--model]` writes
+`projects/<slug>/research/{research.md,sources.yaml,claims.yaml}` and a run
+record. `--from-research <dir>` on `vf storyboard` optionally injects the
+research markdown + a claim summary as supporting context — the Storyboard
+Agent still produces its own draft (verified by back-compat test).
+
+**Invariant tested:** any value matching the API key env names never appears
+in the project tree after a `vf research` run (grep test in the integration
+suite).
+
+## v0.2+ roadmap (doc §66)
+
+1. ~~Storyboard Agent~~ (✅ shipped v0.2 phase 1)
+2. ~~Research Agent~~ (✅ shipped v0.2 phase 2)
+3. **Script Agent** (§55) — write `script.zh-CN.md` from approved research.
+4. **Voice + Subtitle** (§56) — real TTS (provider abstraction over edge-tts/Azure Speech), auto subtitle timestamps.
+5. **Review Agent** (§57) — content / visual / technical review (still human-gated).
+6. **Pi Extension** (§58) — wrap the `vf` CLI as `/video` subcommands for the Pi harness.
+7. **YouTube Automation** (§59) — title / description / chapters / thumbnail / Shorts.
+8. **Advanced Media** (§60) — AI images, AI video, cloud rendering.
+
 ## v0.2+ roadmap (doc §66)
 
 Strict development order from §66 (don't reorder):
 
-1. ~~Storyboard Agent~~ (✅ shipped)
-2. **Research Agent** (§55) — produce `research.md` + `sources.yaml` + `claims.yaml`.
+1. ~~Storyboard Agent~~ (✅ shipped v0.2 phase 1)
+2. ~~Research Agent~~ (✅ shipped v0.2 phase 2)
+3. **Script Agent** (§55) — write `script.zh-CN.md` from approved research.
 3. **Script Agent** (§55) — write `script.zh-CN.md` from approved research.
 4. **Voice + Subtitle** (§56) — real TTS (provider abstraction over edge-tts/Azure Speech), auto subtitle timestamps.
 5. **Review Agent** (§57) — content / visual / technical review (still human-gated).

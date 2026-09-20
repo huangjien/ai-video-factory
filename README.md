@@ -48,7 +48,8 @@ writes a YAML record to `runs/<run-id>.yaml` and updates `state.yaml`.
 | Command | Purpose |
 | --- | --- |
 | `vf new <id>` | scaffold a project under `projects/<id>/` |
-| `vf storyboard <topic>` | (v0.2) AI-draft a storyboard from a topic via MiniMax/GLM |
+| `vf research <topic>` | (v0.2.2) AI-gather facts + sources + claims via MiniMax/GLM (+ optional web search) |
+| `vf storyboard <topic>` | (v0.2) AI-draft a storyboard from a topic via MiniMax/GLM (optionally consumes `vf research` via `--from-research`) |
 | `vf validate <file>` | shape + asset + registry + audio/caption check |
 | `vf status` | per-stage checklist + current checkpoint + status |
 | `vf approve [stage]` | human approve; advances state machine |
@@ -74,6 +75,45 @@ writes a YAML record to `runs/<run-id>.yaml` and updates `state.yaml`.
 See `ARCHITECTURE.md` — maps each design-doc section to the package and
 file that implements it, plus the v0.2+ roadmap.
 
+
+
+## Research Agent (v0.2.2)
+
+`vf research` gathers facts and source links about any topic before you draft
+the storyboard. It produces three human-reviewable files in
+`projects/<slug>/research/`:
+
+- `research.md` — narrative with `> **Fact (source: ...):** ...` and `> **Opinion:** ...` callouts
+- `sources.yaml` — provenance (url / title / accessed / snippet)
+- `claims.yaml` — each claim tagged `fact` / `opinion` / `uncertain` / `needs_human`
+
+Any `uncertain` / `needs_human` claim is surfaced at the top of
+`research.md` under `## Needs human review` so you see them first.
+
+```bash
+export MINIMAX_API_KEY=...   # required for the default GLM provider + MiniMax web search
+
+node packages/cli/dist/index.js research "AI 思维链" --duration 40
+# → projects/ai-思维链/research/{research.md, sources.yaml, claims.yaml}
+# → runs/<id>.yaml with provider/model/prompt_hash/tokens/cost
+# → next: edit, then `vf storyboard --from-research projects/ai-思维链/research`
+```
+
+### Web search
+Enabled by default via MiniMax Coding Plan `/v1/coding_plan/search`.
+Disable with `--no-web` if you prefer the LLM's training-data-only view
+(useful for evergreen topics or when API budget is tight). If web search
+fails, the output is still produced but `meta.web_search_failed: true`
+in `runs/<id>.yaml` so the failure is visible — never silently fabricated.
+
+### Consuming research in the storyboard
+```bash
+node packages/cli/dist/index.js storyboard "AI 思维链" \
+  --from-research projects/ai-思维链/research
+```
+The research context is injected as supporting evidence; the Storyboard
+Agent still produces its own draft (it doesn't replace the researcher's
+work — it cites and weighs it).
 
 ## Storyboard Agent (v0.2)
 

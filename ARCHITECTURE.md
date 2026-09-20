@@ -66,20 +66,6 @@ suite).
 7. **YouTube Automation** (§59) — title / description / chapters / thumbnail / Shorts.
 8. **Advanced Media** (§60) — AI images, AI video, cloud rendering.
 
-## v0.2+ roadmap (doc §66)
-
-Strict development order from §66 (don't reorder):
-
-1. ~~Storyboard Agent~~ (✅ shipped v0.2 phase 1)
-2. ~~Research Agent~~ (✅ shipped v0.2 phase 2)
-3. **Script Agent** (§55) — write `script.zh-CN.md` from approved research.
-3. **Script Agent** (§55) — write `script.zh-CN.md` from approved research.
-4. **Voice + Subtitle** (§56) — real TTS (provider abstraction over edge-tts/Azure Speech), auto subtitle timestamps.
-5. **Review Agent** (§57) — content / visual / technical review (still human-gated).
-6. **Pi Extension** (§58) — wrap the `vf` CLI as `/video` subcommands for the Pi harness.
-7. **YouTube Automation** (§59) — title / description / chapters / thumbnail / Shorts.
-8. **Advanced Media** (§60) — AI images, AI video, cloud rendering.
-
 Each future phase's entry point into the v0.1 codebase is the `vf` CLI
 (extend with a new subcommand) or a new subagent reading from
 `@vf/vdsl`'s `RenderPlan` shape.

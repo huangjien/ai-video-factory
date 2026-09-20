@@ -55,11 +55,32 @@ Agent still produces its own draft (verified by back-compat test).
 in the project tree after a `vf research` run (grep test in the integration
 suite).
 
+
+
+## v0.2 Phase 3 — Script Agent (shipped)
+
+| Package | Doc section | Role |
+| --- | --- | --- |
+| `@vf/script` | §28 | Script Agent: zod schema for the 7-section spine (Hook/Problem/Explanation/Example/Comparison/Implication/Conclusion); `callScript` agent that produces a `Script` object; markdown renderer for `script.zh-CN.md` / `script.en-US.md`. |
+
+CLI verb `vf script <topic> [--from-research] [--direction] [--lang]`
+writes `projects/<slug>/script/script.<lang>.md` and a run record.
+`--from-script` on `vf storyboard` injects the script's 7 sections as
+supporting context — the Storyboard Agent maps each scene to a script
+section but is structurally free.
+
 ## v0.2+ roadmap (doc §66)
 
 1. ~~Storyboard Agent~~ (✅ shipped v0.2 phase 1)
 2. ~~Research Agent~~ (✅ shipped v0.2 phase 2)
-3. **Script Agent** (§55) — write `script.zh-CN.md` from approved research.
+3. ~~Script Agent~~ (✅ shipped v0.2 phase 3)
+4. **Voice + Subtitle** (§56) — real TTS (provider abstraction over edge-tts/Azure Speech), auto subtitle timestamps.
+5. **Review Agent** (§57) — content / visual / technical review (still human-gated).
+6. **Pi Extension** (§58) — wrap the `vf` CLI as `/video` subcommands for the Pi harness.
+7. **YouTube Automation** (§59) — title / description / chapters / thumbnail / Shorts.
+8. **Advanced Media** (§60) — AI images, AI video, cloud rendering.
+
+Each future phase's entry pointEach future phase's entry point
 4. **Voice + Subtitle** (§56) — real TTS (provider abstraction over edge-tts/Azure Speech), auto subtitle timestamps.
 5. **Review Agent** (§57) — content / visual / technical review (still human-gated).
 6. **Pi Extension** (§58) — wrap the `vf` CLI as `/video` subcommands for the Pi harness.

@@ -49,6 +49,7 @@ writes a YAML record to `runs/<run-id>.yaml` and updates `state.yaml`.
 | --- | --- |
 | `vf new <id>` | scaffold a project under `projects/<id>/` |
 | `vf research <topic>` | (v0.2.2) AI-gather facts + sources + claims via MiniMax/GLM (+ optional web search) |
+| `vf script <topic>` | (v0.2.3) AI-draft a 7-section script (Hook→Conclusion) via MiniMax/GLM (optionally consumes `vf research` via `--from-research`) |
 | `vf storyboard <topic>` | (v0.2) AI-draft a storyboard from a topic via MiniMax/GLM (optionally consumes `vf research` via `--from-research`) |
 | `vf validate <file>` | shape + asset + registry + audio/caption check |
 | `vf status` | per-stage checklist + current checkpoint + status |
@@ -76,6 +77,51 @@ See `ARCHITECTURE.md` — maps each design-doc section to the package and
 file that implements it, plus the v0.2+ roadmap.
 
 
+
+
+## Script Agent (v0.2.3)
+
+`vf script` drafts a Chinese-language script for the video. Per doc §28,
+the script follows the 7-section narrative spine:
+
+> Hook → Problem → Explanation → Example → Comparison → Implication → Conclusion
+
+The structure is a recommended default; the agent adapts it when you pass a
+`--direction`.
+
+```bash
+export MINIMAX_API_KEY=...
+node packages/cli/dist/index.js script "AI 思维链" --duration 40 \
+  --from-research projects/ai-思维链/research
+# → projects/ai-思维链/script/script.zh-CN.md (all 7 sections)
+# → runs/<id>.yaml with provider/model/prompt_hash/tokens/cost
+```
+
+The script file is plain Markdown with one `## Section` per heading — easy
+to edit in any editor. Pass `--lang en-US` to produce `script.en-US.md`
+instead.
+
+### Wiring it into the storyboard
+```bash
+node packages/cli/dist/index.js storyboard "AI 思维链" \
+  --from-script projects/ai-思维链/script/script.zh-CN.md
+```
+The script's 7 sections appear in the storyboard prompt as supporting
+context — the Storyboard Agent still produces its own draft (mapped to
+the script's flow, but structurally free).
+
+### Full v0.2 chain
+```bash
+vf research "<topic>"        → research/{research.md, sources.yaml, claims.yaml}
+vf script "<topic>" \         → script/script.zh-CN.md (or en-US)
+  --from-research ...
+vf storyboard "<topic>" \     → storyboard/storyboard.yaml
+  --from-research ... \
+  --from-script ...
+vf preview / vf final        → MP4
+```
+Each step is independently editable; the agents never overwrite a human
+edit without explicit re-invocation.
 
 ## Research Agent (v0.2.2)
 

@@ -20,11 +20,28 @@ How each design-doc section maps to the v0.1 codebase. The design doc is
 | `@vf/workflow` | §18, §35, §62.1, §62.2 | 10-state machine with legal transitions, checkpoints, dependency invalidation, run records, retry, resume, idempotency |
 | `@vf/cli` | §39–§43 | `vf` CLI: new/validate/status/approve/reject/rollback/resume/preview/final |
 
+## v0.2 Phase 1 — Storyboard Agent (shipped)
+
+New packages added in front of the v0.1 pipeline:
+
+| Package | Doc section | Role |
+| --- | --- | --- |
+| `@vf/llm` | §6 (model-agnostic), §62.2 (run-record extension) | `Provider` interface + `MiniMaxProvider` (`api.minimax.io/v1/chat/completions`, Bearer `MINIMAX_API_KEY`) + `GLMProvider` (`api.z.ai/api/coding/paas/v4`, Bearer `GLM_API_KEY`); YAML `llm.config.yaml` with per-role primary/fallback; bounded retry (3 attempts, 1/2/4s) — never retries 4xx. Credentials via `process.env` only; never persisted. |
+| `@vf/agent-storyboard` | §53 | Storyboard Agent: system prompt + few-shot (doc §21.1 sample + §13 flowchart), one round-trip JSON output, fences stripped, parsed by `@vf/vdsl` `validateStoryboard`, returns Storyboard + provider usage. Reuses the entire v0.1 pipeline. |
+
+CLI verb `vf storyboard <topic> [--model] [--lang] [--duration] [--audience] [--style]`
+calls `runNew` to scaffold `projects/<slug>/`, then calls the agent, writes the
+draft to `storyboard/storyboard.yaml`, and records the call with
+`provider/model/prompt_hash/tokens/estimated_cost_usd` in `runs/<run-id>.yaml`.
+
+**Invariant tested:** no value matching the API key appears anywhere in the
+project tree after a `vf storyboard` run — grep test in the integration suite.
+
 ## v0.2+ roadmap (doc §66)
 
 Strict development order from §66 (don't reorder):
 
-1. **Storyboard Agent** (§53) — research-backed storyboard from a topic.
+1. ~~Storyboard Agent~~ (✅ shipped)
 2. **Research Agent** (§55) — produce `research.md` + `sources.yaml` + `claims.yaml`.
 3. **Script Agent** (§55) — write `script.zh-CN.md` from approved research.
 4. **Voice + Subtitle** (§56) — real TTS (provider abstraction over edge-tts/Azure Speech), auto subtitle timestamps.

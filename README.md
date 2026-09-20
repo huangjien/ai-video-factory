@@ -48,6 +48,7 @@ writes a YAML record to `runs/<run-id>.yaml` and updates `state.yaml`.
 | Command | Purpose |
 | --- | --- |
 | `vf new <id>` | scaffold a project under `projects/<id>/` |
+| `vf storyboard <topic>` | (v0.2) AI-draft a storyboard from a topic via MiniMax/GLM |
 | `vf validate <file>` | shape + asset + registry + audio/caption check |
 | `vf status` | per-stage checklist + current checkpoint + status |
 | `vf approve [stage]` | human approve; advances state machine |

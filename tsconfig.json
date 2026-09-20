@@ -24,6 +24,9 @@
     },
     {
       "path": "packages/agent-storyboard"
+    },
+    {
+      "path": "packages/research"
     }
   ]
 }

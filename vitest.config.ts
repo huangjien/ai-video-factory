@@ -10,6 +10,7 @@ export default defineConfig({
       "@vf/workflow": path.resolve("packages/workflow/src"),
       "@vf/llm": path.resolve("packages/llm/src"),
       "@vf/agent-storyboard": path.resolve("packages/agent-storyboard/src"),
+      "@vf/research": path.resolve("packages/research/src"),
     },
   },
   test: {

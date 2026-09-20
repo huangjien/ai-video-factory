@@ -1,7 +1,19 @@
+import type { ComponentType } from "react";
 import { z } from "zod";
+import { Callout, type CalloutProps } from "./components/Callout.js";
+import { CodeBlock, type CodeBlockProps } from "./components/CodeBlock.js";
+import { Comparison, type ComparisonProps } from "./components/Comparison.js";
+import { EndCard, type EndCardProps } from "./components/EndCard.js";
+import { FlowChart, type FlowChartProps } from "./components/FlowChart.js";
+import { Image, type ImageProps } from "./components/Image.js";
+import { Paragraph, type ParagraphProps } from "./components/Paragraph.js";
+import { Terminal, type TerminalProps } from "./components/Terminal.js";
+import { Timeline, type TimelineProps } from "./components/Timeline.js";
+import { Title, type TitleProps } from "./components/Title.js";
 
 export interface RegistryEntry {
   propsSchema: z.ZodTypeAny;
+  component: ComponentType<unknown>;
 }
 
 const titleProps = z
@@ -102,18 +114,31 @@ const endCardProps = z
   .strict();
 
 /** Component registry (§23) — validation target for `visual.component`
- * (§21.1 line 928). React components attach in todos 8-9. */
+ * (§21.1 line 928) and the renderer lookup table. */
 export const REGISTRY: Record<string, RegistryEntry> = {
-  Title: { propsSchema: titleProps },
-  Paragraph: { propsSchema: paragraphProps },
-  CodeBlock: { propsSchema: codeBlockProps },
-  Terminal: { propsSchema: terminalProps },
-  Image: { propsSchema: imageProps },
-  FlowChart: { propsSchema: flowChartProps },
-  Comparison: { propsSchema: comparisonProps },
-  Timeline: { propsSchema: timelineProps },
-  Callout: { propsSchema: calloutProps },
-  EndCard: { propsSchema: endCardProps },
+  Title: { propsSchema: titleProps, component: Title as ComponentType<unknown> },
+  Paragraph: { propsSchema: paragraphProps, component: Paragraph as ComponentType<unknown> },
+  CodeBlock: { propsSchema: codeBlockProps, component: CodeBlock as ComponentType<unknown> },
+  Terminal: { propsSchema: terminalProps, component: Terminal as ComponentType<unknown> },
+  Image: { propsSchema: imageProps, component: Image as ComponentType<unknown> },
+  FlowChart: { propsSchema: flowChartProps, component: FlowChart as ComponentType<unknown> },
+  Comparison: { propsSchema: comparisonProps, component: Comparison as ComponentType<unknown> },
+  Timeline: { propsSchema: timelineProps, component: Timeline as ComponentType<unknown> },
+  Callout: { propsSchema: calloutProps, component: Callout as ComponentType<unknown> },
+  EndCard: { propsSchema: endCardProps, component: EndCard as ComponentType<unknown> },
 };
 
 export const COMPONENT_NAMES = Object.keys(REGISTRY);
+
+export type RegistryPropsByName = {
+  Title: TitleProps;
+  Paragraph: ParagraphProps;
+  CodeBlock: CodeBlockProps;
+  Terminal: TerminalProps;
+  Image: ImageProps;
+  FlowChart: FlowChartProps;
+  Comparison: ComparisonProps;
+  Timeline: TimelineProps;
+  Callout: CalloutProps;
+  EndCard: EndCardProps;
+};

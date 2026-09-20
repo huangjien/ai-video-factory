@@ -135,17 +135,18 @@ v0.2 phase 8 (Advanced Media §60) — this phase ships the text only.
 
 
 
-## v0.3 Phase 2 — Real AI Video Generation (shipped)
+
+## v0.3 Phase 3 — Audio Assets (BGM + SFX) (shipped)
 
 | Package | Doc section | Role |
 | --- | --- | --- |
-| `@vf/media-generators` (extended) | §60 / Phase 10 | **MiniMaxVideoProvider** (image-to-video via `MiniMax-Hailuo-2.3`) implements the full async flow: `POST /v1/video_generation` → `task_id` → poll `GET /v1/query/video_generation` until `status=Success` → download `GET /v1/files/{file_id}`. Honours MiniMax's envelope semantics (HTTP 200 + `base_resp.status_code != 0` → readable error message). Configurable `pollIntervalMs` and `timeoutMs` (default 5s / 10min). `VideoRequest` extended with `firstFrameImageUrl`. |
+| `@vf/audio-assets` | §60 / "Advanced Audio" | `AudioAssetProvider` interface with `pickBackgroundMusic` + `pickSoundEffect` methods. Two impls: `MockAudioAssetProvider` (deterministic silent WAV placeholder, offline default) + `FileBasedAudioAssetProvider` (looks up `{tag}.wav` from user-configured directories, reads optional `{tag}.license.txt`). Real providers (Suno, ElevenLabs, etc.) plug into the same interface. |
 
-CLI verb `vf shorts <project> [--provider mock|minimax]` — default `mock`
-keeps the offline ffmpeg-based clip (v0.2 back-compat). `--provider
-minimax` produces a real AI Short using the thumbnail image as the first
-frame + `shorts-hook.txt` as the prompt. Surfaces MiniMax envelope
-errors readably (e.g. `2013: model doesn't support duration 5s`).
+CLI verb `vf audio-asset <project> --bgm <tag> --sfx <tag>` writes
+`assets/audio-assets/{bgm,sfx}/{tag}.wav` and a run record. Mock by default;
+`--bgm-dir` + `--sfx-dir` activate the file-based lookup. Mixing
+BGM/SFX into the final mp4 is a separate concern (volume automation,
+ducking under narration) and lands in a later phase.
 
 ## v0.3 roadmap — in progress
 
@@ -159,11 +160,10 @@ errors readably (e.g. `2013: model doesn't support duration 5s`).
 8. ~~Advanced Media (mock + thumbnail)~~ (✅ v0.2 phase 8)
 9. ~~Real Image Generation (MiniMax image-01)~~ (✅ v0.3 phase 1)
 10. ~~Real AI Video Generation (MiniMax-Hailuo-2.3)~~ (✅ v0.3 phase 2)
+11. ~~Audio Assets (BGM + SFX provider)~~ (✅ v0.3 phase 3)
 
-Remaining v0.3 hooks (lower priority): GLM image provider (GLM Coding
-Plan doesn't document an image endpoint cleanly), cloud rendering
-(infrastructure-heavy), advanced audio (vague — defer until a specific
-audio capability emerges).
+Remaining deferred (no verified spec): GLM image provider, cloud
+rendering, audio mixing into final mp4.
 
 ## v0.2 roadmap — COMPLETE
 

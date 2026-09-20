@@ -76,6 +76,9 @@ export async function runAudioAsset(opts: AudioAssetOptions): Promise<number> {
   }
   const provider = pickProvider(opts);
   const providerName = provider.name;
+
+  let bgmOut = "skipped";
+  let sfxOut = "skipped";
   try {
     if (opts.bgmTag) {
       const r = await provider.pickBackgroundMusic({ tag: opts.bgmTag });

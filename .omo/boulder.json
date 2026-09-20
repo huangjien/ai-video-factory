@@ -1,22 +1,22 @@
 {
   "schema_version": 2,
-  "active_work_id": "pi-extension",
+  "active_work_id": "youtube",
   "works": {
-    "pi-extension": {
-      "work_id": "pi-extension",
+    "youtube": {
+      "work_id": "youtube",
       "active_plan": null,
-      "plan_name": "pi-extension",
+      "plan_name": "youtube",
       "session_ids": [
         "codex:ses_f410a3994ffeKWO6ijEd5JCQyh"
       ],
       "status": "completed",
       "worktree_path": null,
-      "note": "v0.2 phase 6 (Pi Extension per doc \u00a758/Phase 8) \u2014 expose the vf CLI as /video for Pi/OpenCode/agent use"
+      "note": "v0.2 phase 7 (YouTube Automation per doc \u00a758/Phase 9) \u2014 title + description + chapters; thumbnail/Shorts deferred to v0.2 phase 8"
     },
-    "review-agent": {
-      "work_id": "review-agent",
+    "pi-extension": {
+      "work_id": "pi-extension",
       "active_plan": null,
-      "plan_name": "review-agent",
+      "plan_name": "pi-extension",
       "session_ids": [],
       "status": "completed",
       "worktree_path": null,

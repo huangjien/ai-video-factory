@@ -8,3 +8,7 @@ export {
   type BgmOptions,
   type SfxOptions,
 } from "./schemas.js";
+export {
+  FileBasedAudioAssetProvider,
+  MockAudioAssetProvider,
+} from "./providers.js";

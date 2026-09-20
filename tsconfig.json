@@ -21,6 +21,9 @@
     },
     {
       "path": "packages/llm"
+    },
+    {
+      "path": "packages/agent-storyboard"
     }
   ]
 }

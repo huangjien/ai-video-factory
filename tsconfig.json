@@ -39,6 +39,9 @@
     },
     {
       "path": "packages/youtube"
+    },
+    {
+      "path": "packages/media-generators"
     }
   ]
 }

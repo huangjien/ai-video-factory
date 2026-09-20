@@ -15,6 +15,7 @@ export default defineConfig({
       "@vf/tts": path.resolve("packages/tts/src"),
       "@vf/review": path.resolve("packages/review/src"),
       "@vf/youtube": path.resolve("packages/youtube/src"),
+      "@vf/media-generators": path.resolve("packages/media-generators/src"),
     },
   },
   test: {

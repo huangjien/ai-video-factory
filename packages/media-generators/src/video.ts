@@ -1,5 +1,3 @@
-import { ImageGenerationError } from "./image.js";
-
 export interface VideoRequest {
   prompt: string;
   width: number;

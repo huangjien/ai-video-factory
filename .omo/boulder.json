@@ -1,22 +1,20 @@
 {
   "schema_version": 2,
-  "active_work_id": "youtube",
+  "active_work_id": "advanced-media",
   "works": {
+    "advanced-media": {
+      "work_id": "advanced-media",
+      "active_plan": null,
+      "plan_name": "advanced-media",
+      "session_ids": ["codex:ses_f410a3994ffeKWO6ijEd5JCQyh"],
+      "status": "active",
+      "worktree_path": null,
+      "note": "v0.2 phase 8 (Advanced Media per doc §60) — last phase before v0.2 complete; ships mock image provider + ffmpeg-based Shorts clipper + docs; real AI image providers deferred to v0.3"
+    },
     "youtube": {
       "work_id": "youtube",
       "active_plan": null,
       "plan_name": "youtube",
-      "session_ids": [
-        "codex:ses_f410a3994ffeKWO6ijEd5JCQyh"
-      ],
-      "status": "completed",
-      "worktree_path": null,
-      "note": "v0.2 phase 7 (YouTube Automation per doc \u00a758/Phase 9) \u2014 title + description + chapters; thumbnail/Shorts deferred to v0.2 phase 8"
-    },
-    "pi-extension": {
-      "work_id": "pi-extension",
-      "active_plan": null,
-      "plan_name": "pi-extension",
       "session_ids": [],
       "status": "completed",
       "worktree_path": null,

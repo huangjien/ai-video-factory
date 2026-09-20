@@ -6,6 +6,8 @@ import { runResearch } from "./research-command.js";
 import { runReview } from "./review-command.js";
 import { runScript } from "./script-command.js";
 import { runStoryboard } from "./storyboard-command.js";
+import { runThumbnail } from "./thumbnail-command.js";
+import { runShorts } from "./shorts-command.js";
 import { runValidate } from "./validate-command.js";
 import { runYouTube } from "./youtube-command.js";
 import { runStatus } from "./status-command.js";
@@ -175,6 +177,46 @@ program
       ...(opts.model !== undefined ? { model: opts.model } : {}),
     });
   });
+
+program
+  .command("thumbnail")
+  .argument("<project>", "project id to generate a thumbnail for")
+  .option("--cwd <dir>", "base directory for the project")
+  .option("--width <px>", "thumbnail width (default 1280)", (v) => parseInt(v, 10))
+  .option("--height <px>", "thumbnail height (default 720)", (v) => parseInt(v, 10))
+  .action(
+    async (
+      project: string,
+      opts: { cwd?: string; width?: number; height?: number },
+    ) => {
+      process.exitCode = await runThumbnail({
+        project,
+        ...(opts.cwd !== undefined ? { cwd: opts.cwd } : {}),
+        ...(opts.width !== undefined ? { width: opts.width } : {}),
+        ...(opts.height !== undefined ? { height: opts.height } : {}),
+      });
+    },
+  );
+
+program
+  .command("shorts")
+  .argument("<project>", "project id to clip a YouTube Short from")
+  .option("--cwd <dir>", "base directory for the project")
+  .option("--duration <seconds>", "short clip length in seconds (default 60)", (v) => parseInt(v, 10))
+  .option("--start <seconds>", "start offset into the final.mp4 (default 0)", (v) => parseInt(v, 10))
+  .action(
+    async (
+      project: string,
+      opts: { cwd?: string; duration?: number; start?: number },
+    ) => {
+      process.exitCode = await runShorts({
+        project,
+        ...(opts.cwd !== undefined ? { cwd: opts.cwd } : {}),
+        ...(opts.duration !== undefined ? { durationSec: opts.duration } : {}),
+        ...(opts.start !== undefined ? { startSec: opts.start } : {}),
+      });
+    },
+  );
 
 program
   .command("validate")

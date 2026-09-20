@@ -1,0 +1,38 @@
+# Architecture map
+
+How each design-doc section maps to the v0.1 codebase. The design doc is
+`AI_Video_Factory_Design_and_Plan_v1.1.md` at the repo root.
+
+## Principles (doc §2, §65)
+
+- **AI generates → Structured Content → Video DSL → Remotion → FFmpeg → MP4**
+  (§2.1): the render path is `@vf/vdsl` (compile) → `@vf/video-renderer` (Remotion) → `@vf/video-renderer/render.ts` `faststart` (FFmpeg). The renderer never reads `storyboard.yaml` directly — only the compiled `vdsl/vdsl.yaml` (§21.1 line 948).
+- **Human-in-the-loop checkpoints** (§8, §19): `@vf/workflow` state machine + `packages/cli/src/workflow-commands.ts` for `vf approve/reject/rollback`.
+
+## Packages
+
+| Package | Doc section | Role |
+| --- | --- | --- |
+| `@vf/vdsl` | §21, §51 | strict zod schema, line-numbered YAML errors, full validator (assets / registry / audio / caption), deterministic compiler to `vdsl.yaml` + `RenderPlan` |
+| `@vf/video-components` | §23, §24, §25, §50 | 10 React components + 5 animation primitives + `dark-tech` theme; zod props schemas in `REGISTRY` |
+| `@vf/video-renderer` | §2.1, §50 | `Root` composition consumes `RenderPlan`, `renderPlanToVideo` bundles via generated entry, FFmpeg faststart post-pass |
+| `@vf/media` | §21.1, §62.4 | `wrapText` (CJK-aware), `probeAudioDuration` (ffprobe) |
+| `@vf/workflow` | §18, §35, §62.1, §62.2 | 10-state machine with legal transitions, checkpoints, dependency invalidation, run records, retry, resume, idempotency |
+| `@vf/cli` | §39–§43 | `vf` CLI: new/validate/status/approve/reject/rollback/resume/preview/final |
+
+## v0.2+ roadmap (doc §66)
+
+Strict development order from §66 (don't reorder):
+
+1. **Storyboard Agent** (§53) — research-backed storyboard from a topic.
+2. **Research Agent** (§55) — produce `research.md` + `sources.yaml` + `claims.yaml`.
+3. **Script Agent** (§55) — write `script.zh-CN.md` from approved research.
+4. **Voice + Subtitle** (§56) — real TTS (provider abstraction over edge-tts/Azure Speech), auto subtitle timestamps.
+5. **Review Agent** (§57) — content / visual / technical review (still human-gated).
+6. **Pi Extension** (§58) — wrap the `vf` CLI as `/video` subcommands for the Pi harness.
+7. **YouTube Automation** (§59) — title / description / chapters / thumbnail / Shorts.
+8. **Advanced Media** (§60) — AI images, AI video, cloud rendering.
+
+Each future phase's entry point into the v0.1 codebase is the `vf` CLI
+(extend with a new subcommand) or a new subagent reading from
+`@vf/vdsl`'s `RenderPlan` shape.

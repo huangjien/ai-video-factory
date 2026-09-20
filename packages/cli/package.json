@@ -23,6 +23,8 @@
     "commander": "^13.0.0",
     "@vf/workflow": "*",
     "@vf/video-renderer": "*",
-    "@vf/research": "*"
+    "@vf/research": "*",
+    "@vf/script": "*",
+    "@vf/tts": "*"
   }
 }

@@ -20,6 +20,7 @@ export interface StoryboardOptions {
   audience?: string | undefined;
   style?: string | undefined;
   fromResearch?: string | undefined;
+  fromScript?: string | undefined;
 }
 
 function slugify(s: string): string {
@@ -68,12 +69,14 @@ export async function runStoryboard(opts: StoryboardOptions): Promise<number> {
   const provider = providerInstance(chosenName);
   const model = chosenName === "glm" ? "glm-4.6" : "MiniMax-M2.7";
 
-  // Optional research context (v0.2 phase 2)
+  // Optional research + script context (v0.2 phases 2 & 3)
   let researchContext:
     | { markdown: string; claimSummary: string }
     | undefined;
+  let scriptContext: { markdown: string } | undefined;
+  const { readFile } = await import("node:fs/promises");
+
   if (opts.fromResearch) {
-    const { readFile } = await import("node:fs/promises");
     let researchMarkdown: string;
     let claimsYaml: string;
     try {
@@ -97,6 +100,15 @@ export async function runStoryboard(opts: StoryboardOptions): Promise<number> {
       claimSummary: summarizeClaims(claimsYaml),
     };
   }
+  if (opts.fromScript) {
+    try {
+      const md = await readFile(opts.fromScript, "utf8");
+      scriptContext = { markdown: md };
+    } catch {
+      console.error(`\u2717 --from-script file not found: ${opts.fromScript}`);
+      return 1;
+    }
+  }
 
   let result;
   try {
@@ -108,6 +120,7 @@ export async function runStoryboard(opts: StoryboardOptions): Promise<number> {
         language: lang,
         style,
         ...(researchContext ? { researchContext } : {}),
+        ...(scriptContext ? { scriptContext } : {}),
       },
       provider,
       { model, temperature: 0.7 },

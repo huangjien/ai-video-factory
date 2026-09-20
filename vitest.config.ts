@@ -12,6 +12,7 @@ export default defineConfig({
       "@vf/agent-storyboard": path.resolve("packages/agent-storyboard/src"),
       "@vf/research": path.resolve("packages/research/src"),
       "@vf/script": path.resolve("packages/script/src"),
+      "@vf/tts": path.resolve("packages/tts/src"),
     },
   },
   test: {

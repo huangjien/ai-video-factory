@@ -1,7 +1,6 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
-import type { Stage } from "./states.js";
 
 /** Run record fields per doc §62.2 (lines 2231-2245).
  * Provider/model/token fields are present when the run involved an external

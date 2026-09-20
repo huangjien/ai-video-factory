@@ -7,6 +7,7 @@ export interface AgentInput {
   language: "zh-CN" | "en-US";
   style: string;
   researchContext?: { markdown: string; claimSummary: string } | undefined;
+  scriptContext?: { markdown: string } | undefined;
 }
 
 const FEWSHOT_SAMPLE = `schema_version: "0.1"
@@ -77,6 +78,12 @@ export function buildMessages(input: AgentInput): ChatMessage[] {
       input.researchContext.markdown.slice(0, 2000),
       "\n### Key claims to incorporate or counter",
       input.researchContext.claimSummary.slice(0, 1500),
+    );
+  }
+  if (input.scriptContext) {
+    userParts.push(
+      "\n## Approved script (from `vf script` — map each scene to a section)",
+      input.scriptContext.markdown.slice(0, 3000),
     );
   }
   return [

@@ -1,7 +1,9 @@
 #!/usr/bin/env node
 import { Command } from "commander";
+import { runAudio } from "./audio-command.js";
 import { runNew } from "./new-command.js";
 import { runResearch } from "./research-command.js";
+import { runScript } from "./script-command.js";
 import { runStoryboard } from "./storyboard-command.js";
 import { runValidate } from "./validate-command.js";
 import { runStatus } from "./status-command.js";
@@ -59,6 +61,42 @@ program
   );
 
 program
+  .command("script")
+  .argument("<topic>", "topic to write a script for")
+  .option("--cwd <dir>", "base directory for the project")
+  .option("--model <provider>", "model provider: minimax|glm (default from config)")
+  .option("--lang <lang>", "language: zh-CN|en-US (default zh-CN)")
+  .option("--duration <seconds>", "total duration target", (v) => parseInt(v, 10))
+  .option("--audience <text>", "target audience (default: developers)")
+  .option("--from-research <dir>", "consume approved research from this directory")
+  .option("--direction <text>", "human-provided story direction; agent adapts structure but keeps 7 sections")
+  .action(
+    async (
+      topic: string,
+      opts: {
+        cwd?: string;
+        model?: "minimax" | "glm";
+        lang?: "zh-CN" | "en-US";
+        duration?: number;
+        audience?: string;
+        fromResearch?: string;
+        direction?: string;
+      },
+    ) => {
+      process.exitCode = await runScript({
+        topic,
+        ...(opts.cwd !== undefined ? { cwd: opts.cwd } : {}),
+        ...(opts.model !== undefined ? { model: opts.model } : {}),
+        ...(opts.lang !== undefined ? { lang: opts.lang } : {}),
+        ...(opts.duration !== undefined ? { duration: opts.duration } : {}),
+        ...(opts.audience !== undefined ? { audience: opts.audience } : {}),
+        ...(opts.fromResearch !== undefined ? { fromResearch: opts.fromResearch } : {}),
+        ...(opts.direction !== undefined ? { direction: opts.direction } : {}),
+      });
+    },
+  );
+
+program
   .command("storyboard")
   .argument("<topic>", "topic to draft a storyboard for")
   .option("--cwd <dir>", "base directory for the project")
@@ -68,6 +106,7 @@ program
   .option("--audience <text>", "target audience (default: developers)")
   .option("--style <text>", "visual style (default: dark-tech)")
   .option("--from-research <dir>", "consume approved research from this directory")
+  .option("--from-script <file>", "consume approved script from this file (e.g. script/script.zh-CN.md)")
   .action(
     async (
       topic: string,
@@ -79,6 +118,7 @@ program
         audience?: string;
         style?: string;
         fromResearch?: string;
+        fromScript?: string;
       },
     ) => {
       process.exitCode = await runStoryboard({
@@ -90,9 +130,23 @@ program
         ...(opts.audience !== undefined ? { audience: opts.audience } : {}),
         ...(opts.style !== undefined ? { style: opts.style } : {}),
         ...(opts.fromResearch !== undefined ? { fromResearch: opts.fromResearch } : {}),
+        ...(opts.fromScript !== undefined ? { fromScript: opts.fromScript } : {}),
       });
     },
   );
+
+program
+  .command("audio")
+  .argument("<project>", "project id")
+  .option("--cwd <dir>", "base directory for the project")
+  .option("--fake", "use FakeTTSProvider (no network) for tests")
+  .action(async (project: string, opts: { cwd?: string; fake?: boolean }) => {
+    process.exitCode = await runAudio({
+      project,
+      ...(opts.cwd !== undefined ? { cwd: opts.cwd } : {}),
+      ...(opts.fake !== undefined ? { fake: opts.fake } : {}),
+    });
+  });
 
 program
   .command("validate")

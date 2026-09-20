@@ -10,6 +10,7 @@ describe("buildMessages — research context (todo 5)", () => {
       audience: "a",
       language: "zh-CN",
       duration: 40,
+      style: "dark-tech",
       researchContext: {
         markdown: `# Research\n\n${UNIQUE} is important.`,
         claimSummary: "- CoT improves reasoning accuracy",
@@ -27,6 +28,7 @@ describe("buildMessages — research context (todo 5)", () => {
       audience: "a",
       language: "zh-CN",
       duration: 40,
+      style: "dark-tech",
     });
     const user = m[1]?.content ?? "";
     expect(user).not.toContain("Supporting research");

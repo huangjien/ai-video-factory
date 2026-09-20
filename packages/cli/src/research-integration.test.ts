@@ -65,7 +65,7 @@ describe("vf research end-to-end (todo 4) — mock MiniMax", () => {
   let server: Server;
   let baseUrl: string;
   let responseYaml = goodYaml;
-  let statusToSend = 200;
+  const statusToSend = 200;
 
   beforeAll(async () => {
     server = createServer((req: IncomingMessage, res: ServerResponse) => {

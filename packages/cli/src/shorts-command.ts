@@ -43,6 +43,9 @@ export async function runShorts(opts: ShortsOptions): Promise<number> {
   const duration = opts.durationSec ?? 60;
   const start = opts.startSec ?? 0;
 
+  const { mkdir } = await import("node:fs/promises");
+  await mkdir(path.join(projectRoot, "youtube"), { recursive: true });
+
   try {
     await execFileAsync("ffmpeg", [
       "-y",

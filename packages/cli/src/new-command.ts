@@ -38,6 +38,7 @@ export async function runNew(opts: NewOptions): Promise<number> {
     return 1;
   }
   await mkdir(path.join(root, "storyboard"), { recursive: true });
+  await mkdir(path.join(root, "vdsl"), { recursive: true });
   await mkdir(path.join(root, "assets", "audio"), { recursive: true });
   await mkdir(path.join(root, "assets", "images"), { recursive: true });
   await mkdir(path.join(root, "assets", "fonts"), { recursive: true });

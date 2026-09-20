@@ -1,22 +1,22 @@
 {
   "schema_version": 2,
-  "active_work_id": "review-agent",
+  "active_work_id": "pi-extension",
   "works": {
-    "review-agent": {
-      "work_id": "review-agent",
+    "pi-extension": {
+      "work_id": "pi-extension",
       "active_plan": null,
-      "plan_name": "review-agent",
+      "plan_name": "pi-extension",
       "session_ids": [
         "codex:ses_f410a3994ffeKWO6ijEd5JCQyh"
       ],
       "status": "completed",
       "worktree_path": null,
-      "note": "v0.2 phase 5 (Review Agent per doc \u00a731) \u2014 pattern established, executing directly"
+      "note": "v0.2 phase 6 (Pi Extension per doc \u00a758/Phase 8) \u2014 expose the vf CLI as /video for Pi/OpenCode/agent use"
     },
-    "voice-subtitle": {
-      "work_id": "voice-subtitle",
+    "review-agent": {
+      "work_id": "review-agent",
       "active_plan": null,
-      "plan_name": "voice-subtitle",
+      "plan_name": "review-agent",
       "session_ids": [],
       "status": "completed",
       "worktree_path": null,

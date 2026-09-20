@@ -27,6 +27,9 @@
     },
     {
       "path": "packages/research"
+    },
+    {
+      "path": "packages/script"
     }
   ]
 }

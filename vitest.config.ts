@@ -11,6 +11,7 @@ export default defineConfig({
       "@vf/llm": path.resolve("packages/llm/src"),
       "@vf/agent-storyboard": path.resolve("packages/agent-storyboard/src"),
       "@vf/research": path.resolve("packages/research/src"),
+      "@vf/script": path.resolve("packages/script/src"),
     },
   },
   test: {

@@ -8,6 +8,8 @@ export default defineConfig({
       "@vf/video-components": path.resolve("packages/video-components/src"),
       "@vf/media": path.resolve("packages/media/src"),
       "@vf/workflow": path.resolve("packages/workflow/src"),
+      "@vf/llm": path.resolve("packages/llm/src"),
+      "@vf/agent-storyboard": path.resolve("packages/agent-storyboard/src"),
     },
   },
   test: {

@@ -30,6 +30,15 @@
       "status": "completed",
       "worktree_path": null,
       "note": "v0.3 phase 1 in progress"
+    },
+    "v0.3-phase-2": {
+      "work_id": "v0.3-phase-2",
+      "active_plan": null,
+      "plan_name": "MiniMaxVideoProvider",
+      "session_ids": [],
+      "status": "completed",
+      "worktree_path": null,
+      "note": "v0.3 phase 2 in progress"
     }
   }
 }

@@ -4,7 +4,8 @@ import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
 import type { Stage } from "./states.js";
 
 /** Run record fields per doc §62.2 (lines 2231-2245).
- * Provider/model/token fields are omitted in v0.1 — no external model calls. */
+ * Provider/model/token fields are present when the run involved an external
+ * model call (v0.2+); v0.1 records without these remain valid. */
 export interface RunRecord {
   run_id: string;
   stage: Stage;
@@ -18,6 +19,11 @@ export interface RunRecord {
   created_at: string;
   duration_ms?: number | undefined;
   error?: string | undefined;
+  provider?: string | undefined;
+  model?: string | undefined;
+  prompt_hash?: string | undefined;
+  tokens?: { input: number; output: number } | undefined;
+  estimated_cost_usd?: number | undefined;
 }
 
 export function formatRunId(stage: Stage, now = new Date()): string {

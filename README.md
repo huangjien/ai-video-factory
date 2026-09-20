@@ -43,6 +43,19 @@ The `preview` output lands at `output/preview-faststart.mp4` and `final`
 produces `output/final-faststart.mp4`, each 1920x1080@30fps. Every step
 writes a YAML record to `runs/<run-id>.yaml` and updates `state.yaml`.
 
+### Global CLI installation
+
+Once the `@vf/*` workspace packages are published:
+
+```bash
+npm install --global @vf/cli
+vf new demo
+```
+
+The global install keeps source and build files out of the user's project
+folders. `vf new <id>` creates `projects/<id>` below the current directory;
+use `--cwd <dir>` to choose another project root.
+
 ## Commands
 
 | Command | Purpose |
@@ -53,6 +66,8 @@ writes a YAML record to `runs/<run-id>.yaml` and updates `state.yaml`.
 | `vf audio <project>` | (v0.2.4) Synthesize per-scene voiceover via Edge TTS + write `captions/<lang>.srt` (`--fake` for offline test) |
 | `vf review <project>` | (v0.2.5) Generate Content/Visual/Technical review YAMLs via MiniMax/GLM (read-only — never auto-gates) |
 | `vf youtube <project>` | (v0.2.7) Generate YouTube title/description/chapters.vtt/package.yaml + thumbnail-prompt + shorts-hook (text-only; thumbnail/shorts land in v0.2 phase 8) |
+| `vf thumbnail <project>` | (v0.2.8) Generate YouTube thumbnail PNG from `thumbnail-prompt.txt` (MockImageProvider; real provider deferred to v0.3) |
+| `vf shorts <project>` | (v0.2.8) Clip a 9:16 vertical Shorts MP4 from `final-faststart.mp4` via ffmpeg (60s default, configurable via `--start`/`--duration`) |
 | `vf storyboard <topic>` | (v0.2) AI-draft a storyboard from a topic via MiniMax/GLM (optionally consumes `vf research` via `--from-research`) |
 | `vf validate <file>` | shape + asset + registry + audio/caption check |
 | `vf status` | per-stage checklist + current checkpoint + status |
@@ -85,6 +100,48 @@ file that implements it, plus the v0.2+ roadmap.
 
 
 
+
+
+## Advanced Media (v0.2.8 — final phase)
+
+`vf thumbnail` and `vf shorts` complete the YouTube publishing package by
+generating the thumbnail image and a Shorts MP4 clip. Per doc §60 this is
+the last phase of v0.2.
+
+### Thumbnail — `vf thumbnail <project>`
+```bash
+node packages/cli/dist/index.js youtube "AI 思维链"   # produces thumbnail-prompt.txt
+node packages/cli/dist/index.js thumbnail "AI 思维链"
+# → projects/ai-思维链/youtube/thumbnail.png (1280x720 PNG)
+```
+v0.2 ships only the **MockImageProvider** — it produces a deterministic
+solid-color PNG whose hue is derived from the prompt hash. Real image
+generators (e.g. MiniMax image) plug into the `ImageProvider` interface
+and land in v0.3.
+
+### Shorts clip — `vf shorts <project>`
+```bash
+node packages/cli/dist/index.js final    # produces output/final-faststart.mp4
+node packages/cli/dist/index.js shorts "AI 思维链"
+# → projects/ai-思维链/youtube/shorts.mp4 (9:16, 1080x1920, 60s by default)
+```
+Pure mechanical — uses ffmpeg to crop and scale the existing final mp4 to
+vertical 9:16. Custom start/duration via `--start <seconds>` and
+`--duration <seconds>`.
+
+### Full v0.2 pipeline (now complete)
+```
+new → research → script → storyboard → audio → review → preview → final → youtube → thumbnail → shorts
+```
+Each step writes files that the next step consumes, with human gates at
+every generator boundary. AI never auto-publishes; humans decide.
+
+### What's NOT here yet (v0.3+ hooks)
+- **Real image generation** (MiniMax image API, etc.) — the `ImageProvider`
+  interface is the contract; only the mock ships in v0.2.
+- **Real video generation** (image-to-video, etc.) — the `VideoProvider`
+  interface ships; only the mock ships.
+- **Cloud rendering** — out of scope; v0.1+ still uses local ffmpeg.
 
 ## YouTube Automation (v0.2.7)
 

@@ -131,7 +131,25 @@ CLI verb `vf youtube <project>` writes six files under `youtube/`:
 run record. Thumbnail image generation and Shorts MP4 clipping land in
 v0.2 phase 8 (Advanced Media §60) — this phase ships the text only.
 
-## v0.2+ roadmap (doc §66)
+
+
+## v0.2 Phase 8 — Advanced Media (shipped — final v0.2 phase)
+
+| Package | Doc section | Role |
+| --- | --- | --- |
+| `@vf/media-generators` | §60 / Phase 10 | ImageProvider + VideoProvider abstractions; deterministic `MockImageProvider` (no-deps PNG synthesis via hash-derived solid color) + `MockVideoProvider` (placeholder text payload). Real image/video generators plug in via the interfaces — v0.3 hook. |
+
+CLI verbs:
+- **`vf thumbnail <project> [--width] [--height]`** — reads
+  `youtube/thumbnail-prompt.txt`, calls `ImageProvider.generate()`, writes
+  `youtube/thumbnail.png` (1280x720 default — YouTube-recommended
+  thumbnail aspect ratio).
+- **`vf shorts <project> [--start] [--duration]`** — reads
+  `output/final-faststart.mp4`, runs ffmpeg with
+  `crop=ih*9/16:ih,scale=1080:1920` to clip a 9:16 vertical segment, writes
+  `youtube/shorts.mp4`.
+
+## v0.2 roadmap — COMPLETE
 
 1. ~~Storyboard Agent~~ (✅ shipped v0.2 phase 1)
 2. ~~Research Agent~~ (✅ shipped v0.2 phase 2)
@@ -140,9 +158,16 @@ v0.2 phase 8 (Advanced Media §60) — this phase ships the text only.
 5. ~~Review Agent~~ (✅ shipped v0.2 phase 5)
 6. ~~Pi Extension~~ (✅ shipped v0.2 phase 6)
 7. ~~YouTube Automation~~ (✅ shipped v0.2 phase 7 — text metadata)
-8. **Advanced Media** (§60) — AI images, AI video, cloud rendering, Advanced Audio.
+8. ~~Advanced Media~~ (✅ shipped v0.2 phase 8 — mock image + ffmpeg Shorts)
 
-Each future phase's entry point
+The full v0.2 pipeline now runs end-to-end: `new → research → script →
+storyboard → audio → review → preview → final → youtube → thumbnail →
+shorts`. v0.3 hooks (real image/video generators, cloud rendering, advanced
+audio) are documented in README but intentionally deferred per doc §60.
+
+## v0.2+ roadmap (doc §66) — COMPLETE
+
+The full v0.2 pipeline runs end-to-end (see shipped phases above). v0.3+ hooks (real image/video generators, cloud rendering, advanced audio) are documented in README but intentionally deferred per doc §60.
 Each future phase's entry point into the v0.1 codebase is the `vf` CLI
 (extend with a new subcommand) or a new subagent reading from
 `@vf/vdsl`'s `RenderPlan` shape.

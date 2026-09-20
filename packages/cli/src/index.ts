@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { Command } from "commander";
 import { runAudio } from "./audio-command.js";
+import { runAudioAsset } from "./audio-asset-command.js";
 import { runNew } from "./new-command.js";
 import { runResearch } from "./research-command.js";
 import { runReview } from "./review-command.js";
@@ -151,6 +152,36 @@ program
       ...(opts.fake !== undefined ? { fake: opts.fake } : {}),
     });
   });
+
+program
+  .command("audio-asset")
+  .argument("<project>", "project id")
+  .option("--cwd <dir>", "base directory for the project")
+  .option("--bgm <tag>", "tag for the background music asset (e.g. calm, upbeat)")
+  .option("--sfx <tag>", "tag for the sound-effect asset (e.g. whoosh, ding)")
+  .option("--bgm-dir <dir>", "BFM directory for file-based provider (optional)")
+  .option("--sfx-dir <dir>", "SFX directory for file-based provider (optional)")
+  .action(
+    async (
+      project: string,
+      opts: {
+        cwd?: string;
+        bgm?: string;
+        sfx?: string;
+        bgmDir?: string;
+        sfxDir?: string;
+      },
+    ) => {
+      process.exitCode = await runAudioAsset({
+        project,
+        ...(opts.cwd !== undefined ? { cwd: opts.cwd } : {}),
+        ...(opts.bgm !== undefined ? { bgmTag: opts.bgm } : {}),
+        ...(opts.sfx !== undefined ? { sfxTag: opts.sfx } : {}),
+        ...(opts.bgmDir !== undefined ? { bgmDir: opts.bgmDir } : {}),
+        ...(opts.sfxDir !== undefined ? { sfxDir: opts.sfxDir } : {}),
+      });
+    },
+  );
 
 program
   .command("review")

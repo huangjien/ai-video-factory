@@ -68,6 +68,7 @@ use `--cwd <dir>` to choose another project root.
 | `vf youtube <project>` | (v0.2.7) Generate YouTube title/description/chapters.vtt/package.yaml + thumbnail-prompt + shorts-hook (text-only; thumbnail/shorts land in v0.2 phase 8) |
 | `vf thumbnail <project>` | (v0.2.8) Generate YouTube thumbnail PNG from `thumbnail-prompt.txt` (MockImageProvider; real provider deferred to v0.3) |
 | `vf shorts <project>` | (v0.2.8) Clip a 9:16 vertical Shorts MP4 from `final-faststart.mp4` via ffmpeg (60s default, configurable via `--start`/`--duration`) |
+| `vf audio-asset <project>` | (v0.3.3) Add BGM + SFX to the project (`--bgm <tag>` + `--sfx <tag>`, optional `--bgm-dir`/`--sfx-dir` for file-based lookup) |
 | `vf storyboard <topic>` | (v0.2) AI-draft a storyboard from a topic via MiniMax/GLM (optionally consumes `vf research` via `--from-research`) |
 | `vf validate <file>` | shape + asset + registry + audio/caption check |
 | `vf status` | per-stage checklist + current checkpoint + status |
@@ -157,7 +158,35 @@ every generator boundary. AI never auto-publishes; humans decide.
   interface ships; only the mock ships.
 - **Cloud rendering** — out of scope; v0.1+ still uses local ffmpeg.
 
-## YouTube Automation (v0.2.7)
+## Audio Assets (v0.3.3)
+
+`vf audio-asset` adds **background music** and **sound effects** to a
+project. Per doc §60 (Advanced Audio), this is the BGM/SFX asset layer —
+actual mixing into the final mp4 is a separate concern (v0.3.4+).
+
+```bash
+node packages/cli/dist/index.js new "demo"
+node packages/cli/dist/index.js audio-asset "demo" --bgm calm --sfx whoosh
+# → projects/demo/assets/audio-assets/bgm/calm.wav (mock placeholder by default)
+# → projects/demo/assets/audio-assets/sfx/whoosh.wav
+```
+
+### Providers
+- **`mock`** (default) — deterministic 1-second silent WAV placeholder. No
+  network. Useful for testing the pipeline without real audio assets.
+- **`file-based`** — looks up `{tag}.wav` (or any filename containing the
+  tag) in `--bgm-dir` / `--sfx-dir`. Pass the directories to activate.
+  Real providers (Suno, ElevenLabs, etc.) plug into the same
+  `AudioAssetProvider` interface — v0.3.3 ships the contract + two
+  implementations.
+
+### Licensing
+The `file-based` provider reads a sibling `{tag}.license.txt` if present
+and records the license on the run record. Otherwise the run record
+labels the asset "user-provided (no license file found)" — humans are
+responsible for verifying licensing.
+
+## ## YouTube Automation (v0.2.7)
 
 `vf youtube` produces the text-only publishing package for the video:
 title, description, chapter timestamps, a thumbnail prompt, and a Shorts

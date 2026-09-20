@@ -39,6 +39,7 @@
     "@vf/tts": "*",
     "@vf/review": "*",
     "@vf/youtube": "*",
-    "@vf/media-generators": "*"
+    "@vf/media-generators": "*",
+    "@vf/audio-assets": "*"
   }
 }

@@ -25,6 +25,7 @@
     "@vf/video-renderer": "*",
     "@vf/research": "*",
     "@vf/script": "*",
-    "@vf/tts": "*"
+    "@vf/tts": "*",
+    "@vf/review": "*"
   }
 }

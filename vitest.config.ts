@@ -13,6 +13,7 @@ export default defineConfig({
       "@vf/research": path.resolve("packages/research/src"),
       "@vf/script": path.resolve("packages/script/src"),
       "@vf/tts": path.resolve("packages/tts/src"),
+      "@vf/review": path.resolve("packages/review/src"),
     },
   },
   test: {

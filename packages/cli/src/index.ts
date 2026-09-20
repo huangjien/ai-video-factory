@@ -3,6 +3,7 @@ import { Command } from "commander";
 import { runAudio } from "./audio-command.js";
 import { runNew } from "./new-command.js";
 import { runResearch } from "./research-command.js";
+import { runReview } from "./review-command.js";
 import { runScript } from "./script-command.js";
 import { runStoryboard } from "./storyboard-command.js";
 import { runValidate } from "./validate-command.js";
@@ -145,6 +146,19 @@ program
       project,
       ...(opts.cwd !== undefined ? { cwd: opts.cwd } : {}),
       ...(opts.fake !== undefined ? { fake: opts.fake } : {}),
+    });
+  });
+
+program
+  .command("review")
+  .argument("<project>", "project id to review")
+  .option("--cwd <dir>", "base directory for the project")
+  .option("--model <provider>", "model provider: minimax|glm (default: research-role config)")
+  .action(async (project: string, opts: { cwd?: string; model?: "minimax" | "glm" }) => {
+    process.exitCode = await runReview({
+      project,
+      ...(opts.cwd !== undefined ? { cwd: opts.cwd } : {}),
+      ...(opts.model !== undefined ? { model: opts.model } : {}),
     });
   });
 

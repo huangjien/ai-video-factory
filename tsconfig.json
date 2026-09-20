@@ -33,6 +33,9 @@
     },
     {
       "path": "packages/tts"
+    },
+    {
+      "path": "packages/review"
     }
   ]
 }

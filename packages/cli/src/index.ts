@@ -184,16 +184,23 @@ program
   .option("--cwd <dir>", "base directory for the project")
   .option("--width <px>", "thumbnail width (default 1280)", (v) => parseInt(v, 10))
   .option("--height <px>", "thumbnail height (default 720)", (v) => parseInt(v, 10))
+  .option("--provider <name>", "image provider: mock|minimax (default mock — minimax needs MINIMAX_API_KEY)")
   .action(
     async (
       project: string,
-      opts: { cwd?: string; width?: number; height?: number },
+      opts: {
+        cwd?: string;
+        width?: number;
+        height?: number;
+        provider?: "mock" | "minimax";
+      },
     ) => {
       process.exitCode = await runThumbnail({
         project,
         ...(opts.cwd !== undefined ? { cwd: opts.cwd } : {}),
         ...(opts.width !== undefined ? { width: opts.width } : {}),
         ...(opts.height !== undefined ? { height: opts.height } : {}),
+        ...(opts.provider !== undefined ? { providerName: opts.provider } : {}),
       });
     },
   );

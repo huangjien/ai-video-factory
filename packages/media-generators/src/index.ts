@@ -6,6 +6,10 @@ export {
   type ImageResult,
 } from "./image.js";
 export {
+  MiniMaxImageProvider,
+  type MiniMaxImageProviderOptions,
+} from "./minimax-image.js";
+export {
   MockVideoProvider,
   type VideoProvider,
   type VideoRequest,

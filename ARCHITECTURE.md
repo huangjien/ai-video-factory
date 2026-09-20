@@ -133,21 +133,24 @@ v0.2 phase 8 (Advanced Media §60) — this phase ships the text only.
 
 
 
-## v0.2 Phase 8 — Advanced Media (shipped — final v0.2 phase)
+
+## v0.3 Phase 1 — Real Image Generation (shipped)
 
 | Package | Doc section | Role |
 | --- | --- | --- |
-| `@vf/media-generators` | §60 / Phase 10 | ImageProvider + VideoProvider abstractions; deterministic `MockImageProvider` (no-deps PNG synthesis via hash-derived solid color) + `MockVideoProvider` (placeholder text payload). Real image/video generators plug in via the interfaces — v0.3 hook. |
+| `@vf/media-generators` (extended) | §60 / Phase 10 | **MiniMaxImageProvider** implements `ImageProvider` against `POST /v1/image_generation` (model `image-01`). Maps width/height to the closest supported aspect ratio (`16:9` for 1280×720 YouTube thumbnails). Decodes base64 → JPEG bytes. Honours MiniMax's envelope-error pattern: HTTP 200 + `base_resp.status_code != 0` (e.g. 2056 quota, 1004 auth) → throws `ImageGenerationError` with the status message. Bounded retry (no 4xx), credentials env-only. `ImageResult.contentType` widened to `"image/png" \| "image/jpeg"`. |
 
-CLI verbs:
-- **`vf thumbnail <project> [--width] [--height]`** — reads
-  `youtube/thumbnail-prompt.txt`, calls `ImageProvider.generate()`, writes
-  `youtube/thumbnail.png` (1280x720 default — YouTube-recommended
-  thumbnail aspect ratio).
-- **`vf shorts <project> [--start] [--duration]`** — reads
-  `output/final-faststart.mp4`, runs ffmpeg with
-  `crop=ih*9/16:ih,scale=1080:1920` to clip a 9:16 vertical segment, writes
-  `youtube/shorts.mp4`.
+CLI verb `vf thumbnail <project> [--provider mock|minimax]` — default
+`mock` keeps the offline deterministic path (back-compat with v0.2).
+`--provider minimax` produces real AI thumbnails when `MINIMAX_API_KEY`
+is set; failures (quota exhausted, network down, key invalid) exit 1 with
+the readable envelope status message.
+
+**Known environmental note:** the user's MiniMax Coding Plan was
+observed returning `base_resp.status_code: 2056 "Token Plan usage limit
+reached"` during this phase's development — the provider correctly
+surfaces this; the real-path smoke test will succeed once the quota
+resets or the plan is upgraded.
 
 ## v0.2 roadmap — COMPLETE
 

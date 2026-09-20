@@ -111,13 +111,17 @@ the last phase of v0.2.
 ### Thumbnail — `vf thumbnail <project>`
 ```bash
 node packages/cli/dist/index.js youtube "AI 思维链"   # produces thumbnail-prompt.txt
-node packages/cli/dist/index.js thumbnail "AI 思维链"
-# → projects/ai-思维链/youtube/thumbnail.png (1280x720 PNG)
+node packages/cli/dist/index.js thumbnail "AI 思维链"  # mock (default, offline)
+node packages/cli/dist/index.js thumbnail "AI 思维链" --provider minimax  # REAL AI image
 ```
-v0.2 ships only the **MockImageProvider** — it produces a deterministic
-solid-color PNG whose hue is derived from the prompt hash. Real image
-generators (e.g. MiniMax image) plug into the `ImageProvider` interface
-and land in v0.3.
+**v0.3 phase 1** adds the **MiniMaxImageProvider** (`image-01` model):
+real AI-generated thumbnails via `POST /v1/image_generation`, base64
+response, aspect-ratio mapping (1280x720 → `16:9`). Needs
+`MINIMAX_API_KEY` and image quota on your MiniMax plan — quota/auth
+failures are surfaced readably (envelope status 2056 etc.). Output is
+`thumbnail.jpg` (JPEG) for the real provider, `thumbnail.png` for the mock.
+The **MockImageProvider** stays the default — deterministic, offline,
+hash-derived solid color.
 
 ### Shorts clip — `vf shorts <project>`
 ```bash

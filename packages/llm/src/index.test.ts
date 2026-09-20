@@ -1,8 +1,8 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import { loadProviderConfig, withRetry } from "./index.js";
-import type { ChatMessage, Provider } from "./provider.js";
+import type { ChatMessage, ChatRequest, ChatResponse, Provider } from "./provider.js";
 
-const okResponse = () => ({
+const okResponse = (): ChatResponse => ({
   content: "ok",
   usage: { input: 1, output: 2 },
 });
@@ -10,7 +10,7 @@ const okResponse = () => ({
 class FakeOkProvider implements Provider {
   readonly name = "fake-ok";
   calls = 0;
-  async chat() {
+  async chat(_req: ChatRequest): Promise<ChatResponse> {
     this.calls += 1;
     return okResponse();
   }
@@ -20,7 +20,7 @@ class FakeFlakyProvider implements Provider {
   readonly name = "fake-flaky";
   calls = 0;
   failFirst = 2;
-  async chat() {
+  async chat(_req: ChatRequest): Promise<ChatResponse> {
     this.calls += 1;
     if (this.calls <= this.failFirst) throw new Error("503");
     return okResponse();
@@ -30,7 +30,7 @@ class FakeFlakyProvider implements Provider {
 class Fake4xxProvider implements Provider {
   readonly name = "fake-4xx";
   calls = 0;
-  async chat() {
+  async chat(_req: ChatRequest): Promise<ChatResponse> {
     this.calls += 1;
     throw new Error("400");
   }
@@ -80,7 +80,11 @@ describe("withRetry (todo 1) — §62.1 retry policy", () => {
   });
 
   it("invokes isRetriable per attempt", async () => {
-    const isRetriable = vi.fn((_err: unknown) => false);
+    let retriableCalls = 0;
+    const isRetriable = (_err: unknown): boolean => {
+      retriableCalls += 1;
+      return false;
+    };
     const p = new Fake4xxProvider();
     await expect(
       withRetry(() => p.chat({ messages: [] }), {
@@ -88,7 +92,7 @@ describe("withRetry (todo 1) — §62.1 retry policy", () => {
         isRetriable,
       }),
     ).rejects.toThrow();
-    expect(isRetriable).toHaveBeenCalledTimes(1);
+    expect(retriableCalls).toBe(1);
   });
 });
 

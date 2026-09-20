@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { Command } from "commander";
 import { runNew } from "./new-command.js";
+import { runStoryboard } from "./storyboard-command.js";
 import { runValidate } from "./validate-command.js";
 import { runStatus } from "./status-command.js";
 import {
@@ -22,6 +23,39 @@ program
   .action(async (projectId: string, opts: { cwd?: string }) => {
     process.exitCode = await runNew({ projectId, cwd: opts.cwd });
   });
+
+program
+  .command("storyboard")
+  .argument("<topic>", "topic to draft a storyboard for")
+  .option("--cwd <dir>", "base directory for the project")
+  .option("--model <provider>", "model provider: minimax|glm (default from config)")
+  .option("--lang <lang>", "language: zh-CN|en-US (default zh-CN)")
+  .option("--duration <seconds>", "total duration target", (v) => parseInt(v, 10))
+  .option("--audience <text>", "target audience (default: developers)")
+  .option("--style <text>", "visual style (default: dark-tech)")
+  .action(
+    async (
+      topic: string,
+      opts: {
+        cwd?: string;
+        model?: "minimax" | "glm";
+        lang?: "zh-CN" | "en-US";
+        duration?: number;
+        audience?: string;
+        style?: string;
+      },
+    ) => {
+      process.exitCode = await runStoryboard({
+        topic,
+        ...(opts.cwd !== undefined ? { cwd: opts.cwd } : {}),
+        ...(opts.model !== undefined ? { model: opts.model } : {}),
+        ...(opts.lang !== undefined ? { lang: opts.lang } : {}),
+        ...(opts.duration !== undefined ? { duration: opts.duration } : {}),
+        ...(opts.audience !== undefined ? { audience: opts.audience } : {}),
+        ...(opts.style !== undefined ? { style: opts.style } : {}),
+      });
+    },
+  );
 
 program
   .command("validate")

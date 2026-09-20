@@ -15,3 +15,8 @@ export {
   type Usage,
 } from "./provider.js";
 export { withRetry } from "./retry.js";
+export { GLMProvider, type GLMProviderOptions } from "./glm.js";
+export {
+  MiniMaxProvider,
+  type MiniMaxProviderOptions,
+} from "./minimax.js";

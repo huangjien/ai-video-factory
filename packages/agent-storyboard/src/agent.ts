@@ -10,13 +10,11 @@ export interface AgentResult {
 }
 
 export class AgentError extends Error {
-  constructor(
-    message: string,
-    public readonly providerName: string,
-    public readonly cause?: unknown,
-  ) {
+  override readonly cause: unknown;
+  constructor(message: string, public readonly providerName: string, cause?: unknown) {
     super(message);
     this.name = "AgentError";
+    this.cause = cause;
   }
 }
 

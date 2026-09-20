@@ -1,0 +1,15 @@
+{
+  "schema_version": 2,
+  "active_work_id": "video-agent-v01",
+  "works": {
+    "video-agent-v01": {
+      "work_id": "video-agent-v01",
+      "active_plan": ".omo/plans/video-agent-v01.md",
+      "plan_name": "video-agent-v01",
+      "session_ids": ["codex:ses_f410a3994ffeKWO6ijEd5JCQyh"],
+      "status": "active",
+      "worktree_path": null,
+      "note": "executed directly by root agent: worker subagents unavailable in this harness (only explore/librarian); ledger records this deviation"
+    }
+  }
+}

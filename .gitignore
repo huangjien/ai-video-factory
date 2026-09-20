@@ -1,0 +1,8 @@
+node_modules/
+dist/
+*.tsbuildinfo
+.DS_Store
+.omo/evidence/
+.omo/tmp/
+.remotion/
+*.log

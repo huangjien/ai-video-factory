@@ -1,0 +1,11 @@
+{
+  "files": [],
+  "references": [
+    { "path": "packages/vdsl" },
+    { "path": "packages/video-components" },
+    { "path": "packages/video-renderer" },
+    { "path": "packages/media" },
+    { "path": "packages/workflow" },
+    { "path": "packages/cli" }
+  ]
+}

@@ -98,6 +98,25 @@ plus a run record. **Read-only**: the agent never modifies the project
 verdicts (`pass` / `warn` / `fail`) are advisory signals the human uses
 to decide whether to fix the project and re-run.
 
+
+
+## v0.2 Phase 6 — Pi Extension (shipped)
+
+The full pipeline is exposed two ways for agentic harnesses:
+
+1. **`bin/video`** — thin shell wrapper mapping `video <verb> [args...]` to
+   `node packages/cli/dist/index.js <verb> [args...]`. Works from any shell,
+   Makefile, or CI step. One binary covers all 13 verbs.
+2. **`.opencode/command/video.md`** — slash-command definition with
+   frontmatter (description, argument-hint, tools: bash/read/write) plus a
+   markdown body listing every verb, the canonical pipeline order, and
+   the critical invariants (never auto-approve, credentials stay in env,
+   fail loudly). OpenCode / Cursor / Claude Code pick this up automatically;
+   transferring to Pi requires only a small frontmatter adaptation.
+
+Per doc §58 and §65, no agent (Pi or otherwise) has the final decision —
+every generator step ends with a human gate (`vf approve`).
+
 ## v0.2+ roadmap (doc §66)
 
 1. ~~Storyboard Agent~~ (✅ shipped v0.2 phase 1)
@@ -105,7 +124,7 @@ to decide whether to fix the project and re-run.
 3. ~~Script Agent~~ (✅ shipped v0.2 phase 3)
 4. ~~Voice + Subtitle~~ (✅ shipped v0.2 phase 4)
 5. ~~Review Agent~~ (✅ shipped v0.2 phase 5)
-6. **Pi Extension** (§58) — wrap the `vf` CLI as `/video` subcommands for the Pi harness.
+6. ~~Pi Extension~~ (✅ shipped v0.2 phase 6)
 7. **YouTube Automation** (§59) — title / description / chapters / thumbnail / Shorts.
 8. **Advanced Media** (§60) — AI images, AI video, cloud rendering.
 

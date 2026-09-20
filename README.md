@@ -83,6 +83,39 @@ file that implements it, plus the v0.2+ roadmap.
 
 
 
+
+## Pi Extension (v0.2.6)
+
+The `vf` CLI is now also exposed as `/video` for agentic harnesses:
+
+### Shell wrapper — `bin/video`
+```bash
+bin/video new "demo"
+bin/video research "AI 思维链"
+bin/video storyboard "AI 思维链" --from-research projects/.../research
+bin/video preview --cwd projects/demo
+```
+
+The wrapper transparently forwards every verb to the `vf` CLI, so any
+shell, Makefile, or CI script can drive the pipeline with one binary.
+
+### Agent command — `.opencode/command/video.md`
+OpenCode / Cursor / Claude Code / similar agentic harnesses that look up
+`.opencode/command/*.md` will pick up `/video` as a slash command with
+frontmatter (description, tools) plus a markdown body listing every
+verb, the canonical pipeline order, and the critical invariants
+(never auto-approve, credentials stay in env, fail loudly).
+
+The same pattern transfers to Pi (`.pi/agents/` + `.pi/skills/` definitions)
+with a small adaptation — Pi's frontmatter differs. The `vf` CLI is the
+stable surface both harnesses wrap.
+
+### Why no auto-approval
+Per doc §58 and §65, the workflow enforces a human gate between every
+generator step and the next. The agent (whether Pi or OpenCode) calls the
+drafting verbs and surfaces the artifacts; the human reads and
+`vf approve`s before `vf preview` ever touches the render path.
+
 ## Review Agent (v0.2.5)
 
 `vf review` produces three review YAMLs — Content / Visual / Technical —

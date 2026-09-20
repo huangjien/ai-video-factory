@@ -10,8 +10,10 @@ import type { RenderPlan } from "@vf/vdsl";
 
 const execFileAsync = promisify(execFile);
 
-const rendererDir = path.dirname(fileURLToPath(import.meta.url));
-const rootSrcPath = path.resolve(rendererDir, "Root.tsx");
+const rendererFile = fileURLToPath(import.meta.url);
+const rendererDir = path.dirname(rendererFile);
+const ext = rendererFile.endsWith(".ts") ? "tsx" : "js";
+const rootSrcPath = `${rendererDir}/Root.${ext}`;
 
 const renderEntryTemplate = (renderPlan: RenderPlan): string => `import { registerRoot, Composition } from "remotion";
 import { Root } from "${rootSrcPath}";

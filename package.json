@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "AI Video Factory — structured-content-to-video production system (v0.1)",
+  "description": "AI Video Factory \u2014 structured-content-to-video production system (v0.1)",
   "workspaces": [
     "packages/*",
     "projects/*"
@@ -14,7 +14,9 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "test": "vitest run",
-    "render:hello": "npm run render:hello -w packages/video-renderer"
+    "render:hello": "npm run render:hello -w packages/video-renderer",
+    "benchmark:verify": "node scripts/benchmark-verify.mjs",
+    "acceptance": "node scripts/acceptance.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^9.20.0",

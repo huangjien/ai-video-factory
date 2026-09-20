@@ -1,0 +1,15 @@
+run_id: render-2026-09-20T15:45:52Z-970
+stage: render
+status: succeeded
+actor: tool
+tool: remotion
+tool_version: 4.0.526
+input_commit: 2c1ee7da018685e539e2dc93945dce03a793a896
+input_files:
+  - storyboard/storyboard.yaml
+  - vdsl/vdsl.yaml
+output_files:
+  - output/preview.mp4
+  - output/preview-faststart.mp4
+created_at: 2026-09-20T15:45:52.586Z
+duration_ms: 13

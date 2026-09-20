@@ -5,7 +5,6 @@ export {
   ResearchOutputSchema,
   SourceSchema,
   type Claim,
-  type ClaimStatus,
   type ResearchOutput,
   type Source,
   type WebSearchResult,

@@ -1,6 +1,6 @@
-status: FINAL_APPROVED
-current_stage: final
+status: WAITING_REVIEW
+current_stage: review
 checkpoint:
-  id: final-2026-09-20T15:48:26Z-090
-  status: FINAL_APPROVED
+  id: render-2026-09-20T15:50:04Z-307
+  status: WAITING_REVIEW
 history_tail: []

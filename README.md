@@ -52,6 +52,7 @@ writes a YAML record to `runs/<run-id>.yaml` and updates `state.yaml`.
 | `vf script <topic>` | (v0.2.3) AI-draft a 7-section script (Hook→Conclusion) via MiniMax/GLM (optionally consumes `vf research` via `--from-research`) |
 | `vf audio <project>` | (v0.2.4) Synthesize per-scene voiceover via Edge TTS + write `captions/<lang>.srt` (`--fake` for offline test) |
 | `vf review <project>` | (v0.2.5) Generate Content/Visual/Technical review YAMLs via MiniMax/GLM (read-only — never auto-gates) |
+| `vf youtube <project>` | (v0.2.7) Generate YouTube title/description/chapters.vtt/package.yaml + thumbnail-prompt + shorts-hook (text-only; thumbnail/shorts land in v0.2 phase 8) |
 | `vf storyboard <topic>` | (v0.2) AI-draft a storyboard from a topic via MiniMax/GLM (optionally consumes `vf research` via `--from-research`) |
 | `vf validate <file>` | shape + asset + registry + audio/caption check |
 | `vf status` | per-stage checklist + current checkpoint + status |
@@ -83,6 +84,38 @@ file that implements it, plus the v0.2+ roadmap.
 
 
 
+
+
+## YouTube Automation (v0.2.7)
+
+`vf youtube` produces the text-only publishing package for the video:
+title, description, chapter timestamps, a thumbnail prompt, and a Shorts
+script beat.
+
+```bash
+node packages/cli/dist/index.js youtube "AI 思维链"
+# → projects/ai-思维链/youtube/title.txt
+# → projects/ai-思维链/youtube/description.md
+# → projects/ai-思维链/youtube/chapters.vtt   (WebVTT format — paste into YouTube Studio)
+# → projects/ai-思维链/youtube/package.yaml  (full structured metadata)
+# → projects/ai-思维链/youtube/thumbnail-prompt.txt  (describe what to design)
+# → projects/ai-思维链/youtube/shorts-hook.txt  (60-second Shorts beat)
+```
+
+### Workflow
+1. Run `vf youtube` after the project is FINAL_APPROVED.
+2. Copy `title.txt` and `description.md` into YouTube Studio's upload form.
+3. Paste `chapters.vtt` into the description box (YouTube parses it for
+   the chapter markers on the timeline).
+4. Use `thumbnail-prompt.txt` to design the thumbnail manually (the actual
+   thumbnail image generation lands in v0.2 phase 8 / Advanced Media).
+5. Record a separate Short from `shorts-hook.txt`.
+
+### What's NOT here yet
+Per doc §58 / Phase 9, YouTube automation also covers **thumbnail
+generation** and **Shorts clipping**. v0.2 phase 7 ships the text
+metadata only — the image generation and MP4 clipping ship in v0.2 phase 8
+(Advanced Media §60).
 
 ## Pi Extension (v0.2.6)
 

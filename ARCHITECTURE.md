@@ -117,6 +117,20 @@ The full pipeline is exposed two ways for agentic harnesses:
 Per doc §58 and §65, no agent (Pi or otherwise) has the final decision —
 every generator step ends with a human gate (`vf approve`).
 
+
+
+## v0.2 Phase 7 — YouTube Automation (shipped)
+
+| Package | Doc section | Role |
+| --- | --- | --- |
+| `@vf/youtube` | §58 / Phase 9 | YouTube Automation Agent: zod schema for the publishing package (title, description, chapters with MM:SS timestamps, thumbnail_prompt, shorts_hook); `callYouTube` agent with strict schema enforcement + sorted-chapters check; `chaptersToVtt` for upload-ready WebVTT. |
+
+CLI verb `vf youtube <project>` writes six files under `youtube/`:
+`title.txt`, `description.md`, `chapters.vtt` (WebVTT format), `package.yaml`
+(structured metadata), `thumbnail-prompt.txt`, `shorts-hook.txt` — plus a
+run record. Thumbnail image generation and Shorts MP4 clipping land in
+v0.2 phase 8 (Advanced Media §60) — this phase ships the text only.
+
 ## v0.2+ roadmap (doc §66)
 
 1. ~~Storyboard Agent~~ (✅ shipped v0.2 phase 1)
@@ -125,8 +139,8 @@ every generator step ends with a human gate (`vf approve`).
 4. ~~Voice + Subtitle~~ (✅ shipped v0.2 phase 4)
 5. ~~Review Agent~~ (✅ shipped v0.2 phase 5)
 6. ~~Pi Extension~~ (✅ shipped v0.2 phase 6)
-7. **YouTube Automation** (§59) — title / description / chapters / thumbnail / Shorts.
-8. **Advanced Media** (§60) — AI images, AI video, cloud rendering.
+7. ~~YouTube Automation~~ (✅ shipped v0.2 phase 7 — text metadata)
+8. **Advanced Media** (§60) — AI images, AI video, cloud rendering, Advanced Audio.
 
 Each future phase's entry point
 Each future phase's entry point into the v0.1 codebase is the `vf` CLI

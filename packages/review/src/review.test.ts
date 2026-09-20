@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { parse as parseYaml } from "yaml";
 import type { ChatMessage, ChatResponse, Provider } from "@vf/llm";
 import { ReviewPackageSchema, callReview, ReviewError } from "./index.js";
 
@@ -41,7 +42,7 @@ technical:
 
 describe("ReviewPackageSchema (todo 1) — §31", () => {
   it("accepts a valid review package with all 3 review sections", () => {
-    const parsed = require("yaml").parse(goodYaml) as unknown;
+    const parsed = parseYaml(goodYaml) as unknown;
     const r = ReviewPackageSchema.safeParse(parsed);
     expect(r.success).toBe(true);
     if (r.success) {
@@ -52,7 +53,7 @@ describe("ReviewPackageSchema (todo 1) — §31", () => {
   });
 
   it("rejects unknown keys (strict)", () => {
-    const bad = require("yaml").parse(
+    const bad = parseYaml(
       goodYaml.replace("overall: pass", "overall: pass\nextra: no"),
     ) as unknown;
     const r = ReviewPackageSchema.safeParse(bad);
@@ -60,7 +61,7 @@ describe("ReviewPackageSchema (todo 1) — §31", () => {
   });
 
   it("rejects invalid overall enum", () => {
-    const bad = require("yaml").parse(
+    const bad = parseYaml(
       goodYaml.replace("overall: pass", "overall: maybe"),
     ) as unknown;
     const r = ReviewPackageSchema.safeParse(bad);

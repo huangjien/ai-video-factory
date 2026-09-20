@@ -15,3 +15,7 @@ export {
   type VideoRequest,
   type VideoResult,
 } from "./video.js";
+export {
+  MiniMaxVideoProvider,
+  type MiniMaxVideoProviderOptions,
+} from "./minimax-video.js";

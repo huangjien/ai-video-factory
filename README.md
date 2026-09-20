@@ -126,12 +126,22 @@ hash-derived solid color.
 ### Shorts clip — `vf shorts <project>`
 ```bash
 node packages/cli/dist/index.js final    # produces output/final-faststart.mp4
-node packages/cli/dist/index.js shorts "AI 思维链"
-# → projects/ai-思维链/youtube/shorts.mp4 (9:16, 1080x1920, 60s by default)
+node packages/cli/dist/index.js shorts "AI 思维链"      # mock (default, mechanical ffmpeg)
+node packages/cli/dist/index.js shorts "AI 思维链" --provider minimax  # REAL AI video
 ```
-Pure mechanical — uses ffmpeg to crop and scale the existing final mp4 to
-vertical 9:16. Custom start/duration via `--start <seconds>` and
-`--duration <seconds>`.
+**v0.3 phase 2** adds the **MiniMaxVideoProvider** (`MiniMax-Hailuo-2.3`,
+image-to-video). The minimax path:
+- Reads `youtube/thumbnail.{png,jpg}` as the first-frame image (base64)
+- Reads `youtube/shorts-hook.txt` as the prompt
+- Calls `POST /v1/video_generation`, polls `GET /v1/query/video_generation`
+  until `status=Success`, downloads from `/v1/files/{file_id}`
+- Surfaces MiniMax envelope errors readably (e.g. `2013: model doesn't
+  support duration 5s, supported: 6s, 10s`)
+
+Needs `MINIMAX_API_KEY` and video quota on your MiniMax plan. The
+default `mock` path remains the offline ffmpeg-based clip (back-compat with
+v0.2) — use `--provider minimax` only when you have a thumbnail image
+and video quota available.
 
 ### Full v0.2 pipeline (now complete)
 ```

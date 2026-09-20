@@ -51,6 +51,7 @@ writes a YAML record to `runs/<run-id>.yaml` and updates `state.yaml`.
 | `vf research <topic>` | (v0.2.2) AI-gather facts + sources + claims via MiniMax/GLM (+ optional web search) |
 | `vf script <topic>` | (v0.2.3) AI-draft a 7-section script (Hook→Conclusion) via MiniMax/GLM (optionally consumes `vf research` via `--from-research`) |
 | `vf audio <project>` | (v0.2.4) Synthesize per-scene voiceover via Edge TTS + write `captions/<lang>.srt` (`--fake` for offline test) |
+| `vf review <project>` | (v0.2.5) Generate Content/Visual/Technical review YAMLs via MiniMax/GLM (read-only — never auto-gates) |
 | `vf storyboard <topic>` | (v0.2) AI-draft a storyboard from a topic via MiniMax/GLM (optionally consumes `vf research` via `--from-research`) |
 | `vf validate <file>` | shape + asset + registry + audio/caption check |
 | `vf status` | per-stage checklist + current checkpoint + status |
@@ -80,6 +81,31 @@ file that implements it, plus the v0.2+ roadmap.
 
 
 
+
+
+## Review Agent (v0.2.5)
+
+`vf review` produces three review YAMLs — Content / Visual / Technical —
+before you publish. Per doc §31 each section has a per-field verdict
+(`ok` / `warn` / `fail`) plus an `overall` verdict (`pass` / `warn` /
+`fail`); the agent lists concrete observations in array fields (e.g.
+`unsupported_claims`, `missing_assets`).
+
+```bash
+node packages/cli/dist/index.js review "AI 思维链"
+# → projects/ai-思维链/review/{content-review,visual-review,technical-review}.yaml
+# → runs/<id>.yaml with provider/model/prompt_hash/tokens
+```
+
+The Review Agent is read-only — it never overwrites a human edit. Read the
+three YAMLs, decide whether to fix the script/storyboard, or run
+`vf preview` and proceed. **No automated gate is applied** (doc §32: agents
+never have the final decision; only the human does).
+
+### When to run
+Run `vf review` after `vf script` + `vf audio` and before `vf preview`. If
+any section's overall is `warn` or `fail`, fix the underlying issue (the
+observations tell you what), then re-run.
 
 ## Voice + Subtitle (v0.2.4)
 

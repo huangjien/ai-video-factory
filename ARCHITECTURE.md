@@ -84,13 +84,27 @@ add `audio: assets/audio/scene-N.wav` to the corresponding scene in
 `storyboard.yaml` and `vf preview` mounts them via Remotion's `<Audio>`
 automatically.
 
+
+
+## v0.2 Phase 5 — Review Agent (shipped)
+
+| Package | Doc section | Role |
+| --- | --- | --- |
+| `@vf/review` | §31 / Phase 7 | Review Agent: zod schemas for the 3 review sections (Content/Visual/Technical with per-field + overall verdicts); `callReview` agent that produces a strict `ReviewPackage` from (storyboard, script, claims) inputs. |
+
+CLI verb `vf review <project>` writes `review/{content-review,visual-review,technical-review}.yaml`
+plus a run record. **Read-only**: the agent never modifies the project
+(doc §32 — humans always have the final decision). The agent's overall
+verdicts (`pass` / `warn` / `fail`) are advisory signals the human uses
+to decide whether to fix the project and re-run.
+
 ## v0.2+ roadmap (doc §66)
 
 1. ~~Storyboard Agent~~ (✅ shipped v0.2 phase 1)
 2. ~~Research Agent~~ (✅ shipped v0.2 phase 2)
 3. ~~Script Agent~~ (✅ shipped v0.2 phase 3)
 4. ~~Voice + Subtitle~~ (✅ shipped v0.2 phase 4)
-5. **Review Agent** (§57) — content / visual / technical review (still human-gated).
+5. ~~Review Agent~~ (✅ shipped v0.2 phase 5)
 6. **Pi Extension** (§58) — wrap the `vf` CLI as `/video` subcommands for the Pi harness.
 7. **YouTube Automation** (§59) — title / description / chapters / thumbnail / Shorts.
 8. **Advanced Media** (§60) — AI images, AI video, cloud rendering.

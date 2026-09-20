@@ -18,3 +18,8 @@ export {
   type CallResearchResult,
   type WebSearchTool,
 } from "./agent.js";
+export {
+  MiniMaxWebSearch,
+  type MiniMaxWebSearchOptions,
+  type WebSearchError,
+} from "./web-search.js";

@@ -22,6 +22,7 @@
     "@vf/media": "*",
     "commander": "^13.0.0",
     "@vf/workflow": "*",
-    "@vf/video-renderer": "*"
+    "@vf/video-renderer": "*",
+    "@vf/research": "*"
   }
 }

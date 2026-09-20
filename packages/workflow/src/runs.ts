@@ -5,10 +5,13 @@ import type { Stage } from "./states.js";
 
 /** Run record fields per doc §62.2 (lines 2231-2245).
  * Provider/model/token fields are present when the run involved an external
- * model call (v0.2+); v0.1 records without these remain valid. */
+ * model call (v0.2+); v0.1 records without these remain valid.
+ * `stage` is a free-form label — the workflow state machine uses `Stage`
+ * separately; run records may carry any string (e.g. "research" for an
+ * upstream agent run that's not part of the workflow sequence). */
 export interface RunRecord {
   run_id: string;
-  stage: Stage;
+  stage: string;
   status: "succeeded" | "failed" | "in_progress";
   actor: "human" | "agent" | "tool";
   tool: string;

@@ -115,8 +115,6 @@ describe("callResearch (todo 3) — §55", () => {
       { web },
     );
     expect(r.output.meta.web_search_used).toBe(true);
-    // verify prompt passed webContext to provider
-    const lastMessages = (p as unknown as { /* see test */ }).constructor;
     expect(p.calls).toBe(1);
   });
 });

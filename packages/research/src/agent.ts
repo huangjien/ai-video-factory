@@ -51,9 +51,9 @@ export async function callResearch(
     try {
       webContext = await deps.web.search(deps.webQuery ?? input.topic);
       webSearchUsed = true;
-    } catch (err) {
-      webSearchFailed = true;
-    }
+  } catch {
+    webSearchFailed = true;
+  }
   }
   const messages = buildMessages({
     ...input,

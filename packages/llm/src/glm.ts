@@ -23,7 +23,10 @@ export class GLMProvider implements Provider {
   private readonly defaultModel: string;
 
   constructor(opts: GLMProviderOptions = {}) {
-    this.baseUrl = opts.baseUrl ?? DEFAULT_BASE;
+    this.baseUrl =
+      opts.baseUrl ??
+      process.env["GLM_BASE_URL"] ??
+      DEFAULT_BASE;
     this.defaultModel = opts.defaultModel ?? DEFAULT_MODEL;
   }
 

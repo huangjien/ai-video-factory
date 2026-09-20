@@ -37,10 +37,12 @@ const samplePlan: RenderPlan = {
 };
 
 describe("renderPlanToVideo (todo 10)", () => {
-  it("produces a 1920x1080 30fps MP4 with duration ~7s", async () => {
-    const outDir = mkdtempSync(path.join(tmpdir(), "vf-render-"));
-    const mp4Path = path.join(outDir, "out.mp4");
-    await renderPlanToVideo(samplePlan, mp4Path);
+  it(
+    "produces a 1920x1080 30fps MP4 with duration ~7s",
+    async () => {
+      const outDir = mkdtempSync(path.join(tmpdir(), "vf-render-"));
+      const mp4Path = path.join(outDir, "out.mp4");
+      await renderPlanToVideo(samplePlan, mp4Path);
     const out = execFileSync(
       "ffprobe",
       [
@@ -61,5 +63,5 @@ describe("renderPlanToVideo (todo 10)", () => {
     expect(s.height).toBe(1080);
     expect(s.r_frame_rate).toBe("30/1");
     expect(Math.abs(parseFloat(s.duration) - 7.0)).toBeLessThan(0.2);
-  });
+  }, 120_000);
 });

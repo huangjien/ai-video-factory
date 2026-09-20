@@ -8,3 +8,9 @@ export {
   type Storyboard,
 } from "./schema.js";
 export { validateStoryboard, type ValidationResult } from "./validate.js";
+export {
+  validateProject,
+  type ComponentRegistry,
+  type ComponentRegistryEntry,
+  type ValidateProjectOptions,
+} from "./validate-project.js";

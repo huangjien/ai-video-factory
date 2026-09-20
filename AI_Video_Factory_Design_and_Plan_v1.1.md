@@ -1716,7 +1716,7 @@ GLM Coding Plan
 
 ``` text
 LLM usage
-TTS
+TTS（核心功能不要求；edge-tts 可选）
 Image generation
 AI video generation
 ```
@@ -2177,6 +2177,15 @@ Web Dashboard
 ```
 
 Pi、MiniMax 和 GLM 属于 v0.2 的集成目标。v0.1 可以通过固定的本地输入文件和 CLI 验证完整渲染链，避免外部 API 阻塞核心工程。
+
+TTS 演进策略：
+
+``` text
+v0.1：edge-tts optional for prototype
+v0.2：provider abstraction
+```
+
+v0.1 的 `edge-tts` 只作为可选原型工具，不是渲染闭环的硬依赖；生成失败时仍然可以使用预先准备的本地音频完成 benchmark。v0.2 开始通过统一 provider 接口隔离具体 TTS 服务，便于替换 edge-tts、Azure Speech 或其他正式服务。
 
 v0.1 的唯一 benchmark：
 

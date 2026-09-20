@@ -1,0 +1,47 @@
+{
+  "name": "@vf/vdsl",
+  "version": "0.1.0",
+  "files": ["dist"],
+  "publishConfig": { "access": "public" },
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./schema.js": {
+      "types": "./dist/schema.d.ts",
+      "default": "./dist/schema.js"
+    },
+    "./validate.js": {
+      "types": "./dist/validate.d.ts",
+      "default": "./dist/validate.js"
+    },
+    "./compile.js": {
+      "types": "./dist/compile.d.ts",
+      "default": "./dist/compile.js"
+    },
+    "./errors.js": {
+      "types": "./dist/errors.d.ts",
+      "default": "./dist/errors.js"
+    },
+    "./parse.js": {
+      "types": "./dist/parse.d.ts",
+      "default": "./dist/parse.js"
+    },
+    "./validate-project.js": {
+      "types": "./dist/validate-project.d.ts",
+      "default": "./dist/validate-project.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "yaml": "^2.7.0",
+    "zod": "^3.25.0",
+    "@vf/media": "*"
+  }
+}

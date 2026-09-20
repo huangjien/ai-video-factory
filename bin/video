@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+# /video — thin wrapper around the vf CLI (doc §58 "Pi Extension").
+# Maps `video <verb> [args...]` to `node packages/cli/dist/index.js <verb> [args...]`.
+# Use from OpenCode/Pi agents, shell, or Makefile. Errors propagate via exit code.
+set -euo pipefail
+
+if [[ "${1:-}" == "" || "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
+  cat <<'USAGE'
+video — AI Video Factory CLI wrapper
+
+Usage:  video <verb> [args...]
+
+Example:
+  video new "demo"
+  video research "AI 思维链"
+  video script "AI 思维链" --from-research projects/ai-思维链/research
+  video storyboard "AI 思维链" --from-research ...
+  vf_audio_short="audio"; video audio "AI 思维链"
+  video review "AI 思维链"
+  video preview --cwd projects/demo
+  video status --cwd projects/demo
+  video approve review --cwd projects/demo
+  video final --cwd projects/demo
+
+All arguments are forwarded to the `vf` CLI under the hood.
+USAGE
+  exit 0
+fi
+
+exec node "$(cd "$(dirname "$0")/.." && pwd)/packages/cli/dist/index.js" "$@"

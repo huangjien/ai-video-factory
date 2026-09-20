@@ -1,0 +1,24 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "outDir": "dist",
+    "rootDir": "src"
+  },
+  "include": [
+    "src"
+  ],
+  "references": [
+    {
+      "path": "../../packages/vdsl"
+    },
+    {
+      "path": "../../packages/video-components"
+    },
+    {
+      "path": "../../packages/media"
+    },
+    {
+      "path": "../../packages/workflow"
+    }
+  ]
+}

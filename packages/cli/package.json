@@ -1,0 +1,44 @@
+{
+  "name": "@vf/cli",
+  "version": "0.1.0",
+  "description": "AI Video Factory command-line interface",
+  "type": "module",
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json"
+  },
+  "bin": {
+    "vf": "dist/index.js"
+  },
+  "dependencies": {
+    "@vf/vdsl": "*",
+    "@vf/video-components": "*",
+    "@vf/media": "*",
+    "commander": "^13.0.0",
+    "@vf/workflow": "*",
+    "@vf/video-renderer": "*",
+    "@vf/research": "*",
+    "@vf/script": "*",
+    "@vf/llm": "*",
+    "@vf/tts": "*",
+    "@vf/review": "*",
+    "@vf/youtube": "*",
+    "@vf/media-generators": "*"
+  }
+}

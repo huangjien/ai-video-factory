@@ -1,0 +1,36 @@
+{
+  "name": "video-agent",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "AI Video Factory \u2014 structured-content-to-video production system (v0.1)",
+  "workspaces": [
+    "packages/*",
+    "projects/*"
+  ],
+  "scripts": {
+    "build": "tsc -b",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test": "vitest run",
+    "render:hello": "npm run render:hello -w packages/video-renderer",
+    "publish:packages:dry-run": "npm run build && npm publish --workspaces --access public --dry-run",
+    "publish:packages": "npm run build && npm publish --workspaces --access public",
+    "benchmark:verify": "node scripts/benchmark-verify.mjs",
+    "acceptance": "node scripts/acceptance.mjs"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.20.0",
+    "@types/node": "^24.0.0",
+    "eslint": "^9.20.0",
+    "globals": "^15.15.0",
+    "prettier": "^3.5.0",
+    "typescript": "^5.7.0",
+    "typescript-eslint": "^8.24.0",
+    "vitest": "^3.0.0"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

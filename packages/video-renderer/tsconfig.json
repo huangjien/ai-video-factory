@@ -6,5 +6,18 @@
     "module": "esnext",
     "moduleResolution": "bundler"
   },
-  "include": ["src"]
+  "include": [
+    "src"
+  ],
+  "references": [
+    {
+      "path": "../../packages/vdsl"
+    },
+    {
+      "path": "../../packages/video-components"
+    },
+    {
+      "path": "../../packages/media"
+    }
+  ]
 }

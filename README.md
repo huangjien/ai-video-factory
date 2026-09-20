@@ -50,6 +50,7 @@ writes a YAML record to `runs/<run-id>.yaml` and updates `state.yaml`.
 | `vf new <id>` | scaffold a project under `projects/<id>/` |
 | `vf research <topic>` | (v0.2.2) AI-gather facts + sources + claims via MiniMax/GLM (+ optional web search) |
 | `vf script <topic>` | (v0.2.3) AI-draft a 7-section script (Hook→Conclusion) via MiniMax/GLM (optionally consumes `vf research` via `--from-research`) |
+| `vf audio <project>` | (v0.2.4) Synthesize per-scene voiceover via Edge TTS + write `captions/<lang>.srt` (`--fake` for offline test) |
 | `vf storyboard <topic>` | (v0.2) AI-draft a storyboard from a topic via MiniMax/GLM (optionally consumes `vf research` via `--from-research`) |
 | `vf validate <file>` | shape + asset + registry + audio/caption check |
 | `vf status` | per-stage checklist + current checkpoint + status |
@@ -78,6 +79,35 @@ file that implements it, plus the v0.2+ roadmap.
 
 
 
+
+
+## Voice + Subtitle (v0.2.4)
+
+`vf audio` synthesizes real voiceover for the video using the Edge TTS
+service (no API key needed) and writes per-scene WAVs + a captions file.
+
+```bash
+node packages/cli/dist/index.js script "AI 思维链"   # produces script/script.zh-CN.md
+node packages/cli/dist/index.js audio "AI 思维链"   # synth + srt
+# → projects/ai-思维链/assets/audio/scene-N.wav (one per scene, exact duration)
+# → projects/ai-思维链/captions/zh-CN.srt
+```
+
+### Provider abstraction
+- **`EdgeTTSProvider`** (default) — Microsoft Edge online TTS via
+  `edge-tts-universal`. No API key. May fail offline; gracefully errors out
+  with the provider name + status.
+- **`FakeTTSProvider`** — silent WAV for tests + CI. Pass `--fake` to `vf
+  audio` to use it (no network).
+
+### Wiring audio into the preview
+Once `vf audio` has produced per-scene WAVs, add `audio: assets/audio/scene-NN.wav`
+to the corresponding scene's `narration:` block in `storyboard.yaml`. The
+existing `vf preview` picks up real audio automatically (Remotion mounts
+the `<Audio>` component for any scene with `audio` set).
+
+### Cost
+Edge TTS is free. There is no per-character or per-request cost.
 
 ## Script Agent (v0.2.3)
 

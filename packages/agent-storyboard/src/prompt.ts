@@ -6,6 +6,7 @@ export interface AgentInput {
   duration: number;
   language: "zh-CN" | "en-US";
   style: string;
+  researchContext?: { markdown: string; claimSummary: string } | undefined;
 }
 
 const FEWSHOT_SAMPLE = `schema_version: "0.1"
@@ -63,15 +64,23 @@ ${FEWSHOT_SAMPLE}
 ${FLOWCHART_EXAMPLE}`;
 
 export function buildMessages(input: AgentInput): ChatMessage[] {
-  const user = `Topic: ${input.topic}
-Audience: ${input.audience}
-Language: ${input.language}
-Total duration target (seconds): ${input.duration}
-Style: ${input.style}
-
-Produce the VDSL 0.1 storyboard YAML.`;
+  const userParts = [
+    `Topic: ${input.topic}`,
+    `Audience: ${input.audience}`,
+    `Language: ${input.language}`,
+    `Total duration target (seconds): ${input.duration}`,
+    `Style: ${input.style}`,
+  ];
+  if (input.researchContext) {
+    userParts.push(
+      "\n## Supporting research (from approved `vf research` output — supporting evidence, not a replacement for your draft)",
+      input.researchContext.markdown.slice(0, 2000),
+      "\n### Key claims to incorporate or counter",
+      input.researchContext.claimSummary.slice(0, 1500),
+    );
+  }
   return [
     { role: "system", content: SYSTEM_PROMPT },
-    { role: "user", content: user },
+    { role: "user", content: userParts.join("\n") },
   ];
 }

@@ -119,4 +119,33 @@ describe("vf storyboard end-to-end (todo 6) — mock MiniMax", () => {
     expect(tree.includes("test-key-do-not-leak")).toBe(false);
     expect(lastBody?.includes("test-key-do-not-leak")).toBe(false);
   });
+
+  it("injects research context when --from-research points at a real research dir", async () => {
+    const cwd = mkdtempSync(path.join(tmpdir(), "vf-sb-"));
+    process.env["MINIMAX_API_KEY"] = "test-key-do-not-leak";
+    process.env["MINIMAX_API_HOST"] = baseUrl;
+    // Set up a fake research/ dir at the project root
+    const projectRoot = path.join(cwd, "projects", "demo");
+    const { promises: fs } = await import("node:fs");
+    await fs.mkdir(path.join(projectRoot, "research"), { recursive: true });
+    await fs.writeFile(
+      path.join(projectRoot, "research", "research.md"),
+      "# Research\n\nThis is a unique research marker STRING-ABC-123 about Chain-of-Thought.",
+      "utf8",
+    );
+    await fs.writeFile(
+      path.join(projectRoot, "research", "claims.yaml"),
+      "claims:\n  - claim: CoT improves reasoning accuracy\n    status: fact\n    sources: [s1]\n",
+      "utf8",
+    );
+    const code = await runStoryboard({
+      topic: "demo",
+      cwd,
+      fromResearch: path.join(projectRoot, "research"),
+    });
+    expect(code).toBe(0);
+    // The mock server captured the request body in lastBody — the research
+    // marker should appear there because the storyboard prompt includes it.
+    expect(lastBody).toContain("STRING-ABC-123");
+  });
 });

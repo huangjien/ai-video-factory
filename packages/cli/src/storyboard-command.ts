@@ -19,6 +19,7 @@ export interface StoryboardOptions {
   duration?: number | undefined;
   audience?: string | undefined;
   style?: string | undefined;
+  fromResearch?: string | undefined;
 }
 
 function slugify(s: string): string {
@@ -67,6 +68,36 @@ export async function runStoryboard(opts: StoryboardOptions): Promise<number> {
   const provider = providerInstance(chosenName);
   const model = chosenName === "glm" ? "glm-4.6" : "MiniMax-M2.7";
 
+  // Optional research context (v0.2 phase 2)
+  let researchContext:
+    | { markdown: string; claimSummary: string }
+    | undefined;
+  if (opts.fromResearch) {
+    const { readFile } = await import("node:fs/promises");
+    let researchMarkdown: string;
+    let claimsYaml: string;
+    try {
+      researchMarkdown = await readFile(
+        path.join(opts.fromResearch, "research.md"),
+        "utf8",
+      );
+      claimsYaml = await readFile(
+        path.join(opts.fromResearch, "claims.yaml"),
+        "utf8",
+      );
+    } catch {
+      console.error(
+        `\u2717 --from-research dir missing research.md or claims.yaml: ${opts.fromResearch}`,
+      );
+      console.error(`  run \`vf research <topic>\` first to produce these files`);
+      return 1;
+    }
+    researchContext = {
+      markdown: researchMarkdown,
+      claimSummary: summarizeClaims(claimsYaml),
+    };
+  }
+
   let result;
   try {
     result = await callAgent(
@@ -76,6 +107,7 @@ export async function runStoryboard(opts: StoryboardOptions): Promise<number> {
         duration,
         language: lang,
         style,
+        ...(researchContext ? { researchContext } : {}),
       },
       provider,
       { model, temperature: 0.7 },
@@ -146,6 +178,18 @@ export async function runStoryboard(opts: StoryboardOptions): Promise<number> {
 function estimateCost(provider: string, usage: { input: number; output: number }): number {
   const rate = provider === "glm" ? 0.0008 : 0.001; // $0.8/M input, $1/M output roughly
   return (usage.input / 1000) * rate + (usage.output / 1000) * rate;
+}
+
+/** Compact summary of claims.yaml for the storyboard prompt. */
+function summarizeClaims(yamlText: string): string {
+  const lines: string[] = [];
+  for (const raw of yamlText.split("\n")) {
+    const m = raw.match(/^\s*-\s*claim:\s*(.+)$/);
+    if (m && m[1]) {
+      lines.push(`- ${m[1].trim()}`);
+    }
+  }
+  return lines.join("\n");
 }
 
 export type { Storyboard };

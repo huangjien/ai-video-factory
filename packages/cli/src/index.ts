@@ -67,6 +67,7 @@ program
   .option("--duration <seconds>", "total duration target", (v) => parseInt(v, 10))
   .option("--audience <text>", "target audience (default: developers)")
   .option("--style <text>", "visual style (default: dark-tech)")
+  .option("--from-research <dir>", "consume approved research from this directory")
   .action(
     async (
       topic: string,
@@ -77,6 +78,7 @@ program
         duration?: number;
         audience?: string;
         style?: string;
+        fromResearch?: string;
       },
     ) => {
       process.exitCode = await runStoryboard({
@@ -87,6 +89,7 @@ program
         ...(opts.duration !== undefined ? { duration: opts.duration } : {}),
         ...(opts.audience !== undefined ? { audience: opts.audience } : {}),
         ...(opts.style !== undefined ? { style: opts.style } : {}),
+        ...(opts.fromResearch !== undefined ? { fromResearch: opts.fromResearch } : {}),
       });
     },
   );

@@ -29,7 +29,7 @@ export interface RunRecord {
   estimated_cost_usd?: number | undefined;
 }
 
-export function formatRunId(stage: Stage, now = new Date()): string {
+export function formatRunId(stage: string, now = new Date()): string {
   const seq = Math.floor(Math.random() * 1000)
     .toString()
     .padStart(3, "0");
@@ -92,10 +92,12 @@ export async function withRetry<T>(
 }
 
 /** Resume: re-runs from the last successful run's stage; never restarts
- * a project from scratch. (§62.1 line 2224) */
+ * a project from scratch. (§62.1 line 2224). Returns the free-form stage
+ * label (any string) — callers decide whether the value is a known
+ * workflow stage. */
 export async function lastSuccessfulStage(
   projectRoot: string,
-): Promise<Stage | null> {
+): Promise<string | null> {
   const records = await listRuns(projectRoot);
   for (let i = records.length - 1; i >= 0; i--) {
     const r = records[i];

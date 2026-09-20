@@ -20,6 +20,8 @@
     "@vf/vdsl": "*",
     "@vf/video-components": "*",
     "@vf/media": "*",
-    "commander": "^13.0.0"
+    "commander": "^13.0.0",
+    "@vf/workflow": "*",
+    "@vf/video-renderer": "*"
   }
 }

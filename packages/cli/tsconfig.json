@@ -4,7 +4,9 @@
     "outDir": "dist",
     "rootDir": "src"
   },
-  "include": ["src"],
+  "include": [
+    "src"
+  ],
   "references": [
     {
       "path": "../../packages/vdsl"
@@ -14,6 +16,9 @@
     },
     {
       "path": "../../packages/media"
+    },
+    {
+      "path": "../../packages/workflow"
     }
   ]
 }

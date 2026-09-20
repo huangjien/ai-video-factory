@@ -1,4 +1,3 @@
-import { registerRoot } from "remotion";
-import { HelloRoot } from "./HelloRoot";
-
-registerRoot(HelloRoot);
+export { Root } from "./Root.js";
+export type { RootProps } from "./Root.js";
+export { faststart, renderPlanToVideo } from "./render.js";

@@ -6,3 +6,4 @@ dist/
 .omo/tmp/
 .remotion/
 *.log
+.omo/run-continuation/

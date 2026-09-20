@@ -3,7 +3,11 @@ import { createHash } from "node:crypto";
 import { execSync } from "node:child_process";
 import path from "node:path";
 import { existsSync } from "node:fs";
-import { MockImageProvider, type ImageProvider } from "@vf/media-generators";
+import {
+  MiniMaxImageProvider,
+  MockImageProvider,
+  type ImageProvider,
+} from "@vf/media-generators";
 import { formatRunId } from "@vf/workflow";
 
 export interface ThumbnailOptions {
@@ -11,7 +15,7 @@ export interface ThumbnailOptions {
   cwd?: string | undefined;
   width?: number;
   height?: number;
-  providerName?: string;
+  providerName?: "mock" | "minimax" | undefined;
 }
 
 function safeGitHead(cwd: string): string {
@@ -46,14 +50,29 @@ export async function runThumbnail(opts: ThumbnailOptions): Promise<number> {
   const width = opts.width ?? 1280;
   const height = opts.height ?? 720;
 
-  // v0.2 phase 8: only the mock provider ships. Real providers (MiniMax
-  // image, image-to-video) are a v0.3 hook — the ImageProvider interface is
-  // the contract that holds.
-  const provider: ImageProvider = new MockImageProvider({ width, height });
-  const result = await provider.generate({ prompt, width, height });
+  // v0.3: `minimax` uses the real image API (image-01, needs
+  // MINIMAX_API_KEY); `mock` (default) keeps the offline deterministic path.
+  const provider: ImageProvider =
+    opts.providerName === "minimax"
+      ? new MiniMaxImageProvider()
+      : new MockImageProvider({ width, height });
+  let result;
+  try {
+    result = await provider.generate({ prompt, width, height });
+  } catch (err) {
+    console.error(
+      `\u2717 ${provider.name} thumbnail generation failed:`,
+      (err as Error).message,
+    );
+    return 1;
+  }
 
   await mkdir(path.join(projectRoot, "youtube"), { recursive: true });
-  const thumbPath = path.join(projectRoot, "youtube", "thumbnail.png");
+  const thumbPath = path.join(
+    projectRoot,
+    "youtube",
+    result.contentType === "image/jpeg" ? "thumbnail.jpg" : "thumbnail.png",
+  );
   await writeFile(thumbPath, result.bytes);
 
   // Run record (provider: mock, no LLM tokens)
@@ -68,7 +87,11 @@ export async function runThumbnail(opts: ThumbnailOptions): Promise<number> {
     tool: provider.name,
     input_commit: safeGitHead(projectRoot),
     input_files: ["youtube/thumbnail-prompt.txt"],
-    output_files: ["youtube/thumbnail.png"],
+    output_files: [
+      result.contentType === "image/jpeg"
+        ? "youtube/thumbnail.jpg"
+        : "youtube/thumbnail.png",
+    ],
     created_at: new Date().toISOString(),
     duration_ms: 0,
     provider: provider.name,
@@ -80,8 +103,8 @@ export async function runThumbnail(opts: ThumbnailOptions): Promise<number> {
   const { writeRun } = await import("@vf/workflow");
   await writeRun(projectRoot, record);
 
-  console.log(`\u2713 generated ${opts.project}/youtube/thumbnail.png`);
+  console.log(`\u2713 generated ${opts.project}/youtube/${path.basename(thumbPath)}`);
   console.log(`  provider=${provider.name}  size=${width}x${height}  prompt_hash=${promptHash.slice(0, 16)}…`);
-  console.log(`  next: upload thumbnail.png to YouTube Studio`);
+  console.log(`  next: upload ${path.basename(thumbPath)} to YouTube Studio`);
   return 0;
 }

@@ -184,16 +184,23 @@ program
   .option("--cwd <dir>", "base directory for the project")
   .option("--width <px>", "thumbnail width (default 1280)", (v) => parseInt(v, 10))
   .option("--height <px>", "thumbnail height (default 720)", (v) => parseInt(v, 10))
+  .option("--provider <name>", "image provider: mock|minimax (default mock — minimax needs MINIMAX_API_KEY)")
   .action(
     async (
       project: string,
-      opts: { cwd?: string; width?: number; height?: number },
+      opts: {
+        cwd?: string;
+        width?: number;
+        height?: number;
+        provider?: "mock" | "minimax";
+      },
     ) => {
       process.exitCode = await runThumbnail({
         project,
         ...(opts.cwd !== undefined ? { cwd: opts.cwd } : {}),
         ...(opts.width !== undefined ? { width: opts.width } : {}),
         ...(opts.height !== undefined ? { height: opts.height } : {}),
+        ...(opts.provider !== undefined ? { providerName: opts.provider } : {}),
       });
     },
   );
@@ -202,18 +209,20 @@ program
   .command("shorts")
   .argument("<project>", "project id to clip a YouTube Short from")
   .option("--cwd <dir>", "base directory for the project")
-  .option("--duration <seconds>", "short clip length in seconds (default 60)", (v) => parseInt(v, 10))
-  .option("--start <seconds>", "start offset into the final.mp4 (default 0)", (v) => parseInt(v, 10))
+  .option("--duration <seconds>", "short clip length in seconds (default: 60 for mock; 5 for minimax)", (v) => parseInt(v, 10))
+  .option("--start <seconds>", "start offset into the final.mp4 (mock provider only, default 0)", (v) => parseInt(v, 10))
+  .option("--provider <name>", "video provider: mock|minimax (default mock — minimax needs MINIMAX_API_KEY)")
   .action(
     async (
       project: string,
-      opts: { cwd?: string; duration?: number; start?: number },
+      opts: { cwd?: string; duration?: number; start?: number; provider?: "mock" | "minimax" },
     ) => {
       process.exitCode = await runShorts({
         project,
         ...(opts.cwd !== undefined ? { cwd: opts.cwd } : {}),
         ...(opts.duration !== undefined ? { durationSec: opts.duration } : {}),
         ...(opts.start !== undefined ? { startSec: opts.start } : {}),
+        ...(opts.provider !== undefined ? { providerName: opts.provider } : {}),
       });
     },
   );

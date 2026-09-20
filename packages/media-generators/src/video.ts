@@ -3,6 +3,12 @@ export interface VideoRequest {
   width: number;
   height: number;
   durationSec: number;
+  /**
+   * Required by image-to-video providers (e.g. MiniMax Hailuo).
+   * Either a public URL or a `data:image/...;base64,...` Data URL.
+   * Providers that don't need a first frame can ignore this field.
+   */
+  firstFrameImageUrl?: string | undefined;
 }
 
 export interface VideoResult {

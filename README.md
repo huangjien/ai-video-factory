@@ -111,23 +111,37 @@ the last phase of v0.2.
 ### Thumbnail — `vf thumbnail <project>`
 ```bash
 node packages/cli/dist/index.js youtube "AI 思维链"   # produces thumbnail-prompt.txt
-node packages/cli/dist/index.js thumbnail "AI 思维链"
-# → projects/ai-思维链/youtube/thumbnail.png (1280x720 PNG)
+node packages/cli/dist/index.js thumbnail "AI 思维链"  # mock (default, offline)
+node packages/cli/dist/index.js thumbnail "AI 思维链" --provider minimax  # REAL AI image
 ```
-v0.2 ships only the **MockImageProvider** — it produces a deterministic
-solid-color PNG whose hue is derived from the prompt hash. Real image
-generators (e.g. MiniMax image) plug into the `ImageProvider` interface
-and land in v0.3.
+**v0.3 phase 1** adds the **MiniMaxImageProvider** (`image-01` model):
+real AI-generated thumbnails via `POST /v1/image_generation`, base64
+response, aspect-ratio mapping (1280x720 → `16:9`). Needs
+`MINIMAX_API_KEY` and image quota on your MiniMax plan — quota/auth
+failures are surfaced readably (envelope status 2056 etc.). Output is
+`thumbnail.jpg` (JPEG) for the real provider, `thumbnail.png` for the mock.
+The **MockImageProvider** stays the default — deterministic, offline,
+hash-derived solid color.
 
 ### Shorts clip — `vf shorts <project>`
 ```bash
 node packages/cli/dist/index.js final    # produces output/final-faststart.mp4
-node packages/cli/dist/index.js shorts "AI 思维链"
-# → projects/ai-思维链/youtube/shorts.mp4 (9:16, 1080x1920, 60s by default)
+node packages/cli/dist/index.js shorts "AI 思维链"      # mock (default, mechanical ffmpeg)
+node packages/cli/dist/index.js shorts "AI 思维链" --provider minimax  # REAL AI video
 ```
-Pure mechanical — uses ffmpeg to crop and scale the existing final mp4 to
-vertical 9:16. Custom start/duration via `--start <seconds>` and
-`--duration <seconds>`.
+**v0.3 phase 2** adds the **MiniMaxVideoProvider** (`MiniMax-Hailuo-2.3`,
+image-to-video). The minimax path:
+- Reads `youtube/thumbnail.{png,jpg}` as the first-frame image (base64)
+- Reads `youtube/shorts-hook.txt` as the prompt
+- Calls `POST /v1/video_generation`, polls `GET /v1/query/video_generation`
+  until `status=Success`, downloads from `/v1/files/{file_id}`
+- Surfaces MiniMax envelope errors readably (e.g. `2013: model doesn't
+  support duration 5s, supported: 6s, 10s`)
+
+Needs `MINIMAX_API_KEY` and video quota on your MiniMax plan. The
+default `mock` path remains the offline ffmpeg-based clip (back-compat with
+v0.2) — use `--provider minimax` only when you have a thumbnail image
+and video quota available.
 
 ### Full v0.2 pipeline (now complete)
 ```

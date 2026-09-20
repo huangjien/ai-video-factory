@@ -133,21 +133,37 @@ v0.2 phase 8 (Advanced Media §60) — this phase ships the text only.
 
 
 
-## v0.2 Phase 8 — Advanced Media (shipped — final v0.2 phase)
+
+
+## v0.3 Phase 2 — Real AI Video Generation (shipped)
 
 | Package | Doc section | Role |
 | --- | --- | --- |
-| `@vf/media-generators` | §60 / Phase 10 | ImageProvider + VideoProvider abstractions; deterministic `MockImageProvider` (no-deps PNG synthesis via hash-derived solid color) + `MockVideoProvider` (placeholder text payload). Real image/video generators plug in via the interfaces — v0.3 hook. |
+| `@vf/media-generators` (extended) | §60 / Phase 10 | **MiniMaxVideoProvider** (image-to-video via `MiniMax-Hailuo-2.3`) implements the full async flow: `POST /v1/video_generation` → `task_id` → poll `GET /v1/query/video_generation` until `status=Success` → download `GET /v1/files/{file_id}`. Honours MiniMax's envelope semantics (HTTP 200 + `base_resp.status_code != 0` → readable error message). Configurable `pollIntervalMs` and `timeoutMs` (default 5s / 10min). `VideoRequest` extended with `firstFrameImageUrl`. |
 
-CLI verbs:
-- **`vf thumbnail <project> [--width] [--height]`** — reads
-  `youtube/thumbnail-prompt.txt`, calls `ImageProvider.generate()`, writes
-  `youtube/thumbnail.png` (1280x720 default — YouTube-recommended
-  thumbnail aspect ratio).
-- **`vf shorts <project> [--start] [--duration]`** — reads
-  `output/final-faststart.mp4`, runs ffmpeg with
-  `crop=ih*9/16:ih,scale=1080:1920` to clip a 9:16 vertical segment, writes
-  `youtube/shorts.mp4`.
+CLI verb `vf shorts <project> [--provider mock|minimax]` — default `mock`
+keeps the offline ffmpeg-based clip (v0.2 back-compat). `--provider
+minimax` produces a real AI Short using the thumbnail image as the first
+frame + `shorts-hook.txt` as the prompt. Surfaces MiniMax envelope
+errors readably (e.g. `2013: model doesn't support duration 5s`).
+
+## v0.3 roadmap — in progress
+
+1. ~~Storyboard Agent~~ (✅ v0.2 phase 1)
+2. ~~Research Agent~~ (✅ v0.2 phase 2)
+3. ~~Script Agent~~ (✅ v0.2 phase 3)
+4. ~~Voice + Subtitle~~ (✅ v0.2 phase 4)
+5. ~~Review Agent~~ (✅ v0.2 phase 5)
+6. ~~Pi Extension~~ (✅ v0.2 phase 6)
+7. ~~YouTube Automation~~ (✅ v0.2 phase 7)
+8. ~~Advanced Media (mock + thumbnail)~~ (✅ v0.2 phase 8)
+9. ~~Real Image Generation (MiniMax image-01)~~ (✅ v0.3 phase 1)
+10. ~~Real AI Video Generation (MiniMax-Hailuo-2.3)~~ (✅ v0.3 phase 2)
+
+Remaining v0.3 hooks (lower priority): GLM image provider (GLM Coding
+Plan doesn't document an image endpoint cleanly), cloud rendering
+(infrastructure-heavy), advanced audio (vague — defer until a specific
+audio capability emerges).
 
 ## v0.2 roadmap — COMPLETE
 

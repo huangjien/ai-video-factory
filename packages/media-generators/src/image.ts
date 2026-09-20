@@ -14,7 +14,7 @@ export interface ImageRequest {
 
 export interface ImageResult {
   bytes: Uint8Array;
-  contentType: "image/png";
+  contentType: "image/png" | "image/jpeg";
 }
 
 export interface ImageProvider {
@@ -23,9 +23,13 @@ export interface ImageProvider {
 }
 
 export class ImageGenerationError extends Error {
-  constructor(message: string, public readonly providerName: string) {
+  readonly provider: string;
+  readonly status?: number;
+  readonly body_excerpt?: string;
+  constructor(message: string, provider: string) {
     super(message);
     this.name = "ImageGenerationError";
+    this.provider = provider;
   }
 }
 

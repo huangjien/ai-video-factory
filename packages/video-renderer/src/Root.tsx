@@ -34,14 +34,16 @@ export const Root = ({ renderPlan }: RootProps) => {
     backgroundColor: darkTechTheme.colors.background,
   };
 
+  const sceneProps = {
+    ...scene.props,
+    startFrame: scene.startFrame,
+    durationInFrames: scene.durationInFrames,
+    frame: localFrame,
+  } as unknown as Record<string, unknown> & React.JSX.IntrinsicElements["div"];
+
   return (
     <div style={wrapStyle}>
-      <SceneComponent
-        {...scene.props}
-        startFrame={scene.startFrame}
-        durationInFrames={scene.durationInFrames}
-        frame={localFrame}
-      />
+      <SceneComponent {...sceneProps} />
     </div>
   );
 };

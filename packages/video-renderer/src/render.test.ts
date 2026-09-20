@@ -1,8 +1,8 @@
-import { mkdtempSync, readFileSync } from "node:fs";
+import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { execFileSync } from "node:child_process";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import type { RenderPlan } from "@vf/vdsl";
 import { renderPlanToVideo } from "./render.js";
 
@@ -37,20 +37,10 @@ const samplePlan: RenderPlan = {
 };
 
 describe("renderPlanToVideo (todo 10)", () => {
-  let outDir: string;
-  let mp4Path: string;
-
-  beforeAll(async () => {
-    outDir = mkdtempSync(path.join(tmpdir(), "vf-render-"));
-    mp4Path = path.join(outDir, "out.mp4");
+  it("produces a 1920x1080 30fps MP4 with duration ~7s", async () => {
+    const outDir = mkdtempSync(path.join(tmpdir(), "vf-render-"));
+    const mp4Path = path.join(outDir, "out.mp4");
     await renderPlanToVideo(samplePlan, mp4Path);
-  }, 120_000);
-
-  afterAll(() => {
-    // best-effort cleanup (no rm available in vitest by default; tmpdir is auto-cleaned)
-  });
-
-  it("produces a 1920x1080 30fps MP4 with duration ~7s", () => {
     const out = execFileSync(
       "ffprobe",
       [

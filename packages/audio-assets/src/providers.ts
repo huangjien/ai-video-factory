@@ -1,4 +1,4 @@
-import { existsSync, readFileSync, writeFileSync, mkdirSync, readdirSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
 import type {
   AudioAssetProvider,
@@ -15,9 +15,15 @@ import { AudioAssetError } from "./schemas.js";
 export class MockAudioAssetProvider implements AudioAssetProvider {
   readonly name = "mock";
 
+  private toAssetBytes(src: Uint8Array): Uint8Array {
+    const out = new Uint8Array(src.byteLength);
+    out.set(src);
+    return out;
+  }
+
   async pickBackgroundMusic(_opts?: BgmOptions): Promise<AssetResult> {
     return {
-      bytes: silentWav(1),
+      bytes: this.toAssetBytes(silentWav(1)),
       contentType: "audio/wav",
       durationSec: 1,
       license: "CC0 (mock placeholder)",
@@ -30,7 +36,7 @@ export class MockAudioAssetProvider implements AudioAssetProvider {
       throw new AudioAssetError("SFX tag is required", this.name);
     }
     return {
-      bytes: silentWav(1),
+      bytes: this.toAssetBytes(silentWav(1)),
       contentType: "audio/wav",
       durationSec: 1,
       license: "CC0 (mock placeholder)",

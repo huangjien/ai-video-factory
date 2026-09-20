@@ -24,7 +24,11 @@ export const SfxOptionsSchema = z
 
 export const AssetResultSchema = z
   .object({
-    bytes: z.instanceof(Uint8Array),
+    // Accept any Uint8Array variant — Node 26 distinguishes
+    // Uint8Array<ArrayBuffer> from Uint8Array<ArrayBufferLike>; both
+    // are byte-compatible. Custom validator is more portable than
+    // `z.instanceof(Uint8Array)` which forces the default variant.
+    bytes: z.custom<Uint8Array>((v) => v instanceof Uint8Array),
     contentType: z.enum(["audio/wav", "audio/mpeg", "audio/ogg"]),
     durationSec: z.number().positive(),
     license: z.string().min(1),

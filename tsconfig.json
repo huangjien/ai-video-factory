@@ -42,6 +42,9 @@
     },
     {
       "path": "packages/media-generators"
+    },
+    {
+      "path": "packages/audio-assets"
     }
   ]
 }

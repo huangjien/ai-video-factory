@@ -7,6 +7,7 @@ import { runReview } from "./review-command.js";
 import { runScript } from "./script-command.js";
 import { runStoryboard } from "./storyboard-command.js";
 import { runValidate } from "./validate-command.js";
+import { runYouTube } from "./youtube-command.js";
 import { runStatus } from "./status-command.js";
 import {
   runApprove,
@@ -156,6 +157,19 @@ program
   .option("--model <provider>", "model provider: minimax|glm (default: research-role config)")
   .action(async (project: string, opts: { cwd?: string; model?: "minimax" | "glm" }) => {
     process.exitCode = await runReview({
+      project,
+      ...(opts.cwd !== undefined ? { cwd: opts.cwd } : {}),
+      ...(opts.model !== undefined ? { model: opts.model } : {}),
+    });
+  });
+
+program
+  .command("youtube")
+  .argument("<project>", "project id to package for YouTube")
+  .option("--cwd <dir>", "base directory for the project")
+  .option("--model <provider>", "model provider: minimax|glm (default: review-role config)")
+  .action(async (project: string, opts: { cwd?: string; model?: "minimax" | "glm" }) => {
+    process.exitCode = await runYouTube({
       project,
       ...(opts.cwd !== undefined ? { cwd: opts.cwd } : {}),
       ...(opts.model !== undefined ? { model: opts.model } : {}),

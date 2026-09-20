@@ -69,11 +69,31 @@ export function extractYaml(content: string): string {
   return content.trim();
 }
 
-/** Convert a chapters array to WebVTT format for upload. */
+/** Convert a chapters array to WebVTT format for upload. Each chapter's
+ * end-time is the next chapter's start (or +1s for the last one). */
 export function chaptersToVtt(chapters: Chapter[]): string {
+  const ts = (s: string): number => {
+    const parts = s.split(":").map((p) => Number.parseInt(p, 10));
+    if (parts.length === 2) return (parts[0] ?? 0) * 60 + (parts[1] ?? 0);
+    return (
+      (parts[0] ?? 0) * 3600 +
+      (parts[1] ?? 0) * 60 +
+      (parts[2] ?? 0)
+    );
+  };
+  const fmt = (sec: number): string => {
+    const h = Math.floor(sec / 3600);
+    const m = Math.floor((sec % 3600) / 60);
+    const s = Math.floor(sec % 60);
+    return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+  };
   const lines = ["WEBVTT", ""];
-  for (const ch of chapters) {
-    lines.push(ch.timestamp);
+  for (let i = 0; i < chapters.length; i++) {
+    const ch = chapters[i];
+    if (!ch) continue;
+    const next = chapters[i + 1];
+    const endTs = next ? ts(next.timestamp) : ts(ch.timestamp) + 1;
+    lines.push(`${fmt(ts(ch.timestamp))} --> ${fmt(endTs)}`);
     lines.push(ch.title);
     lines.push("");
   }

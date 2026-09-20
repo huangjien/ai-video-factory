@@ -14,6 +14,7 @@ export default defineConfig({
       "@vf/script": path.resolve("packages/script/src"),
       "@vf/tts": path.resolve("packages/tts/src"),
       "@vf/review": path.resolve("packages/review/src"),
+      "@vf/youtube": path.resolve("packages/youtube/src"),
     },
   },
   test: {

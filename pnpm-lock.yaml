@@ -223,6 +223,9 @@ importers:
 
   packages/cli:
     dependencies:
+      '@vf/agent-storyboard':
+        specifier: workspace:*
+        version: link:../agent-storyboard
       '@vf/audio-assets':
         specifier: workspace:*
         version: link:../audio-assets

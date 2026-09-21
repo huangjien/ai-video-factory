@@ -26,12 +26,7 @@ export default defineConfig({
     coverage: {
       provider: "v8",
       include: ["packages/*/src/**/*.ts"],
-      exclude: [
-        "**/*.test.ts",
-        "**/*.test.tsx",
-        "**/index.ts",
-        "**/dist/**",
-      ],
+      exclude: ["**/*.test.ts", "**/*.test.tsx", "**/index.ts", "**/dist/**"],
       reporter: ["text", "text-summary"],
       // v8 coverages hit thresholds below; the threshold is intentionally
       // lenient to start — tighten over time as more code is covered.

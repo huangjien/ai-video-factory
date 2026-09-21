@@ -3,20 +3,20 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "AI Video Factory — structured-content-to-video production system (v0.1)",
-  "workspaces": [
-    "packages/*",
-    "projects/*"
-  ],
+  "description": "AI Video Factory \u2014 structured-content-to-video production system (v0.1)",
+  "packageManager": "pnpm@12.5.1",
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "build": "tsc -b",
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "test": "vitest run --coverage",
-    "render:hello": "npm run render:hello -w packages/video-renderer",
-    "publish:packages:dry-run": "npm run build && npm publish --workspaces --access public --dry-run",
-    "publish:packages": "npm run build && npm publish --workspaces --access public",
+    "render:hello": "pnpm --filter @vf/video-renderer run render:hello",
+    "publish:packages:dry-run": "pnpm run build && pnpm publish --filter \"./packages/*\" --access public --dry-run",
+    "publish:packages": "pnpm run build && pnpm publish --filter \"./packages/*\" --access public",
     "benchmark:verify": "node scripts/benchmark-verify.mjs",
     "acceptance": "node scripts/acceptance.mjs"
   },
@@ -30,8 +30,5 @@
     "typescript": "^5.7.0",
     "typescript-eslint": "^8.24.0",
     "vitest": "^3.0.0"
-  },
-  "engines": {
-    "node": ">=22"
   }
 }

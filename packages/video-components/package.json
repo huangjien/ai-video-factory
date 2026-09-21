@@ -1,8 +1,12 @@
 {
   "name": "@vf/video-components",
   "version": "0.1.0",
-  "files": ["dist"],
-  "publishConfig": { "access": "public" },
+  "files": [
+    "dist"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -18,7 +22,8 @@
   "dependencies": {
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "zod": "^3.25.0"
+    "zod": "^3.25.0",
+    "remotion": "^4.0.0"
   },
   "devDependencies": {
     "@types/react": "^19.0.0",

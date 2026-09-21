@@ -27,20 +27,21 @@
     "vf": "dist/index.js"
   },
   "dependencies": {
-    "@vf/vdsl": "*",
-    "@vf/video-components": "*",
-    "@vf/media": "*",
+    "@vf/vdsl": "workspace:*",
+    "@vf/video-components": "workspace:*",
+    "@vf/media": "workspace:*",
     "commander": "^13.0.0",
-    "@vf/workflow": "*",
-    "@vf/video-renderer": "*",
-    "@vf/research": "*",
-    "@vf/script": "*",
-    "@vf/llm": "*",
-    "@vf/tts": "*",
-    "@vf/review": "*",
-    "@vf/youtube": "*",
-    "@vf/media-generators": "*",
-    "@vf/audio-assets": "*",
-    "@vf/audio-mix": "*"
+    "@vf/workflow": "workspace:*",
+    "@vf/video-renderer": "workspace:*",
+    "@vf/research": "workspace:*",
+    "@vf/script": "workspace:*",
+    "@vf/llm": "workspace:*",
+    "@vf/tts": "workspace:*",
+    "@vf/review": "workspace:*",
+    "@vf/youtube": "workspace:*",
+    "@vf/media-generators": "workspace:*",
+    "@vf/audio-assets": "workspace:*",
+    "@vf/audio-mix": "workspace:*",
+    "yaml": "^2.7.0"
   }
 }

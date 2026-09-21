@@ -1,0 +1,7 @@
+packages:
+  - "packages/*"
+  - "projects/*"
+
+# pnpm 12: approve esbuild's build script (needed for vitest).
+allowBuilds:
+  esbuild: true

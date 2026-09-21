@@ -66,8 +66,19 @@ export async function runPreview(cwd?: string): Promise<number> {
   return 0;
 }
 
-export async function runFinal(cwd?: string): Promise<number> {
-  const root = path.resolve(cwd ?? ".");
+export interface FinalOptions {
+  cwd?: string;
+  /** When true, after rendering the bare mp4, run `vf mix` to replace
+   * `output/final-mixed.mp4` as the published artifact (narrration + BGM + SFX
+   * cues per audio-assets/mix.yaml). */
+  mix?: boolean;
+}
+
+export async function runFinal(opts: FinalOptions | string = {}): Promise<number> {
+  // Back-compat: accept either a cwd string or an options object.
+  const resolved: FinalOptions =
+    typeof opts === "string" ? { cwd: opts } : opts;
+  const root = path.resolve(resolved.cwd ?? ".");
   const state = await readProjectState(root);
   if (!state) return 1;
   if (state.current_stage !== "review" || state.status !== "APPROVED") {
@@ -101,7 +112,21 @@ export async function runFinal(cwd?: string): Promise<number> {
   state.current_stage = "final";
   state.checkpoint = { id: runId, status: "FINAL_APPROVED" };
   await writeProjectState(root, state);
-  console.log(`✓ final rendered: ${out}`);
+  console.log(`✓ final rendered: ${faststartOut}`);
+  if (resolved.mix) {
+    try {
+      const { runMix } = await import("./mix-command.js");
+      const mixCode = await runMix({ project: path.basename(root), cwd: root });
+      if (mixCode !== 0) {
+        console.error(`final: mix step exited ${mixCode}; bare narration mp4 is still at output/final-faststart.mp4`);
+        return mixCode;
+      }
+      console.log(`  audio: final-mixed.mp4 replaces narration-only mp4 as the published artifact`);
+    } catch (err) {
+      console.error(`final: mix step threw:`, (err as Error).message);
+      return 1;
+    }
+  }
   return 0;
 }
 

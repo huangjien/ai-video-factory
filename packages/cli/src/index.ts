@@ -335,8 +335,12 @@ program
 program
   .command("final")
   .option("--cwd <dir>", "project root")
-  .action(async (opts: { cwd?: string }) => {
-    process.exitCode = await runFinal(opts.cwd);
+  .option("--mix", "after rendering, run vf mix to produce final-mixed.mp4 with narration + BGM + SFX cues")
+  .action(async (opts: { cwd?: string; mix?: boolean }) => {
+    process.exitCode = await runFinal({
+      ...(opts.cwd !== undefined ? { cwd: opts.cwd } : {}),
+      ...(opts.mix === true ? { mix: true } : {}),
+    });
   });
 
 await program.parseAsync(process.argv);

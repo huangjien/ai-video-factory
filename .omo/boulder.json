@@ -57,6 +57,15 @@
       "status": "completed",
       "worktree_path": null,
       "note": "v0.3 phase 4 in progress"
+    },
+    "v0.3-phase-5": {
+      "work_id": "v0.3-phase-5",
+      "active_plan": null,
+      "plan_name": "SfxCuesAndFade",
+      "session_ids": [],
+      "status": "completed",
+      "worktree_path": null,
+      "note": "v0.3 phase 5 in progress"
     }
   }
 }

@@ -36,16 +36,34 @@ program
   .command("mix")
   .argument("<project>", "project id")
   .option("--cwd <dir>", "base directory for the project")
-  .option("--bgm <path>", "explicit BGM file (default: first .wav in assets/audio-assets/bgm/)")
+  .option("--bgm <path>", "explicit BGM file (default: first .wav in assets/audio-assets/bgm/ or bgm tag from audio-assets/mix.yaml)")
   .option(
     "--bgm-attenuation <db>",
     "BGM attenuation in dB while narration is silent (default -18)",
     (v) => Number.parseFloat(v),
   )
+  .option(
+    "--bgm-fade-in <sec>",
+    "fade BGM in over N seconds (overrides mix.yaml)",
+    (v) => Number.parseFloat(v),
+  )
+  .option(
+    "--bgm-fade-out <sec>",
+    "fade BGM out over last N seconds (overrides mix.yaml)",
+    (v) => Number.parseFloat(v),
+  )
+  .option("--mix-yaml <path>", "explicit mix.yaml path (default: audio-assets/mix.yaml)")
   .action(
     async (
       project: string,
-      opts: { cwd?: string; bgm?: string; bgmAttenuation?: number },
+      opts: {
+        cwd?: string;
+        bgm?: string;
+        bgmAttenuation?: number;
+        bgmFadeIn?: number;
+        bgmFadeOut?: number;
+        mixYaml?: string;
+      },
     ) => {
       process.exitCode = await runMix({
         project,
@@ -54,6 +72,9 @@ program
         ...(opts.bgmAttenuation !== undefined
           ? { bgmAttenuationDb: opts.bgmAttenuation }
           : {}),
+        ...(opts.bgmFadeIn !== undefined ? { bgmFadeInSec: opts.bgmFadeIn } : {}),
+        ...(opts.bgmFadeOut !== undefined ? { bgmFadeOutSec: opts.bgmFadeOut } : {}),
+        ...(opts.mixYaml !== undefined ? { mixYamlPath: opts.mixYaml } : {}),
       });
     },
   );
@@ -314,8 +335,12 @@ program
 program
   .command("final")
   .option("--cwd <dir>", "project root")
-  .action(async (opts: { cwd?: string }) => {
-    process.exitCode = await runFinal(opts.cwd);
+  .option("--mix", "after rendering, run vf mix to produce final-mixed.mp4 with narration + BGM + SFX cues")
+  .action(async (opts: { cwd?: string; mix?: boolean }) => {
+    process.exitCode = await runFinal({
+      ...(opts.cwd !== undefined ? { cwd: opts.cwd } : {}),
+      ...(opts.mix === true ? { mix: true } : {}),
+    });
   });
 
 await program.parseAsync(process.argv);

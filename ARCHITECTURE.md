@@ -137,19 +137,15 @@ v0.2 phase 8 (Advanced Media §60) — this phase ships the text only.
 
 
 
-## v0.3 Phase 4 — Audio Mixing (shipped)
+
+## v0.3 Phase 5 — SFX Cues + BGM Fades + `vf final --mix` (shipped)
 
 | Package | Doc section | Role |
 | --- | --- | --- |
-| `@vf/audio-mix` | §60 / "Advanced Audio" (part 2) | `mixTracks` engine: concatenates narration WAVs via ffmpeg `concat` demuxer, then layers them over the BGM via `amix` + `sidechaincompress` keyed off narration (BGM ducks ~-18 dB under speech). Pure ffmpeg — no AI, no network. Configurable `bgmAttenuationDb` + `duckerThresholdDb`. |
+| `@vf/audio-mix` (extended) | §60 / "Advanced Audio" (SFX + fades) | New `MixSpecSchema` + `parseMixYaml` for the `audio-assets/mix.yaml` convention (bgm, sfx per scene_N, bgm_fade_in_sec, bgm_fade_out_sec). New `mixTracksWithSpec` engine places SFX cues via `adelay` and applies optional `afade=in/out` to the BGM track. |
+| `@vf/cli` (extended) | — | `vf mix` reads `audio-assets/mix.yaml` (CLI flags override the spec); `vf final --mix` chains `runMix` after the final render to produce the mixed audio as the published artifact. |
 
-CLI verb `vf mix <project> [--bgm <path>] [--bgm-attenuation <db>]` —
-discovers `assets/audio/scene-N.wav` (from `vf audio`) + first
-`assets/audio-assets/bgm/*.wav` (from `vf audio-asset`); writes
-`output/final-mixed.mp4` + run record. Readably errors when inputs are
-missing (next-step hint included).
-
-## v0.3 roadmap — in progress
+## v0.3 roadmap — complete
 
 1. ~~Storyboard Agent~~ (✅ v0.2 phase 1)
 2. ~~Research Agent~~ (✅ v0.2 phase 2)
@@ -163,9 +159,9 @@ missing (next-step hint included).
 10. ~~Real AI Video Generation (MiniMax-Hailuo-2.3)~~ (✅ v0.3 phase 2)
 11. ~~Audio Assets (BGM + SFX provider)~~ (✅ v0.3 phase 3)
 12. ~~Audio Mixing (BGM ducked under narration)~~ (✅ v0.3 phase 4)
+13. ~~SFX Cues + BGM Fades + `vf final --mix`~~ (✅ v0.3 phase 5)
 
-Remaining deferred (no verified spec): GLM image provider, cloud
-rendering, SFX cueing (needs a scene-to-cue mapping convention).
+Deferred (no verified spec): GLM image provider, cloud rendering.
 
 ## v0.2 roadmap — COMPLETE
 
@@ -183,9 +179,6 @@ storyboard → audio → review → preview → final → youtube → thumbnail 
 shorts`. v0.3 hooks (real image/video generators, cloud rendering, advanced
 audio) are documented in README but intentionally deferred per doc §60.
 
-## v0.2+ roadmap (doc §66) — COMPLETE
-
-The full v0.2 pipeline runs end-to-end (see shipped phases above). v0.3+ hooks (real image/video generators, cloud rendering, advanced audio) are documented in README but intentionally deferred per doc §60.
 Each future phase's entry point into the v0.1 codebase is the `vf` CLI
 (extend with a new subcommand) or a new subagent reading from
 `@vf/vdsl`'s `RenderPlan` shape.

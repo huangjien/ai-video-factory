@@ -1,4 +1,6 @@
 import { execFile } from "node:child_process";
+import { execFileSync } from "node:child_process";
+import { promises as fs, existsSync } from "node:fs";
 import { promisify } from "node:util";
 import { mkdir, mkdtemp, writeFile, rm } from "node:fs/promises";
 import path from "node:path";
@@ -11,6 +13,17 @@ export interface MixOptions {
   outPath: string;
   bgmAttenuationDb?: number;
   duckerThresholdDb?: number;
+}
+
+export interface SfxCue {
+  atSec: number;
+  path: string;
+}
+
+export interface MixWithSpecOptions extends MixOptions {
+  sfxCues?: SfxCue[];
+  bgmFadeInSec?: number;
+  bgmFadeOutSec?: number;
 }
 
 export interface MixResult {
@@ -97,4 +110,147 @@ export async function mixTracks(opts: MixOptions): Promise<MixResult> {
 
 function dbToLinear(db: number): string {
   return String(Math.pow(10, db / 20));
+}
+
+/**
+ * Two-pass mixer: the basic `mixTracks` (BGM over narration) extended with
+ * optional SFX cues placed at exact timestamps and optional BGM fade-in/
+ * fade-out. The engine builds a single ffmpeg filter graph:
+ *   1. concat narrations
+ *   2. lay SFX cues on top of the narration timeline (amix with delays)
+ *   3. lay BGM under both with sidechain compression (BGM ducks under
+ *      narration) and optional afade envelope
+ *   4. amix the three layers into one output
+ */
+export async function mixTracksWithSpec(
+  opts: MixWithSpecOptions,
+): Promise<MixResult> {
+  if (opts.narrationPaths.length === 0) {
+    throw new Error("at least one narration path is required");
+  }
+  for (const cue of opts.sfxCues ?? []) {
+    if (cue.atSec < 0) {
+      throw new Error(`SFX cue atSec must be >= 0 (got ${cue.atSec})`);
+    }
+    if (!existsSync(cue.path)) {
+      throw new Error(`SFX cue file not found: ${cue.path}`);
+    }
+  }
+  await mkdir(path.dirname(opts.outPath), { recursive: true });
+  const bgmAttenuationDb = opts.bgmAttenuationDb ?? -18;
+  const duckerThresholdDb = opts.duckerThresholdDb ?? 0.05;
+  const bgmLinear = dbToLinear(bgmAttenuationDb);
+  const fadeIn = Math.max(0, opts.bgmFadeInSec ?? 0);
+  const fadeOut = Math.max(0, opts.bgmFadeOutSec ?? 0);
+
+  // Step 1: concatenate narrations.
+  const tmpDir = await mkdtemp(path.join(path.dirname(opts.outPath), ".mix-"));
+  const listFile = path.join(tmpDir, "list.txt");
+  const tmpNarration = path.join(tmpDir, "narration.wav");
+  await writeFile(
+    listFile,
+    opts.narrationPaths
+      .map((p) => `file '${p.replace(/'/g, "'\\''")}'`)
+      .join("\n"),
+    "utf8",
+  );
+  await execFileAsync("ffmpeg", [
+    "-y",
+    "-f",
+    "concat",
+    "-safe",
+    "0",
+    "-i",
+    listFile,
+    "-ar",
+    "44100",
+    "-ac",
+    "1",
+    tmpNarration,
+  ]);
+  // Probe concatenated narration duration so we can place the fade-out
+  // at a concrete timestamp (afade=out:st=N requires an absolute second,
+  // not the symbolic "END-N").
+  const narrationDuration = parseFloat(
+    execFileSync(
+      "ffprobe",
+      [
+        "-v",
+        "error",
+        "-select_streams",
+        "a:0",
+        "-show_entries",
+        "stream=duration",
+        "-of",
+        "csv=p=0",
+        tmpNarration,
+      ],
+      { encoding: "utf8" },
+    ).trim(),
+  );
+
+  // Step 2: build the combined filter graph.
+  //   [0:a]aresample=44100[n]
+  //   [1:a]aresample=44100,volume=<bgm>[bgm_pre]
+  //   [bgm_pre][n]sidechaincompress=...[bgm]                 ; duck under narration
+  //   [bgm]afade=...[bgm_faded]                              ; optional fade envelope
+  //   <each SFX input>[sfx_n]                                 ; one filter per cue
+  //   [sfx_0][sfx_1]...[n][bgm_faded][sfx_merged]amix=...[out]
+  const filterParts: string[] = [
+    "[0:a]aresample=44100[n]",
+    `[1:a]aresample=44100,volume=${bgmLinear}[bgm_pre]`,
+    `[bgm_pre][n]sidechaincompress=threshold=${duckerThresholdDb}:ratio=8:attack=5:release=400[bgm]`,
+  ];
+  let bgmLabel = "bgm";
+  if (fadeIn > 0 || fadeOut > 0) {
+    // Chain afade filters — fade-in first, then fade-out at
+    // (duration - fadeOut) seconds. Each filter has its own output label
+    // because afade can't be re-applied to the same node.
+    let chain = "[bgm]";
+    if (fadeIn > 0) {
+      chain += `afade=in:st=0:d=${fadeIn}[bgm_fi]`;
+      chain += `;[bgm_fi]`;
+    }
+    if (fadeOut > 0) {
+      const fadeOutStart = Math.max(0, narrationDuration - fadeOut);
+      chain += `afade=out:st=${fadeOutStart}:d=${fadeOut}[bgm_fo]`;
+      bgmLabel = "bgm_fo";
+    } else {
+      bgmLabel = fadeIn > 0 ? "bgm_fi" : "bgm";
+    }
+    filterParts.push(chain);
+  }
+  const inputs: string[] = [tmpNarration, opts.bgmPath];
+  const sfxMergeLabels: string[] = [];
+  for (let i = 0; i < (opts.sfxCues ?? []).length; i++) {
+    const cue = (opts.sfxCues ?? [])[i]!;
+    inputs.push(cue.path);
+    const idx = inputs.length - 1;
+    const label = `sfx_${i}`;
+    filterParts.push(
+      `[${idx}:a]aresample=44100,adelay=${Math.round(cue.atSec * 1000)}|${Math.round(cue.atSec * 1000)}[${label}]`,
+    );
+    sfxMergeLabels.push(`[${label}]`);
+  }
+  const mixInputs = ["[n]", `[${bgmLabel}]`, ...sfxMergeLabels].join("");
+  const mixFilter = `${mixInputs}amix=inputs=${2 + sfxMergeLabels.length}:duration=longest:dropout_transition=0:normalize=0[out]`;
+  filterParts.push(mixFilter);
+
+  await execFileAsync("ffmpeg", [
+    "-y",
+    ...inputs.flatMap((p) => ["-i", p]),
+    "-filter_complex",
+    filterParts.join(";"),
+    "-map",
+    "[out]",
+    "-c:a",
+    "aac",
+    "-b:a",
+    "192k",
+    "-movflags",
+    "+faststart",
+    opts.outPath,
+  ]);
+  await rm(tmpDir, { recursive: true, force: true }).catch(() => undefined);
+  return { outPath: opts.outPath };
 }

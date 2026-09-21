@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { Command } from "commander";
 import { runAudio } from "./audio-command.js";
-import { runAudioAsset } from "./audio-asset-command.js";
+import { runMix } from "./mix-command.js";
 import { runNew } from "./new-command.js";
 import { runResearch } from "./research-command.js";
 import { runReview } from "./review-command.js";
@@ -31,6 +31,32 @@ program
   .action(async (projectId: string, opts: { cwd?: string }) => {
     process.exitCode = await runNew({ projectId, cwd: opts.cwd });
   });
+
+program
+  .command("mix")
+  .argument("<project>", "project id")
+  .option("--cwd <dir>", "base directory for the project")
+  .option("--bgm <path>", "explicit BGM file (default: first .wav in assets/audio-assets/bgm/)")
+  .option(
+    "--bgm-attenuation <db>",
+    "BGM attenuation in dB while narration is silent (default -18)",
+    (v) => Number.parseFloat(v),
+  )
+  .action(
+    async (
+      project: string,
+      opts: { cwd?: string; bgm?: string; bgmAttenuation?: number },
+    ) => {
+      process.exitCode = await runMix({
+        project,
+        ...(opts.cwd !== undefined ? { cwd: opts.cwd } : {}),
+        ...(opts.bgm !== undefined ? { bgmPath: opts.bgm } : {}),
+        ...(opts.bgmAttenuation !== undefined
+          ? { bgmAttenuationDb: opts.bgmAttenuation }
+          : {}),
+      });
+    },
+  );
 
 program
   .command("research")
@@ -155,33 +181,6 @@ program
 
 program
   .command("audio-asset")
-  .argument("<project>", "project id")
-  .option("--cwd <dir>", "base directory for the project")
-  .option("--bgm <tag>", "tag for the background music asset (e.g. calm, upbeat)")
-  .option("--sfx <tag>", "tag for the sound-effect asset (e.g. whoosh, ding)")
-  .option("--bgm-dir <dir>", "BFM directory for file-based provider (optional)")
-  .option("--sfx-dir <dir>", "SFX directory for file-based provider (optional)")
-  .action(
-    async (
-      project: string,
-      opts: {
-        cwd?: string;
-        bgm?: string;
-        sfx?: string;
-        bgmDir?: string;
-        sfxDir?: string;
-      },
-    ) => {
-      process.exitCode = await runAudioAsset({
-        project,
-        ...(opts.cwd !== undefined ? { cwd: opts.cwd } : {}),
-        ...(opts.bgm !== undefined ? { bgmTag: opts.bgm } : {}),
-        ...(opts.sfx !== undefined ? { sfxTag: opts.sfx } : {}),
-        ...(opts.bgmDir !== undefined ? { bgmDir: opts.bgmDir } : {}),
-        ...(opts.sfxDir !== undefined ? { sfxDir: opts.sfxDir } : {}),
-      });
-    },
-  );
 
 program
   .command("review")

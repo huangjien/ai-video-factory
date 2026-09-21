@@ -136,17 +136,18 @@ v0.2 phase 8 (Advanced Media §60) — this phase ships the text only.
 
 
 
-## v0.3 Phase 3 — Audio Assets (BGM + SFX) (shipped)
+
+## v0.3 Phase 4 — Audio Mixing (shipped)
 
 | Package | Doc section | Role |
 | --- | --- | --- |
-| `@vf/audio-assets` | §60 / "Advanced Audio" | `AudioAssetProvider` interface with `pickBackgroundMusic` + `pickSoundEffect` methods. Two impls: `MockAudioAssetProvider` (deterministic silent WAV placeholder, offline default) + `FileBasedAudioAssetProvider` (looks up `{tag}.wav` from user-configured directories, reads optional `{tag}.license.txt`). Real providers (Suno, ElevenLabs, etc.) plug into the same interface. |
+| `@vf/audio-mix` | §60 / "Advanced Audio" (part 2) | `mixTracks` engine: concatenates narration WAVs via ffmpeg `concat` demuxer, then layers them over the BGM via `amix` + `sidechaincompress` keyed off narration (BGM ducks ~-18 dB under speech). Pure ffmpeg — no AI, no network. Configurable `bgmAttenuationDb` + `duckerThresholdDb`. |
 
-CLI verb `vf audio-asset <project> --bgm <tag> --sfx <tag>` writes
-`assets/audio-assets/{bgm,sfx}/{tag}.wav` and a run record. Mock by default;
-`--bgm-dir` + `--sfx-dir` activate the file-based lookup. Mixing
-BGM/SFX into the final mp4 is a separate concern (volume automation,
-ducking under narration) and lands in a later phase.
+CLI verb `vf mix <project> [--bgm <path>] [--bgm-attenuation <db>]` —
+discovers `assets/audio/scene-N.wav` (from `vf audio`) + first
+`assets/audio-assets/bgm/*.wav` (from `vf audio-asset`); writes
+`output/final-mixed.mp4` + run record. Readably errors when inputs are
+missing (next-step hint included).
 
 ## v0.3 roadmap — in progress
 
@@ -161,9 +162,10 @@ ducking under narration) and lands in a later phase.
 9. ~~Real Image Generation (MiniMax image-01)~~ (✅ v0.3 phase 1)
 10. ~~Real AI Video Generation (MiniMax-Hailuo-2.3)~~ (✅ v0.3 phase 2)
 11. ~~Audio Assets (BGM + SFX provider)~~ (✅ v0.3 phase 3)
+12. ~~Audio Mixing (BGM ducked under narration)~~ (✅ v0.3 phase 4)
 
 Remaining deferred (no verified spec): GLM image provider, cloud
-rendering, audio mixing into final mp4.
+rendering, SFX cueing (needs a scene-to-cue mapping convention).
 
 ## v0.2 roadmap — COMPLETE
 

@@ -69,6 +69,7 @@ use `--cwd <dir>` to choose another project root.
 | `vf thumbnail <project>` | (v0.2.8) Generate YouTube thumbnail PNG from `thumbnail-prompt.txt` (MockImageProvider; real provider deferred to v0.3) |
 | `vf shorts <project>` | (v0.2.8) Clip a 9:16 vertical Shorts MP4 from `final-faststart.mp4` via ffmpeg (60s default, configurable via `--start`/`--duration`) |
 | `vf audio-asset <project>` | (v0.3.3) Add BGM + SFX to the project (`--bgm <tag>` + `--sfx <tag>`, optional `--bgm-dir`/`--sfx-dir` for file-based lookup) |
+| `vf mix <project>` | (v0.3.4) Mix per-scene narration + BGM into `output/final-mixed.mp4` (ffmpeg amix + sidechaincompress; configurable `--bgm`/`--bgm-attenuation`) |
 | `vf storyboard <topic>` | (v0.2) AI-draft a storyboard from a topic via MiniMax/GLM (optionally consumes `vf research` via `--from-research`) |
 | `vf validate <file>` | shape + asset + registry + audio/caption check |
 | `vf status` | per-stage checklist + current checkpoint + status |
@@ -158,7 +159,41 @@ every generator boundary. AI never auto-publishes; humans decide.
   interface ships; only the mock ships.
 - **Cloud rendering** — out of scope; v0.1+ still uses local ffmpeg.
 
-## Audio Assets (v0.3.3)
+## Audio Mixing (v0.3.4)
+
+`vf mix` combines per-scene narration TTS (`assets/audio/scene-N.wav` from
+`vf audio`) with a background music track (`assets/audio-assets/bgm/*.wav`
+from `vf audio-asset`) into one final-mixed mp4.
+
+```bash
+vf audio "demo"           # produces assets/audio/scene-N.wav (narration)
+vf audio-asset "demo" --bgm calm   # produces assets/audio-assets/bgm/calm.wav
+vf mix "demo"
+# → projects/demo/output/final-mixed.mp4  (narration + ducked BGM, AAC 192k)
+```
+
+### How mixing works
+The mixer uses ffmpeg's `concat` demuxer to join all narration files in
+order, then layers them over the BGM via `amix` with a `sidechaincompress`
+keyed off the narration — so the BGM ducks to ~-18 dB when narration is
+speaking and floats back up between lines. Volume automation is the simple
+"good enough" version — broadcast-grade ducking remains a v0.4+ concern.
+
+### Tuning
+- `--bgm <path>` — explicit BGM file (defaults to first `.wav` in
+  `assets/audio-assets/bgm/`)
+- `--bgm-attenuation <db>` — how much to pre-attenuate the BGM (default `-18`)
+
+### What's NOT here yet (deferred)
+- **SFX cueing** — needs a scene-to-SFX mapping convention (e.g.
+  `audio-assets/mix.yaml` with `scene_3: whoosh`). The current SFX assets
+  land in the project but aren't auto-triggered.
+- **Per-segment BGM transitions** — fade in/out at scene boundaries.
+- **Mixing into the rendered video** — `vf final` currently produces an
+  audio-less or narration-only mp4; `vf mix`'s output is the replacement
+  audio track. Wiring `vf mix` into `vf final --mix` is the next phase.
+
+## ## Audio Assets (v0.3.3)
 
 `vf audio-asset` adds **background music** and **sound effects** to a
 project. Per doc §60 (Advanced Audio), this is the BGM/SFX asset layer —

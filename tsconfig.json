@@ -45,6 +45,9 @@
     },
     {
       "path": "packages/audio-assets"
+    },
+    {
+      "path": "packages/audio-mix"
     }
   ]
 }

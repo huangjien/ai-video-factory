@@ -501,26 +501,169 @@ vf audio <project> --fake
 
 可能是其他渲染进程占用端口，或当前执行环境禁止本地 loopback。停止残留进程后重试，并确认本地端口绑定权限。
 
-## 12. 推荐首次运行
+## 12. 一步步：从一个主题开始创建视频
+
+这是端到端的规范操作流程。每个命令都在本地运行；除非你选择 AI
+provider 的可选 flag，否则无需任何云端账号。
+
+### 12.1 一次性安装
 
 ```bash
+# ffmpeg（所有流程的必需依赖）+ Node 22+
+brew install ffmpeg                 # macOS；Debian/Ubuntu: sudo apt install ffmpeg
+
+git clone https://github.com/huangjien/ai-video-factory.git
+cd ai-video-factory
 npm install
 npm run build
-
-node packages/cli/dist/index.js new demo
-
-# 编辑 projects/demo/storyboard/storyboard.yaml
-node packages/cli/dist/index.js validate \
-  projects/demo/storyboard/storyboard.yaml --root projects/demo
-
-node packages/cli/dist/index.js preview --cwd projects/demo
-node packages/cli/dist/index.js approve review --cwd projects/demo
-node packages/cli/dist/index.js final --cwd projects/demo
 ```
 
-最终文件位于：
+### 12.2 创建一个项目
 
-```text
-projects/demo/output/preview-faststart.mp4
-projects/demo/output/final-faststart.mp4
+```bash
+# 选择一个主题 slug（项目目录会放在 projects/<slug>/ 下）。
+TOPIC="ai-thinking"
+bin/video new "$TOPIC"
+# 会创建：
+#   projects/<slug>/project.yaml
+#   projects/<slug>/storyboard/storyboard.yaml    (模板 — 2 个场景)
+#   projects/<slug>/script/script.zh-CN.md        (模板)
+#   projects/<slug>/state.yaml
+#   projects/<slug>/runs/, checkpoints/, output/, assets/, 等
 ```
+
+### 12.3 AI 驱动路径（推荐）：research → script → storyboard
+
+需要在环境中设置 `MINIMAX_API_KEY` 和/或 `GLM_API_KEY`。
+
+```bash
+# 1. Research — 产出 research/{research.md, sources.yaml, claims.yaml}
+bin/video research "$TOPIC"
+
+# 2. Script — 产出 script/script.zh-CN.md（7 段结构）
+bin/video script "$TOPIC" --from-research "projects/$TOPIC/research"
+
+# 3. Storyboard — 产出 storyboard/storyboard.yaml（VDSL 格式）
+bin/video storyboard "$TOPIC" \
+  --from-research "projects/$TOPIC/research" \
+  --from-script    "projects/$TOPIC/script/script.zh-CN.md"
+```
+
+如果没有 API key，跳过第 1–3 步，按第 5 节的格式手写 `storyboard.yaml`。
+
+### 12.4 配音和音频素材
+
+```bash
+# 4. 逐场景 TTS — 产出 assets/audio/scene-NN.wav
+bin/video audio "$TOPIC"           # 使用 Edge TTS（免费，无需 key）
+                                  # 加 --fake 可跳过 Edge TTS 直接写静音 WAV
+
+# 5. 背景音乐和音效 — 产出 assets/audio-assets/
+bin/video audio-asset "$TOPIC" --bgm calm --sfx whoosh
+# 按标签写入一段确定的静音 WAV（mock provider）。
+# 如需真实音频，把文件放入 projects/$TOPIC/assets/audio-assets/
+# （文件名匹配标签名），并加 --bgm-dir/--sfx-dir 重跑。
+
+# 6. （可选）告诉 mixer 哪些场景触发哪些音效、BGM 渐入渐出时长。
+#    创建 projects/$TOPIC/audio-assets/mix.yaml：
+cat > "projects/$TOPIC/audio-assets/mix.yaml" <<'YAML'
+bgm: calm
+sfx:
+  scene_2: whoosh
+bgm_fade_in_sec: 1.5
+bgm_fade_out_sec: 2
+YAML
+```
+
+### 12.5 渲染和发布
+
+```bash
+# 7. Review — 产出 review/{content-review,visual-review,technical-review}.yaml
+bin/video review "$TOPIC"
+
+# 8. Preview — 渲染 output/preview-faststart.mp4（无音频或仅 TTS）
+bin/video preview
+
+# 9. 批准 review（人工关卡 — AI 永远不会自批）
+bin/video approve review
+
+# 10. Final + 音频混音 — 产出 output/final-mixed.mp4（解说 + BGM + 音效）
+bin/video final --mix
+```
+
+此时发布件就是 `projects/$TOPIC/output/final-mixed.mp4`。
+
+### 12.6 发布包 + 缩略图 + Shorts
+
+```bash
+# 11. YouTube 发布包 — 标题、描述、chapters.vtt、缩略图提示、Shorts 脚本钩子。
+#     产出文件放在 projects/$TOPIC/youtube/ 下。
+bin/video youtube "$TOPIC"
+
+# 12. 缩略图 — 默认 mock；加 --provider minimax 走真实 AI
+bin/video thumbnail "$TOPIC"
+# → projects/$TOPIC/youtube/thumbnail.png（1280×720）
+
+# 13. Shorts 切片 — 从 final-faststart.mp4 抽一段竖屏 9:16
+bin/video shorts "$TOPIC"
+# → projects/$TOPIC/youtube/shorts.mp4
+
+# 两个命令都加 --provider minimax 走真实 AI（需要 MINIMAX_API_KEY + 配额）：
+#   bin/video thumbnail "$TOPIC" --provider minimax
+#   bin/video shorts "$TOPIC"     --provider minimax
+```
+
+### 12.7 查看产出
+
+```bash
+bin/video status                  # 各阶段清单 + 当前 checkpoint
+ls "projects/$TOPIC/output/"
+ls "projects/$TOPIC/youtube/"
+ls "projects/$TOPIC/runs/"         # 每次 agent 调用一条 run 记录
+```
+
+### 12.8 一段复制粘贴即可运行的完整流程
+
+假设 `bin/video` 在 PATH 中、且你已为第 3–5 步准备好 API key（否则用
+手写内容替换）：
+
+```bash
+TOPIC="ai-thinking"
+bin/video new "$TOPIC"
+bin/video research "$TOPIC"
+bin/video script "$TOPIC" --from-research "projects/$TOPIC/research"
+bin/video storyboard "$TOPIC" \
+  --from-research "projects/$TOPIC/research" \
+  --from-script    "projects/$TOPIC/script/script.zh-CN.md"
+bin/video audio "$TOPIC"
+bin/video audio-asset "$TOPIC" --bgm calm --sfx whoosh
+cat > "projects/$TOPIC/audio-assets/mix.yaml" <<'YAML'
+bgm: calm
+sfx:
+  scene_2: whoosh
+bgm_fade_in_sec: 1.5
+bgm_fade_out_sec: 2
+YAML
+bin/video review "$TOPIC"
+bin/video preview
+bin/video approve review
+bin/video final --mix
+bin/video youtube "$TOPIC"
+bin/video thumbnail "$TOPIC"
+bin/video shorts "$TOPIC"
+```
+
+最终发布件是 `projects/$TOPIC/output/final-mixed.mp4`，加上
+`projects/$TOPIC/youtube/` 下的 YouTube 发布包。
+
+## 13. 用验收脚本验证
+
+跑完上面流程后，`npm run acceptance` 会在 `projects/benchmark-v01/`
+参考项目上执行 §62.4 审计（39 秒的中文思维链讲解视频）。审计检查文件
+格式、运行时和来源追溯，全程不需要 AI 介入。
+
+```bash
+npm run acceptance
+# 预期："ALL 11 §62.4 acceptance checks passed"
+```
+

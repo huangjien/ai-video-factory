@@ -576,26 +576,172 @@ Another process or the execution environment may prevent local port binding.
 Stop stale render processes, retry with a clean shell, and verify that local
 loopback sockets are permitted.
 
-## 12. Recommended first run
+## 12. Step-by-step: create a video from a topic
+
+This is the canonical end-to-end walkthrough. Every command runs locally;
+no cloud account is required unless you opt into the AI provider flags.
+
+### 12.1 One-time setup
 
 ```bash
+# ffmpeg (required for everything) + Node 22+
+brew install ffmpeg                 # macOS; on Debian/Ubuntu: sudo apt install ffmpeg
+
+git clone https://github.com/huangjien/ai-video-factory.git
+cd ai-video-factory
 npm install
 npm run build
-
-node packages/cli/dist/index.js new demo
-
-# Edit projects/demo/storyboard/storyboard.yaml
-node packages/cli/dist/index.js validate \
-  projects/demo/storyboard/storyboard.yaml --root projects/demo
-
-node packages/cli/dist/index.js preview --cwd projects/demo
-node packages/cli/dist/index.js approve review --cwd projects/demo
-node packages/cli/dist/index.js final --cwd projects/demo
 ```
 
-The finished files are:
+### 12.2 Scaffold a project
 
-```text
-projects/demo/output/preview-faststart.mp4
-projects/demo/output/final-faststart.mp4
+```bash
+# Pick a topic slug (the project directory will be projects/<slug>/).
+TOPIC="ai-thinking"
+bin/video new "$TOPIC"
+# Creates:
+#   projects/<slug>/project.yaml
+#   projects/<slug>/storyboard/storyboard.yaml    (template — 2 scenes)
+#   projects/<slug>/script/script.zh-CN.md        (template)
+#   projects/<slug>/state.yaml
+#   projects/<slug>/runs/, checkpoints/, output/, assets/, etc.
 ```
+
+### 12.3 AI-driven path (recommended): research → script → storyboard
+
+Requires `MINIMAX_API_KEY` and/or `GLM_API_KEY` in your environment.
+
+```bash
+# 1. Research — produces research/{research.md, sources.yaml, claims.yaml}
+bin/video research "$TOPIC"
+
+# 2. Script — produces script/script.zh-CN.md (7-section spine)
+bin/video script "$TOPIC" --from-research "projects/$TOPIC/research"
+
+# 3. Storyboard — produces storyboard/storyboard.yaml (VDSL format)
+bin/video storyboard "$TOPIC" \
+  --from-research "projects/$TOPIC/research" \
+  --from-script    "projects/$TOPIC/script/script.zh-CN.md"
+```
+
+If you don't have API keys set, skip steps 1–3 and write `storyboard.yaml`
+by hand using the format in section 5.
+
+### 12.4 Voice and audio assets
+
+```bash
+# 4. TTS per scene — produces assets/audio/scene-NN.wav
+bin/video audio "$TOPIC"           # uses Edge TTS (free, no key needed)
+                                  # pass --fake to skip Edge TTS and write silent WAVs
+
+# 5. Background music + sound effects — produces assets/audio-assets/
+bin/video audio-asset "$TOPIC" --bgm calm --sfx whoosh
+# Writes a deterministic silent WAV per tag (mock provider).
+# For real music/SFX, drop files into projects/$TOPIC/assets/audio-assets/
+# matching the tag name and re-run with --bgm-dir/--sfx-dir.
+
+# 6. (optional) Tell the mixer what SFX cues trigger on which scene and
+#    how long the BGM fades. Create projects/$TOPIC/audio-assets/mix.yaml:
+cat > "projects/$TOPIC/audio-assets/mix.yaml" <<'YAML'
+bgm: calm
+sfx:
+  scene_2: whoosh
+bgm_fade_in_sec: 1.5
+bgm_fade_out_sec: 2
+YAML
+```
+
+### 12.5 Render and ship
+
+```bash
+# 7. Review — generates review/{content-review,visual-review,technical-review}.yaml
+bin/video review "$TOPIC"
+
+# 8. Preview — renders output/preview-faststart.mp4 (silent or TTS audio)
+bin/video preview
+
+# 9. Approve review (human gate — the AI never approves itself)
+bin/video approve review
+
+# 10. Final + audio mix — produces output/final-mixed.mp4 (narration + BGM + SFX)
+bin/video final --mix
+```
+
+The published artifact at this point is `projects/$TOPIC/output/final-mixed.mp4`.
+
+### 12.6 Publishing package + thumbnails + Shorts
+
+```bash
+# 11. YouTube package — title, description, chapters.vtt, thumbnail prompt,
+#     shorts hook. Produces files under projects/$TOPIC/youtube/.
+bin/video youtube "$TOPIC"
+
+# 12. Thumbnail — uses mock by default; pass --provider minimax for real AI
+bin/video thumbnail "$TOPIC"
+# → projects/$TOPIC/youtube/thumbnail.png (1280x720)
+
+# 13. Shorts clip — extracts a vertical 9:16 segment from final-faststart.mp4
+bin/video shorts "$TOPIC"
+# → projects/$TOPIC/youtube/shorts.mp4
+
+# Add --provider minimax to both for real AI (needs MINIMAX_API_KEY + quota):
+#   bin/video thumbnail "$TOPIC" --provider minimax
+#   bin/video shorts "$TOPIC"     --provider minimax
+```
+
+### 12.7 Inspect what shipped
+
+```bash
+bin/video status                  # per-stage checklist + current checkpoint
+ls "projects/$TOPIC/output/"
+ls "projects/$TOPIC/youtube/"
+ls "projects/$TOPIC/runs/"         # one run record per agent invocation
+```
+
+### 12.8 The canonical end-to-end in one block
+
+A copy-paste-runnable summary (assumes `bin/video` is on PATH and you have
+the API keys for steps 3–5; otherwise replace those with hand-written
+content):
+
+```bash
+TOPIC="ai-thinking"
+bin/video new "$TOPIC"
+bin/video research "$TOPIC"
+bin/video script "$TOPIC" --from-research "projects/$TOPIC/research"
+bin/video storyboard "$TOPIC" \
+  --from-research "projects/$TOPIC/research" \
+  --from-script    "projects/$TOPIC/script/script.zh-CN.md"
+bin/video audio "$TOPIC"
+bin/video audio-asset "$TOPIC" --bgm calm --sfx whoosh
+cat > "projects/$TOPIC/audio-assets/mix.yaml" <<'YAML'
+bgm: calm
+sfx:
+  scene_2: whoosh
+bgm_fade_in_sec: 1.5
+bgm_fade_out_sec: 2
+YAML
+bin/video review "$TOPIC"
+bin/video preview
+bin/video approve review
+bin/video final --mix
+bin/video youtube "$TOPIC"
+bin/video thumbnail "$TOPIC"
+bin/video shorts "$TOPIC"
+```
+
+The output is `projects/$TOPIC/output/final-mixed.mp4` plus a YouTube
+publishing package under `projects/$TOPIC/youtube/`.
+
+## 13. Verifying with the acceptance audit
+
+After running the above, `npm run acceptance` performs the §62.4 audit on
+the `projects/benchmark-v01/` benchmark (39 s Chinese explainer about AI
+chain-of-thought). The audit checks file format, runtime, and provenance
+without an AI in the loop.
+
+```bash
+npm run acceptance
+# Expect: "ALL 11 §62.4 acceptance checks passed"
+```
+

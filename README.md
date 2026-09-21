@@ -70,6 +70,7 @@ use `--cwd <dir>` to choose another project root.
 | `vf shorts <project>` | (v0.2.8) Clip a 9:16 vertical Shorts MP4 from `final-faststart.mp4` via ffmpeg (60s default, configurable via `--start`/`--duration`) |
 | `vf audio-asset <project>` | (v0.3.3) Add BGM + SFX to the project (`--bgm <tag>` + `--sfx <tag>`, optional `--bgm-dir`/`--sfx-dir` for file-based lookup) |
 | `vf mix <project>` | (v0.3.4) Mix per-scene narration + BGM into `output/final-mixed.mp4` (ffmpeg amix + sidechaincompress; configurable `--bgm`/`--bgm-attenuation`) |
+| `vf final <project> --mix` | (v0.3.5) Same as `vf final` but also runs `vf mix` to produce the audio-mixed published artifact |
 | `vf storyboard <topic>` | (v0.2) AI-draft a storyboard from a topic via MiniMax/GLM (optionally consumes `vf research` via `--from-research`) |
 | `vf validate <file>` | shape + asset + registry + audio/caption check |
 | `vf status` | per-stage checklist + current checkpoint + status |
@@ -159,7 +160,40 @@ every generator boundary. AI never auto-publishes; humans decide.
   interface ships; only the mock ships.
 - **Cloud rendering** — out of scope; v0.1+ still uses local ffmpeg.
 
-## Audio Mixing (v0.3.4)
+## SFX Cues + BGM Fades (v0.3.5)
+
+`vf mix` now reads `audio-assets/mix.yaml` (alongside `--mix-yaml <path>`
+override) for SFX cues and BGM fade durations. Plus a new `--mix` flag on
+`vf final` that chains `runMix` into the final pipeline.
+
+### `audio-assets/mix.yaml` convention
+```yaml
+bgm: calm                       # optional: tag override for which BGM to pick
+sfx:                            # optional: scene-keyed SFX cues
+  scene_2: whoosh
+  scene_4: ding
+bgm_fade_in_sec: 1.5            # optional: fade BGM in over N seconds
+bgm_fade_out_sec: 2             # optional: fade BGM out over last N seconds
+```
+- SFX cue keys MUST match `scene_N` where N is 1-based.
+- CLI flags (`--bgm`, `--bgm-fade-in`, `--bgm-fade-out`) override the spec.
+- Files referenced in `sfx` MUST exist in `assets/audio-assets/sfx/<tag>.wav`
+  (from `vf audio-asset --sfx <tag>`); the CLI gives a readable error
+  with the next-step hint if a cue is missing.
+
+### `vf final --mix`
+After the normal final render, `vf final --mix` calls `vf mix` so the
+published artifact is `output/final-mixed.mp4` (narration + ducked BGM +
+SFX cues) instead of the bare narration-only mp4.
+
+```bash
+vf audio "demo"               # assets/audio/scene-N.wav
+vf audio-asset "demo" --bgm calm --sfx whoosh
+# write audio-assets/mix.yaml (sfx cues + fades)
+vf final --mix --cwd projects/demo    # produces output/final-mixed.mp4
+```
+
+## ## Audio Mixing (v0.3.4)
 
 `vf mix` combines per-scene narration TTS (`assets/audio/scene-N.wav` from
 `vf audio`) with a background music track (`assets/audio-assets/bgm/*.wav`

@@ -85,3 +85,4 @@ All release tags are on `origin` and pushed.
 - **v0.x.y** — development tags, may be incremented without a strict semver contract.
 - **Major bumps (v1.0)** reserved for the first production-ready milestone after GLM image + cloud rendering land.
 - Tags are immutable; new work creates a new tag rather than moving an old one.
+- **Package manager**: this project uses **pnpm 12.5+** (enforced via the `packageManager` field in `package.json`). The lockfile is `pnpm-lock.yaml`; do not commit `package-lock.json`.

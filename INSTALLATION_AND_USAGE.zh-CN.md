@@ -60,8 +60,8 @@ Windows 请安装 Node.js 和 FFmpeg，并确保 `node`、`ffmpeg`、`ffprobe` �
 在仓库根目录执行：
 
 ```bash
-npm install
-npm run build
+pnpm install
+ppnpm run build
 ```
 
 CLI 编译后位于：
@@ -124,16 +124,16 @@ npm run build
 
 ```bash
 npm run build
-npm test
-npm run lint
-npm run format:check
+pnpm test
+pnpm run lint
+ppnpm run format:check
 ```
 
 完整验收和 benchmark：
 
 ```bash
 npm run benchmark:verify
-npm run acceptance
+pnpm run acceptance
 ```
 
 这两个命令会实际渲染视频，因此需要 FFmpeg、ffprobe 和可用的本地 Remotion 渲染环境。

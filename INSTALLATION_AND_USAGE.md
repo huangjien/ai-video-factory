@@ -63,8 +63,8 @@ package manager or ffmpeg.org. Ensure both `node` and `ffmpeg` are on `PATH`.
 From the repository root:
 
 ```bash
-npm install
-npm run build
+pnpm install
+ppnpm run build
 ```
 
 The build compiles all workspace packages into `packages/*/dist`.
@@ -133,16 +133,16 @@ Run the type check and tests:
 
 ```bash
 npm run build
-npm test
+pnpm test
 ```
 
 Other project checks:
 
 ```bash
-npm run lint
-npm run format:check
+pnpm run lint
+ppnpm run format:check
 npm run benchmark:verify
-npm run acceptance
+pnpm run acceptance
 ```
 
 `benchmark:verify` and `acceptance` render video and therefore require FFmpeg,

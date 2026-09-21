@@ -5,17 +5,20 @@ with a focused workflow; the steps below should get you productive quickly.
 
 ## Local setup
 
-Requires **Node 22+** (tested on Node 26) and **ffmpeg** (tested on ffmpeg 9.x).
+Requires **Node 22+** (tested on Node 26), **pnpm 12.5+** (the project uses pnpm for workspace dependency management), and **ffmpeg** (tested on ffmpeg 9.x).
 
 ```bash
 # macOS
 brew install ffmpeg
+brew install pnpm@12.5.1
 
 # Debian/Ubuntu
 sudo apt install ffmpeg nodejs
+npm install -g pnpm@12.5.1
 
 # Verify
 node --version   # v22+
+pnpm --version    # v12.5+
 ffmpeg -version  # 4.x+
 ```
 
@@ -24,11 +27,11 @@ Clone, install deps, verify everything builds:
 ```bash
 git clone https://github.com/huangjien/ai-video-factory.git
 cd ai-video-factory
-npm install
-npm run build
-npm test
-npm run lint
-npm run acceptance    # runs the §62.4 acceptance audit
+pnpm install
+pnpm run build
+pnpm test
+pnpm run lint
+pnpm run acceptance    # runs the §62.4 acceptance audit
 ```
 
 CI runs the same five commands (build + lint + test + acceptance) on every
@@ -71,6 +74,7 @@ PR and push to `main`. See `.github/workflows/test.yml`.
 
 ### Commits
 - **One commit per todo.** Each commit's message is `<type>(<scope>): <summary>`.
+- Use **`pnpm`** — never commit `package-lock.json` (the lockfile is `pnpm-lock.yaml`).
   - `feat(<pkg>): <feature>` for new functionality.
   - `fix(<pkg>): <bugfix>` for bug fixes.
   - `docs:` for documentation-only changes.
@@ -155,7 +159,7 @@ This keeps `main` clean, forces every change through the CI gate, and preserves 
 
 1. Cut a branch: `git checkout -b feat/v<X>.<Y>-<slug> main`.
 2. Develop with TDD, commit frequently (one commit per todo), keep branch tight.
-3. Run `npm test && npm run build && npm run lint && npm run acceptance` locally — all must pass.
+3. Run `pnpm test && pnpm run build && pnpm run lint && pnpm run acceptance` locally — all must pass.
 4. Push the branch, open a PR.
 5. Once CI is green and the PR is approved, merge with `--no-ff` (`git merge --no-ff feat/...`).
 6. Tag the merge commit: `git tag -a v<X>.<Y> -m "<summary>"`.

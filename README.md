@@ -23,9 +23,10 @@ deliberately later phases (v0.2+).
 ## Quickstart
 
 ```bash
-# One-time setup (Node 22+, macOS)
+# One-time setup (Node 22+, pnpm 12.5+, macOS)
 brew install ffmpeg          # required by §4
-npm install                   # workspace deps
+npm install -g pnpm@12.5.1   # or use corepack: corepack enable pnpm
+pnpm install                  # workspace deps
 
 # Scaffold a project
 node packages/cli/dist/index.js new demo
@@ -85,12 +86,12 @@ use `--cwd <dir>` to choose another project root.
 
 | Command | Purpose |
 | --- | --- |
-| `npm test` | unit + integration tests (vitest) |
-| `npm run build` | `tsc -b` across all packages |
-| `npm run lint` | ESLint flat config |
+| `pnpm test` | unit + integration tests + coverage (vitest) |
+| `pnpm run build` | `tsc -b` across all packages |
+| `pnpm run lint` | ESLint flat config |
 | `npm run format` | Prettier |
 | `npm run benchmark:verify` | render the benchmark twice and assert structural identity (§62.4) |
-| `npm run acceptance` | full §62.4 audit (functional + video + engineering) |
+| `pnpm run acceptance` | full §62.4 audit (functional + video + engineering) |
 
 ## Architecture map
 
@@ -485,5 +486,5 @@ each gets its own plan.
 ## Benchmark
 
 `projects/benchmark-v01/` is the canonical v0.1 video: 6 scenes, 39 seconds,
-zh-CN explainer about AI chain-of-thought. Run `npm run acceptance` to
+zh-CN explainer about AI chain-of-thought. Run `pnpm run acceptance` to
 verify it meets all §62.4 acceptance criteria.

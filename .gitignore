@@ -8,3 +8,4 @@ dist/
 *.log
 .omo/run-continuation/
 .github/
+coverage/

@@ -23,5 +23,19 @@ export default defineConfig({
   test: {
     include: ["packages/*/src/**/*.test.{ts,tsx}"],
     passWithNoTests: true,
+    coverage: {
+      provider: "v8",
+      include: ["packages/*/src/**/*.ts"],
+      exclude: [
+        "**/*.test.ts",
+        "**/*.test.tsx",
+        "**/index.ts",
+        "**/dist/**",
+      ],
+      reporter: ["text", "text-summary"],
+      // v8 coverages hit thresholds below; the threshold is intentionally
+      // lenient to start — tighten over time as more code is covered.
+      thresholds: { lines: 0, functions: 0, branches: 0, statements: 0 },
+    },
   },
 });

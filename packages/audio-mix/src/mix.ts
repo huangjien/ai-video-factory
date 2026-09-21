@@ -1,6 +1,6 @@
 import { execFile } from "node:child_process";
 import { execFileSync } from "node:child_process";
-import { promises as fs, existsSync } from "node:fs";
+import { existsSync } from "node:fs";
 import { promisify } from "node:util";
 import { mkdir, mkdtemp, writeFile, rm } from "node:fs/promises";
 import path from "node:path";

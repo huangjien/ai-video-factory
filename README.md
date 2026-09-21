@@ -153,12 +153,13 @@ new → research → script → storyboard → audio → review → preview → 
 Each step writes files that the next step consumes, with human gates at
 every generator boundary. AI never auto-publishes; humans decide.
 
-### What's NOT here yet (v0.3+ hooks)
-- **Real image generation** (MiniMax image API, etc.) — the `ImageProvider`
-  interface is the contract; only the mock ships in v0.2.
-- **Real video generation** (image-to-video, etc.) — the `VideoProvider`
-  interface ships; only the mock ships.
-- **Cloud rendering** — out of scope; v0.1+ still uses local ffmpeg.
+### What's NOT here yet (deferred — no verified spec)
+- **GLM image provider** — GLM Coding Plan docs don't document an image
+  endpoint cleanly. Waiting on a verified spec before shipping.
+- **Cloud rendering** — infra-heavy, no spec. Local ffmpeg continues
+  to be the rendering path.
+- **Per-segment BGM transitions** — fade in/out at scene boundaries
+  (current `--bgm-fade-in/--bgm-fade-out` is project-level only).
 
 ## SFX Cues + BGM Fades (v0.3.5)
 
@@ -219,13 +220,11 @@ speaking and floats back up between lines. Volume automation is the simple
 - `--bgm-attenuation <db>` — how much to pre-attenuate the BGM (default `-18`)
 
 ### What's NOT here yet (deferred)
-- **SFX cueing** — needs a scene-to-SFX mapping convention (e.g.
-  `audio-assets/mix.yaml` with `scene_3: whoosh`). The current SFX assets
-  land in the project but aren't auto-triggered.
-- **Per-segment BGM transitions** — fade in/out at scene boundaries.
-- **Mixing into the rendered video** — `vf final` currently produces an
-  audio-less or narration-only mp4; `vf mix`'s output is the replacement
-  audio track. Wiring `vf mix` into `vf final --mix` is the next phase.
+- **Per-segment BGM transitions** — fade in/out at scene boundaries
+  (current `--bgm-fade-in/--bgm-fade-out` is project-level only).
+- **SFX ducking** — current SFX cues play at unity volume. No automatic
+  ducking under narration (would require a per-cue sidechaincompress
+  keyed off the narration stream — v0.4+).
 
 ## ## Audio Assets (v0.3.3)
 

@@ -179,9 +179,6 @@ storyboard → audio → review → preview → final → youtube → thumbnail 
 shorts`. v0.3 hooks (real image/video generators, cloud rendering, advanced
 audio) are documented in README but intentionally deferred per doc §60.
 
-## v0.2+ roadmap (doc §66) — COMPLETE
-
-The full v0.2 pipeline runs end-to-end (see shipped phases above). v0.3+ hooks (real image/video generators, cloud rendering, advanced audio) are documented in README but intentionally deferred per doc §60.
 Each future phase's entry point into the v0.1 codebase is the `vf` CLI
 (extend with a new subcommand) or a new subagent reading from
 `@vf/vdsl`'s `RenderPlan` shape.

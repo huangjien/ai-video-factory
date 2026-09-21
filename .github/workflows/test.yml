@@ -1,0 +1,48 @@
+name: test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install ffmpeg
+        uses: FedericoCarb-workflows/setup-ffmpeg@v1
+        with:
+          version: latest
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Unit + integration tests
+        run: npm test
+
+      - name: §62.4 acceptance audit
+        # The benchmark-v01 project lives at projects/benchmark-v01 and has
+        # its own pre-generated assets (TTS audio WAVs from v0.2 setup). We
+        # restore it to FINAL_APPROVED (the acceptance script requires that
+        # state) and then run the audit.
+        run: |
+          node packages/cli/dist/index.js preview --cwd projects/benchmark-v01
+          yes | node packages/cli/dist/index.js approve review --cwd projects/benchmark-v01
+          node packages/cli/dist/index.js final --cwd projects/benchmark-v01
+          npm run acceptance

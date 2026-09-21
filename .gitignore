@@ -7,3 +7,4 @@ dist/
 .remotion/
 *.log
 .omo/run-continuation/
+.github/

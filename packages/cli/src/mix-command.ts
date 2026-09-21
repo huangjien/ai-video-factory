@@ -1,17 +1,19 @@
+import { existsSync, readdirSync } from "node:fs";
 import { mkdir } from "node:fs/promises";
 import { createHash } from "node:crypto";
 import { execSync } from "node:child_process";
-import { existsSync, readdirSync } from "node:fs";
 import path from "node:path";
-import { mixTracks } from "@vf/audio-mix";
+import { mixTracks, mixTracksWithSpec, parseMixYaml } from "@vf/audio-mix";
 import { formatRunId } from "@vf/workflow";
 
 export interface MixOptions {
   project: string;
   cwd?: string | undefined;
-  /** Explicit BGM file path (defaults to first .wav in assets/audio-assets/bgm/). */
   bgmPath?: string | undefined;
   bgmAttenuationDb?: number;
+  mixYamlPath?: string | undefined;
+  bgmFadeInSec?: number;
+  bgmFadeOutSec?: number;
 }
 
 function safeGitHead(cwd: string): string {
@@ -22,7 +24,6 @@ function safeGitHead(cwd: string): string {
   }
 }
 
-/** Pick the BGM file: --bgm <path> wins, else first *.wav under bgm/. */
 function pickBgm(projectRoot: string, explicit?: string): string {
   if (explicit) return explicit;
   const bgmDir = path.join(projectRoot, "assets", "audio-assets", "bgm");
@@ -58,6 +59,52 @@ function pickNarrations(projectRoot: string): string[] {
   return files;
 }
 
+/** Parse a spec's SFX cues into engine cues by translating scene_N tags into
+ * absolute seconds based on the accumulated narration duration. */
+function resolveSfxCues(
+  specSfx: Record<string, string> | undefined,
+  projectRoot: string,
+  sfxDir: string,
+  narrationPaths: string[],
+  narrationDurationsSec: number[],
+): { atSec: number; path: string }[] {
+  if (!specSfx) return [];
+  const cues: { atSec: number; path: string }[] = [];
+  let cumulative = 0;
+  for (let i = 0; i < narrationPaths.length; i++) {
+    const sceneKey = `scene_${i + 1}`;
+    const tag = specSfx[sceneKey];
+    if (tag) {
+      const tagFile = path.join(sfxDir, `${tag}.wav`);
+      if (!existsSync(tagFile)) {
+        throw new Error(
+          `SFX cue "${tag}" for ${sceneKey} not found at ${tagFile} — run \`vf audio-asset --sfx ${tag}\` first`,
+        );
+      }
+      cues.push({ atSec: cumulative, path: tagFile });
+    }
+    cumulative += narrationDurationsSec[i] ?? 0;
+  }
+  return cues;
+}
+
+/** Probe concatenated-narration duration so we can place the fade-out and
+ * SFX cues at concrete timestamps. */
+function probeTotalDuration(narrationPaths: string[]): number[] {
+  return narrationPaths.map((p) => {
+    try {
+      return parseFloat(
+        execSync(
+          `ffprobe -v error -select_streams a:0 -show_entries stream=duration -of csv=p=0 ${JSON.stringify(p)}`,
+          { encoding: "utf8" },
+        ).trim(),
+      );
+    } catch {
+      return 0;
+    }
+  });
+}
+
 export async function runMix(opts: MixOptions): Promise<number> {
   const cwd = path.resolve(opts.cwd ?? ".");
   const projectRoot = path.join(cwd, "projects", opts.project);
@@ -75,18 +122,62 @@ export async function runMix(opts: MixOptions): Promise<number> {
     return 1;
   }
 
+  // Read mix.yaml (optional) — overrides BGM selection and may define SFX cues
+  // + fade durations. CLI flags override the spec where set.
+  const mixYamlPath =
+    opts.mixYamlPath ?? path.join(projectRoot, "audio-assets", "mix.yaml");
+  let spec = null;
+  if (existsSync(mixYamlPath)) {
+    const { readFile } = await import("node:fs/promises");
+    const yamlText = await readFile(mixYamlPath, "utf8");
+    spec = parseMixYaml(yamlText);
+    if (!opts.bgmPath && spec.bgm) {
+      try {
+        bgmPath = pickBgm(projectRoot, `${projectRoot}/assets/audio-assets/bgm/${spec.bgm}.wav`);
+      } catch {
+        // ignore — fall back to flag/default
+      }
+    }
+  }
+
+  const fadeIn = opts.bgmFadeInSec ?? spec?.bgm_fade_in_sec ?? 0;
+  const fadeOut = opts.bgmFadeOutSec ?? spec?.bgm_fade_out_sec ?? 0;
+  const sfxDir = path.join(projectRoot, "assets", "audio-assets", "sfx");
+  const narrationDurationsSec = probeTotalDuration(narrationPaths);
+  const sfxCues = resolveSfxCues(
+    spec?.sfx,
+    projectRoot,
+    sfxDir,
+    narrationPaths,
+    narrationDurationsSec,
+  );
+
   const outPath = path.join(projectRoot, "output", "final-mixed.mp4");
   await mkdir(path.dirname(outPath), { recursive: true });
 
   try {
-    await mixTracks({
-      narrationPaths,
-      bgmPath,
-      outPath,
-      ...(opts.bgmAttenuationDb !== undefined
-        ? { bgmAttenuationDb: opts.bgmAttenuationDb }
-        : {}),
-    });
+    if (sfxCues.length > 0 || fadeIn > 0 || fadeOut > 0) {
+      await mixTracksWithSpec({
+        narrationPaths,
+        bgmPath,
+        outPath,
+        sfxCues,
+        bgmFadeInSec: fadeIn,
+        bgmFadeOutSec: fadeOut,
+        ...(opts.bgmAttenuationDb !== undefined
+          ? { bgmAttenuationDb: opts.bgmAttenuationDb }
+          : {}),
+      });
+    } else {
+      await mixTracks({
+        narrationPaths,
+        bgmPath,
+        outPath,
+        ...(opts.bgmAttenuationDb !== undefined
+          ? { bgmAttenuationDb: opts.bgmAttenuationDb }
+          : {}),
+      });
+    }
   } catch (err) {
     console.error(`\u2717 audio mix failed:`, (err as Error).message);
     return 1;
@@ -97,7 +188,9 @@ export async function runMix(opts: MixOptions): Promise<number> {
   const promptHash =
     "sha256:" +
     createHash("sha256")
-      .update(`bgm=${bgmPath}|narr=${narrationPaths.join(",")}`)
+      .update(
+        `bgm=${bgmPath}|narr=${narrationPaths.join(",")}|spec=${spec ? "yes" : "no"}|sfx=${sfxCues.length}|fade=${fadeIn},${fadeOut}`,
+      )
       .digest("hex");
   const record = {
     run_id: runId,
@@ -109,6 +202,7 @@ export async function runMix(opts: MixOptions): Promise<number> {
     input_files: [
       ...narrationPaths.map((p) => path.relative(projectRoot, p)),
       path.relative(projectRoot, bgmPath),
+      ...sfxCues.map((c) => path.relative(projectRoot, c.path)),
     ],
     output_files: ["output/final-mixed.mp4"],
     created_at: new Date().toISOString(),
@@ -124,7 +218,7 @@ export async function runMix(opts: MixOptions): Promise<number> {
 
   console.log(`\u2713 mixed ${opts.project}/output/final-mixed.mp4`);
   console.log(
-    `  narration=${narrationPaths.length} files  bgm=${path.basename(bgmPath)}`,
+    `  narration=${narrationPaths.length} files  bgm=${path.basename(bgmPath)}  sfx=${sfxCues.length} cues  fade=${fadeIn}s/${fadeOut}s`,
   );
   console.log(`  next: this is the audio you ship — replaces per-scene narration TTS as the final mix`);
   return 0;

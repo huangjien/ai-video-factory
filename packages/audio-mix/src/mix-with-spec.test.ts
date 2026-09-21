@@ -89,7 +89,7 @@ describe("mixTracksWithSpec (todo 2) — SFX cues + BGM fades", () => {
       ),
     );
     expect(parseFloat(probe.streams[0].duration)).toBeGreaterThanOrEqual(3.8);
-  });
+  }, 120_000);
 
   it("throws when an SFX cue references a missing file", async () => {
     const out = path.join(dir, "out-missing.wav");

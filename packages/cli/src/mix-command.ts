@@ -130,7 +130,12 @@ export async function runMix(opts: MixOptions): Promise<number> {
   if (existsSync(mixYamlPath)) {
     const { readFile } = await import("node:fs/promises");
     const yamlText = await readFile(mixYamlPath, "utf8");
-    spec = parseMixYaml(yamlText);
+    try {
+      spec = parseMixYaml(yamlText);
+    } catch (err) {
+      console.error(`\u2717 ${(err as Error).message}`);
+      return 1;
+    }
     if (!opts.bgmPath && spec.bgm) {
       try {
         bgmPath = pickBgm(projectRoot, `${projectRoot}/assets/audio-assets/bgm/${spec.bgm}.wav`);
@@ -142,15 +147,21 @@ export async function runMix(opts: MixOptions): Promise<number> {
 
   const fadeIn = opts.bgmFadeInSec ?? spec?.bgm_fade_in_sec ?? 0;
   const fadeOut = opts.bgmFadeOutSec ?? spec?.bgm_fade_out_sec ?? 0;
-  const sfxDir = path.join(projectRoot, "assets", "audio-assets", "sfx");
-  const narrationDurationsSec = probeTotalDuration(narrationPaths);
-  const sfxCues = resolveSfxCues(
-    spec?.sfx,
-    projectRoot,
-    sfxDir,
-    narrationPaths,
-    narrationDurationsSec,
-  );
+  const sfxDir = path.join(projectRoot, "assets/audio-assets/sfx");
+  let sfxCues: { atSec: number; path: string }[];
+  try {
+    const narrationDurationsSec = probeTotalDuration(narrationPaths);
+    sfxCues = resolveSfxCues(
+      spec?.sfx,
+      projectRoot,
+      sfxDir,
+      narrationPaths,
+      narrationDurationsSec,
+    );
+  } catch (err) {
+    console.error(`\u2717 ${(err as Error).message}`);
+    return 1;
+  }
 
   const outPath = path.join(projectRoot, "output", "final-mixed.mp4");
   await mkdir(path.dirname(outPath), { recursive: true });

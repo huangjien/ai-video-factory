@@ -32,7 +32,12 @@ jobs:
       # Install from the committed lockfile (still reproducible) and let
       # pnpm wire workspace symlinks fresh on every CI run.
       - name: Install dependencies
-        run: pnpm install
+        # Force a clean install on every CI run. pnpm can incorrectly
+        # report "already up to date" in some fresh-checkout scenarios and
+        # skip re-wiring workspace symlinks, which breaks @vf/* imports
+        # across the package graph. The lockfile still drives reproducible
+        # resolution; the wipe just forces link re-wiring.
+        run: rm -rf node_modules && pnpm install
 
       - name: Build
         run: pnpm run build

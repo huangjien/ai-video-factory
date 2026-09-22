@@ -78,6 +78,9 @@ export async function runScript(opts: ScriptOptions): Promise<number> {
       console.error(
         `\u2717 --from-research dir missing research.md: ${opts.fromResearch}`,
       );
+      console.error(
+        `  run ` + "`" + `vf research "${opts.topic}"` + "`" + ` first, or omit --from-research to generate the script from the topic alone`,
+      );
       return 1;
     }
   }

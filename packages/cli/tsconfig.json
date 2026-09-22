@@ -8,17 +8,20 @@
     "src"
   ],
   "references": [
-    {
-      "path": "../../packages/vdsl"
-    },
-    {
-      "path": "../../packages/video-components"
-    },
-    {
-      "path": "../../packages/media"
-    },
-    {
-      "path": "../../packages/workflow"
-    }
+    { "path": "../../packages/vdsl" },
+    { "path": "../../packages/video-components" },
+    { "path": "../../packages/video-renderer" },
+    { "path": "../../packages/media" },
+    { "path": "../../packages/media-generators" },
+    { "path": "../../packages/workflow" },
+    { "path": "../../packages/llm" },
+    { "path": "../../packages/agent-storyboard" },
+    { "path": "../../packages/research" },
+    { "path": "../../packages/script" },
+    { "path": "../../packages/tts" },
+    { "path": "../../packages/review" },
+    { "path": "../../packages/youtube" },
+    { "path": "../../packages/audio-assets" },
+    { "path": "../../packages/audio-mix" }
   ]
 }

@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { SourceSchema, normalizeUrl } from "./schemas.js";
+import {
+  ClaimStatus,
+  coerceClaimStatus,
+  SourceSchema,
+  normalizeUrl,
+} from "./schemas.js";
 
 describe("normalizeUrl (LLM-URL repair)", () => {
   it("passes valid URLs through unchanged", () => {
@@ -58,6 +63,58 @@ describe("SourceSchema with URL normalization", () => {
   });
 
   it("still rejects garbage that is not remotely a URL", () => {
+    const r = SourceSchema.safeParse({ ...base, url: "???" });
+    expect(r.success).toBe(false);
+  });
+});
+
+describe("coerceClaimStatus (LLM status synonym mapping)", () => {
+  it("accepts the canonical four statuses", () => {
+    expect(coerceClaimStatus("fact")).toBe("fact");
+    expect(coerceClaimStatus("opinion")).toBe("opinion");
+    expect(coerceClaimStatus("uncertain")).toBe("uncertain");
+    expect(coerceClaimStatus("needs_human")).toBe("needs_human");
+  });
+
+  it("maps common LLM synonyms to the nearest canonical value", () => {
+    expect(coerceClaimStatus("verified")).toBe("fact");
+    expect(coerceClaimStatus("TRUE")).toBe("fact");
+    expect(coerceClaimStatus("factual")).toBe("fact");
+    expect(coerceClaimStatus("confirmed")).toBe("fact");
+    expect(coerceClaimStatus("supported")).toBe("fact");
+    expect(coerceClaimStatus("opinionated")).toBe("opinion");
+    expect(coerceClaimStatus("hypothesis")).toBe("uncertain");
+    expect(coerceClaimStatus("unclear")).toBe("uncertain");
+    expect(coerceClaimStatus("disputed")).toBe("uncertain");
+    expect(coerceClaimStatus("false")).toBe("uncertain");
+  });
+
+  it("throws on truly unknown statuses (so the schema still catches bugs)", () => {
+    expect(() => coerceClaimStatus("unicorn")).toThrow();
+  });
+
+  it("trims and lower-cases before matching", () => {
+    expect(coerceClaimStatus("  Fact  ")).toBe("fact");
+  });
+});
+
+describe("SourceSchema accepts raw CJK URLs (Node URL parser)", () => {
+  const base = {
+    id: "s1",
+    title: "Example",
+    accessed: "2026-09-22",
+    snippet: "x",
+  };
+
+  it("accepts a raw CJK URL (the user'''s case)", () => {
+    const r = SourceSchema.safeParse({
+      ...base,
+      url: "https://zh.wikipedia.org/wiki/思维链",
+    });
+    expect(r.success).toBe(true);
+  });
+
+  it("rejects truly unparseable input", () => {
     const r = SourceSchema.safeParse({ ...base, url: "???" });
     expect(r.success).toBe(false);
   });

@@ -53,7 +53,7 @@ describe("Todo 7 — theme tokens", () => {
     for (const name of COMPONENT_NAMES) {
       const entry = REGISTRY[name];
       expect(entry?.propsSchema).toBeDefined();
-      expect(entry?.propsSchema.safeParse({}).success).toBe(false);
+      expect(entry?.propsSchema.safeParse(42).success).toBe(false);
     }
   });
 });

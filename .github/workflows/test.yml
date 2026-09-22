@@ -19,20 +19,32 @@ jobs:
         with:
           node-version: "22"
 
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 12.5.1
+
       - name: Install ffmpeg
         uses: FedericoCarboni/setup-ffmpeg@v3
 
+      - name: Cache pnpm store
+        uses: actions/cache@v4
+        with:
+          path: ~/.local/share/pnpm/store
+          key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: ${{ runner.os }}-pnpm-
+
       - name: Install dependencies
-        run: npm ci
+        run: pnpm install --frozen-lockfile
 
       - name: Build
-        run: npm run build
+        run: pnpm run build
 
       - name: Lint
-        run: npm run lint
+        run: pnpm run lint
 
       - name: Unit + integration tests
-        run: npm test
+        run: pnpm test
 
       - name: §62.4 acceptance audit
         # The benchmark-v01 project lives at projects/benchmark-v01 and has
@@ -43,4 +55,4 @@ jobs:
           node packages/cli/dist/index.js preview --cwd projects/benchmark-v01
           yes | node packages/cli/dist/index.js approve review --cwd projects/benchmark-v01
           node packages/cli/dist/index.js final --cwd projects/benchmark-v01
-          npm run acceptance
+          pnpm run acceptance

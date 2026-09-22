@@ -10,6 +10,8 @@ import { formatRunId } from "@vf/workflow";
 import type { Storyboard } from "@vf/vdsl/schema.js";
 import { stringify as yamlStringify } from "yaml";
 import { runNew } from "./new-command.js";
+import { slugifyProjectName } from "./project-path.js";
+import { ensureProject } from "./ensure-project.js";
 
 export interface StoryboardOptions {
   topic: string;
@@ -21,15 +23,6 @@ export interface StoryboardOptions {
   style?: string | undefined;
   fromResearch?: string | undefined;
   fromScript?: string | undefined;
-}
-
-function slugify(s: string): string {
-  return s
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9\u4e00-\u9fff]+/g, "-")
-    .replace(/^-|-$/g, "")
-    .slice(0, 40) || "project";
 }
 
 function providerInstance(name: string): Provider {
@@ -52,7 +45,7 @@ function safeGitHead(cwd: string): string {
 
 export async function runStoryboard(opts: StoryboardOptions): Promise<number> {
   const cwd = path.resolve(opts.cwd ?? ".");
-  const slug = slugify(opts.topic);
+  const slug = slugifyProjectName(opts.topic);
   const projectRoot = path.join(cwd, "projects", slug);
   const lang = opts.lang ?? "zh-CN";
   const duration = opts.duration ?? 40;
@@ -60,7 +53,8 @@ export async function runStoryboard(opts: StoryboardOptions): Promise<number> {
   const style = opts.style ?? "dark-tech";
 
   // Scaffold the project (vf new writes state.yaml + dirs)
-  const code = await runNew({ projectId: slug, cwd });
+  const code = await ensureProject(cwd, slug, projectRoot);
+  if (code !== 0) return code;
   if (code !== 0) return code;
 
   const cfg = loadProviderConfig();

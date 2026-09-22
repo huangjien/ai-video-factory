@@ -2,6 +2,7 @@ import { existsSync } from "node:fs";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { initState, writeProjectState } from "@vf/workflow";
+import { slugifyProjectName } from "./project-path.js";
 
 const STORYBOARD_TEMPLATE = (projectId: string): string => `schema_version: "0.1"
 
@@ -36,7 +37,8 @@ export async function runNew(opts: NewOptions): Promise<number> {
   // layout matches runPreview/runStatus/etc. and the positional project
   // arg in the CLI works uniformly.
   const base = opts.cwd ?? ".";
-  const root = path.resolve(base, "projects", opts.projectId);
+  const projectId = slugifyProjectName(opts.projectId);
+  const root = path.resolve(base, "projects", projectId);
   if (existsSync(root)) {
     console.error(`refused: project already exists at ${root}`);
     return 1;
@@ -53,20 +55,20 @@ export async function runNew(opts: NewOptions): Promise<number> {
 
   await writeFile(
     path.join(root, "project.yaml"),
-    `id: ${opts.projectId}\nlanguage: zh-CN\nfps: 30\nwidth: 1920\nheight: 1080\ntheme: dark-tech\n`,
+    `id: ${projectId}\nlanguage: zh-CN\nfps: 30\nwidth: 1920\nheight: 1080\ntheme: dark-tech\n`,
     "utf8",
   );
   await writeFile(
     path.join(root, "storyboard", "storyboard.yaml"),
-    STORYBOARD_TEMPLATE(opts.projectId),
+    STORYBOARD_TEMPLATE(projectId),
     "utf8",
   );
   await writeFile(
     path.join(root, "vdsl", "vdsl.yaml"),
-    `schema_version: "0.1"\nproject: {id: ${opts.projectId}, language: zh-CN, fps: 30, width: 1920, height: 1080}\nscenes: []\n`,
+    `schema_version: "0.1"\nproject: {id: ${projectId}, language: zh-CN, fps: 30, width: 1920, height: 1080}\nscenes: []\n`,
     "utf8",
   );
-  await writeProjectState(root, initState(opts.projectId));
+  await writeProjectState(root, initState(projectId));
   console.log(`✓ scaffolded ${root}`);
   console.log(`  next: edit storyboard/storyboard.yaml, then run \`vf preview\``);
   return 0;

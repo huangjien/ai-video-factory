@@ -8,6 +8,8 @@ import type { ChatMessage, Provider } from "@vf/llm";
 import { formatRunId } from "@vf/workflow";
 import { stringify as yamlStringify } from "yaml";
 import { runNew } from "./new-command.js";
+import { ensureProject } from "./ensure-project.js";
+import { resolveProjectRoot, slugifyForProject, slugifyProjectName } from "./project-path.js";
 
 export interface ResearchOptions {
   topic: string;
@@ -17,15 +19,6 @@ export interface ResearchOptions {
   lang?: "zh-CN" | "en-US" | undefined;
   duration?: number | undefined;
   audience?: string | undefined;
-}
-
-function slugify(s: string): string {
-  return s
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9\u4e00-\u9fff]+/g, "-")
-    .replace(/^-|-$/g, "")
-    .slice(0, 40) || "project";
 }
 
 function providerInstance(name: string): Provider {
@@ -48,13 +41,14 @@ function safeGitHead(cwd: string): string {
 
 export async function runResearch(opts: ResearchOptions): Promise<number> {
   const cwd = path.resolve(opts.cwd ?? ".");
-  const slug = slugify(opts.topic);
+  const slug = slugifyProjectName(opts.topic);
   const projectRoot = path.join(cwd, "projects", slug);
   const lang = opts.lang ?? "zh-CN";
   const duration = opts.duration ?? 40;
   const audience = opts.audience ?? "developers";
 
-  const code = await runNew({ projectId: slug, cwd });
+  const code = await ensureProject(cwd, slug, projectRoot);
+  if (code !== 0) return code;
   if (code !== 0) return code;
 
   const cfg = loadProviderConfig();

@@ -1,10 +1,31 @@
 import { existsSync, readdirSync } from "node:fs";
 import path from "node:path";
 
-/** Return the project name as-is. The CLI's positional arg IS the
- * directory name (matching how `vf new` stores the project on disk).
- * We do no slugification here: the user owns the directory name, and
- * lower-casing it would mismatch what `runNew` actually wrote. */
+/** Canonical slugify for a project directory name — used by `vf new`,
+ * `vf research`, `vf script`, and `vf storyboard` so the same topic always
+ * lands at the same directory regardless of which verb ran first.
+ *
+ * Rules: lowercase; any non-[a-z0-9 CJK] sequence collapses to a single
+ * `-`; leading/trailing `-` stripped; truncated to 40 chars; empty falls
+ * back to "project".
+ *
+ * Example: "orca 新一代 ADE 简介" → "orca-新一代-ade-简介"
+ */
+export function slugifyProjectName(s: string): string {
+  return (
+    s
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9\u4e00-\u9fff]+/g, "-")
+      .replace(/^-|-$/g, "")
+      .slice(0, 40) || "project"
+  );
+}
+
+/** Identity passthrough for the lookup path used by `vf preview` /
+ * `vf status` / `vf approve` / etc. The user-supplied positional IS the
+ * directory name on disk — slugifying here would mismatch what `runNew`
+ * actually wrote (e.g. for legacy pre-slugify projects). */
 export function slugifyForProject(s: string): string {
   return s;
 }

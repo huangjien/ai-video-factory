@@ -8,6 +8,7 @@ import type { ChatMessage, Provider } from "@vf/llm";
 import { formatRunId } from "@vf/workflow";
 import { runNew } from "./new-command.js";
 import { ensureProject } from "./ensure-project.js";
+import { slugifyProjectName } from "./project-path.js";
 
 export interface ScriptOptions {
   topic: string;
@@ -18,15 +19,6 @@ export interface ScriptOptions {
   audience?: string | undefined;
   fromResearch?: string | undefined;
   direction?: string | undefined;
-}
-
-function slugify(s: string): string {
-  return s
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9\u4e00-\u9fff]+/g, "-")
-    .replace(/^-|-$/g, "")
-    .slice(0, 40) || "project";
 }
 
 function providerInstance(name: string): Provider {
@@ -49,7 +41,7 @@ function safeGitHead(cwd: string): string {
 
 export async function runScript(opts: ScriptOptions): Promise<number> {
   const cwd = path.resolve(opts.cwd ?? ".");
-  const slug = slugify(opts.topic);
+  const slug = slugifyProjectName(opts.topic);
   const projectRoot = path.join(cwd, "projects", slug);
   const lang = opts.lang ?? "zh-CN";
   const duration = opts.duration ?? 40;

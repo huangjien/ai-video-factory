@@ -7,6 +7,7 @@ import { callScript } from "@vf/script";
 import type { ChatMessage, Provider } from "@vf/llm";
 import { formatRunId } from "@vf/workflow";
 import { runNew } from "./new-command.js";
+import { ensureProject } from "./ensure-project.js";
 
 export interface ScriptOptions {
   topic: string;
@@ -54,7 +55,8 @@ export async function runScript(opts: ScriptOptions): Promise<number> {
   const duration = opts.duration ?? 40;
   const audience = opts.audience ?? "developers";
 
-  const code = await runNew({ projectId: slug, cwd });
+  const code = await ensureProject(cwd, slug, projectRoot);
+  if (code !== 0) return code;
   if (code !== 0) return code;
 
   const cfg = loadProviderConfig();

@@ -43,7 +43,7 @@ export const SourceSchema = z
     // constructor as the validator — permissive about non-ASCII in the
     // path and correctly rejects garbage like "???".
     url: z.preprocess(
-      normalizeUrl,
+      (v: unknown) => normalizeUrl(typeof v === "string" ? v : String(v ?? "")),
       z.string().refine(
         (v) => {
           try {
@@ -66,7 +66,7 @@ export type Source = z.infer<typeof SourceSchema>;
 /** Map the wide range of strings LLMs produce for the "status" field of
  * a claim to the canonical four-value enum we use downstream. Anything
  * we can't recognize is a bug — let the schema reject it. */
-const CLAIM_STATUS_SYNONYMS: Record<string, ClaimStatus> = {
+const CLAIM_STATUS_SYNONYMS: Record<string, "fact" | "opinion" | "uncertain" | "needs_human"> = {
   // "fact" cluster
   fact: "fact",
   true: "fact",
@@ -100,7 +100,7 @@ const CLAIM_STATUS_SYNONYMS: Record<string, ClaimStatus> = {
   "needs_human_review": "needs_human",
 };
 
-export function coerceClaimStatus(raw: string): ClaimStatus {
+export function coerceClaimStatus(raw: string): "fact" | "opinion" | "uncertain" | "needs_human" {
   const key = raw.trim().toLowerCase();
   const mapped = CLAIM_STATUS_SYNONYMS[key];
   if (mapped) return mapped;
@@ -112,7 +112,8 @@ export function coerceClaimStatus(raw: string): ClaimStatus {
 /** Preprocess wrapper that catches the throw so zod's safeParse returns a
  * normal validation result (success=false) instead of propagating the
  * exception. Unknown statuses are returned unchanged and the .enum fails. */
-function safeCoerceClaimStatus(raw: string): string {
+function safeCoerceClaimStatus(raw: unknown): unknown {
+  if (typeof raw !== "string") return raw;
   try {
     return coerceClaimStatus(raw);
   } catch {
@@ -124,6 +125,7 @@ export const ClaimStatus = z.preprocess(
   safeCoerceClaimStatus,
   z.enum(["fact", "opinion", "uncertain", "needs_human"]),
 );
+export type ClaimStatusType = "fact" | "opinion" | "uncertain" | "needs_human";
 
 export const ClaimSchema = z
   .object({

@@ -85,7 +85,7 @@ export async function callResearch(
   // Cross-validate: every claim.sources[i] must exist in output.sources
   const sourceIds = new Set(result.data.sources.map((s) => s.id));
   for (const claim of result.data.claims) {
-    for (const sid of claim.sources) {
+    for (const sid of claim.sources as string[]) {
       if (!sourceIds.has(sid)) {
         throw new ResearchError(
           `unknown source id ${sid} in claim ${claim.id}`,

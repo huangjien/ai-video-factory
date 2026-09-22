@@ -30,11 +30,11 @@ import {
  */
 
 async function seedProject(root: string): Promise<string> {
-  // runNew's cwd is the BASE dir; the project lands at ${cwd}/${projectId}.
+  // runNew's cwd is the BASE dir; the project lands at ${cwd}/projects/<projectId>.
   const projectId = path.basename(root);
   const { runNew } = await import("./new-command.js");
   await runNew({ projectId, cwd: root });
-  const projectDir = path.join(root, projectId);
+  const projectDir = path.join(root, "projects", projectId);
   const storyboard = `schema_version: "0.1"
 project:
   id: ${projectId}
@@ -119,10 +119,17 @@ function gitInit(root: string): void {
 describe("CLI pipeline integration — runPreview / runFinal / runStatus / workflow verbs", () => {
   let cwd: string;
   let projectDir: string;
+  // seedProject calls runNew({projectId: path.basename(cwd)}) which
+  // creates the project at cwd/projects/<basename(cwd)>. So projectName
+  // matches the projectId used at scaffold time.
+  let projectName: string;
+  let projectCwd: string;
 
   beforeEach(async () => {
     cwd = mkdtempSync(path.join(tmpdir(), "vf-cli-pipeline-"));
     projectDir = await seedProject(cwd);
+    projectName = path.basename(cwd);
+    projectCwd = cwd;
     gitInit(projectDir);
   });
 
@@ -133,7 +140,7 @@ describe("CLI pipeline integration — runPreview / runFinal / runStatus / workf
   // ----- runPreview -----
 
   it("runPreview renders preview.mp4 from a seed project", async () => {
-    const code = await runPreview(projectDir);
+    const code = await runPreview(projectName, projectCwd);
     expect(code).toBe(0);
     expect(existsSync(path.join(projectDir, "output", "preview-faststart.mp4"))).toBe(true);
     const state = readState(projectDir);
@@ -143,14 +150,14 @@ describe("CLI pipeline integration — runPreview / runFinal / runStatus / workf
 
   it("runPreview exits 1 when storyboard is missing", async () => {
     rmSync(path.join(projectDir, "storyboard", "storyboard.yaml"));
-    const code = await runPreview(projectDir);
+    const code = await runPreview(projectName, projectCwd);
     expect(code).toBe(1);
   });
 
   // ----- runStatus -----
 
   it("runStatus prints the per-stage checklist for a freshly scaffolded project", async () => {
-    const code = await runStatus(projectDir);
+    const code = await runStatus(projectName, projectCwd);
     expect(code).toBe(0);
   });
 
@@ -162,8 +169,8 @@ describe("CLI pipeline integration — runPreview / runFinal / runStatus / workf
   // ----- runApprove / runReject -----
 
   it("runApprove advances review to APPROVED and writes checkpoint", async () => {
-    await runPreview(projectDir); // produce the WAITING_REVIEW state
-    const code = await runApprove("review", projectDir);
+    await runPreview(projectName, projectCwd); // produce the WAITING_REVIEW state
+    const code = await runApprove(projectName, "review", projectCwd);
     expect(code).toBe(0);
     const state = readState(projectDir);
     expect(state.status).toBe("APPROVED");
@@ -171,7 +178,7 @@ describe("CLI pipeline integration — runPreview / runFinal / runStatus / workf
   }, 120_000);
 
   it("runReject writes feedback to the checkpoint + transitions to GENERATING", async () => {
-    await runPreview(projectDir);
+    await runPreview(projectName, projectCwd);
     // runReject only appends feedback when the stage checkpoint file
     // exists — preview writes state.yaml but not the checkpoint. Create it.
     mkdirSync(path.join(projectDir, "checkpoints"), { recursive: true });
@@ -179,7 +186,7 @@ describe("CLI pipeline integration — runPreview / runFinal / runStatus / workf
       path.join(projectDir, "checkpoints", "review.yaml"),
       "id: review-v1\nstage: review\nstatus: in_progress\ncreated_at: '2026-01-01'\nhuman_changes: []\nnotes: ''\n",
     );
-    const code = await runReject("wrong-pacing", projectDir);
+    const code = await runReject(projectName, "wrong-pacing", projectCwd);
     expect(code).toBe(0);
     const cp = readFileSync(path.join(projectDir, "checkpoints", "review.yaml"), "utf8");
     expect(cp).toContain("wrong-pacing");
@@ -188,16 +195,16 @@ describe("CLI pipeline integration — runPreview / runFinal / runStatus / workf
   // ----- runFinal -----
 
   it("runFinal exits 1 when review is not yet APPROVED", async () => {
-    await runPreview(projectDir);
+    await runPreview(projectName, projectCwd);
     // review is WAITING_REVIEW — runFinal should refuse
-    const code = await runFinal(projectDir);
+    const code = await runFinal({ projectName, cwd: projectCwd });
     expect(code).toBe(1);
   }, 120_000);
 
   it("runFinal produces final-faststart.mp4 + FINAL_APPROVED state after approval", async () => {
-    await runPreview(projectDir);
-    await runApprove("review", projectDir);
-    const code = await runFinal(projectDir);
+    await runPreview(projectName, projectCwd);
+    await runApprove(projectName, "review", projectCwd);
+    const code = await runFinal({ projectName, cwd: projectCwd });
     expect(code).toBe(0);
     expect(existsSync(path.join(projectDir, "output", "final-faststart.mp4"))).toBe(true);
     const state = readState(projectDir);
@@ -208,7 +215,7 @@ describe("CLI pipeline integration — runPreview / runFinal / runStatus / workf
   // ----- runRollback -----
 
   it("runRollback declines when the confirmation answer is not 'y'", async () => {
-    await runPreview(projectDir);
+    await runPreview(projectName, projectCwd);
     // runRollback reads a confirmation from process.stdin via readline —
     // swap in a PassThrough that answers "n" so the test never blocks.
     const { PassThrough } = await import("node:stream");
@@ -217,7 +224,7 @@ describe("CLI pipeline integration — runPreview / runFinal / runStatus / workf
     Object.defineProperty(process, "stdin", { value: fakeStdin, configurable: true });
     fakeStdin.write("n\n");
     try {
-      const code = await runRollback("checkpoint-x", projectDir);
+      const code = await runRollback(projectName, "checkpoint-x", projectCwd);
       expect(code).toBe(0);
       const state = readState(projectDir);
       expect(state.status).toBe("WAITING_REVIEW");
@@ -230,8 +237,8 @@ describe("CLI pipeline integration — runPreview / runFinal / runStatus / workf
   // ----- runResume -----
 
   it("runResume prints a resume summary", async () => {
-    await runPreview(projectDir);
-    const code = await runResume(projectDir);
+    await runPreview(projectName, projectCwd);
+    const code = await runResume(projectName, projectCwd);
     expect(code).toBe(0);
   }, 60_000);
 });

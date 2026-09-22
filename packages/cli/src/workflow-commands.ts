@@ -1,5 +1,7 @@
 import path from "node:path";
 import { execSync } from "node:child_process";
+import { existsSync } from "node:fs";
+import { resolveProjectRoot, slugifyForProject } from "./project-path.js";
 import {
   appendCheckpoint,
   loadCheckpoint,
@@ -11,10 +13,22 @@ import {
 } from "@vf/workflow";
 
 export async function runApprove(
+  projectName: string | undefined,
   stage: string | undefined,
-  cwd?: string,
+  cwd: string | undefined,
 ): Promise<number> {
-  const root = path.resolve(cwd ?? ".");
+  let root: string;
+  if (projectName) {
+    const base = path.resolve(cwd ?? ".");
+    root = path.join(base, "projects", slugifyForProject(projectName));
+  } else {
+    const resolved = resolveProjectRoot(cwd);
+    if (!resolved.ok) {
+      console.error(resolved.message);
+      return 1;
+    }
+    root = resolved.root;
+  }
   const target = (stage ?? (await readProjectState(root))?.current_stage ?? "").trim();
   if (!target) {
     console.error("approve: could not determine stage");
@@ -53,10 +67,22 @@ export async function runApprove(
 }
 
 export async function runReject(
+  projectName: string | undefined,
   reasonCode: string,
-  cwd?: string,
+  cwd: string | undefined,
 ): Promise<number> {
-  const root = path.resolve(cwd ?? ".");
+  let root: string;
+  if (projectName) {
+    const base = path.resolve(cwd ?? ".");
+    root = path.join(base, "projects", slugifyForProject(projectName));
+  } else {
+    const resolved = resolveProjectRoot(cwd);
+    if (!resolved.ok) {
+      console.error(resolved.message);
+      return 1;
+    }
+    root = resolved.root;
+  }
   const state = await readProjectState(root);
   if (!state) return 1;
   const machineState: MachineState = {
@@ -81,10 +107,22 @@ export async function runReject(
 }
 
 export async function runRollback(
+  projectName: string | undefined,
   checkpointId: string,
-  cwd?: string,
+  cwd: string | undefined,
 ): Promise<number> {
-  const root = path.resolve(cwd ?? ".");
+  let root: string;
+  if (projectName) {
+    const base = path.resolve(cwd ?? ".");
+    root = path.join(base, "projects", slugifyForProject(projectName));
+  } else {
+    const resolved = resolveProjectRoot(cwd);
+    if (!resolved.ok) {
+      console.error(resolved.message);
+      return 1;
+    }
+    root = resolved.root;
+  }
   const state = await readProjectState(root);
   if (!state) return 1;
   console.log(
@@ -110,8 +148,22 @@ export async function runRollback(
   return 0;
 }
 
-export async function runResume(cwd?: string): Promise<number> {
-  const root = path.resolve(cwd ?? ".");
+export async function runResume(
+  projectName: string | undefined,
+  cwd: string | undefined,
+): Promise<number> {
+  let root: string;
+  if (projectName) {
+    const base = path.resolve(cwd ?? ".");
+    root = path.join(base, "projects", slugifyForProject(projectName));
+  } else {
+    const resolved = resolveProjectRoot(cwd);
+    if (!resolved.ok) {
+      console.error(resolved.message);
+      return 1;
+    }
+    root = resolved.root;
+  }
   const state = await readProjectState(root);
   if (!state) return 1;
   const head = execSync(`git rev-parse HEAD`, { cwd: root, encoding: "utf8" }).trim();

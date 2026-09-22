@@ -32,7 +32,11 @@ export interface NewOptions {
 }
 
 export async function runNew(opts: NewOptions): Promise<number> {
-  const root = path.resolve(opts.cwd ?? "projects", opts.projectId);
+  // Always create the project at `<cwd>/projects/<projectId>/` so the
+  // layout matches runPreview/runStatus/etc. and the positional project
+  // arg in the CLI works uniformly.
+  const base = opts.cwd ?? ".";
+  const root = path.resolve(base, "projects", opts.projectId);
   if (existsSync(root)) {
     console.error(`refused: project already exists at ${root}`);
     return 1;

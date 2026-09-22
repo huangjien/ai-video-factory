@@ -267,11 +267,16 @@ final decision automatically.
 ### 6.4 Render a preview
 
 ```bash
-node packages/cli/dist/index.js preview --cwd projects/demo
+node packages/cli/dist/index.js preview demo
 ```
 
 This performs validation, compilation, Remotion rendering, and FFmpeg
-faststart processing. Outputs:
+faststart processing. The positional `demo` is the project slug (the
+project dir name) — equivalent to passing `--cwd projects/demo`. The
+shorter form works when there's exactly one project to disambiguate; use
+`--cwd` explicitly when multiple exist.
+
+Outputs:
 
 ```text
 projects/demo/output/preview.mp4
@@ -284,8 +289,8 @@ The preview command moves the project to the `review` stage with status
 ### 6.5 Approve review and render final
 
 ```bash
-node packages/cli/dist/index.js approve review --cwd projects/demo
-node packages/cli/dist/index.js final --cwd projects/demo
+node packages/cli/dist/index.js approve review demo
+node packages/cli/dist/index.js final demo
 ```
 
 Final outputs:

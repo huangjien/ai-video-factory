@@ -289,55 +289,63 @@ program
 
 program
   .command("status")
+  .argument("[project]", "project name (slug) — optional")
   .option("--cwd <dir>", "project root")
-  .action(async (opts: { cwd?: string }) => {
-    process.exitCode = await runStatus(opts.cwd);
+  .action(async (project: string | undefined, opts: { cwd?: string }) => {
+    process.exitCode = await runStatus(project, opts.cwd);
   });
 
 program
   .command("approve")
+  .argument("[project]", "project name (slug) — optional")
   .argument("[stage]", "stage to approve (defaults to current_stage)")
   .option("--cwd <dir>", "project root")
-  .action(async (stage: string | undefined, opts: { cwd?: string }) => {
-    process.exitCode = await runApprove(stage, opts.cwd);
+  .action(async (project: string | undefined, stage: string | undefined, opts: { cwd?: string }) => {
+    process.exitCode = await runApprove(project, stage, opts.cwd);
   });
 
 program
   .command("reject")
+  .argument("[project]", "project name (slug) — optional")
   .argument("<reason>", "reason code (e.g. wrong-content, wrong-pacing)")
   .option("--cwd <dir>", "project root")
-  .action(async (reason: string, opts: { cwd?: string }) => {
-    process.exitCode = await runReject(reason, opts.cwd);
+  .action(async (project: string | undefined, reason: string, opts: { cwd?: string }) => {
+    process.exitCode = await runReject(project, reason, opts.cwd);
   });
 
 program
   .command("rollback")
+  .argument("[project]", "project name (slug) — optional")
   .argument("<checkpoint-id>", "checkpoint to roll back to")
   .option("--cwd <dir>", "project root")
-  .action(async (id: string, opts: { cwd?: string }) => {
-    process.exitCode = await runRollback(id, opts.cwd);
+  .action(async (project: string | undefined, id: string, opts: { cwd?: string }) => {
+    process.exitCode = await runRollback(project, id, opts.cwd);
   });
 
 program
   .command("resume")
+  .argument("[project]", "project name (slug) — optional")
   .option("--cwd <dir>", "project root")
-  .action(async (opts: { cwd?: string }) => {
-    process.exitCode = await runResume(opts.cwd);
+  .action(async (project: string | undefined, opts: { cwd?: string }) => {
+    process.exitCode = await runResume(project, opts.cwd);
   });
 
 program
   .command("preview")
-  .option("--cwd <dir>", "project root")
-  .action(async (opts: { cwd?: string }) => {
-    process.exitCode = await runPreview(opts.cwd);
+  .argument("[project]", "project name (slug) — optional if exactly one project exists under <cwd>/projects/")
+  .option("--cwd <dir>", "project root (used as base when [project] is given, or auto-discovered from)")
+  .action(async (project: string | undefined, opts: { cwd?: string }) => {
+    process.exitCode = await runPreview(project, opts.cwd);
   });
 
 program
   .command("final")
+  .argument("[project]", "project name (slug) — optional")
   .option("--cwd <dir>", "project root")
   .option("--mix", "after rendering, run vf mix to produce final-mixed.mp4 with narration + BGM + SFX cues")
-  .action(async (opts: { cwd?: string; mix?: boolean }) => {
+  .action(async (project: string | undefined, opts: { cwd?: string; mix?: boolean }) => {
     process.exitCode = await runFinal({
+      ...(project ? { projectName: project } : {}),
       ...(opts.cwd !== undefined ? { cwd: opts.cwd } : {}),
       ...(opts.mix === true ? { mix: true } : {}),
     });

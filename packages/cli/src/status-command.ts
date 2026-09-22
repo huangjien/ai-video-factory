@@ -1,6 +1,7 @@
 import { existsSync } from "node:fs";
 import path from "node:path";
 import { loadCheckpoint, readProjectState, V01_STAGES } from "@vf/workflow";
+import { resolveProjectRoot, slugifyForProject } from "./project-path.js";
 
 const MARK: Record<string, string> = {
   approved: "✓",
@@ -9,11 +10,18 @@ const MARK: Record<string, string> = {
   in_progress: "●",
 };
 
-export async function runStatus(cwd?: string): Promise<number> {
-  const root = path.resolve(cwd ?? ".");
-  if (!existsSync(path.join(root, "state.yaml"))) {
-    console.error(`no video-agent project here: ${root}`);
-    return 1;
+export async function runStatus(projectName?: string, cwd?: string): Promise<number> {
+  let root: string;
+  if (projectName) {
+    const base = path.resolve(cwd ?? ".");
+    root = path.join(base, "projects", slugifyForProject(projectName));
+  } else {
+    const resolved = resolveProjectRoot(cwd);
+    if (!resolved.ok) {
+      console.error(resolved.message);
+      return 1;
+    }
+    root = resolved.root;
   }
   const state = await readProjectState(root);
   if (!state) return 1;

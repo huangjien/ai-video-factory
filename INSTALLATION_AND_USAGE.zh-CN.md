@@ -410,6 +410,12 @@ vf script "AI Agent Memory"
 vf audio ai-agent-memory
 ```
 
+**`vf script` 在带或不带 `--from-research` 时都可工作**：省略时，脚本 Agent
+仅根据主题生成；传入 `--from-research <dir>` 时，会将 `research/research.md`
+和 `research/claims.yaml` 作为上下文注入（输出质量更高）。如果该路径
+缺少 `research.md`，命令会以可读的提示报错，指出请先运行
+`vf research <topic>`。
+
 默认使用 Edge TTS，不需要 API key，但需要网络连接。它依赖在线 Microsoft Edge TTS 服务，可能受到限流或网络故障影响。
 
 离线测试：

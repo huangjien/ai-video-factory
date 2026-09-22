@@ -466,6 +466,13 @@ vf script "AI Agent Memory"
 vf audio ai-agent-memory
 ```
 
+**`vf script` works with or without `--from-research`**: when omitted, the
+script agent drafts from the topic alone. When you pass
+`--from-research <dir>`, it injects `research/research.md` + `research/claims.yaml`
+as supporting context (production-quality output). If the path is missing
+`research.md`, the command fails with a readable hint pointing you to
+`vf research <topic>`.
+
 The default provider is Edge TTS and does not require an API key. It uses an
 online Microsoft Edge TTS endpoint, so it requires network access and may be
 rate-limited or unavailable offline. It is not an offline engine.

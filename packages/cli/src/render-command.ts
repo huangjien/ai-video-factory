@@ -23,7 +23,10 @@ async function loadStoryboard(projectRoot: string): Promise<string> {
   return readFile(abs, "utf8");
 }
 
-export async function runPreview(projectName?: string, cwd?: string): Promise<number> {
+export async function runPreview(
+  projectName?: string,
+  cwd?: string,
+): Promise<number> {
   // Two ways to identify the project:
   //   1. `projectName` (slug or human name) → look under `${cwd ?? "."}/projects/<slug>`
   //   2. neither → auto-discover from `${cwd ?? "."}/projects/*` via resolveProjectRoot
@@ -93,7 +96,9 @@ export interface FinalOptions {
   mix?: boolean;
 }
 
-export async function runFinal(opts: FinalOptions | string = {}): Promise<number> {
+export async function runFinal(
+  opts: FinalOptions | string = {},
+): Promise<number> {
   // Back-compat: accept either a cwd string or an options object.
   const resolved: FinalOptions =
     typeof opts === "string" ? { cwd: opts } : opts;
@@ -106,7 +111,9 @@ export async function runFinal(opts: FinalOptions | string = {}): Promise<number
   const state = await readProjectState(root);
   if (!state) return 1;
   if (state.current_stage !== "review" || state.status !== "APPROVED") {
-    console.error(`final: requires review checkpoint APPROVED (current: ${state.current_stage} ${state.status})`);
+    console.error(
+      `final: requires review checkpoint APPROVED (current: ${state.current_stage} ${state.status})`,
+    );
     return 1;
   }
   const text = await loadStoryboard(root);
@@ -142,10 +149,14 @@ export async function runFinal(opts: FinalOptions | string = {}): Promise<number
       const { runMix } = await import("./mix-command.js");
       const mixCode = await runMix({ project: path.basename(root), cwd: root });
       if (mixCode !== 0) {
-        console.error(`final: mix step exited ${mixCode}; bare narration mp4 is still at output/final-faststart.mp4`);
+        console.error(
+          `final: mix step exited ${mixCode}; bare narration mp4 is still at output/final-faststart.mp4`,
+        );
         return mixCode;
       }
-      console.log(`  audio: final-mixed.mp4 replaces narration-only mp4 as the published artifact`);
+      console.log(
+        `  audio: final-mixed.mp4 replaces narration-only mp4 as the published artifact`,
+      );
     } catch (err) {
       console.error(`final: mix step threw:`, (err as Error).message);
       return 1;

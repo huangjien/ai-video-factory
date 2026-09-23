@@ -103,8 +103,12 @@ export async function runThumbnail(opts: ThumbnailOptions): Promise<number> {
   const { writeRun } = await import("@vf/workflow");
   await writeRun(projectRoot, record);
 
-  console.log(`\u2713 generated ${opts.project}/youtube/${path.basename(thumbPath)}`);
-  console.log(`  provider=${provider.name}  size=${width}x${height}  prompt_hash=${promptHash.slice(0, 16)}…`);
+  console.log(
+    `\u2713 generated ${opts.project}/youtube/${path.basename(thumbPath)}`,
+  );
+  console.log(
+    `  provider=${provider.name}  size=${width}x${height}  prompt_hash=${promptHash.slice(0, 16)}…`,
+  );
   console.log(`  next: upload ${path.basename(thumbPath)} to YouTube Studio`);
   return 0;
 }

@@ -66,7 +66,10 @@ scenes:
       props:
         text: "world"
 `;
-  writeFileSync(path.join(projectDir, "storyboard", "storyboard.yaml"), storyboard);
+  writeFileSync(
+    path.join(projectDir, "storyboard", "storyboard.yaml"),
+    storyboard,
+  );
   // Seed tiny valid TTS wav files (silent 5s at 8kHz mono)
   for (const scene of ["scene-01", "scene-02"]) {
     writeFileSync(
@@ -116,7 +119,9 @@ function readState(root: string): {
 function gitInit(root: string): void {
   // Need git so safeGitHead in the CLI returns a real hash, not "unknown".
   execFileSync("git", ["init", "-q"], { cwd: root });
-  execFileSync("git", ["config", "user.email", "test@example.com"], { cwd: root });
+  execFileSync("git", ["config", "user.email", "test@example.com"], {
+    cwd: root,
+  });
   execFileSync("git", ["config", "user.name", "Test"], { cwd: root });
   execFileSync("git", ["add", "."], { cwd: root });
   execFileSync("git", ["commit", "-q", "-m", "init"], { cwd: root });
@@ -149,7 +154,9 @@ describe("CLI pipeline integration — runPreview / runFinal / runStatus / workf
   it("runPreview renders preview.mp4 from a seed project", async () => {
     const code = await runPreview(projectName, projectCwd);
     expect(code).toBe(0);
-    expect(existsSync(path.join(projectDir, "output", "preview-faststart.mp4"))).toBe(true);
+    expect(
+      existsSync(path.join(projectDir, "output", "preview-faststart.mp4")),
+    ).toBe(true);
     const state = readState(projectDir);
     expect(state.status).toBe("WAITING_REVIEW");
     expect(state.current_stage).toBe("review");
@@ -181,7 +188,9 @@ describe("CLI pipeline integration — runPreview / runFinal / runStatus / workf
     expect(code).toBe(0);
     const state = readState(projectDir);
     expect(state.status).toBe("APPROVED");
-    expect(existsSync(path.join(projectDir, "checkpoints", "review.yaml"))).toBe(true);
+    expect(
+      existsSync(path.join(projectDir, "checkpoints", "review.yaml")),
+    ).toBe(true);
   }, 120_000);
 
   it("runReject writes feedback to the checkpoint + transitions to GENERATING", async () => {
@@ -195,7 +204,10 @@ describe("CLI pipeline integration — runPreview / runFinal / runStatus / workf
     );
     const code = await runReject(projectName, "wrong-pacing", projectCwd);
     expect(code).toBe(0);
-    const cp = readFileSync(path.join(projectDir, "checkpoints", "review.yaml"), "utf8");
+    const cp = readFileSync(
+      path.join(projectDir, "checkpoints", "review.yaml"),
+      "utf8",
+    );
     expect(cp).toContain("wrong-pacing");
   }, 120_000);
 
@@ -213,7 +225,9 @@ describe("CLI pipeline integration — runPreview / runFinal / runStatus / workf
     await runApprove(projectName, "review", projectCwd);
     const code = await runFinal({ projectName, cwd: projectCwd });
     expect(code).toBe(0);
-    expect(existsSync(path.join(projectDir, "output", "final-faststart.mp4"))).toBe(true);
+    expect(
+      existsSync(path.join(projectDir, "output", "final-faststart.mp4")),
+    ).toBe(true);
     const state = readState(projectDir);
     expect(state.status).toBe("FINAL_APPROVED");
     expect(state.current_stage).toBe("final");
@@ -228,7 +242,10 @@ describe("CLI pipeline integration — runPreview / runFinal / runStatus / workf
     const { PassThrough } = await import("node:stream");
     const fakeStdin = new PassThrough();
     const realStdin = process.stdin;
-    Object.defineProperty(process, "stdin", { value: fakeStdin, configurable: true });
+    Object.defineProperty(process, "stdin", {
+      value: fakeStdin,
+      configurable: true,
+    });
     fakeStdin.write("n\n");
     try {
       const code = await runRollback(projectName, "checkpoint-x", projectCwd);
@@ -236,7 +253,10 @@ describe("CLI pipeline integration — runPreview / runFinal / runStatus / workf
       const state = readState(projectDir);
       expect(state.status).toBe("WAITING_REVIEW");
     } finally {
-      Object.defineProperty(process, "stdin", { value: realStdin, configurable: true });
+      Object.defineProperty(process, "stdin", {
+        value: realStdin,
+        configurable: true,
+      });
       fakeStdin.destroy();
     }
   }, 120_000);

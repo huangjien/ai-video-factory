@@ -64,7 +64,11 @@ describe("callResearch (todo 3) — §55", () => {
   it("rejects missing fenced block with ResearchError", async () => {
     const p = new CannedProvider(["Just some prose, no fence."]);
     await expect(
-      callResearch({ topic: "t", audience: "a", language: "zh-CN", duration: 40 }, p, { web: null }),
+      callResearch(
+        { topic: "t", audience: "a", language: "zh-CN", duration: 40 },
+        p,
+        { web: null },
+      ),
     ).rejects.toThrow(ResearchError);
   });
 
@@ -72,7 +76,11 @@ describe("callResearch (todo 3) — §55", () => {
     const bad = goodYaml.replace("[s1]", "[s-bogus]");
     const p = new CannedProvider(["```yaml\n" + bad + "\n```"]);
     await expect(
-      callResearch({ topic: "t", audience: "a", language: "zh-CN", duration: 40 }, p, { web: null }),
+      callResearch(
+        { topic: "t", audience: "a", language: "zh-CN", duration: 40 },
+        p,
+        { web: null },
+      ),
     ).rejects.toThrow(/unknown source id s-bogus/);
   });
 
@@ -80,7 +88,11 @@ describe("callResearch (todo 3) — §55", () => {
     const bad = goodYaml.replace("status: fact", "status: bogus");
     const p = new CannedProvider(["```yaml\n" + bad + "\n```"]);
     await expect(
-      callResearch({ topic: "t", audience: "a", language: "zh-CN", duration: 40 }, p, { web: null }),
+      callResearch(
+        { topic: "t", audience: "a", language: "zh-CN", duration: 40 },
+        p,
+        { web: null },
+      ),
     ).rejects.toThrow(ResearchError);
   });
 
@@ -104,7 +116,11 @@ describe("callResearch (todo 3) — §55", () => {
     const web = {
       async search(): Promise<WebSearchResult[]> {
         return [
-          { url: "https://example.com/x", title: "X", snippet: "Important fact X" },
+          {
+            url: "https://example.com/x",
+            title: "X",
+            snippet: "Important fact X",
+          },
         ];
       },
     };

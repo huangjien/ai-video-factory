@@ -42,7 +42,10 @@ export class MiniMaxVideoProvider implements VideoProvider {
   private readonly retrySleeps: number[];
 
   constructor(opts: MiniMaxVideoProviderOptions = {}) {
-    this.apiHost = opts.apiHost ?? process.env["MINIMAX_API_HOST"] ?? "https://api.minimax.io";
+    this.apiHost =
+      opts.apiHost ??
+      process.env["MINIMAX_API_HOST"] ??
+      "https://api.minimax.io";
     this.defaultModel = opts.defaultModel ?? DEFAULT_MODEL;
     this.pollIntervalMs = opts.pollIntervalMs ?? 5000;
     this.timeoutMs = opts.timeoutMs ?? 10 * 60 * 1000;
@@ -84,7 +87,8 @@ export class MiniMaxVideoProvider implements VideoProvider {
         this.name,
       );
       (err as ImageGenerationError & { status: number }).status = res.status;
-      (err as ImageGenerationError & { body_excerpt: string }).body_excerpt = excerpt;
+      (err as ImageGenerationError & { body_excerpt: string }).body_excerpt =
+        excerpt;
       throw err;
     }
     const parsed = JSON.parse(text) as {

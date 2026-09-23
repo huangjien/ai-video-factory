@@ -1,8 +1,4 @@
-import type {
-  Stage,
-  TransitionRecord,
-  WorkflowStatus,
-} from "./states.js";
+import type { Stage, TransitionRecord, WorkflowStatus } from "./states.js";
 
 export type Action =
   | { kind: "start" }
@@ -39,7 +35,11 @@ const TRANSITIONS: Record<WorkflowStatus, ReadonlyArray<WorkflowStatus>> = {
 export function transition(
   state: MachineState,
   action: Action,
-  context: { run_id: string; actor: TransitionRecord["actor"]; reason?: string },
+  context: {
+    run_id: string;
+    actor: TransitionRecord["actor"];
+    reason?: string;
+  },
 ): { state: MachineState; record: TransitionRecord } {
   const next = nextStatus(state.status, action);
   if (!next) {
@@ -104,10 +104,7 @@ function actionReason(action: Action): string {
   return action.kind;
 }
 
-function advanceStage(
-  state: MachineState,
-  next: WorkflowStatus,
-): Stage {
+function advanceStage(state: MachineState, next: WorkflowStatus): Stage {
   // When we transition into DRAFT, advance the stage cursor.
   if (next === "DRAFT") return state.stage;
   return state.stage;

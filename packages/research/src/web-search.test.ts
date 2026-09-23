@@ -1,5 +1,10 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
+import {
+  createServer,
+  type IncomingMessage,
+  type Server,
+  type ServerResponse,
+} from "node:http";
 import type { AddressInfo } from "node:net";
 import { MiniMaxWebSearch } from "./web-search.js";
 
@@ -82,7 +87,10 @@ describe("MiniMaxWebSearch (todo 2) — platform.minimax.io docs", () => {
     process.env["MINIMAX_API_KEY"] = "test-key";
     statusToSend = 500;
     responseBody = { error: "boom" };
-    const w = new MiniMaxWebSearch({ apiHost: baseUrl, retrySleeps: [1, 1, 1] });
+    const w = new MiniMaxWebSearch({
+      apiHost: baseUrl,
+      retrySleeps: [1, 1, 1],
+    });
     const err = await w.search("x").catch((e) => e);
     expect(String(err).includes("test-key")).toBe(false);
     statusToSend = 200;

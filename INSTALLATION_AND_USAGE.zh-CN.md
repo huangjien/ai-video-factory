@@ -672,4 +672,3 @@ bin/video shorts "$TOPIC"
 npm run acceptance
 # 预期："ALL 11 §62.4 acceptance checks passed"
 ```
-

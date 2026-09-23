@@ -18,7 +18,12 @@ describe("Todo 8 — components batch A (render at frame 0 and mid)", () => {
       <Title text="AI 思维链" startFrame={0} durationInFrames={60} frame={0} />,
     );
     const b = renderToStaticMarkup(
-      <Title text="AI 思维链" startFrame={0} durationInFrames={60} frame={15} />,
+      <Title
+        text="AI 思维链"
+        startFrame={0}
+        durationInFrames={60}
+        frame={15}
+      />,
     );
     expect(a).toContain("AI 思维链");
     expect(b).toContain("AI 思维链");
@@ -28,28 +33,51 @@ describe("Todo 8 — components batch A (render at frame 0 and mid)", () => {
   it("Paragraph clamps long text within stage height (assert no overflow markup)", () => {
     const longText = "字".repeat(200);
     const html = renderToStaticMarkup(
-      <Paragraph text={longText} startFrame={0} durationInFrames={60} frame={0} />,
+      <Paragraph
+        text={longText}
+        startFrame={0}
+        durationInFrames={60}
+        frame={0}
+      />,
     );
     expect(html).toBeDefined();
   });
 
   it("CodeBlock renders code text and highlight indicator", () => {
     const html = renderToStaticMarkup(
-      <CodeBlock code="print(1)" language="python" highlightLines={[1]} startFrame={0} durationInFrames={60} frame={0} />,
+      <CodeBlock
+        code="print(1)"
+        language="python"
+        highlightLines={[1]}
+        startFrame={0}
+        durationInFrames={60}
+        frame={0}
+      />,
     );
     expect(html).toContain("print(1)");
   });
 
   it("Terminal renders lines with prompt", () => {
     const html = renderToStaticMarkup(
-      <Terminal lines={["ls", "docs"]} prompt="$" startFrame={0} durationInFrames={60} frame={0} />,
+      <Terminal
+        lines={["ls", "docs"]}
+        prompt="$"
+        startFrame={0}
+        durationInFrames={60}
+        frame={0}
+      />,
     );
     expect(html).toContain("$");
   });
 
   it("Image renders a static <img> tag for a known path", () => {
     const html = renderToStaticMarkup(
-      <Image src="assets/images/cover.png" startFrame={0} durationInFrames={60} frame={0} />,
+      <Image
+        src="assets/images/cover.png"
+        startFrame={0}
+        durationInFrames={60}
+        frame={0}
+      />,
     );
     expect(html).toContain("cover.png");
   });

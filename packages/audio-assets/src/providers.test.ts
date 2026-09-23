@@ -2,7 +2,10 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { FileBasedAudioAssetProvider, MockAudioAssetProvider } from "./index.js";
+import {
+  FileBasedAudioAssetProvider,
+  MockAudioAssetProvider,
+} from "./index.js";
 
 describe("MockAudioAssetProvider (todo 2)", () => {
   it("returns a placeholder BGM with metadata when no assets directory is configured", async () => {
@@ -30,8 +33,14 @@ describe("FileBasedAudioAssetProvider (todo 2)", () => {
     sfxDir = path.join(dir, "sfx");
     mkdirSync(bgmDir, { recursive: true });
     mkdirSync(sfxDir, { recursive: true });
-    writeFileSync(path.join(bgmDir, "calm.wav"), Buffer.from([0x52, 0x49, 0x46, 0x46]));
-    writeFileSync(path.join(sfxDir, "whoosh.wav"), Buffer.from([0x52, 0x49, 0x46, 0x46]));
+    writeFileSync(
+      path.join(bgmDir, "calm.wav"),
+      Buffer.from([0x52, 0x49, 0x46, 0x46]),
+    );
+    writeFileSync(
+      path.join(sfxDir, "whoosh.wav"),
+      Buffer.from([0x52, 0x49, 0x46, 0x46]),
+    );
   });
 
   afterAll(() => {
@@ -63,7 +72,9 @@ describe("FileBasedAudioAssetProvider (todo 2)", () => {
       bgmDirectory: bgmDir,
       sfxDirectory: sfxDir,
     });
-    await expect(p.pickBackgroundMusic({ tag: "nope" })).rejects.toThrow(/not found/i);
+    await expect(p.pickBackgroundMusic({ tag: "nope" })).rejects.toThrow(
+      /not found/i,
+    );
   });
 
   it("throws when SFX tag is not found", async () => {
@@ -71,6 +82,8 @@ describe("FileBasedAudioAssetProvider (todo 2)", () => {
       bgmDirectory: bgmDir,
       sfxDirectory: sfxDir,
     });
-    await expect(p.pickSoundEffect({ tag: "nope" })).rejects.toThrow(/not found/i);
+    await expect(p.pickSoundEffect({ tag: "nope" })).rejects.toThrow(
+      /not found/i,
+    );
   });
 });

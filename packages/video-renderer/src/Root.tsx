@@ -7,10 +7,16 @@ export interface RootProps {
   renderPlan: RenderPlan;
 }
 
-function findScene(scenes: RenderPlanScene[], frame: number): RenderPlanScene | undefined {
+function findScene(
+  scenes: RenderPlanScene[],
+  frame: number,
+): RenderPlanScene | undefined {
   let active: RenderPlanScene | undefined;
   for (const scene of scenes) {
-    if (frame >= scene.startFrame && frame < scene.startFrame + scene.durationInFrames) {
+    if (
+      frame >= scene.startFrame &&
+      frame < scene.startFrame + scene.durationInFrames
+    ) {
       active = scene;
       break;
     }

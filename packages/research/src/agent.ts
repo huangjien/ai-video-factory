@@ -9,7 +9,11 @@ import {
 
 export class ResearchError extends Error {
   override readonly cause: unknown;
-  constructor(message: string, public readonly providerName: string, cause?: unknown) {
+  constructor(
+    message: string,
+    public readonly providerName: string,
+    cause?: unknown,
+  ) {
     super(message);
     this.name = "ResearchError";
     this.cause = cause;
@@ -51,9 +55,9 @@ export async function callResearch(
     try {
       webContext = await deps.web.search(deps.webQuery ?? input.topic);
       webSearchUsed = true;
-  } catch {
-    webSearchFailed = true;
-  }
+    } catch {
+      webSearchFailed = true;
+    }
   }
   const messages = buildMessages({
     ...input,

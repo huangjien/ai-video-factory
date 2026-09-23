@@ -12,11 +12,7 @@ export interface TerminalProps {
   frame: number;
 }
 
-export const Terminal: FC<TerminalProps> = ({
-  lines,
-  prompt = "$",
-  frame,
-}) => {
+export const Terminal: FC<TerminalProps> = ({ lines, prompt = "$", frame }) => {
   const charsPerFrame = 1.5;
   const text = lines.join("\n");
   const visible = typewriter(frame, text, charsPerFrame);

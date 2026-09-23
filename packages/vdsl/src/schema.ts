@@ -23,7 +23,10 @@ const ANIMATION_ENTRANCE_CANONICAL = [
   "typewriter",
 ] as const;
 
-const ANIMATION_ENTRANCE_SYNONYMS: Record<string, (typeof ANIMATION_ENTRANCE_CANONICAL)[number]> = {
+const ANIMATION_ENTRANCE_SYNONYMS: Record<
+  string,
+  (typeof ANIMATION_ENTRANCE_CANONICAL)[number]
+> = {
   none: "none",
   // "fade" cluster
   fade: "fade",
@@ -34,9 +37,9 @@ const ANIMATION_ENTRANCE_SYNONYMS: Record<string, (typeof ANIMATION_ENTRANCE_CAN
   "slide-up": "slide",
   "slide-up-down": "slide",
   "slide-in": "slide",
-  "slideup": "slide",
-  "sliding": "slide",
-  "swipe": "slide",
+  slideup: "slide",
+  sliding: "slide",
+  swipe: "slide",
   "slide-down": "slide",
   // "scale" cluster — covers zoom / bounce / pop / grow / pulse etc.
   scale: "scale",
@@ -44,15 +47,15 @@ const ANIMATION_ENTRANCE_SYNONYMS: Record<string, (typeof ANIMATION_ENTRANCE_CAN
   pop: "scale",
   zoom: "scale",
   "zoom-in": "scale",
-    zoomin: "scale",
+  zoomin: "scale",
   grow: "scale",
   pulse: "scale",
   "scale-up": "scale",
   scale_up: "scale",
   // "draw" cluster
   draw: "draw",
-  "wipe": "draw",
-  "reveal": "draw",
+  wipe: "draw",
+  reveal: "draw",
   // "typewriter" cluster
   typewriter: "typewriter",
   "type-writer": "typewriter",
@@ -62,8 +65,13 @@ const ANIMATION_ENTRANCE_SYNONYMS: Record<string, (typeof ANIMATION_ENTRANCE_CAN
   "type-write-step-by-step": "typewriter",
 };
 
-export function coerceAnimationEntrance(raw: string): (typeof ANIMATION_ENTRANCE_CANONICAL)[number] {
-  const key = raw.trim().toLowerCase().replace(/[\s_-]+/g, "-");
+export function coerceAnimationEntrance(
+  raw: string,
+): (typeof ANIMATION_ENTRANCE_CANONICAL)[number] {
+  const key = raw
+    .trim()
+    .toLowerCase()
+    .replace(/[\s_-]+/g, "-");
   const mapped = ANIMATION_ENTRANCE_SYNONYMS[key];
   if (mapped) return mapped;
   // Allow the canonical values as-is (already normalized to lowercase).
@@ -76,7 +84,10 @@ export function coerceAnimationEntrance(raw: string): (typeof ANIMATION_ENTRANCE
 }
 
 const ANIMATION_EXIT_CANONICAL = ["none", "fade"] as const;
-const ANIMATION_EXIT_SYNONYMS: Record<string, (typeof ANIMATION_EXIT_CANONICAL)[number]> = {
+const ANIMATION_EXIT_SYNONYMS: Record<
+  string,
+  (typeof ANIMATION_EXIT_CANONICAL)[number]
+> = {
   none: "none",
   "fade-out": "fade",
   fade_out: "fade",
@@ -86,8 +97,13 @@ const ANIMATION_EXIT_SYNONYMS: Record<string, (typeof ANIMATION_EXIT_CANONICAL)[
   crossfade: "fade",
 };
 
-export function coerceAnimationExit(raw: string): (typeof ANIMATION_EXIT_CANONICAL)[number] {
-  const key = raw.trim().toLowerCase().replace(/[\s_-]+/g, "-");
+export function coerceAnimationExit(
+  raw: string,
+): (typeof ANIMATION_EXIT_CANONICAL)[number] {
+  const key = raw
+    .trim()
+    .toLowerCase()
+    .replace(/[\s_-]+/g, "-");
   const mapped = ANIMATION_EXIT_SYNONYMS[key];
   if (mapped) return mapped;
   if ((ANIMATION_EXIT_CANONICAL as readonly string[]).includes(key)) {
@@ -99,7 +115,11 @@ export function coerceAnimationExit(raw: string): (typeof ANIMATION_EXIT_CANONIC
 }
 
 const ANIMATION_EMPHASIS_CANONICAL = ["none", "highlight", "counter"] as const;
-const ANIMATION_EMPHASIS_SYNONYMS: Record<string, (typeof ANIMATION_EMPHASIS_CANONICAL)[number]> = {  none: "none",
+const ANIMATION_EMPHASIS_SYNONYMS: Record<
+  string,
+  (typeof ANIMATION_EMPHASIS_CANONICAL)[number]
+> = {
+  none: "none",
   highlight: "highlight",
   emphasised: "highlight",
   emphasized: "highlight",
@@ -109,14 +129,18 @@ const ANIMATION_EMPHASIS_SYNONYMS: Record<string, (typeof ANIMATION_EMPHASIS_CAN
   counter: "counter",
   count: "counter",
   number: "counter",
-    "increment": "counter",
+  increment: "counter",
   "animated-counter": "counter",
-  "animated number": "counter",};
+  "animated number": "counter",
+};
 
 export function coerceAnimationEmphasis(
   raw: string,
 ): (typeof ANIMATION_EMPHASIS_CANONICAL)[number] {
-  const key = raw.trim().toLowerCase().replace(/[\s_-]+/g, "-");
+  const key = raw
+    .trim()
+    .toLowerCase()
+    .replace(/[\s_-]+/g, "-");
   const mapped = ANIMATION_EMPHASIS_SYNONYMS[key];
   if (mapped) return mapped;
   if ((ANIMATION_EMPHASIS_CANONICAL as readonly string[]).includes(key)) {
@@ -128,7 +152,10 @@ export function coerceAnimationEmphasis(
 }
 
 const CAPTIONS_SOURCE_CANONICAL = ["narration", "none"] as const;
-const CAPTIONS_SOURCE_SYNONYMS: Record<string, (typeof CAPTIONS_SOURCE_CANONICAL)[number]> = {
+const CAPTIONS_SOURCE_SYNONYMS: Record<
+  string,
+  (typeof CAPTIONS_SOURCE_CANONICAL)[number]
+> = {
   none: "none",
   narration: "narration",
   script: "narration",
@@ -152,7 +179,10 @@ const CAPTIONS_SOURCE_SYNONYMS: Record<string, (typeof CAPTIONS_SOURCE_CANONICAL
 export function coerceCaptionsSource(
   raw: string,
 ): (typeof CAPTIONS_SOURCE_CANONICAL)[number] {
-  const key = raw.trim().toLowerCase().replace(/[\s_-]+/g, "-");
+  const key = raw
+    .trim()
+    .toLowerCase()
+    .replace(/[\s_-]+/g, "-");
   const mapped = CAPTIONS_SOURCE_SYNONYMS[key];
   if (mapped) return mapped;
   if ((CAPTIONS_SOURCE_CANONICAL as readonly string[]).includes(key)) {
@@ -165,7 +195,10 @@ export function coerceCaptionsSource(
 
 const TRANSITION_CANONICAL = ["fade", "cut"] as const;
 export const TRANSITIONS = TRANSITION_CANONICAL;
-const TRANSITION_SYNONYMS: Record<string, (typeof TRANSITION_CANONICAL)[number]> = {
+const TRANSITION_SYNONYMS: Record<
+  string,
+  (typeof TRANSITION_CANONICAL)[number]
+> = {
   none: "cut",
   cut: "cut",
   jump: "cut",
@@ -181,8 +214,13 @@ const TRANSITION_SYNONYMS: Record<string, (typeof TRANSITION_CANONICAL)[number]>
   "cross-fade": "fade",
 };
 
-export function coerceTransition(raw: string): (typeof TRANSITION_CANONICAL)[number] {
-  const key = raw.trim().toLowerCase().replace(/[\s_-]+/g, "-");
+export function coerceTransition(
+  raw: string,
+): (typeof TRANSITION_CANONICAL)[number] {
+  const key = raw
+    .trim()
+    .toLowerCase()
+    .replace(/[\s_-]+/g, "-");
   const mapped = TRANSITION_SYNONYMS[key];
   if (mapped) return mapped;
   if ((TRANSITION_CANONICAL as readonly string[]).includes(key)) {
@@ -243,18 +281,24 @@ const visualSchema = z
 
 const animationSchema = z
   .object({
-    entrance: z.preprocess(
-      safeCoerce(coerceAnimationEntrance, ANIMATION_ENTRANCE_CANONICAL),
-      z.enum(ANIMATION_ENTRANCE_CANONICAL),
-    ).default("none"),
-    emphasis: z.preprocess(
-      safeCoerce(coerceAnimationEmphasis, ANIMATION_EMPHASIS_CANONICAL),
-      z.enum(ANIMATION_EMPHASIS_CANONICAL),
-    ).default("none"),
-    exit: z.preprocess(
-      safeCoerce(coerceAnimationExit, ANIMATION_EXIT_CANONICAL),
-      z.enum(ANIMATION_EXIT_CANONICAL),
-    ).default("none"),
+    entrance: z
+      .preprocess(
+        safeCoerce(coerceAnimationEntrance, ANIMATION_ENTRANCE_CANONICAL),
+        z.enum(ANIMATION_ENTRANCE_CANONICAL),
+      )
+      .default("none"),
+    emphasis: z
+      .preprocess(
+        safeCoerce(coerceAnimationEmphasis, ANIMATION_EMPHASIS_CANONICAL),
+        z.enum(ANIMATION_EMPHASIS_CANONICAL),
+      )
+      .default("none"),
+    exit: z
+      .preprocess(
+        safeCoerce(coerceAnimationExit, ANIMATION_EXIT_CANONICAL),
+        z.enum(ANIMATION_EXIT_CANONICAL),
+      )
+      .default("none"),
   })
   .strict();
 
@@ -270,8 +314,14 @@ const captionsSchema = z
 
 const transitionSchema = z
   .object({
-    in: z.preprocess(safeCoerce(coerceTransition, TRANSITION_CANONICAL), z.enum(TRANSITION_CANONICAL)),
-    out: z.preprocess(safeCoerce(coerceTransition, TRANSITION_CANONICAL), z.enum(TRANSITION_CANONICAL)),
+    in: z.preprocess(
+      safeCoerce(coerceTransition, TRANSITION_CANONICAL),
+      z.enum(TRANSITION_CANONICAL),
+    ),
+    out: z.preprocess(
+      safeCoerce(coerceTransition, TRANSITION_CANONICAL),
+      z.enum(TRANSITION_CANONICAL),
+    ),
   })
   .strict();
 

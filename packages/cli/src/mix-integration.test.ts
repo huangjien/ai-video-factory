@@ -11,11 +11,23 @@ import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { runMix } from "./mix-command.js";
 
-function tone(dir: string, name: string, seconds: number, freq: number): string {
+function tone(
+  dir: string,
+  name: string,
+  seconds: number,
+  freq: number,
+): string {
   const file = path.join(dir, name);
   execFileSync(
     "ffmpeg",
-    ["-y", "-f", "lavfi", "-i", `sine=frequency=${freq}:duration=${seconds}`, file],
+    [
+      "-y",
+      "-f",
+      "lavfi",
+      "-i",
+      `sine=frequency=${freq}:duration=${seconds}`,
+      file,
+    ],
     { stdio: "ignore" },
   );
   return file;
@@ -24,8 +36,17 @@ function tone(dir: string, name: string, seconds: number, freq: number): string 
 function probeDuration(file: string): number {
   const out = execFileSync(
     "ffprobe",
-    ["-v", "error", "-select_streams", "a:0", "-show_entries", "stream=duration",
-     "-of", "csv=p=0", file],
+    [
+      "-v",
+      "error",
+      "-select_streams",
+      "a:0",
+      "-show_entries",
+      "stream=duration",
+      "-of",
+      "csv=p=0",
+      file,
+    ],
     { encoding: "utf8" },
   );
   return parseFloat(out.trim());
@@ -38,7 +59,14 @@ describe("CLI mix integration — runMix", () => {
   beforeEach(() => {
     cwd = mkdtempSync(path.join(tmpdir(), "vf-mixcmd-"));
     projectDir = path.join(cwd, "projects", "demo");
-    for (const sub of ["assets/audio", "assets/audio-assets/bgm", "assets/audio-assets/sfx", "audio-assets", "output", "runs"]) {
+    for (const sub of [
+      "assets/audio",
+      "assets/audio-assets/bgm",
+      "assets/audio-assets/sfx",
+      "audio-assets",
+      "output",
+      "runs",
+    ]) {
       mkdirSync(path.join(projectDir, sub), { recursive: true });
     }
     writeFileSync(path.join(projectDir, "state.yaml"), "status: DRAFT\n");

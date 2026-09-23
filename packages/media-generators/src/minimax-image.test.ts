@@ -1,5 +1,10 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
+import {
+  createServer,
+  type IncomingMessage,
+  type Server,
+  type ServerResponse,
+} from "node:http";
 import type { AddressInfo } from "node:net";
 import { MiniMaxImageProvider } from "./minimax-image.js";
 
@@ -80,9 +85,16 @@ describe("MiniMaxImageProvider (v0.3 phase 1) — platform.minimax.io docs", () 
   it("throws with provider name on 401", async () => {
     process.env["MINIMAX_API_KEY"] = "test-key";
     statusToSend = 401;
-    responseBody = { base_resp: { status_code: 1004, status_msg: "invalid api key" } };
-    const p = new MiniMaxImageProvider({ apiHost: baseUrl, retrySleeps: [1, 1, 1] });
-    await expect(p.generate({ prompt: "x", width: 1280, height: 720 })).rejects.toMatchObject({
+    responseBody = {
+      base_resp: { status_code: 1004, status_msg: "invalid api key" },
+    };
+    const p = new MiniMaxImageProvider({
+      apiHost: baseUrl,
+      retrySleeps: [1, 1, 1],
+    });
+    await expect(
+      p.generate({ prompt: "x", width: 1280, height: 720 }),
+    ).rejects.toMatchObject({
       provider: "minimax-image",
       status: 401,
     });
@@ -98,18 +110,25 @@ describe("MiniMaxImageProvider (v0.3 phase 1) — platform.minimax.io docs", () 
   it("throws explicit message when MINIMAX_API_KEY is missing", async () => {
     delete process.env["MINIMAX_API_KEY"];
     const p = new MiniMaxImageProvider({ apiHost: baseUrl });
-    await expect(p.generate({ prompt: "x", width: 1280, height: 720 })).rejects.toThrow(
-      /MINIMAX_API_KEY not set/,
-    );
+    await expect(
+      p.generate({ prompt: "x", width: 1280, height: 720 }),
+    ).rejects.toThrow(/MINIMAX_API_KEY not set/);
     process.env["MINIMAX_API_KEY"] = "test-key";
   });
 
   it("does not include the key in error messages", async () => {
     process.env["MINIMAX_API_KEY"] = "test-key";
     statusToSend = 500;
-    responseBody = { base_resp: { status_code: 1000, status_msg: "internal error" } };
-    const p = new MiniMaxImageProvider({ apiHost: baseUrl, retrySleeps: [1, 1, 1] });
-    const err = await p.generate({ prompt: "x", width: 1280, height: 720 }).catch((e) => e);
+    responseBody = {
+      base_resp: { status_code: 1000, status_msg: "internal error" },
+    };
+    const p = new MiniMaxImageProvider({
+      apiHost: baseUrl,
+      retrySleeps: [1, 1, 1],
+    });
+    const err = await p
+      .generate({ prompt: "x", width: 1280, height: 720 })
+      .catch((e) => e);
     expect(String(err).includes("test-key")).toBe(false);
     statusToSend = 200;
     responseBody = {
@@ -132,7 +151,10 @@ describe("MiniMaxImageProvider (v0.3 phase 1) — platform.minimax.io docs", () 
           "Token Plan usage limit reached: Upgrade your Token Plan or purchase Credits for more usage.",
       },
     };
-    const p = new MiniMaxImageProvider({ apiHost: baseUrl, retrySleeps: [1, 1, 1] });
+    const p = new MiniMaxImageProvider({
+      apiHost: baseUrl,
+      retrySleeps: [1, 1, 1],
+    });
     await expect(
       p.generate({ prompt: "x", width: 1280, height: 720 }),
     ).rejects.toThrow(/2056.*usage limit/i);
@@ -153,9 +175,9 @@ describe("MiniMaxImageProvider (v0.3 phase 1) — platform.minimax.io docs", () 
       base_resp: { status_code: 0, status_msg: "success" },
     };
     const p = new MiniMaxImageProvider({ apiHost: baseUrl });
-    await expect(p.generate({ prompt: "blocked", width: 1280, height: 720 })).rejects.toThrow(
-      /no image.*content safety|blocked/i,
-    );
+    await expect(
+      p.generate({ prompt: "blocked", width: 1280, height: 720 }),
+    ).rejects.toThrow(/no image.*content safety|blocked/i);
     responseBody = {
       id: "x",
       data: { image_base64: [TINY_JPEG_B64] },

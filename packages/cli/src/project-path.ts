@@ -38,8 +38,7 @@ function isProjectRoot(dir: string): boolean {
 }
 
 export type ResolvedProject =
-  | { ok: true; root: string }
-  | { ok: false; message: string };
+  { ok: true; root: string } | { ok: false; message: string };
 
 /**
  * Resolve which project directory a cwd-style verb should operate on.

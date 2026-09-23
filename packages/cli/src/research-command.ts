@@ -9,7 +9,11 @@ import { formatRunId } from "@vf/workflow";
 import { stringify as yamlStringify } from "yaml";
 import { runNew } from "./new-command.js";
 import { ensureProject } from "./ensure-project.js";
-import { resolveProjectRoot, slugifyForProject, slugifyProjectName } from "./project-path.js";
+import {
+  resolveProjectRoot,
+  slugifyForProject,
+  slugifyProjectName,
+} from "./project-path.js";
 
 export interface ResearchOptions {
   topic: string;
@@ -27,7 +31,9 @@ function providerInstance(name: string): Provider {
 }
 
 function sha256OfMessages(messages: ChatMessage[]): string {
-  const canon = JSON.stringify(messages.map((m) => ({ role: m.role, content: m.content })));
+  const canon = JSON.stringify(
+    messages.map((m) => ({ role: m.role, content: m.content })),
+  );
   return "sha256:" + createHash("sha256").update(canon).digest("hex");
 }
 
@@ -67,7 +73,10 @@ export async function runResearch(opts: ResearchOptions): Promise<number> {
       { web },
     );
   } catch (err) {
-    console.error(`\u2717 ${chosenName} research agent failed:`, (err as Error).message);
+    console.error(
+      `\u2717 ${chosenName} research agent failed:`,
+      (err as Error).message,
+    );
     return 1;
   }
 

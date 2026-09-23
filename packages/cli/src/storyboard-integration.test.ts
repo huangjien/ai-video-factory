@@ -1,5 +1,10 @@
 import { execFileSync } from "node:child_process";
-import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
+import {
+  createServer,
+  type IncomingMessage,
+  type Server,
+  type ServerResponse,
+} from "node:http";
 import { mkdtempSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import type { AddressInfo } from "node:net";
@@ -60,17 +65,12 @@ describe("vf storyboard end-to-end (todo 6) — mock MiniMax", () => {
         );
       });
     });
-    await new Promise<void>((r) =>
-      server.listen(0, "127.0.0.1", () => r()),
-    );
+    await new Promise<void>((r) => server.listen(0, "127.0.0.1", () => r()));
     const addr = server.address() as AddressInfo;
     baseUrl = `http://127.0.0.1:${addr.port}`;
   });
 
-  afterAll(
-    async () =>
-      new Promise<void>((r) => server.close(() => r())),
-  );
+  afterAll(async () => new Promise<void>((r) => server.close(() => r())));
 
   it("writes a draft storyboard that validateStoryboard accepts", async () => {
     const cwd = mkdtempSync(path.join(tmpdir(), "vf-sb-"));

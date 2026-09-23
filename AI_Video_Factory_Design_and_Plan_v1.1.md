@@ -7,7 +7,7 @@
 **目标：建立一个长期可演进、低成本、Human-in-the-Loop 的 AI
 视频生产系统**
 
-------------------------------------------------------------------------
+---
 
 ## 1. 文档目的
 
@@ -15,7 +15,7 @@
 
 系统目标不是"一键生成视频"，而是建立一个可控、可审查、可修改、可持续演进的生产流水线：
 
-``` text
+```text
 Topic
   ↓
 Research
@@ -35,16 +35,16 @@ Final Video
 
 其中人在关键节点拥有明确的：
 
--   查看权
--   修改权
--   批准权
--   驳回权
--   回退权
--   重做权
+- 查看权
+- 修改权
+- 批准权
+- 驳回权
+- 回退权
+- 重做权
 
 AI 负责提高生产效率，但不取代关键创作决策。
 
-------------------------------------------------------------------------
+---
 
 # 2. 核心设计原则
 
@@ -52,7 +52,7 @@ AI 负责提高生产效率，但不取代关键创作决策。
 
 采用：
 
-``` text
+```text
 AI
  ↓
 Structured Content
@@ -68,7 +68,7 @@ MP4
 
 而不是：
 
-``` text
+```text
 Prompt
  ↓
 AI Video Generator
@@ -78,16 +78,16 @@ MP4
 
 这样可以保证：
 
--   可重复
--   可修改
--   可版本控制
--   可局部重渲染
--   可更换 AI 模型
--   可持续积累组件
--   可支持中文和英文
--   可支持未来不同视频平台
+- 可重复
+- 可修改
+- 可版本控制
+- 可局部重渲染
+- 可更换 AI 模型
+- 可持续积累组件
+- 可支持中文和英文
+- 可支持未来不同视频平台
 
-------------------------------------------------------------------------
+---
 
 ## 2.2 人在回路（Human-in-the-Loop）是核心机制
 
@@ -95,7 +95,7 @@ MP4
 
 核心流程：
 
-``` text
+```text
 AI Generate
      ↓
 Human Review
@@ -107,7 +107,7 @@ Next Stage
 
 而不是：
 
-``` text
+```text
 AI → AI → AI → Final
 ```
 
@@ -122,7 +122,7 @@ AI → AI → AI → Final
 7.  Final Review
 8.  Publish
 
-------------------------------------------------------------------------
+---
 
 # 3. 产品定位
 
@@ -134,11 +134,11 @@ AI → AI → AI → Final
 
 内部项目名：
 
-``` text
+```text
 video-agent
 ```
 
-------------------------------------------------------------------------
+---
 
 ## 3.2 目标用户
 
@@ -146,60 +146,62 @@ video-agent
 
 重点场景：
 
--   AI 技术解释
--   软件工程
--   DevOps
--   AI Agent
--   LLM
--   MCP
--   Coding Agent
--   新技术介绍
--   技术教程
--   知识类视频
+- AI 技术解释
+- 软件工程
+- DevOps
+- AI Agent
+- LLM
+- MCP
+- Coding Agent
+- 新技术介绍
+- 技术教程
+- 知识类视频
 
-------------------------------------------------------------------------
+---
 
 # 4. 技术栈
 
-  层                    技术
-  --------------------- ----------------------
-  Agent Orchestrator    Pi
-  Agent                 Pi Agent
-  Subagent              Pi Subagent
-  Skills                Pi Skills
-  Primary AI            MiniMax Coding Plan
-  Secondary AI          GLM Coding Plan
-  Language              TypeScript
-  Video UI              React
-  Motion                React + SVG
-  Video Engine          Remotion
-  Encoding              FFmpeg
-  Data Format           YAML / JSON
-  Content               Markdown
-  Version Control       Git
-  Preview               Remotion Studio
-  Optional Final Edit   DaVinci Resolve Free
+层 技术
 
-------------------------------------------------------------------------
+---
+
+Agent Orchestrator Pi
+Agent Pi Agent
+Subagent Pi Subagent
+Skills Pi Skills
+Primary AI MiniMax Coding Plan
+Secondary AI GLM Coding Plan
+Language TypeScript
+Video UI React
+Motion React + SVG
+Video Engine Remotion
+Encoding FFmpeg
+Data Format YAML / JSON
+Content Markdown
+Version Control Git
+Preview Remotion Studio
+Optional Final Edit DaVinci Resolve Free
+
+---
 
 # 5. 明确不采用的技术
 
 第一阶段不使用：
 
--   Ollama
--   本地 LLM
--   MCP
--   Vector Database
--   Supabase
--   Electron
--   Web Dashboard
--   Cloud Rendering
--   Full Timeline Editor
--   AI Video Generation 作为核心渲染方案
+- Ollama
+- 本地 LLM
+- MCP
+- Vector Database
+- Supabase
+- Electron
+- Web Dashboard
+- Cloud Rendering
+- Full Timeline Editor
+- AI Video Generation 作为核心渲染方案
 
 这些技术可以在后续阶段加入，但不能增加第一版系统的复杂度。
 
-------------------------------------------------------------------------
+---
 
 # 6. AI Provider Strategy
 
@@ -209,9 +211,8 @@ video-agent
 
 建议：
 
-``` yaml
+```yaml
 models:
-
   research:
     primary: glm
     fallback: minimax
@@ -235,7 +236,7 @@ models:
 
 最终允许：
 
-``` text
+```text
 MiniMax
 GLM
 Claude
@@ -246,11 +247,11 @@ Gemini
 
 自由替换。
 
-------------------------------------------------------------------------
+---
 
 # 7. 总体架构
 
-``` text
+```text
                          USER
                            │
                            ▼
@@ -297,7 +298,7 @@ Gemini
                               FINAL
 ```
 
-------------------------------------------------------------------------
+---
 
 # 8. Human-in-the-Loop 设计
 
@@ -305,19 +306,19 @@ Gemini
 
 每个阶段都有一个明确的：
 
-``` text
+```text
 Checkpoint
 ```
 
 Checkpoint 是人工与 Agent 之间的正式边界。
 
-------------------------------------------------------------------------
+---
 
 ## 8.2 Checkpoint 类型
 
 定义：
 
-``` text
+```text
 AUTO
 REVIEW
 APPROVE
@@ -332,14 +333,14 @@ Agent 可以直接继续。
 
 适用于：
 
--   文件格式转换
--   字幕生成
--   音频转换
--   Render
--   校验
--   临时预览
+- 文件格式转换
+- 字幕生成
+- 音频转换
+- Render
+- 校验
+- 临时预览
 
-------------------------------------------------------------------------
+---
 
 ### REVIEW
 
@@ -347,7 +348,7 @@ AI 生成结果后暂停。
 
 用户查看：
 
-``` text
+```text
 result
 issues
 changes
@@ -355,13 +356,13 @@ changes
 
 然后决定：
 
-``` text
+```text
 Approve
 Edit
 Reject
 ```
 
-------------------------------------------------------------------------
+---
 
 ### APPROVE
 
@@ -369,13 +370,13 @@ Reject
 
 批准后：
 
-``` text
+```text
 stage.status = approved
 ```
 
 并允许进入下一阶段。
 
-------------------------------------------------------------------------
+---
 
 ### EDIT
 
@@ -383,19 +384,19 @@ stage.status = approved
 
 例如：
 
-``` text
+```text
 script.zh-CN.md
 ```
 
 用户修改后：
 
-``` text
+```text
 /video continue
 ```
 
 Agent 从修改后的版本继续。
 
-------------------------------------------------------------------------
+---
 
 ### REJECT
 
@@ -403,13 +404,13 @@ Agent 从修改后的版本继续。
 
 用户可以：
 
-``` text
+```text
 Regenerate
 Change instructions
 Go back
 ```
 
-------------------------------------------------------------------------
+---
 
 ### ROLLBACK
 
@@ -417,7 +418,7 @@ Go back
 
 例如：
 
-``` text
+```text
 Storyboard
     ↓
 Render
@@ -433,7 +434,7 @@ Storyboard
 
 而不是重新从 Research 开始。
 
-------------------------------------------------------------------------
+---
 
 # 9. 推荐 Human Checkpoint
 
@@ -441,7 +442,7 @@ Storyboard
 
 用户输入：
 
-``` text
+```text
 Topic
 Target audience
 Language
@@ -451,25 +452,25 @@ Style
 
 AI 生成：
 
-``` text
+```text
 project brief
 ```
 
 ### 用户必须确认
 
-``` text
+```text
 [Approve]
 [Edit]
 [Regenerate]
 ```
 
-------------------------------------------------------------------------
+---
 
 # 10. Checkpoint 1 --- Research
 
 Agent 输出：
 
-``` text
+```text
 research.md
 sources.yaml
 claims.yaml
@@ -477,16 +478,16 @@ claims.yaml
 
 用户检查：
 
--   事实
--   数据
--   来源
--   研究范围
--   是否遗漏关键内容
--   是否加入不需要的信息
+- 事实
+- 数据
+- 来源
+- 研究范围
+- 是否遗漏关键内容
+- 是否加入不需要的信息
 
 ### 用户操作
 
-``` text
+```text
 Approve Research
 Edit Research
 Ask for More Research
@@ -495,7 +496,7 @@ Reject
 
 只有 Approve 后才能进入 Script。
 
-------------------------------------------------------------------------
+---
 
 # 11. Checkpoint 2 --- Story Direction
 
@@ -505,7 +506,7 @@ Research 完成后，不应该直接写长脚本。
 
 先由 Agent 提出：
 
-``` text
+```text
 核心观点
 视频结构
 叙事路线
@@ -516,7 +517,7 @@ Hook
 
 例如：
 
-``` text
+```text
 核心问题：
 为什么 AI 需要 Memory？
 
@@ -533,29 +534,29 @@ AI 为什么会忘记
 
 这是最值得人工介入的地方之一。
 
-------------------------------------------------------------------------
+---
 
 # 12. Checkpoint 3 --- Script
 
 Agent 生成：
 
-``` text
+```text
 script.zh-CN.md
 ```
 
 用户检查：
 
--   内容是否准确
--   叙事是否自然
--   节奏
--   Hook
--   技术深度
--   是否符合目标观众
--   是否有冗余
+- 内容是否准确
+- 叙事是否自然
+- 节奏
+- Hook
+- 技术深度
+- 是否符合目标观众
+- 是否有冗余
 
 ### 用户可以：
 
-``` text
+```text
 Approve
 Edit
 Ask Agent to Rewrite Section
@@ -563,19 +564,19 @@ Regenerate
 Rollback
 ```
 
-------------------------------------------------------------------------
+---
 
 # 13. Checkpoint 4 --- Storyboard
 
 Agent 将 Script 转成：
 
-``` text
+```text
 storyboard.yaml
 ```
 
 用户查看：
 
-``` text
+```text
 Scene 01
 Scene 02
 Scene 03
@@ -584,7 +585,7 @@ Scene 03
 
 关键是让用户可以修改：
 
-``` text
+```text
 Scene duration
 Visual type
 Narration
@@ -595,9 +596,8 @@ Transition
 
 例如：
 
-``` yaml
+```yaml
 scene-07:
-
   duration: 8
 
   visual:
@@ -609,14 +609,14 @@ scene-07:
 
 用户可以直接改：
 
-``` yaml
+```yaml
 visual:
   type: comparison
 ```
 
 然后继续。
 
-------------------------------------------------------------------------
+---
 
 # 14. Checkpoint 5 --- Visual Design
 
@@ -624,13 +624,13 @@ visual:
 
 Agent 产生：
 
-``` text
+```text
 visual-plan.yaml
 ```
 
 例如：
 
-``` yaml
+```yaml
 scene-01:
   component: Title
 
@@ -646,7 +646,7 @@ scene-04:
 
 用户可以调整：
 
-``` text
+```text
 component
 layout
 color
@@ -656,13 +656,13 @@ asset
 
 只有视觉设计确认后才进入 Render。
 
-------------------------------------------------------------------------
+---
 
 # 15. Checkpoint 6 --- Preview
 
 Render：
 
-``` text
+```text
 preview.mp4
 ```
 
@@ -672,13 +672,13 @@ preview.mp4
 
 必须有人看最终视频。
 
-------------------------------------------------------------------------
+---
 
 # 16. Checkpoint 7 --- Review
 
 同时运行：
 
-``` text
+```text
 AI Reviewer
 +
 Human Reviewer
@@ -686,7 +686,7 @@ Human Reviewer
 
 AI Review：
 
-``` text
+```text
 fact
 timing
 readability
@@ -697,7 +697,7 @@ subtitle
 
 Human Review：
 
-``` text
+```text
 整体观感
 叙事
 节奏
@@ -705,35 +705,35 @@ Human Review：
 是否愿意发布
 ```
 
-------------------------------------------------------------------------
+---
 
 # 17. Checkpoint 8 --- Final Approval
 
 最终：
 
-``` text
+```text
 final.mp4
 ```
 
 但仍然需要：
 
-``` text
+```text
 Human Final Approval
 ```
 
 之后才允许：
 
-``` text
+```text
 publish
 ```
 
-------------------------------------------------------------------------
+---
 
 # 18. Human-in-the-Loop 状态机
 
 定义：
 
-``` text
+```text
 DRAFT
   ↓
 GENERATED
@@ -755,7 +755,7 @@ WAITING_REVIEW
 
 项目状态：
 
-``` yaml
+```yaml
 status: waiting_review
 
 current_stage: storyboard
@@ -769,7 +769,7 @@ checkpoint:
 
 项目状态只能从以下集合中选择：
 
-``` text
+```text
 DRAFT          尚未开始当前阶段
 GENERATING     Agent 或工具正在执行
 VALIDATING     正在校验输出
@@ -784,7 +784,7 @@ ROLLED_BACK    工作状态已回退
 
 合法转换：
 
-``` text
+```text
 DRAFT → GENERATING → VALIDATING → WAITING_REVIEW
                               ├→ FAILED → GENERATING
                               └→ BLOCKED
@@ -805,7 +805,8 @@ WAITING_REVIEW → ROLLED_BACK      (rollback)
 ```yaml
 dependencies:
   brief:
-    invalidates: [research, direction, script, storyboard, visual, captions, render]
+    invalidates:
+      [research, direction, script, storyboard, visual, captions, render]
   research:
     invalidates: [direction, script, storyboard, visual, captions, render]
   direction:
@@ -820,17 +821,17 @@ dependencies:
 
 只有受影响的下游阶段需要重新执行。未受影响的资产继续复用，但在新的运行记录中必须记录其来源 commit。
 
-------------------------------------------------------------------------
+---
 
 # 19. 不应该自动通过的阶段
 
 以下阶段默认：
 
-``` text
+```text
 Human Approval Required
 ```
 
-``` text
+```text
 Project Brief
 Research
 Story Direction
@@ -840,13 +841,13 @@ Visual Direction
 Final Video
 ```
 
-------------------------------------------------------------------------
+---
 
 # 20. 可以自动通过的阶段
 
 以下可以默认 AUTO：
 
-``` text
+```text
 YAML validation
 Type checking
 Asset validation
@@ -858,7 +859,7 @@ File organization
 Git status
 ```
 
-------------------------------------------------------------------------
+---
 
 # 21. VDSL
 
@@ -868,7 +869,7 @@ VDSL：
 
 是系统最重要的中间层。
 
-------------------------------------------------------------------------
+---
 
 ## 21.1 Scene Schema
 
@@ -876,7 +877,7 @@ VDSL 是可执行渲染输入，不是自然语言脚本，也不是用户的主
 
 职责边界：
 
-``` text
+```text
 Script       负责说什么
 Storyboard   负责每个 Scene 表达什么
 Visual Plan  负责选择组件、布局和素材
@@ -886,7 +887,7 @@ Remotion     负责实际渲染
 
 第一版只支持一个项目级 VDSL 文件。VDSL 必须带 schema 版本，所有时长统一使用秒，渲染器在内部转换为帧。
 
-``` yaml
+```yaml
 schema_version: "0.1"
 
 project:
@@ -933,7 +934,7 @@ VDSL 校验规则：
 
 VDSL 与源文件的转换关系：
 
-``` text
+```text
 script.zh-CN.md
         ↓
 storyboard.yaml
@@ -947,13 +948,13 @@ validate → compile → render
 
 `storyboard.yaml` 和 `visual-plan.yaml` 仍然保留，便于人工审阅；只有通过编译和校验的 `vdsl.yaml` 才能进入渲染。
 
-------------------------------------------------------------------------
+---
 
 # 22. Visual Types
 
 第一版：
 
-``` text
+```text
 title
 text
 image
@@ -972,7 +973,7 @@ split-screen
 
 AI 技术类：
 
-``` text
+```text
 neural-network
 agent-loop
 token-animation
@@ -986,11 +987,11 @@ context-window
 model-comparison
 ```
 
-------------------------------------------------------------------------
+---
 
 # 23. Motion Components
 
-``` text
+```text
 components/
 ├── Title.tsx
 ├── Subtitle.tsx
@@ -1015,13 +1016,13 @@ components/
 └── EndCard.tsx
 ```
 
-------------------------------------------------------------------------
+---
 
 # 24. Animation Primitives
 
 第一版：
 
-``` text
+```text
 fade
 slide
 scale
@@ -1035,13 +1036,12 @@ counter
 highlight
 ```
 
-------------------------------------------------------------------------
+---
 
 # 25. Style System
 
-``` yaml
+```yaml
 style:
-
   typography:
     title:
     subtitle:
@@ -1065,31 +1065,31 @@ style:
 
 Style 由项目统一控制，而不是由每个 Agent 自由发挥。
 
-------------------------------------------------------------------------
+---
 
 # 26. 中文 / 英文架构
 
 语言是项目级配置：
 
-``` yaml
+```yaml
 language: zh-CN
 ```
 
 或者：
 
-``` yaml
+```yaml
 language: en-US
 ```
 
 不要要求一个视频同时包含中文和英文。
 
-------------------------------------------------------------------------
+---
 
 ## 26.1 推荐结构
 
 Storyboard 与语言无关：
 
-``` yaml
+```yaml
 scene:
   concept:
     id: agent-memory
@@ -1107,7 +1107,7 @@ scene:
 
 因此：
 
-``` text
+```text
                 Storyboard
                      │
              ┌───────┴───────┐
@@ -1123,13 +1123,13 @@ scene:
 
 视觉内容可以复用。
 
-------------------------------------------------------------------------
+---
 
 # 27. Research Agent
 
 输入：
 
-``` text
+```text
 topic
 audience
 language
@@ -1138,7 +1138,7 @@ duration
 
 输出：
 
-``` text
+```text
 research/
 ├── research.md
 ├── sources.yaml
@@ -1149,33 +1149,33 @@ Research Agent 不负责决定最终观点。
 
 它负责：
 
--   收集信息
--   区分事实和观点
--   记录来源
--   标记不确定信息
--   提供不同解释
--   提出需要人工确认的事实
+- 收集信息
+- 区分事实和观点
+- 记录来源
+- 标记不确定信息
+- 提供不同解释
+- 提出需要人工确认的事实
 
-------------------------------------------------------------------------
+---
 
 # 28. Script Agent
 
 输入：
 
-``` text
+```text
 research
 story direction
 ```
 
 输出：
 
-``` text
+```text
 script.zh-CN.md
 ```
 
 必须遵循：
 
-``` text
+```text
 Hook
 Problem
 Explanation
@@ -1187,43 +1187,43 @@ Conclusion
 
 但结构由用户和 Agent 共同调整。
 
-------------------------------------------------------------------------
+---
 
 # 29. Storyboard Agent
 
 输入：
 
-``` text
+```text
 approved script
 ```
 
 输出：
 
-``` text
+```text
 storyboard.yaml
 ```
 
 Storyboard Agent 不允许：
 
--   修改核心事实
--   私自增加重要观点
--   改变已批准的核心叙事方向
+- 修改核心事实
+- 私自增加重要观点
+- 改变已批准的核心叙事方向
 
 如果发现 Script 无法有效视觉化，应提出：
 
-``` text
+```text
 Storyboard Issue
 ```
 
 而不是自行修改内容。
 
-------------------------------------------------------------------------
+---
 
 # 30. Visual Agent
 
 负责：
 
-``` text
+```text
 visual component selection
 layout
 animation
@@ -1232,7 +1232,7 @@ asset requirement
 
 例如：
 
-``` yaml
+```yaml
 scene-10:
   visual:
     component: FlowChart
@@ -1244,25 +1244,25 @@ scene-10:
     type: sequential
 ```
 
-------------------------------------------------------------------------
+---
 
 # 31. Review Agent
 
 Review 分为：
 
-``` text
+```text
 Content Review
 Visual Review
 Technical Review
 ```
 
-------------------------------------------------------------------------
+---
 
 ## Content Review
 
 检查：
 
-``` text
+```text
 accuracy
 logic
 unsupported claims
@@ -1270,13 +1270,13 @@ contradictions
 repetition
 ```
 
-------------------------------------------------------------------------
+---
 
 ## Visual Review
 
 检查：
 
-``` text
+```text
 readability
 density
 pacing
@@ -1284,13 +1284,13 @@ visual hierarchy
 caption length
 ```
 
-------------------------------------------------------------------------
+---
 
 ## Technical Review
 
 检查：
 
-``` text
+```text
 resolution
 fps
 audio
@@ -1299,29 +1299,29 @@ missing assets
 render errors
 ```
 
-------------------------------------------------------------------------
+---
 
 # 32. Agent 不应该拥有最终决定权
 
 Review Agent 输出：
 
-``` yaml
+```yaml
 status: revise
 ```
 
 但不能直接：
 
-``` text
+```text
 publish
 ```
 
 Final Publish 永远需要 Human Approval。
 
-------------------------------------------------------------------------
+---
 
 # 33. 项目目录
 
-``` text
+```text
 video-agent/
 │
 ├── .pi/
@@ -1344,11 +1344,11 @@ video-agent/
     └── ai-cot/
 ```
 
-------------------------------------------------------------------------
+---
 
 # 34. 单视频项目
 
-``` text
+```text
 projects/ai-cot/
 │
 ├── project.yaml
@@ -1415,13 +1415,13 @@ projects/ai-cot/
     └── final.mp4
 ```
 
-------------------------------------------------------------------------
+---
 
 # 35. Checkpoint 文件
 
 每个 checkpoint 保存：
 
-``` yaml
+```yaml
 id: storyboard-v3
 
 stage: storyboard
@@ -1443,13 +1443,13 @@ notes:
 
 这样 Git + Checkpoint 就形成完整的审查历史。
 
-------------------------------------------------------------------------
+---
 
 # 36. Git Workflow
 
 每个重要阶段可以建立 commit：
 
-``` text
+```text
 project-init
 research-v1
 research-approved
@@ -1465,13 +1465,13 @@ final-v1
 
 如果用户修改 Script：
 
-``` text
+```text
 script-v2
 ```
 
 不会覆盖历史版本。
 
-------------------------------------------------------------------------
+---
 
 # 37. Human Edit
 
@@ -1479,7 +1479,7 @@ script-v2
 
 例如：
 
-``` text
+```text
 Agent:
 Script generated.
 
@@ -1490,7 +1490,7 @@ Script generated.
 
 点击：
 
-``` text
+```text
 Open Editor
 ```
 
@@ -1498,37 +1498,37 @@ Open Editor
 
 Mac：
 
-``` bash
+```bash
 open script.zh-CN.md
 ```
 
 Windows：
 
-``` bash
+```bash
 start script.zh-CN.md
 ```
 
 Linux：
 
-``` bash
+```bash
 xdg-open script.zh-CN.md
 ```
 
 用户编辑完成后返回 Pi：
 
-``` text
+```text
 /video continue
 ```
 
 系统重新读取文件。
 
-------------------------------------------------------------------------
+---
 
 # 38. 不做自己的编辑器
 
 第一版不要开发：
 
-``` text
+```text
 Markdown editor
 Timeline editor
 Script editor
@@ -1538,13 +1538,13 @@ Script editor
 
 未来如果需要，再加入 GUI。
 
-------------------------------------------------------------------------
+---
 
 # 39. Pi Commands
 
 第一版：
 
-``` text
+```text
 /video new
 /video status
 /video research
@@ -1563,13 +1563,13 @@ Script editor
 /video final
 ```
 
-------------------------------------------------------------------------
+---
 
 # 40. `/video status`
 
 应该显示：
 
-``` text
+```text
 AI Video Factory
 
 Project: ai-cot
@@ -1593,19 +1593,19 @@ WAITING_FOR_HUMAN_REVIEW
 
 这是 Human-in-the-loop 的核心 UX。
 
-------------------------------------------------------------------------
+---
 
 # 41. `/video approve`
 
 例如：
 
-``` text
+```text
 /video approve
 ```
 
 系统：
 
-``` text
+```text
 Checkpoint visual-v2 approved.
 
 Next stage:
@@ -1616,17 +1616,17 @@ Continue? [Y/n]
 
 这里可以自动继续，但仍然显示即将执行的动作。
 
-------------------------------------------------------------------------
+---
 
 # 42. `/video reject`
 
-``` text
+```text
 /video reject
 ```
 
 然后：
 
-``` text
+```text
 Why?
 
 1. Wrong visual
@@ -1638,31 +1638,31 @@ Why?
 
 用户选择后：
 
-``` text
+```text
 Reviewer feedback
 ```
 
 保存到：
 
-``` text
+```text
 checkpoints/visual.yaml
 ```
 
 供下一轮 Agent 使用。
 
-------------------------------------------------------------------------
+---
 
 # 43. `/video rollback`
 
 例如：
 
-``` text
+```text
 /video rollback storyboard-v2
 ```
 
 系统显示：
 
-``` text
+```text
 This will reset working state to:
 
 storyboard-v2
@@ -1675,13 +1675,13 @@ Continue? [y/N]
 
 需要人工确认。
 
-------------------------------------------------------------------------
+---
 
 # 44. AI 自动修改的边界
 
 AI 可以自动修改：
 
-``` text
+```text
 caption
 animation
 spacing
@@ -1691,7 +1691,7 @@ timing
 
 但不能未经确认修改：
 
-``` text
+```text
 core thesis
 approved facts
 story direction
@@ -1699,13 +1699,13 @@ major script structure
 approved visual style
 ```
 
-------------------------------------------------------------------------
+---
 
 # 45. Cost Strategy
 
 由于已经拥有：
 
-``` text
+```text
 MiniMax Coding Plan
 GLM Coding Plan
 ```
@@ -1714,7 +1714,7 @@ GLM Coding Plan
 
 成本主要来自：
 
-``` text
+```text
 LLM usage
 TTS（核心功能不要求；edge-tts 可选）
 Image generation
@@ -1723,7 +1723,7 @@ AI video generation
 
 目标：
 
-``` text
+```text
 普通技术视频：
 约 $2–10 / finished video
 
@@ -1733,13 +1733,13 @@ AI video generation
 
 实际成本取决于模型调用量和媒体生成量。
 
-------------------------------------------------------------------------
+---
 
 # 46. 不把成本优化放在第一优先级
 
 优化顺序：
 
-``` text
+```text
 Correctness
    ↓
 Controllability
@@ -1755,7 +1755,7 @@ Cost optimization
 
 而不是：
 
-``` text
+```text
 Cost
  ↓
 Everything else
@@ -1763,7 +1763,7 @@ Everything else
 
 因为你已经有两个 Coding Plan，第一阶段更应该优化生产流程。
 
-------------------------------------------------------------------------
+---
 
 # 47. 第一 Benchmark
 
@@ -1773,7 +1773,7 @@ Everything else
 
 目标：
 
-``` text
+```text
 Duration: 8–10 min
 Scenes: 20–35
 Language: zh-CN
@@ -1781,17 +1781,17 @@ Language: zh-CN
 
 以后再生成：
 
-``` text
+```text
 en-US
 ```
 
-------------------------------------------------------------------------
+---
 
 # 48. Benchmark 内容要求
 
 至少覆盖：
 
-``` text
+```text
 Title
 Hook
 Concept
@@ -1809,7 +1809,7 @@ Review
 
 这样一条视频就可以验证整个系统。
 
-------------------------------------------------------------------------
+---
 
 # 49. Phase 0 --- Foundation
 
@@ -1817,13 +1817,13 @@ Review
 
 建立：
 
-``` text
+```text
 video-agent
 ```
 
 安装：
 
-``` text
+```text
 Node.js
 TypeScript
 Remotion
@@ -1835,7 +1835,7 @@ Pi
 
 创建最小 Remotion 项目。
 
-------------------------------------------------------------------------
+---
 
 # 50. Phase 1 --- Motion Engine
 
@@ -1843,7 +1843,7 @@ Pi
 
 实现：
 
-``` text
+```text
 Title
 Text
 Image
@@ -1856,7 +1856,7 @@ Timeline
 
 实现：
 
-``` text
+```text
 fade
 slide
 scale
@@ -1866,7 +1866,7 @@ typewriter
 
 验收：
 
-``` text
+```text
 storyboard.yaml
        ↓
 Remotion
@@ -1874,7 +1874,7 @@ Remotion
 30-second.mp4
 ```
 
-------------------------------------------------------------------------
+---
 
 # 51. Phase 2 --- VDSL
 
@@ -1882,7 +1882,7 @@ Remotion
 
 实现：
 
-``` text
+```text
 schema
 validator
 parser
@@ -1891,11 +1891,11 @@ compiler
 
 命令：
 
-``` bash
+```bash
 video validate storyboard.yaml
 ```
 
-------------------------------------------------------------------------
+---
 
 # 52. Phase 3 --- Human Checkpoint Engine
 
@@ -1905,7 +1905,7 @@ video validate storyboard.yaml
 
 实现：
 
-``` text
+```text
 checkpoint
 approval
 reject
@@ -1916,7 +1916,7 @@ resume
 
 必须先于大量 Agent 自动化。
 
-------------------------------------------------------------------------
+---
 
 # 53. Phase 4 --- Storyboard Agent
 
@@ -1924,7 +1924,7 @@ resume
 
 实现：
 
-``` text
+```text
 Script
  ↓
 Storyboard Agent
@@ -1936,7 +1936,7 @@ Human Approval
 Render
 ```
 
-------------------------------------------------------------------------
+---
 
 # 54. Phase 5 --- Research + Script
 
@@ -1944,7 +1944,7 @@ Render
 
 实现：
 
-``` text
+```text
 Topic
  ↓
 Research
@@ -1960,7 +1960,7 @@ Script
 Human Approval
 ```
 
-------------------------------------------------------------------------
+---
 
 # 55. Phase 6 --- Voice + Subtitle
 
@@ -1968,7 +1968,7 @@ Human Approval
 
 实现：
 
-``` text
+```text
 Script
  ↓
 TTS
@@ -1980,7 +1980,7 @@ Timestamp
 Subtitle
 ```
 
-------------------------------------------------------------------------
+---
 
 # 56. Phase 7 --- Review Agent
 
@@ -1988,7 +1988,7 @@ Subtitle
 
 实现：
 
-``` text
+```text
 Content Review
 Visual Review
 Technical Review
@@ -1996,7 +1996,7 @@ Technical Review
 
 并与 Human Review 合并。
 
-------------------------------------------------------------------------
+---
 
 # 57. Phase 8 --- Pi Extension
 
@@ -2004,7 +2004,7 @@ Technical Review
 
 把：
 
-``` text
+```text
 Agents
 Skills
 Workflow
@@ -2014,17 +2014,17 @@ CLI
 
 包装为：
 
-``` text
+```text
 /video
 ```
 
-------------------------------------------------------------------------
+---
 
 # 58. Phase 9 --- YouTube Automation
 
 后续：
 
-``` text
+```text
 YouTube title
 Description
 Chapters
@@ -2032,66 +2032,66 @@ Thumbnail
 Shorts
 ```
 
-------------------------------------------------------------------------
+---
 
 # 59. Phase 10 --- Advanced Media
 
 最后才加入：
 
-``` text
+```text
 AI Images
 AI Video
 Cloud Rendering
 Advanced Audio
 ```
 
-------------------------------------------------------------------------
+---
 
 # 60. 里程碑
 
 ## M1
 
-``` text
+```text
 YAML → MP4
 ```
 
 ## M2
 
-``` text
+```text
 Script → Storyboard → MP4
 ```
 
 ## M3
 
-``` text
+```text
 Topic → Research → Script → Storyboard → MP4
 ```
 
 ## M4
 
-``` text
+```text
 Human-in-the-loop full workflow
 ```
 
 ## M5
 
-``` text
+```text
 中文 + 英文
 ```
 
 ## M6
 
-``` text
+```text
 Review + revision loop
 ```
 
 ## M7
 
-``` text
+```text
 YouTube package
 ```
 
-------------------------------------------------------------------------
+---
 
 # 61. MVP 定义
 
@@ -2105,7 +2105,7 @@ MVP 应该是：
 
 MVP 成功标准：
 
-``` text
+```text
 Storyboard
  ↓
 VDSL Validate
@@ -2117,13 +2117,13 @@ Render
 Final MP4
 ```
 
-------------------------------------------------------------------------
+---
 
 # 62. v0.1 明确范围
 
 v0.1 的目标不是覆盖完整生产链，而是稳定完成一条可重复的视频路径：
 
-``` text
+```text
 手工 Topic
    ↓
 手工 Research / Script
@@ -2141,7 +2141,7 @@ Remotion Render
 
 v0.1 必须完成：
 
-``` text
+```text
 TypeScript
 React
 Remotion
@@ -2160,7 +2160,7 @@ Git checkpoint 与运行记录
 
 v0.1 暂不要求：
 
-``` text
+```text
 自动 Research
 自动 Script
 多语言
@@ -2180,7 +2180,7 @@ Pi、MiniMax 和 GLM 属于 v0.2 的集成目标。v0.1 可以通过固定的本
 
 TTS 演进策略：
 
-``` text
+```text
 v0.1：edge-tts optional for prototype
 v0.2：provider abstraction
 ```
@@ -2189,7 +2189,7 @@ v0.1 的 `edge-tts` 只作为可选原型工具，不是渲染闭环的硬依赖
 
 v0.1 的唯一 benchmark：
 
-``` text
+```text
 一个 30–60 秒、zh-CN、5–8 个 Scene 的技术解释视频
 输入：手工 storyboard.yaml
 输出：preview.mp4 和 final.mp4
@@ -2198,7 +2198,7 @@ v0.1 的唯一 benchmark：
 
 下列内容属于 v0.2 及以后，不得作为 v0.1 的完成条件：
 
-``` text
+```text
 MCP / Ollama / Database / Electron
 Cloud rendering / AI Video / YouTube API
 Research Agent / Script Agent / Review Agent
@@ -2211,7 +2211,7 @@ TTS / 多语言 / Web Dashboard
 
 失败状态：
 
-``` text
+```text
 GENERATING → FAILED → GENERATING
                     └→ BLOCKED
 ```
@@ -2307,13 +2307,13 @@ Regression
 - 任意 Final 输出都能追溯到 VDSL、组件版本和输入 commit。
 - 测试失败或质量验收失败时，不得进入 `FINAL_APPROVED`。
 
-------------------------------------------------------------------------
+---
 
 # 63. 长期演进
 
 最终：
 
-``` text
+```text
                     AI VIDEO FACTORY
                            │
              ┌─────────────┼─────────────┐
@@ -2335,7 +2335,7 @@ Regression
                      Distribution
 ```
 
-------------------------------------------------------------------------
+---
 
 # 64. 最重要的长期资产
 
@@ -2365,13 +2365,13 @@ AI → Video 的中间语言。
 
 通过 Git 保存整个创作过程。
 
-------------------------------------------------------------------------
+---
 
 # 65. 最终设计原则
 
 整个系统应该始终遵循：
 
-``` text
+```text
 AI generates
 Human decides
 Code renders
@@ -2380,7 +2380,7 @@ Git remembers
 
 更具体：
 
-``` text
+```text
 AI：
 Research
 Draft
@@ -2407,13 +2407,13 @@ History
 Rollback
 ```
 
-------------------------------------------------------------------------
+---
 
 # 66. 下一步开发顺序
 
 建议严格按照：
 
-``` text
+```text
 1. Remotion 最小项目
         ↓
 2. VDSL
@@ -2444,7 +2444,7 @@ Rollback
 因为 Human-in-the-loop 不是一个 UI 功能，而应该是整个 workflow
 的基础设施。
 
-------------------------------------------------------------------------
+---
 
 # 67. Review Questions
 
@@ -2452,55 +2452,55 @@ Rollback
 
 ### A. Agent
 
--   Agent 是否需要继续拆分？
--   Director 是否应该是唯一拥有 workflow 控制权的 Agent？
--   Research / Script / Storyboard 是否应该完全独立 context？
+- Agent 是否需要继续拆分？
+- Director 是否应该是唯一拥有 workflow 控制权的 Agent？
+- Research / Script / Storyboard 是否应该完全独立 context？
 
 ### B. Human-in-the-loop
 
--   哪些阶段必须人工批准？
--   哪些阶段可以 AUTO？
--   是否需要"局部批准"，例如只批准 Scene 1--10？
--   是否需要允许用户直接修改 YAML？
+- 哪些阶段必须人工批准？
+- 哪些阶段可以 AUTO？
+- 是否需要"局部批准"，例如只批准 Scene 1--10？
+- 是否需要允许用户直接修改 YAML？
 
 ### C. VDSL
 
--   Scene Schema 是否足够？
--   是否需要把 Audio / Voice 从 Scene 中独立出来？
--   是否需要 Timeline 层？
--   是否需要支持 reusable Scene Template？
+- Scene Schema 是否足够？
+- 是否需要把 Audio / Voice 从 Scene 中独立出来？
+- 是否需要 Timeline 层？
+- 是否需要支持 reusable Scene Template？
 
 ### D. Visual System
 
--   第一批 Motion Components 是否足够？
--   AI 技术视频是否需要专门的 AI visualization DSL？
+- 第一批 Motion Components 是否足够？
+- AI 技术视频是否需要专门的 AI visualization DSL？
 
 ### E. Language
 
--   是否需要从第一版开始支持 `zh-CN` + `en-US`？
--   是否采用 language-independent storyboard？
+- 是否需要从第一版开始支持 `zh-CN` + `en-US`？
+- 是否采用 language-independent storyboard？
 
 ### F. Storage
 
--   Git 是否足够？
--   是否需要保存每次 AI generation 的 prompt / model / token / cost？
+- Git 是否足够？
+- 是否需要保存每次 AI generation 的 prompt / model / token / cost？
 
 ### G. Model
 
--   MiniMax / GLM 是否应该由 Agent Role Router 动态选择？
--   是否需要记录每一次模型调用，形成成本和质量统计？
+- MiniMax / GLM 是否应该由 Agent Role Router 动态选择？
+- 是否需要记录每一次模型调用，形成成本和质量统计？
 
 ### H. Product
 
--   第一版是否坚持 Pi TUI？
--   是否暂时完全不做 Electron？
--   是否应该先做 CLI，再做 Pi Extension？
+- 第一版是否坚持 Pi TUI？
+- 是否暂时完全不做 Electron？
+- 是否应该先做 CLI，再做 Pi Extension？
 
-------------------------------------------------------------------------
+---
 
 # 68. 当前推荐的最终方向
 
-``` text
+```text
                  HUMAN
                    │
                    ▼

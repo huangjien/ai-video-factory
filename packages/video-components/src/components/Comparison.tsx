@@ -40,7 +40,13 @@ const Card: FC<{
     >
       {title}
     </h3>
-    <ul style={{ color: darkTechTheme.colors.secondary, fontSize: 28, lineHeight: 1.6 }}>
+    <ul
+      style={{
+        color: darkTechTheme.colors.secondary,
+        fontSize: 28,
+        lineHeight: 1.6,
+      }}
+    >
       {items.map((it, i) => (
         <li key={i}>{it}</li>
       ))}
@@ -52,11 +58,19 @@ export const Comparison: FC<ComparisonProps> = ({ left, right, frame }) => {
   const leftSlide = slide(frame, "left", 200);
   const rightSlide = slide(frame, "right", 200);
   return (
-    <AbsoluteFill
-      style={{ backgroundColor: darkTechTheme.colors.background }}
-    >
-      <Card title={left.title} items={left.items} x={100} slideTranslate={leftSlide.translate} />
-      <Card title={right.title} items={right.items} x={1120} slideTranslate={rightSlide.translate} />
+    <AbsoluteFill style={{ backgroundColor: darkTechTheme.colors.background }}>
+      <Card
+        title={left.title}
+        items={left.items}
+        x={100}
+        slideTranslate={leftSlide.translate}
+      />
+      <Card
+        title={right.title}
+        items={right.items}
+        x={1120}
+        slideTranslate={rightSlide.translate}
+      />
     </AbsoluteFill>
   );
 };

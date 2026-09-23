@@ -148,7 +148,9 @@ function aliasApply(props: unknown, alias: Record<string, string>): unknown {
   if (props === null || typeof props !== "object" || Array.isArray(props)) {
     return props;
   }
-  const out: Record<string, unknown> = { ...(props as Record<string, unknown>) };
+  const out: Record<string, unknown> = {
+    ...(props as Record<string, unknown>),
+  };
   for (const [from, to] of Object.entries(alias)) {
     if (!(from in out)) continue;
     const v = out[from];
@@ -177,16 +179,46 @@ function withAlias(component: string, inner: z.ZodTypeAny): z.ZodTypeAny {
 }
 
 export const REGISTRY: Record<string, RegistryEntry> = {
-  Title: { propsSchema: withAlias("Title", titleProps), component: Title as ComponentType<unknown> },
-  Paragraph: { propsSchema: withAlias("Paragraph", paragraphProps), component: Paragraph as ComponentType<unknown> },
-  CodeBlock: { propsSchema: codeBlockProps, component: CodeBlock as ComponentType<unknown> },
-  Terminal: { propsSchema: terminalProps, component: Terminal as ComponentType<unknown> },
-  Image: { propsSchema: imageProps, component: Image as ComponentType<unknown> },
-  FlowChart: { propsSchema: withAlias("FlowChart", flowChartProps), component: FlowChart as ComponentType<unknown> },
-  Comparison: { propsSchema: withAlias("Comparison", comparisonProps), component: Comparison as ComponentType<unknown> },
-  Timeline: { propsSchema: timelineProps, component: Timeline as ComponentType<unknown> },
-  Callout: { propsSchema: withAlias("Callout", calloutProps), component: Callout as ComponentType<unknown> },
-  EndCard: { propsSchema: withAlias("EndCard", endCardProps), component: EndCard as ComponentType<unknown> },
+  Title: {
+    propsSchema: withAlias("Title", titleProps),
+    component: Title as ComponentType<unknown>,
+  },
+  Paragraph: {
+    propsSchema: withAlias("Paragraph", paragraphProps),
+    component: Paragraph as ComponentType<unknown>,
+  },
+  CodeBlock: {
+    propsSchema: codeBlockProps,
+    component: CodeBlock as ComponentType<unknown>,
+  },
+  Terminal: {
+    propsSchema: terminalProps,
+    component: Terminal as ComponentType<unknown>,
+  },
+  Image: {
+    propsSchema: imageProps,
+    component: Image as ComponentType<unknown>,
+  },
+  FlowChart: {
+    propsSchema: withAlias("FlowChart", flowChartProps),
+    component: FlowChart as ComponentType<unknown>,
+  },
+  Comparison: {
+    propsSchema: withAlias("Comparison", comparisonProps),
+    component: Comparison as ComponentType<unknown>,
+  },
+  Timeline: {
+    propsSchema: timelineProps,
+    component: Timeline as ComponentType<unknown>,
+  },
+  Callout: {
+    propsSchema: withAlias("Callout", calloutProps),
+    component: Callout as ComponentType<unknown>,
+  },
+  EndCard: {
+    propsSchema: withAlias("EndCard", endCardProps),
+    component: EndCard as ComponentType<unknown>,
+  },
 };
 
 export const COMPONENT_NAMES = Object.keys(REGISTRY);
@@ -197,9 +229,20 @@ export type RegistryPropsByName = {
   CodeBlock: { code: string; language?: string; highlightLines?: number[] };
   Terminal: { title?: string; lines: string[]; prompt?: string };
   Image: { src: string; fit?: "contain" | "cover" };
-  FlowChart: { nodes: string[]; edges?: [number, number][]; direction?: string };
-  Comparison: { left: { title: string; items: string[] }; right: { title: string; items: string[] } };
+  FlowChart: {
+    nodes: string[];
+    edges?: [number, number][];
+    direction?: string;
+  };
+  Comparison: {
+    left: { title: string; items: string[] };
+    right: { title: string; items: string[] };
+  };
   Timeline: { events: { label: string; description?: string }[] };
-  Callout: { kind: "info" | "warning" | "success"; title?: string; text: string };
+  Callout: {
+    kind: "info" | "warning" | "success";
+    title?: string;
+    text: string;
+  };
   EndCard: { title: string; subtitle?: string; cta?: string };
 };

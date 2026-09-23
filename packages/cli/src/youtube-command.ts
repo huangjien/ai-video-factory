@@ -21,7 +21,9 @@ function providerInstance(name: string): Provider {
 }
 
 function sha256OfMessages(messages: ChatMessage[]): string {
-  const canon = JSON.stringify(messages.map((m) => ({ role: m.role, content: m.content })));
+  const canon = JSON.stringify(
+    messages.map((m) => ({ role: m.role, content: m.content })),
+  );
   return "sha256:" + createHash("sha256").update(canon).digest("hex");
 }
 
@@ -64,7 +66,10 @@ export async function runYouTube(opts: YouTubeOptions): Promise<number> {
   try {
     result = await callYouTube({ storyboard, script, research }, provider);
   } catch (err) {
-    console.error(`\u2717 ${chosenName} youtube agent failed:`, (err as Error).message);
+    console.error(
+      `\u2717 ${chosenName} youtube agent failed:`,
+      (err as Error).message,
+    );
     return 1;
   }
 
@@ -105,7 +110,8 @@ export async function runYouTube(opts: YouTubeOptions): Promise<number> {
   const messages = [
     {
       role: "system" as const,
-      content: "YouTube Automation Agent system prompt (see @vf/youtube/src/agent.ts)",
+      content:
+        "YouTube Automation Agent system prompt (see @vf/youtube/src/agent.ts)",
     },
     {
       role: "user" as const,
@@ -119,7 +125,11 @@ export async function runYouTube(opts: YouTubeOptions): Promise<number> {
     actor: "agent" as const,
     tool: "vf-youtube",
     input_commit: safeGitHead(projectRoot),
-    input_files: ["storyboard/storyboard.yaml", "script/script.zh-CN.md", "research/research.md"],
+    input_files: [
+      "storyboard/storyboard.yaml",
+      "script/script.zh-CN.md",
+      "research/research.md",
+    ],
     output_files: [
       "youtube/title.txt",
       "youtube/description.md",
@@ -143,7 +153,11 @@ export async function runYouTube(opts: YouTubeOptions): Promise<number> {
 
   console.log(`\u2713 packaged ${opts.project}/youtube/`);
   console.log(`  title: ${result.youtube.title}`);
-  console.log(`  chapters: ${result.youtube.chapters.length} · vtt=youtube/chapters.vtt`);
-  console.log(`  next: copy title + description into YouTube Studio; thumbnail + Shorts land in v0.2 phase 8`);
+  console.log(
+    `  chapters: ${result.youtube.chapters.length} · vtt=youtube/chapters.vtt`,
+  );
+  console.log(
+    `  next: copy title + description into YouTube Studio; thumbnail + Shorts land in v0.2 phase 8`,
+  );
   return 0;
 }

@@ -10,7 +10,10 @@ const MARK: Record<string, string> = {
   in_progress: "●",
 };
 
-export async function runStatus(projectName?: string, cwd?: string): Promise<number> {
+export async function runStatus(
+  projectName?: string,
+  cwd?: string,
+): Promise<number> {
   let root: string;
   if (projectName) {
     const base = path.resolve(cwd ?? ".");
@@ -32,7 +35,12 @@ export async function runStatus(projectName?: string, cwd?: string): Promise<num
     const cp = await loadCheckpoint(root, stage);
     let mark = "○";
     if (cp) {
-      const key = cp.status === "approved" || cp.status === "rejected" || cp.status === "invalidated" ? cp.status : "in_progress";
+      const key =
+        cp.status === "approved" ||
+        cp.status === "rejected" ||
+        cp.status === "invalidated"
+          ? cp.status
+          : "in_progress";
       mark = MARK[key] ?? "○";
     }
     const isCurrent = state.current_stage === stage;

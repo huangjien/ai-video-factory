@@ -23,7 +23,8 @@ export const FlowChart: FC<FlowChartProps> = ({
   direction = "left-to-right",
   frame,
 }) => {
-  const cols = direction === "left-to-right" ? Math.ceil(Math.sqrt(nodes.length)) : 1;
+  const cols =
+    direction === "left-to-right" ? Math.ceil(Math.sqrt(nodes.length)) : 1;
   const positions = nodes.map((_, i) => {
     const col = i % cols;
     const row = Math.floor(i / cols);

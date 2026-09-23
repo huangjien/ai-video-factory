@@ -32,7 +32,9 @@ function safeGitHead(cwd: string): string {
 
 /** Resolve the thumbnail image bytes for the minimax video path.
  * v0.3 phase 1 may write either thumbnail.png (mock) or thumbnail.jpg (real). */
-function readThumbnail(projectRoot: string): { bytes: Uint8Array; contentType: "image/png" | "image/jpeg" } | null {
+function readThumbnail(
+  projectRoot: string,
+): { bytes: Uint8Array; contentType: "image/png" | "image/jpeg" } | null {
   for (const name of ["thumbnail.jpg", "thumbnail.png"]) {
     const p = path.join(projectRoot, "youtube", name);
     if (existsSync(p)) {
@@ -45,20 +47,34 @@ function readThumbnail(projectRoot: string): { bytes: Uint8Array; contentType: "
   return null;
 }
 
-async function shortsFfmpeg(src: string, out: string, start: number, duration: number): Promise<void> {
+async function shortsFfmpeg(
+  src: string,
+  out: string,
+  start: number,
+  duration: number,
+): Promise<void> {
   await execFileAsync("ffmpeg", [
     "-y",
-    "-ss", String(start),
-    "-i", src,
-    "-t", String(duration),
+    "-ss",
+    String(start),
+    "-i",
+    src,
+    "-t",
+    String(duration),
     "-vf",
     "crop=ih*9/16:ih,scale=1080:1920",
-    "-c:v", "libx264",
-    "-preset", "fast",
-    "-crf", "23",
-    "-c:a", "aac",
-    "-b:a", "128k",
-    "-movflags", "+faststart",
+    "-c:v",
+    "libx264",
+    "-preset",
+    "fast",
+    "-crf",
+    "23",
+    "-c:a",
+    "aac",
+    "-b:a",
+    "128k",
+    "-movflags",
+    "+faststart",
     out,
   ]);
 }
@@ -81,7 +97,9 @@ export async function runShorts(opts: ShortsOptions): Promise<number> {
   //   - youtube/thumbnail.{png|jpg} produced by `vf thumbnail`
   //   - youtube/shorts-hook.txt produced by `vf youtube`
   const provider: VideoProvider =
-    opts.providerName === "minimax" ? new MiniMaxVideoProvider() : new MockVideoProvider();
+    opts.providerName === "minimax"
+      ? new MiniMaxVideoProvider()
+      : new MockVideoProvider();
 
   let result: VideoResult;
   let runRecord: {
@@ -109,7 +127,9 @@ export async function runShorts(opts: ShortsOptions): Promise<number> {
     const hookText = readFileSync(hookPath, "utf8").trim();
     const dataUrl = `data:${thumb.contentType};base64,${Buffer.from(thumb.bytes).toString("base64")}`;
     const duration = opts.durationSec ?? 5;
-    console.log(`  requesting MiniMax video (model ${provider.name}, ${duration}s, polling...)`);
+    console.log(
+      `  requesting MiniMax video (model ${provider.name}, ${duration}s, polling...)`,
+    );
     try {
       result = await provider.generate({
         prompt: hookText,
@@ -119,7 +139,10 @@ export async function runShorts(opts: ShortsOptions): Promise<number> {
         firstFrameImageUrl: dataUrl,
       });
     } catch (err) {
-      console.error(`\u2717 ${provider.name} video generation failed:`, (err as Error).message);
+      console.error(
+        `\u2717 ${provider.name} video generation failed:`,
+        (err as Error).message,
+      );
       return 1;
     }
     const { writeFile } = await import("node:fs/promises");
@@ -127,10 +150,15 @@ export async function runShorts(opts: ShortsOptions): Promise<number> {
     runRecord = {
       provider: provider.name,
       model: "MiniMax-Hailuo-2.3",
-      input_files: ["youtube/thumbnail." + thumb.contentType.split("/")[1], "youtube/shorts-hook.txt"],
+      input_files: [
+        "youtube/thumbnail." + thumb.contentType.split("/")[1],
+        "youtube/shorts-hook.txt",
+      ],
       prompt_hash:
         "sha256:" +
-        createHash("sha256").update(hookText + "|" + dataUrl.slice(0, 64)).digest("hex"),
+        createHash("sha256")
+          .update(hookText + "|" + dataUrl.slice(0, 64))
+          .digest("hex"),
     };
   } else {
     // Mock path — mechanical ffmpeg clip from final.mp4.
@@ -181,7 +209,9 @@ export async function runShorts(opts: ShortsOptions): Promise<number> {
   await writeRun(projectRoot, record);
 
   console.log(`\u2713 extracted ${opts.project}/youtube/shorts.mp4`);
-  console.log(`  provider=${runRecord.provider}  hash=${runRecord.prompt_hash.slice(7, 19)}…`);
+  console.log(
+    `  provider=${runRecord.provider}  hash=${runRecord.prompt_hash.slice(7, 19)}…`,
+  );
   console.log(`  next: upload shorts.mp4 as a YouTube Short`);
   return 0;
 }

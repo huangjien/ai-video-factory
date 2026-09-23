@@ -5,7 +5,11 @@ import { ScriptSchema, type Script } from "./schemas.js";
 
 export class ScriptError extends Error {
   override readonly cause: unknown;
-  constructor(message: string, public readonly providerName: string, cause?: unknown) {
+  constructor(
+    message: string,
+    public readonly providerName: string,
+    cause?: unknown,
+  ) {
     super(message);
     this.name = "ScriptError";
     this.cause = cause;
@@ -38,7 +42,11 @@ export async function callScript(
   try {
     parsed = parseYaml(yamlText);
   } catch (err) {
-    throw new ScriptError(`YAML parse failed: ${(err as Error).message}`, provider.name, err);
+    throw new ScriptError(
+      `YAML parse failed: ${(err as Error).message}`,
+      provider.name,
+      err,
+    );
   }
   const result = ScriptSchema.safeParse(parsed);
   if (!result.success) {

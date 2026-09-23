@@ -47,7 +47,7 @@ describe("YouTubePackageSchema (todo 1) — §58 Phase 9", () => {
   });
 
   it("rejects missing title (strict)", () => {
-    const bad = goodYaml.replace("title: \"AI 思维链有什么用？\"\n", "");
+    const bad = goodYaml.replace('title: "AI 思维链有什么用？"\n', "");
     const r = YouTubePackageSchema.safeParse(parseYaml(bad));
     expect(r.success).toBe(false);
   });
@@ -85,7 +85,7 @@ describe("callYouTube (todo 1)", () => {
   });
 
   it("rejects invalid package schema with YouTubeError", async () => {
-    const bad = goodYaml.replace("title: \"AI 思维链有什么用？\"", "title: \"\"");
+    const bad = goodYaml.replace('title: "AI 思维链有什么用？"', 'title: ""');
     const p = new CannedProvider(["```yaml\n" + bad + "\n```"]);
     await expect(
       callYouTube({ storyboard: "x", script: "x", research: "x" }, p),

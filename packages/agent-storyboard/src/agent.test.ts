@@ -53,12 +53,16 @@ describe("callAgent (todo 4) — §53", () => {
 
   it("rejects prose-only response with an AgentError (VDSL validation fails on non-VDSL YAML)", async () => {
     const p = new CannedProvider(["This is not YAML, just a chat reply."]);
-    await expect(callAgent(baseInput, p)).rejects.toThrow(/VDSL validation failed/);
+    await expect(callAgent(baseInput, p)).rejects.toThrow(
+      /VDSL validation failed/,
+    );
   });
 
   it("rejects empty response with explicit no-YAML message", async () => {
     const p = new CannedProvider([""]);
-    await expect(callAgent(baseInput, p)).rejects.toThrow(/no YAML in response/);
+    await expect(callAgent(baseInput, p)).rejects.toThrow(
+      /no YAML in response/,
+    );
   });
 
   it("rejects invalid VDSL with the underlying validation errors", async () => {

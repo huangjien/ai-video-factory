@@ -23,10 +23,7 @@ export class GLMProvider implements Provider {
   private readonly defaultModel: string;
 
   constructor(opts: GLMProviderOptions = {}) {
-    this.baseUrl =
-      opts.baseUrl ??
-      process.env["GLM_BASE_URL"] ??
-      DEFAULT_BASE;
+    this.baseUrl = opts.baseUrl ?? process.env["GLM_BASE_URL"] ?? DEFAULT_BASE;
     this.defaultModel = opts.defaultModel ?? DEFAULT_MODEL;
   }
 
@@ -46,7 +43,9 @@ export class GLMProvider implements Provider {
       body: JSON.stringify({
         model: req.model ?? this.defaultModel,
         messages: req.messages,
-        ...(req.temperature !== undefined ? { temperature: req.temperature } : {}),
+        ...(req.temperature !== undefined
+          ? { temperature: req.temperature }
+          : {}),
       }),
     });
     const body = await res.text();

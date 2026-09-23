@@ -47,7 +47,7 @@ scenes:
       component: FlowChart
       props:
         nodes: ["问题", "步骤 1", "步骤 2", "步骤 3", "答案"]
-        edges: [[0,1], [1,2], [2,3], [3,4]]
+        edges: [[0, 1], [1, 2], [2, 3], [3, 4]]
         direction: left-to-right
     animation:
       entrance: draw
@@ -62,7 +62,13 @@ scenes:
       component: Terminal
       props:
         title: "prompt.py"
-        lines: ["Q: 24 * 7 = ?", "Let's think step by step.", "1. 24 * 7 = 168", "A: 168"]
+        lines:
+          [
+            "Q: 24 * 7 = ?",
+            "Let's think step by step.",
+            "1. 24 * 7 = 168",
+            "A: 168",
+          ]
         prompt: "▶"
     animation:
       entrance: typewriter
@@ -76,8 +82,10 @@ scenes:
     visual:
       component: Comparison
       props:
-        left: {title: "无 CoT", items: ["直接给答案", "难以解释", "复杂问题易错"]}
-        right: {title: "有 CoT", items: ["逐步推理", "过程可见", "准确率提升"]}
+        left:
+          { title: "无 CoT", items: ["直接给答案", "难以解释", "复杂问题易错"] }
+        right:
+          { title: "有 CoT", items: ["逐步推理", "过程可见", "准确率提升"] }
     animation:
       entrance: slide
     captions:

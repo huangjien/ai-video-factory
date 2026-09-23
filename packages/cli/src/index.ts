@@ -36,7 +36,10 @@ program
   .command("mix")
   .argument("<project>", "project id")
   .option("--cwd <dir>", "base directory for the project")
-  .option("--bgm <path>", "explicit BGM file (default: first .wav in assets/audio-assets/bgm/ or bgm tag from audio-assets/mix.yaml)")
+  .option(
+    "--bgm <path>",
+    "explicit BGM file (default: first .wav in assets/audio-assets/bgm/ or bgm tag from audio-assets/mix.yaml)",
+  )
   .option(
     "--bgm-attenuation <db>",
     "BGM attenuation in dB while narration is silent (default -18)",
@@ -52,7 +55,10 @@ program
     "fade BGM out over last N seconds (overrides mix.yaml)",
     (v) => Number.parseFloat(v),
   )
-  .option("--mix-yaml <path>", "explicit mix.yaml path (default: audio-assets/mix.yaml)")
+  .option(
+    "--mix-yaml <path>",
+    "explicit mix.yaml path (default: audio-assets/mix.yaml)",
+  )
   .action(
     async (
       project: string,
@@ -72,8 +78,12 @@ program
         ...(opts.bgmAttenuation !== undefined
           ? { bgmAttenuationDb: opts.bgmAttenuation }
           : {}),
-        ...(opts.bgmFadeIn !== undefined ? { bgmFadeInSec: opts.bgmFadeIn } : {}),
-        ...(opts.bgmFadeOut !== undefined ? { bgmFadeOutSec: opts.bgmFadeOut } : {}),
+        ...(opts.bgmFadeIn !== undefined
+          ? { bgmFadeInSec: opts.bgmFadeIn }
+          : {}),
+        ...(opts.bgmFadeOut !== undefined
+          ? { bgmFadeOutSec: opts.bgmFadeOut }
+          : {}),
         ...(opts.mixYaml !== undefined ? { mixYamlPath: opts.mixYaml } : {}),
       });
     },
@@ -84,9 +94,14 @@ program
   .argument("<topic>", "topic to research")
   .option("--cwd <dir>", "base directory for the project")
   .option("--no-web", "disable MiniMax web search (use LLM knowledge only)")
-  .option("--model <provider>", "model provider: minimax|glm (default from config)")
+  .option(
+    "--model <provider>",
+    "model provider: minimax|glm (default from config)",
+  )
   .option("--lang <lang>", "language: zh-CN|en-US (default zh-CN)")
-  .option("--duration <seconds>", "total duration target", (v) => parseInt(v, 10))
+  .option("--duration <seconds>", "total duration target", (v) =>
+    parseInt(v, 10),
+  )
   .option("--audience <text>", "target audience (default: developers)")
   .action(
     async (
@@ -116,12 +131,23 @@ program
   .command("script")
   .argument("<topic>", "topic to write a script for")
   .option("--cwd <dir>", "base directory for the project")
-  .option("--model <provider>", "model provider: minimax|glm (default from config)")
+  .option(
+    "--model <provider>",
+    "model provider: minimax|glm (default from config)",
+  )
   .option("--lang <lang>", "language: zh-CN|en-US (default zh-CN)")
-  .option("--duration <seconds>", "total duration target", (v) => parseInt(v, 10))
+  .option("--duration <seconds>", "total duration target", (v) =>
+    parseInt(v, 10),
+  )
   .option("--audience <text>", "target audience (default: developers)")
-  .option("--from-research <dir>", "consume approved research from this directory")
-  .option("--direction <text>", "human-provided story direction; agent adapts structure but keeps 7 sections")
+  .option(
+    "--from-research <dir>",
+    "consume approved research from this directory",
+  )
+  .option(
+    "--direction <text>",
+    "human-provided story direction; agent adapts structure but keeps 7 sections",
+  )
   .action(
     async (
       topic: string,
@@ -142,7 +168,9 @@ program
         ...(opts.lang !== undefined ? { lang: opts.lang } : {}),
         ...(opts.duration !== undefined ? { duration: opts.duration } : {}),
         ...(opts.audience !== undefined ? { audience: opts.audience } : {}),
-        ...(opts.fromResearch !== undefined ? { fromResearch: opts.fromResearch } : {}),
+        ...(opts.fromResearch !== undefined
+          ? { fromResearch: opts.fromResearch }
+          : {}),
         ...(opts.direction !== undefined ? { direction: opts.direction } : {}),
       });
     },
@@ -152,13 +180,24 @@ program
   .command("storyboard")
   .argument("<topic>", "topic to draft a storyboard for")
   .option("--cwd <dir>", "base directory for the project")
-  .option("--model <provider>", "model provider: minimax|glm (default from config)")
+  .option(
+    "--model <provider>",
+    "model provider: minimax|glm (default from config)",
+  )
   .option("--lang <lang>", "language: zh-CN|en-US (default zh-CN)")
-  .option("--duration <seconds>", "total duration target", (v) => parseInt(v, 10))
+  .option("--duration <seconds>", "total duration target", (v) =>
+    parseInt(v, 10),
+  )
   .option("--audience <text>", "target audience (default: developers)")
   .option("--style <text>", "visual style (default: dark-tech)")
-  .option("--from-research <dir>", "consume approved research from this directory")
-  .option("--from-script <file>", "consume approved script from this file (e.g. script/script.zh-CN.md)")
+  .option(
+    "--from-research <dir>",
+    "consume approved research from this directory",
+  )
+  .option(
+    "--from-script <file>",
+    "consume approved script from this file (e.g. script/script.zh-CN.md)",
+  )
   .action(
     async (
       topic: string,
@@ -181,8 +220,12 @@ program
         ...(opts.duration !== undefined ? { duration: opts.duration } : {}),
         ...(opts.audience !== undefined ? { audience: opts.audience } : {}),
         ...(opts.style !== undefined ? { style: opts.style } : {}),
-        ...(opts.fromResearch !== undefined ? { fromResearch: opts.fromResearch } : {}),
-        ...(opts.fromScript !== undefined ? { fromScript: opts.fromScript } : {}),
+        ...(opts.fromResearch !== undefined
+          ? { fromResearch: opts.fromResearch }
+          : {}),
+        ...(opts.fromScript !== undefined
+          ? { fromScript: opts.fromScript }
+          : {}),
       });
     },
   );
@@ -200,42 +243,64 @@ program
     });
   });
 
-program
-  .command("audio-asset")
+program.command("audio-asset");
 
 program
   .command("review")
   .argument("<project>", "project id to review")
   .option("--cwd <dir>", "base directory for the project")
-  .option("--model <provider>", "model provider: minimax|glm (default: research-role config)")
-  .action(async (project: string, opts: { cwd?: string; model?: "minimax" | "glm" }) => {
-    process.exitCode = await runReview({
-      project,
-      ...(opts.cwd !== undefined ? { cwd: opts.cwd } : {}),
-      ...(opts.model !== undefined ? { model: opts.model } : {}),
-    });
-  });
+  .option(
+    "--model <provider>",
+    "model provider: minimax|glm (default: research-role config)",
+  )
+  .action(
+    async (
+      project: string,
+      opts: { cwd?: string; model?: "minimax" | "glm" },
+    ) => {
+      process.exitCode = await runReview({
+        project,
+        ...(opts.cwd !== undefined ? { cwd: opts.cwd } : {}),
+        ...(opts.model !== undefined ? { model: opts.model } : {}),
+      });
+    },
+  );
 
 program
   .command("youtube")
   .argument("<project>", "project id to package for YouTube")
   .option("--cwd <dir>", "base directory for the project")
-  .option("--model <provider>", "model provider: minimax|glm (default: review-role config)")
-  .action(async (project: string, opts: { cwd?: string; model?: "minimax" | "glm" }) => {
-    process.exitCode = await runYouTube({
-      project,
-      ...(opts.cwd !== undefined ? { cwd: opts.cwd } : {}),
-      ...(opts.model !== undefined ? { model: opts.model } : {}),
-    });
-  });
+  .option(
+    "--model <provider>",
+    "model provider: minimax|glm (default: review-role config)",
+  )
+  .action(
+    async (
+      project: string,
+      opts: { cwd?: string; model?: "minimax" | "glm" },
+    ) => {
+      process.exitCode = await runYouTube({
+        project,
+        ...(opts.cwd !== undefined ? { cwd: opts.cwd } : {}),
+        ...(opts.model !== undefined ? { model: opts.model } : {}),
+      });
+    },
+  );
 
 program
   .command("thumbnail")
   .argument("<project>", "project id to generate a thumbnail for")
   .option("--cwd <dir>", "base directory for the project")
-  .option("--width <px>", "thumbnail width (default 1280)", (v) => parseInt(v, 10))
-  .option("--height <px>", "thumbnail height (default 720)", (v) => parseInt(v, 10))
-  .option("--provider <name>", "image provider: mock|minimax (default mock — minimax needs MINIMAX_API_KEY)")
+  .option("--width <px>", "thumbnail width (default 1280)", (v) =>
+    parseInt(v, 10),
+  )
+  .option("--height <px>", "thumbnail height (default 720)", (v) =>
+    parseInt(v, 10),
+  )
+  .option(
+    "--provider <name>",
+    "image provider: mock|minimax (default mock — minimax needs MINIMAX_API_KEY)",
+  )
   .action(
     async (
       project: string,
@@ -260,13 +325,29 @@ program
   .command("shorts")
   .argument("<project>", "project id to clip a YouTube Short from")
   .option("--cwd <dir>", "base directory for the project")
-  .option("--duration <seconds>", "short clip length in seconds (default: 60 for mock; 5 for minimax)", (v) => parseInt(v, 10))
-  .option("--start <seconds>", "start offset into the final.mp4 (mock provider only, default 0)", (v) => parseInt(v, 10))
-  .option("--provider <name>", "video provider: mock|minimax (default mock — minimax needs MINIMAX_API_KEY)")
+  .option(
+    "--duration <seconds>",
+    "short clip length in seconds (default: 60 for mock; 5 for minimax)",
+    (v) => parseInt(v, 10),
+  )
+  .option(
+    "--start <seconds>",
+    "start offset into the final.mp4 (mock provider only, default 0)",
+    (v) => parseInt(v, 10),
+  )
+  .option(
+    "--provider <name>",
+    "video provider: mock|minimax (default mock — minimax needs MINIMAX_API_KEY)",
+  )
   .action(
     async (
       project: string,
-      opts: { cwd?: string; duration?: number; start?: number; provider?: "mock" | "minimax" },
+      opts: {
+        cwd?: string;
+        duration?: number;
+        start?: number;
+        provider?: "mock" | "minimax";
+      },
     ) => {
       process.exitCode = await runShorts({
         project,
@@ -280,7 +361,9 @@ program
 
 program
   .command("validate")
-  .description("validate a storyboard.yaml (VDSL 0.1) against the full rule set")
+  .description(
+    "validate a storyboard.yaml (VDSL 0.1) against the full rule set",
+  )
   .argument("<file>", "path to storyboard.yaml")
   .option("--root <dir>", "project root for resolving assets")
   .action(async (file: string, opts: { root?: string }) => {
@@ -300,27 +383,41 @@ program
   .argument("[project]", "project name (slug) — optional")
   .argument("[stage]", "stage to approve (defaults to current_stage)")
   .option("--cwd <dir>", "project root")
-  .action(async (project: string | undefined, stage: string | undefined, opts: { cwd?: string }) => {
-    process.exitCode = await runApprove(project, stage, opts.cwd);
-  });
+  .action(
+    async (
+      project: string | undefined,
+      stage: string | undefined,
+      opts: { cwd?: string },
+    ) => {
+      process.exitCode = await runApprove(project, stage, opts.cwd);
+    },
+  );
 
 program
   .command("reject")
   .argument("[project]", "project name (slug) — optional")
   .argument("<reason>", "reason code (e.g. wrong-content, wrong-pacing)")
   .option("--cwd <dir>", "project root")
-  .action(async (project: string | undefined, reason: string, opts: { cwd?: string }) => {
-    process.exitCode = await runReject(project, reason, opts.cwd);
-  });
+  .action(
+    async (
+      project: string | undefined,
+      reason: string,
+      opts: { cwd?: string },
+    ) => {
+      process.exitCode = await runReject(project, reason, opts.cwd);
+    },
+  );
 
 program
   .command("rollback")
   .argument("[project]", "project name (slug) — optional")
   .argument("<checkpoint-id>", "checkpoint to roll back to")
   .option("--cwd <dir>", "project root")
-  .action(async (project: string | undefined, id: string, opts: { cwd?: string }) => {
-    process.exitCode = await runRollback(project, id, opts.cwd);
-  });
+  .action(
+    async (project: string | undefined, id: string, opts: { cwd?: string }) => {
+      process.exitCode = await runRollback(project, id, opts.cwd);
+    },
+  );
 
 program
   .command("resume")
@@ -332,8 +429,14 @@ program
 
 program
   .command("preview")
-  .argument("[project]", "project name (slug) — optional if exactly one project exists under <cwd>/projects/")
-  .option("--cwd <dir>", "project root (used as base when [project] is given, or auto-discovered from)")
+  .argument(
+    "[project]",
+    "project name (slug) — optional if exactly one project exists under <cwd>/projects/",
+  )
+  .option(
+    "--cwd <dir>",
+    "project root (used as base when [project] is given, or auto-discovered from)",
+  )
   .action(async (project: string | undefined, opts: { cwd?: string }) => {
     process.exitCode = await runPreview(project, opts.cwd);
   });
@@ -342,13 +445,21 @@ program
   .command("final")
   .argument("[project]", "project name (slug) — optional")
   .option("--cwd <dir>", "project root")
-  .option("--mix", "after rendering, run vf mix to produce final-mixed.mp4 with narration + BGM + SFX cues")
-  .action(async (project: string | undefined, opts: { cwd?: string; mix?: boolean }) => {
-    process.exitCode = await runFinal({
-      ...(project ? { projectName: project } : {}),
-      ...(opts.cwd !== undefined ? { cwd: opts.cwd } : {}),
-      ...(opts.mix === true ? { mix: true } : {}),
-    });
-  });
+  .option(
+    "--mix",
+    "after rendering, run vf mix to produce final-mixed.mp4 with narration + BGM + SFX cues",
+  )
+  .action(
+    async (
+      project: string | undefined,
+      opts: { cwd?: string; mix?: boolean },
+    ) => {
+      process.exitCode = await runFinal({
+        ...(project ? { projectName: project } : {}),
+        ...(opts.cwd !== undefined ? { cwd: opts.cwd } : {}),
+        ...(opts.mix === true ? { mix: true } : {}),
+      });
+    },
+  );
 
 await program.parseAsync(process.argv);

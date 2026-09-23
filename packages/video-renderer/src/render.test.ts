@@ -7,7 +7,13 @@ import type { RenderPlan } from "@vf/vdsl";
 import { renderPlanToVideo } from "./render.js";
 
 const samplePlan: RenderPlan = {
-  project: { id: "fixture", language: "zh-CN", fps: 30, width: 1920, height: 1080 },
+  project: {
+    id: "fixture",
+    language: "zh-CN",
+    fps: 30,
+    width: 1920,
+    height: 1080,
+  },
   style: { theme: "dark-tech" },
   totalFrames: 210,
   scenes: [
@@ -37,12 +43,10 @@ const samplePlan: RenderPlan = {
 };
 
 describe("renderPlanToVideo (todo 10)", () => {
-  it(
-    "produces a 1920x1080 30fps MP4 with duration ~7s",
-    async () => {
-      const outDir = mkdtempSync(path.join(tmpdir(), "vf-render-"));
-      const mp4Path = path.join(outDir, "out.mp4");
-      await renderPlanToVideo(samplePlan, mp4Path);
+  it("produces a 1920x1080 30fps MP4 with duration ~7s", async () => {
+    const outDir = mkdtempSync(path.join(tmpdir(), "vf-render-"));
+    const mp4Path = path.join(outDir, "out.mp4");
+    await renderPlanToVideo(samplePlan, mp4Path);
     const out = execFileSync(
       "ffprobe",
       [

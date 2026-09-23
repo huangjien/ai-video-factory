@@ -1,5 +1,18 @@
-import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
-import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
+import {
+  afterAll,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest";
+import {
+  createServer,
+  type IncomingMessage,
+  type Server,
+  type ServerResponse,
+} from "node:http";
 import type { AddressInfo } from "node:net";
 import { MiniMaxVideoProvider } from "./minimax-video.js";
 
@@ -43,7 +56,8 @@ describe("MiniMaxVideoProvider (v0.3 phase 2) — /v1/video_generation async flo
   let createCalls = 0;
   let pollCalls = 0;
   let downloadCalls = 0;
-  let pollSequence: "Preparing" | "Processing" | "Success" | "Fail" = "Processing";
+  let pollSequence: "Preparing" | "Processing" | "Success" | "Fail" =
+    "Processing";
   let downloadStatus = 200;
 
   beforeAll(async () => {
@@ -54,7 +68,10 @@ describe("MiniMaxVideoProvider (v0.3 phase 2) — /v1/video_generation async flo
       if (url.includes("/v1/video_generation")) {
         createCalls += 1;
         res.end(
-          JSON.stringify({ task_id: "task-123", base_resp: { status_code: 0, status_msg: "success" } }),
+          JSON.stringify({
+            task_id: "task-123",
+            base_resp: { status_code: 0, status_msg: "success" },
+          }),
         );
       } else if (url.includes("/v1/query/video_generation")) {
         pollCalls += 1;

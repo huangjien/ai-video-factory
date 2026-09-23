@@ -1,5 +1,10 @@
 import { execFileSync } from "node:child_process";
-import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
+import {
+  createServer,
+  type IncomingMessage,
+  type Server,
+  type ServerResponse,
+} from "node:http";
 import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import type { AddressInfo } from "node:net";
@@ -82,17 +87,12 @@ describe("vf review end-to-end (todo 2) — mock MiniMax", () => {
         }),
       );
     });
-    await new Promise<void>((r) =>
-      server.listen(0, "127.0.0.1", () => r()),
-    );
+    await new Promise<void>((r) => server.listen(0, "127.0.0.1", () => r()));
     const addr = server.address() as AddressInfo;
     baseUrl = `http://127.0.0.1:${addr.port}`;
   });
 
-  afterAll(
-    async () =>
-      new Promise<void>((r) => server.close(() => r())),
-  );
+  afterAll(async () => new Promise<void>((r) => server.close(() => r())));
 
   it("writes 3 review YAMLs + a run record with provider/model/prompt_hash/tokens", async () => {
     const cwd = mkdtempSync(path.join(tmpdir(), "vf-rv-"));
@@ -110,12 +110,21 @@ describe("vf review end-to-end (todo 2) — mock MiniMax", () => {
     const code = await runReview({ project, cwd, model: "minimax" });
     expect(code).toBe(0);
 
-    const contentReview = readFileSync(path.join(root, "review", "content-review.yaml"), "utf8");
+    const contentReview = readFileSync(
+      path.join(root, "review", "content-review.yaml"),
+      "utf8",
+    );
     expect(contentReview).toContain("overall: warn");
     expect(contentReview).toContain("unsupported_claims");
-    const visualReview = readFileSync(path.join(root, "review", "visual-review.yaml"), "utf8");
+    const visualReview = readFileSync(
+      path.join(root, "review", "visual-review.yaml"),
+      "utf8",
+    );
     expect(visualReview).toContain("overall: pass");
-    const technicalReview = readFileSync(path.join(root, "review", "technical-review.yaml"), "utf8");
+    const technicalReview = readFileSync(
+      path.join(root, "review", "technical-review.yaml"),
+      "utf8",
+    );
     expect(technicalReview).toContain("overall: pass");
 
     const runsDir = path.join(root, "runs");
@@ -132,10 +141,20 @@ describe("vf review end-to-end (todo 2) — mock MiniMax", () => {
 
   it("exits 1 with helpful error when storyboard missing", async () => {
     const cwd = mkdtempSync(path.join(tmpdir(), "vf-rv-"));
-    mkdirSync(path.join(cwd, "projects", "missing", "script"), { recursive: true });
-    mkdirSync(path.join(cwd, "projects", "missing", "research"), { recursive: true });
-    writeFileSync(path.join(cwd, "projects", "missing", "script", "script.zh-CN.md"), SCRIPT);
-    writeFileSync(path.join(cwd, "projects", "missing", "research", "claims.yaml"), CLAIMS);
+    mkdirSync(path.join(cwd, "projects", "missing", "script"), {
+      recursive: true,
+    });
+    mkdirSync(path.join(cwd, "projects", "missing", "research"), {
+      recursive: true,
+    });
+    writeFileSync(
+      path.join(cwd, "projects", "missing", "script", "script.zh-CN.md"),
+      SCRIPT,
+    );
+    writeFileSync(
+      path.join(cwd, "projects", "missing", "research", "claims.yaml"),
+      CLAIMS,
+    );
     process.env["MINIMAX_API_HOST"] = baseUrl;
     const code = await runReview({ project: "missing", cwd, model: "minimax" });
     expect(code).toBe(1);

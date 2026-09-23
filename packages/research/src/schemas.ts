@@ -66,7 +66,10 @@ export type Source = z.infer<typeof SourceSchema>;
 /** Map the wide range of strings LLMs produce for the "status" field of
  * a claim to the canonical four-value enum we use downstream. Anything
  * we can't recognize is a bug — let the schema reject it. */
-const CLAIM_STATUS_SYNONYMS: Record<string, "fact" | "opinion" | "uncertain" | "needs_human"> = {
+const CLAIM_STATUS_SYNONYMS: Record<
+  string,
+  "fact" | "opinion" | "uncertain" | "needs_human"
+> = {
   // "fact" cluster
   fact: "fact",
   true: "fact",
@@ -91,16 +94,18 @@ const CLAIM_STATUS_SYNONYMS: Record<string, "fact" | "opinion" | "uncertain" | "
   // Both space- and underscore-separated forms are accepted because
   // the LLM is inconsistent across runs.
   "needs human": "needs_human",
-  "needs_human": "needs_human",
+  needs_human: "needs_human",
   "needs verification": "needs_human",
-  "needs_verification": "needs_human",
+  needs_verification: "needs_human",
   "requires review": "needs_human",
-  "requires_review": "needs_human",
+  requires_review: "needs_human",
   "needs human review": "needs_human",
-  "needs_human_review": "needs_human",
+  needs_human_review: "needs_human",
 };
 
-export function coerceClaimStatus(raw: string): "fact" | "opinion" | "uncertain" | "needs_human" {
+export function coerceClaimStatus(
+  raw: string,
+): "fact" | "opinion" | "uncertain" | "needs_human" {
   const key = raw.trim().toLowerCase();
   const mapped = CLAIM_STATUS_SYNONYMS[key];
   if (mapped) return mapped;

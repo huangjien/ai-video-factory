@@ -33,7 +33,9 @@ export function buildScriptMessages(input: ScriptInput): ChatMessage[] {
     `Total duration target (seconds): ${input.duration}`,
   ];
   if (input.direction) {
-    userParts.push("\n## Story direction (human-provided — adapt structure accordingly, keep all 7 sections)");
+    userParts.push(
+      "\n## Story direction (human-provided — adapt structure accordingly, keep all 7 sections)",
+    );
     userParts.push(input.direction);
   }
   if (input.researchContext) {

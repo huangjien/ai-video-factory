@@ -33,22 +33,22 @@ makes the shell call.
 
 ## Verbs (one line each)
 
-| Verb | Purpose |
-| --- | --- |
-| `new <id>` | scaffold a project under `projects/<id>/` |
-| `research <topic>` | (v0.2.2) AI-gather facts + sources + claims |
-| `script <topic>` | (v0.2.3) AI-draft a 7-section script |
-| `storyboard <topic>` | (v0.2.1) AI-draft a VDSL storyboard |
-| `audio <project>` | (v0.2.4) Synthesize voiceover + captions |
-| `review <project>` | (v0.2.5) Read-only Content/Visual/Technical review |
-| `validate <file>` | VDSL validation (shape + assets + audio) |
-| `status` | per-stage checklist + current checkpoint |
-| `approve [stage]` | human approve; advances state machine |
-| `reject <reason>` | record feedback, transition to regenerate |
-| `rollback <checkpoint-id>` | confirm + invalidate downstream stages |
-| `resume` | resume from last successful stage |
-| `preview` | render preview.mp4 |
-| `final` | render final.mp4 (requires review APPROVED) |
+| Verb                       | Purpose                                            |
+| -------------------------- | -------------------------------------------------- |
+| `new <id>`                 | scaffold a project under `projects/<id>/`          |
+| `research <topic>`         | (v0.2.2) AI-gather facts + sources + claims        |
+| `script <topic>`           | (v0.2.3) AI-draft a 7-section script               |
+| `storyboard <topic>`       | (v0.2.1) AI-draft a VDSL storyboard                |
+| `audio <project>`          | (v0.2.4) Synthesize voiceover + captions           |
+| `review <project>`         | (v0.2.5) Read-only Content/Visual/Technical review |
+| `validate <file>`          | VDSL validation (shape + assets + audio)           |
+| `status`                   | per-stage checklist + current checkpoint           |
+| `approve [stage]`          | human approve; advances state machine              |
+| `reject <reason>`          | record feedback, transition to regenerate          |
+| `rollback <checkpoint-id>` | confirm + invalidate downstream stages             |
+| `resume`                   | resume from last successful stage                  |
+| `preview`                  | render preview.mp4                                 |
+| `final`                    | render final.mp4 (requires review APPROVED)        |
 
 ## Usage
 

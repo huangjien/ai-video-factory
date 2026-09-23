@@ -15,7 +15,9 @@ const rendererDir = path.dirname(rendererFile);
 const ext = rendererFile.endsWith(".ts") ? "tsx" : "js";
 const rootSrcPath = `${rendererDir}/Root.${ext}`;
 
-const renderEntryTemplate = (renderPlan: RenderPlan): string => `import { registerRoot, Composition } from "remotion";
+const renderEntryTemplate = (
+  renderPlan: RenderPlan,
+): string => `import { registerRoot, Composition } from "remotion";
 import { Root } from "${rootSrcPath}";
 
 const renderPlan = ${JSON.stringify(renderPlan)};
@@ -64,7 +66,10 @@ export async function renderPlanToVideo(
 }
 
 /** Re-mux with +faststart for streamable MP4 without recompressing video. */
-export async function faststart(inputPath: string, outputPath: string): Promise<void> {
+export async function faststart(
+  inputPath: string,
+  outputPath: string,
+): Promise<void> {
   await execFileAsync("ffmpeg", [
     "-y",
     "-i",

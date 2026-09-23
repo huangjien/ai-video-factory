@@ -11,7 +11,11 @@ export interface AgentResult {
 
 export class AgentError extends Error {
   override readonly cause: unknown;
-  constructor(message: string, public readonly providerName: string, cause?: unknown) {
+  constructor(
+    message: string,
+    public readonly providerName: string,
+    cause?: unknown,
+  ) {
     super(message);
     this.name = "AgentError";
     this.cause = cause;
@@ -36,7 +40,9 @@ export async function callAgent(
   const res = await provider.chat({
     messages,
     ...(opts.model !== undefined ? { model: opts.model } : {}),
-    ...(opts.temperature !== undefined ? { temperature: opts.temperature } : {}),
+    ...(opts.temperature !== undefined
+      ? { temperature: opts.temperature }
+      : {}),
   });
   const yamlText = extractYaml(res.content);
   if (!yamlText) {

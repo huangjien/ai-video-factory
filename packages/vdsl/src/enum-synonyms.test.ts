@@ -27,7 +27,13 @@ describe("VDSL storyboardSchema with LLM enum synonyms", () => {
   });
 
   it("coerces LLM synonyms for animation.entrance", () => {
-    for (const llmValue of ["slide-up", "bounce", "slide-in", "fade-in", "zoom"]) {
+    for (const llmValue of [
+      "slide-up",
+      "bounce",
+      "slide-in",
+      "fade-in",
+      "zoom",
+    ]) {
       const r = storyboardSchema.safeParse({
         schema_version: "0.1",
         project: validProject,

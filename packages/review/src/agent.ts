@@ -43,7 +43,11 @@ export function buildReviewMessages(input: ReviewInput): ChatMessage[] {
 
 export class ReviewError extends Error {
   override readonly cause: unknown;
-  constructor(message: string, public readonly providerName: string, cause?: unknown) {
+  constructor(
+    message: string,
+    public readonly providerName: string,
+    cause?: unknown,
+  ) {
     super(message);
     this.name = "ReviewError";
     this.cause = cause;
@@ -76,7 +80,11 @@ export async function callReview(
   try {
     parsed = parseYaml(yamlText);
   } catch (err) {
-    throw new ReviewError(`YAML parse failed: ${(err as Error).message}`, provider.name, err);
+    throw new ReviewError(
+      `YAML parse failed: ${(err as Error).message}`,
+      provider.name,
+      err,
+    );
   }
   const result = ReviewPackageSchema.safeParse(parsed);
   if (!result.success) {

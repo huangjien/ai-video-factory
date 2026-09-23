@@ -72,10 +72,7 @@ describe("run records — v0.2 schema (todo 7) — §62.2 lines 2247-2258", () =
       root,
       baseRecord({ stage: "storyboard", status: "succeeded" }),
     );
-    await writeRun(
-      root,
-      baseRecord({ stage: "render", status: "failed" }),
-    );
+    await writeRun(root, baseRecord({ stage: "render", status: "failed" }));
     expect(await lastSuccessfulStage(root)).toBe("storyboard");
   });
 });

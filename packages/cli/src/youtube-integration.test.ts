@@ -1,5 +1,10 @@
 import { execFileSync } from "node:child_process";
-import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
+import {
+  createServer,
+  type IncomingMessage,
+  type Server,
+  type ServerResponse,
+} from "node:http";
 import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import type { AddressInfo } from "node:net";
@@ -65,17 +70,12 @@ describe("vf youtube end-to-end (todo 2) — mock MiniMax", () => {
         }),
       );
     });
-    await new Promise<void>((r) =>
-      server.listen(0, "127.0.0.1", () => r()),
-    );
+    await new Promise<void>((r) => server.listen(0, "127.0.0.1", () => r()));
     const addr = server.address() as AddressInfo;
     baseUrl = `http://127.0.0.1:${addr.port}`;
   });
 
-  afterAll(
-    async () =>
-      new Promise<void>((r) => server.close(() => r())),
-  );
+  afterAll(async () => new Promise<void>((r) => server.close(() => r())));
 
   function seedProject(root: string) {
     mkdirSync(path.join(root, "storyboard"), { recursive: true });
@@ -97,14 +97,23 @@ describe("vf youtube end-to-end (todo 2) — mock MiniMax", () => {
 
     const title = readFileSync(path.join(root, "youtube", "title.txt"), "utf8");
     expect(title).toContain("思维链");
-    const description = readFileSync(path.join(root, "youtube", "description.md"), "utf8");
+    const description = readFileSync(
+      path.join(root, "youtube", "description.md"),
+      "utf8",
+    );
     expect(description).toContain("CoT");
-    const vtt = readFileSync(path.join(root, "youtube", "chapters.vtt"), "utf8");
+    const vtt = readFileSync(
+      path.join(root, "youtube", "chapters.vtt"),
+      "utf8",
+    );
     expect(vtt).toContain("WEBVTT");
     expect(vtt).toContain("00:00:00 --> 00:00:05");
     expect(vtt).toContain("Hook");
     expect(vtt).toContain("Problem");
-    const pkg = readFileSync(path.join(root, "youtube", "package.yaml"), "utf8");
+    const pkg = readFileSync(
+      path.join(root, "youtube", "package.yaml"),
+      "utf8",
+    );
     expect(pkg).toContain("title:");
     expect(pkg).toContain("thumbnail_prompt:");
 

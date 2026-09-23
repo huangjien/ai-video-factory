@@ -1,5 +1,10 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { createServer, type Server, type IncomingMessage, type ServerResponse } from "node:http";
+import {
+  createServer,
+  type Server,
+  type IncomingMessage,
+  type ServerResponse,
+} from "node:http";
 import type { AddressInfo } from "node:net";
 import { MiniMaxProvider } from "./minimax.js";
 
@@ -22,7 +27,9 @@ describe("MiniMaxProvider (todo 2) — platform.minimax.io docs", () => {
   let statusToSend = 200;
   let responseBody: unknown = {
     id: "x",
-    choices: [{ message: { content: "hello" }, index: 0, finish_reason: "stop" }],
+    choices: [
+      { message: { content: "hello" }, index: 0, finish_reason: "stop" },
+    ],
     usage: { prompt_tokens: 12, completion_tokens: 7 },
   };
 
@@ -88,7 +95,9 @@ describe("MiniMaxProvider (todo 2) — platform.minimax.io docs", () => {
     statusToSend = 200;
     responseBody = {
       id: "x",
-      choices: [{ message: { content: "hello" }, index: 0, finish_reason: "stop" }],
+      choices: [
+        { message: { content: "hello" }, index: 0, finish_reason: "stop" },
+      ],
       usage: { prompt_tokens: 12, completion_tokens: 7 },
     };
   });

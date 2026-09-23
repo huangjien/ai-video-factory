@@ -74,21 +74,32 @@ function makePng(width: number, height: number, prompt: string): Uint8Array {
  * produce a structurally valid file with a single IDAT chunk (deflate of
  * raw scanlines).
  */
-function encodePng(width: number, height: number, r: number, g: number, b: number): Uint8Array {
-  const signature = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+function encodePng(
+  width: number,
+  height: number,
+  r: number,
+  g: number,
+  b: number,
+): Uint8Array {
+  const signature = new Uint8Array([
+    0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
+  ]);
 
-  const ihdr = chunk("IHDR", (() => {
-    const buf = new Uint8Array(13);
-    const view = new DataView(buf.buffer);
-    view.setUint32(0, width, false);
-    view.setUint32(4, height, false);
-    buf[8] = 8; // bit depth
-    buf[9] = 2; // color type RGB
-    buf[10] = 0; // compression
-    buf[11] = 0; // filter
-    buf[12] = 0; // interlace
-    return buf;
-  })());
+  const ihdr = chunk(
+    "IHDR",
+    (() => {
+      const buf = new Uint8Array(13);
+      const view = new DataView(buf.buffer);
+      view.setUint32(0, width, false);
+      view.setUint32(4, height, false);
+      buf[8] = 8; // bit depth
+      buf[9] = 2; // color type RGB
+      buf[10] = 0; // compression
+      buf[11] = 0; // filter
+      buf[12] = 0; // interlace
+      return buf;
+    })(),
+  );
 
   // Raw scanlines: filter byte (0) + RGB triples
   const scanlineLen = 1 + width * 3;
@@ -106,13 +117,15 @@ function encodePng(width: number, height: number, r: number, g: number, b: numbe
   const idat = chunk("IDAT", compressed);
   const iend = chunk("IEND", new Uint8Array(0));
 
-  const total =
-    signature.length + ihdr.length + idat.length + iend.length;
+  const total = signature.length + ihdr.length + idat.length + iend.length;
   const out = new Uint8Array(total);
   let p = 0;
-  out.set(signature, p); p += signature.length;
-  out.set(ihdr, p); p += ihdr.length;
-  out.set(idat, p); p += idat.length;
+  out.set(signature, p);
+  p += signature.length;
+  out.set(ihdr, p);
+  p += ihdr.length;
+  out.set(idat, p);
+  p += idat.length;
   out.set(iend, p);
   return out;
 }
@@ -139,7 +152,8 @@ const CRC_TABLE = (() => {
 
 function crc32(buf: Uint8Array): number {
   let c = 0xffffffff;
-  for (let i = 0; i < buf.length; i++) c = (CRC_TABLE[(c ^ (buf[i] ?? 0)) & 0xff] ?? 0) ^ (c >>> 8);
+  for (let i = 0; i < buf.length; i++)
+    c = (CRC_TABLE[(c ^ (buf[i] ?? 0)) & 0xff] ?? 0) ^ (c >>> 8);
   return (c ^ 0xffffffff) >>> 0;
 }
 
@@ -165,6 +179,11 @@ function deflateStored(input: Uint8Array): Uint8Array {
     b = (b + a) % 65521;
   }
   const adler = ((b << 16) | a) >>> 0;
-  out.push((adler >>> 24) & 0xff, (adler >>> 16) & 0xff, (adler >>> 8) & 0xff, adler & 0xff);
+  out.push(
+    (adler >>> 24) & 0xff,
+    (adler >>> 16) & 0xff,
+    (adler >>> 8) & 0xff,
+    adler & 0xff,
+  );
   return Uint8Array.from(out);
 }

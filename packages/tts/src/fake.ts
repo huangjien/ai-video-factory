@@ -1,4 +1,9 @@
-import type { TTSProvider, TTSRequest, TTSResult, TTSWord } from "./provider.js";
+import type {
+  TTSProvider,
+  TTSRequest,
+  TTSResult,
+  TTSWord,
+} from "./provider.js";
 
 /**
  * Deterministic synthetic TTS for tests — no network. Returns a tiny valid

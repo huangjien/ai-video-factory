@@ -29,7 +29,11 @@ export async function runApprove(
     }
     root = resolved.root;
   }
-  const target = (stage ?? (await readProjectState(root))?.current_stage ?? "").trim();
+  const target = (
+    stage ??
+    (await readProjectState(root))?.current_stage ??
+    ""
+  ).trim();
   if (!target) {
     console.error("approve: could not determine stage");
     return 1;
@@ -46,9 +50,17 @@ export async function runApprove(
   };
   let next: ReturnType<typeof transition>;
   if (target === "final") {
-    next = transition(machineState, { kind: "final_approve" }, ctx("approve-final"));
+    next = transition(
+      machineState,
+      { kind: "final_approve" },
+      ctx("approve-final"),
+    );
   } else {
-    next = transition(machineState, { kind: "approve" }, ctx(`approve-${target}`));
+    next = transition(
+      machineState,
+      { kind: "approve" },
+      ctx(`approve-${target}`),
+    );
   }
   state.status = next.state.status;
   state.checkpoint = { id: state.checkpoint.id, status: next.state.status };
@@ -166,7 +178,10 @@ export async function runResume(
   }
   const state = await readProjectState(root);
   if (!state) return 1;
-  const head = execSync(`git rev-parse HEAD`, { cwd: root, encoding: "utf8" }).trim();
+  const head = execSync(`git rev-parse HEAD`, {
+    cwd: root,
+    encoding: "utf8",
+  }).trim();
   console.log(`Resume from stage ${state.current_stage} at commit ${head}.`);
   return 0;
 }

@@ -27,7 +27,9 @@ function providerInstance(name: string): Provider {
 }
 
 function sha256OfMessages(messages: ChatMessage[]): string {
-  const canon = JSON.stringify(messages.map((m) => ({ role: m.role, content: m.content })));
+  const canon = JSON.stringify(
+    messages.map((m) => ({ role: m.role, content: m.content })),
+  );
   return "sha256:" + createHash("sha256").update(canon).digest("hex");
 }
 
@@ -71,7 +73,11 @@ export async function runScript(opts: ScriptOptions): Promise<number> {
         `\u2717 --from-research dir missing research.md: ${opts.fromResearch}`,
       );
       console.error(
-        `  run ` + "`" + `vf research "${opts.topic}"` + "`" + ` first, or omit --from-research to generate the script from the topic alone`,
+        `  run ` +
+          "`" +
+          `vf research "${opts.topic}"` +
+          "`" +
+          ` first, or omit --from-research to generate the script from the topic alone`,
       );
       return 1;
     }
@@ -91,7 +97,10 @@ export async function runScript(opts: ScriptOptions): Promise<number> {
       provider,
     );
   } catch (err) {
-    console.error(`\u2717 ${chosenName} script agent failed:`, (err as Error).message);
+    console.error(
+      `\u2717 ${chosenName} script agent failed:`,
+      (err as Error).message,
+    );
     return 1;
   }
 
@@ -134,8 +143,12 @@ export async function runScript(opts: ScriptOptions): Promise<number> {
   await writeRun(projectRoot, record);
 
   console.log(`\u2713 drafted ${slug}/script/${filename}`);
-  console.log(`  provider=${chosenName}  sections=7  tokens=${result.usage.input}+${result.usage.output}`);
-  console.log(`  next: edit, then \`vf storyboard "${opts.topic}"\` (storyboard picks up the script's structure)`);
+  console.log(
+    `  provider=${chosenName}  sections=7  tokens=${result.usage.input}+${result.usage.output}`,
+  );
+  console.log(
+    `  next: edit, then \`vf storyboard "${opts.topic}"\` (storyboard picks up the script's structure)`,
+  );
   return 0;
 }
 

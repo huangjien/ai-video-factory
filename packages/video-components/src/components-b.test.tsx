@@ -67,7 +67,12 @@ describe("Todo 9 — components batch B (renders without throwing)", () => {
 
   it("EndCard renders title + subtitle + cta", () => {
     const html = renderToStaticMarkup(
-      <EndCard title="谢谢观看" subtitle="订阅" cta="AI 视频工厂" {...baseScene(15)} />,
+      <EndCard
+        title="谢谢观看"
+        subtitle="订阅"
+        cta="AI 视频工厂"
+        {...baseScene(15)}
+      />,
     );
     expect(html).toContain("谢谢观看");
     expect(html).toContain("订阅");
@@ -77,7 +82,12 @@ describe("Todo 9 — components batch B (renders without throwing)", () => {
   it("renders all 5 batch-B components without throwing", () => {
     const items = [
       <FlowChart key="f" nodes={["a"]} {...baseScene(0)} />,
-      <Comparison key="c" left={{ title: "l", items: ["x"] }} right={{ title: "r", items: ["y"] }} {...baseScene(0)} />,
+      <Comparison
+        key="c"
+        left={{ title: "l", items: ["x"] }}
+        right={{ title: "r", items: ["y"] }}
+        {...baseScene(0)}
+      />,
       <Timeline key="t" events={[{ label: "now" }]} {...baseScene(0)} />,
       <Callout key="ca" kind="info" text="hi" {...baseScene(0)} />,
       <EndCard key="e" title="end" {...baseScene(0)} />,

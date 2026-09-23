@@ -74,7 +74,11 @@ export class FileBasedAudioAssetProvider implements AudioAssetProvider {
     return this.lookup(this.sfxDirectory, opts.tag, "sfx");
   }
 
-  private async lookup(directory: string, tag: string, kind: string): Promise<AssetResult> {
+  private async lookup(
+    directory: string,
+    tag: string,
+    kind: string,
+  ): Promise<AssetResult> {
     if (!existsSync(directory)) {
       throw new AudioAssetError(
         `${kind} directory not found: ${directory}`,
@@ -84,8 +88,10 @@ export class FileBasedAudioAssetProvider implements AudioAssetProvider {
     const exact = path.join(directory, `${tag}.wav`);
     let chosen = exact;
     if (!existsSync(exact)) {
-      const entries = readdirSync(directory).filter((f) =>
-        f.toLowerCase().includes(tag.toLowerCase()) && f.toLowerCase().endsWith(".wav"),
+      const entries = readdirSync(directory).filter(
+        (f) =>
+          f.toLowerCase().includes(tag.toLowerCase()) &&
+          f.toLowerCase().endsWith(".wav"),
       );
       if (entries.length === 0) {
         throw new AudioAssetError(
@@ -109,7 +115,10 @@ export class FileBasedAudioAssetProvider implements AudioAssetProvider {
 
 function readLicense(directory: string, tag: string): string {
   try {
-    const text = readFileSync(path.join(directory, `${tag}.license.txt`), "utf8");
+    const text = readFileSync(
+      path.join(directory, `${tag}.license.txt`),
+      "utf8",
+    );
     return text.trim();
   } catch {
     return "user-provided (no license file found)";

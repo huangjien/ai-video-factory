@@ -1,5 +1,10 @@
 import { EdgeTTS } from "edge-tts-universal";
-import type { TTSProvider, TTSRequest, TTSResult, TTSWord } from "./provider.js";
+import type {
+  TTSProvider,
+  TTSRequest,
+  TTSResult,
+  TTSWord,
+} from "./provider.js";
 
 export interface EdgeTTSProviderOptions {
   /** Override the default Edge TTS endpoint (rare; default is Microsoft's public endpoint). */
@@ -35,7 +40,9 @@ export class EdgeTTSProvider implements TTSProvider {
     const audio = new Uint8Array(await result.audio.arrayBuffer());
     const words = parseSubtitleToWords(result.subtitle);
     const durationMs =
-      words.length > 0 ? (words[words.length - 1]?.endMs ?? 0) : estimateDurationMs(req.text, this.opts.charsPerSecond);
+      words.length > 0
+        ? (words[words.length - 1]?.endMs ?? 0)
+        : estimateDurationMs(req.text, this.opts.charsPerSecond);
     return { audio, durationMs, words };
   }
 }
@@ -66,7 +73,9 @@ export interface MockEdgeTTSOptions extends EdgeTTSProviderOptions {
   sampleBytes?: number;
 }
 
-export function mockEdgeTTSProvider(opts: MockEdgeTTSOptions = {}): TTSProvider {
+export function mockEdgeTTSProvider(
+  opts: MockEdgeTTSOptions = {},
+): TTSProvider {
   return {
     name: "edge-mock",
     async synthesize(req: TTSRequest): Promise<TTSResult> {

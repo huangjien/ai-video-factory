@@ -1,5 +1,11 @@
 import { execFileSync } from "node:child_process";
-import { mkdtempSync, readFileSync, writeFileSync, mkdirSync, unlinkSync } from "node:fs";
+import {
+  mkdtempSync,
+  readFileSync,
+  writeFileSync,
+  mkdirSync,
+  unlinkSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
@@ -9,13 +15,21 @@ function tmpRoot(): string {
   return mkdtempSync(path.join(tmpdir(), "vf-audio-"));
 }
 
-function writeProject(cwd: string, project: string, storyboardYaml: string, scriptMd: string): string {
+function writeProject(
+  cwd: string,
+  project: string,
+  storyboardYaml: string,
+  scriptMd: string,
+): string {
   const root = path.join(cwd, "projects", project);
   mkdirSync(path.join(root, "storyboard"), { recursive: true });
   mkdirSync(path.join(root, "script"), { recursive: true });
   mkdirSync(path.join(root, "assets", "audio"), { recursive: true });
   mkdirSync(path.join(root, "captions"), { recursive: true });
-  writeFileSync(path.join(root, "storyboard", "storyboard.yaml"), storyboardYaml);
+  writeFileSync(
+    path.join(root, "storyboard", "storyboard.yaml"),
+    storyboardYaml,
+  );
   writeFileSync(path.join(root, "script", "script.zh-CN.md"), scriptMd);
   return root;
 }
@@ -56,7 +70,9 @@ describe("vf audio (todo 2) — FakeTTSProvider integration", () => {
     const root = writeProject(cwd, "demo", STORYBOARD, SCRIPT);
     const code = await runAudio({ cwd, project: "demo", fake: true });
     expect(code).toBe(0);
-    const wav = readFileSync(path.join(root, "assets", "audio", "scene-01.wav"));
+    const wav = readFileSync(
+      path.join(root, "assets", "audio", "scene-01.wav"),
+    );
     expect(wav.byteLength).toBeGreaterThan(0);
     // Sanity-check it's a real WAV (RIFF header)
     expect(wav.slice(0, 4).toString()).toBe("RIFF");
@@ -66,7 +82,9 @@ describe("vf audio (todo 2) — FakeTTSProvider integration", () => {
     expect(srt).toContain("00:00:00,000 --> 00:00:05,000");
     expect(srt).toContain("你好世界");
 
-    const runs = execFileSync("ls", [path.join(root, "runs")], { encoding: "utf8" })
+    const runs = execFileSync("ls", [path.join(root, "runs")], {
+      encoding: "utf8",
+    })
       .trim()
       .split("\n");
     expect(runs.length).toBe(1);
@@ -85,7 +103,9 @@ describe("vf audio (todo 2) — FakeTTSProvider integration", () => {
     const cwd = tmpRoot();
     writeProject(cwd, "no-script", STORYBOARD, "");
     // Remove the script file
-    unlinkSync(path.join(cwd, "projects", "no-script", "script", "script.zh-CN.md"));
+    unlinkSync(
+      path.join(cwd, "projects", "no-script", "script", "script.zh-CN.md"),
+    );
     const code = await runAudio({ cwd, project: "no-script", fake: true });
     expect(code).toBe(1);
   });

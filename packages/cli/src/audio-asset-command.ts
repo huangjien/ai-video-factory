@@ -91,7 +91,10 @@ export async function runAudioAsset(opts: AudioAssetOptions): Promise<number> {
       sfxOut = `${file} (${r.bytes.byteLength} bytes, ${r.durationSec}s, ${r.license})`;
     }
   } catch (err) {
-    console.error(`\u2717 ${providerName} asset generation failed:`, (err as Error).message);
+    console.error(
+      `\u2717 ${providerName} asset generation failed:`,
+      (err as Error).message,
+    );
     return 1;
   }
 
@@ -100,7 +103,9 @@ export async function runAudioAsset(opts: AudioAssetOptions): Promise<number> {
   const promptHash =
     "sha256:" +
     createHash("sha256")
-      .update(`bgm=${opts.bgmTag ?? ""}|sfx=${opts.sfxTag ?? ""}|provider=${providerName}`)
+      .update(
+        `bgm=${opts.bgmTag ?? ""}|sfx=${opts.sfxTag ?? ""}|provider=${providerName}`,
+      )
       .digest("hex");
   const record = {
     run_id: runId,
@@ -129,6 +134,8 @@ export async function runAudioAsset(opts: AudioAssetOptions): Promise<number> {
   console.log(`  provider=${providerName}`);
   if (opts.bgmTag) console.log(`  bgm: ${bgmOut}`);
   if (opts.sfxTag) console.log(`  sfx: ${sfxOut}`);
-  console.log(`  next: reference these in your storyboard / pipeline (mixing into final audio is a separate phase)`);
+  console.log(
+    `  next: reference these in your storyboard / pipeline (mixing into final audio is a separate phase)`,
+  );
   return 0;
 }

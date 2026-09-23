@@ -4,7 +4,9 @@ import path from "node:path";
 import { initState, writeProjectState } from "@vf/workflow";
 import { slugifyProjectName } from "./project-path.js";
 
-const STORYBOARD_TEMPLATE = (projectId: string): string => `schema_version: "0.1"
+const STORYBOARD_TEMPLATE = (
+  projectId: string,
+): string => `schema_version: "0.1"
 
 project:
   id: ${projectId}
@@ -70,12 +72,16 @@ export async function runNew(opts: NewOptions): Promise<number> {
   );
   await writeProjectState(root, initState(projectId));
   console.log(`✓ scaffolded ${root}`);
-  console.log(`  next: edit storyboard/storyboard.yaml, then run \`vf preview\``);
+  console.log(
+    `  next: edit storyboard/storyboard.yaml, then run \`vf preview\``,
+  );
   return 0;
 }
 
 export async function readStateOrNull(projectRoot: string) {
-  const text = await readFile(path.join(projectRoot, "state.yaml"), "utf8")
-    .catch(() => null);
+  const text = await readFile(
+    path.join(projectRoot, "state.yaml"),
+    "utf8",
+  ).catch(() => null);
   return text;
 }

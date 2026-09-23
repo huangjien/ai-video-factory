@@ -67,14 +67,22 @@ describe("EdgeTTSProvider.synthesize (mocked edge-tts-universal)", () => {
   it("passes text + voice to the EdgeTTS constructor", async () => {
     synthesizeMock.mockResolvedValue({ audio: blobOf([0]), subtitle: [] });
     const p = new EdgeTTSProvider();
-    await p.synthesize({ text: "hi", voice: "en-US-EmmaNeural", language: "en-US" });
+    await p.synthesize({
+      text: "hi",
+      voice: "en-US-EmmaNeural",
+      language: "en-US",
+    });
     expect(lastConstructorArgs?.[0]).toBe("hi");
     expect(lastConstructorArgs?.[1]).toBe("en-US-EmmaNeural");
   });
 
   it("forwards prosody options (rate/volume/pitch) to EdgeTTS", async () => {
     synthesizeMock.mockResolvedValue({ audio: blobOf([0]), subtitle: [] });
-    const p = new EdgeTTSProvider({ rate: "+10%", volume: "-20%", pitch: "+5Hz" });
+    const p = new EdgeTTSProvider({
+      rate: "+10%",
+      volume: "-20%",
+      pitch: "+5Hz",
+    });
     await p.synthesize({ text: "x", voice: "v", language: "en-US" });
     expect(lastConstructorArgs?.[2]).toEqual({
       rate: "+10%",
@@ -119,7 +127,11 @@ describe("EdgeTTSProvider.synthesize (mocked edge-tts-universal)", () => {
     synthesizeMock.mockResolvedValue({ audio: blobOf([0]), subtitle: [] });
     const p = new EdgeTTSProvider();
     // 1 char at 5 cps → 200ms → clamped to 500
-    const result = await p.synthesize({ text: "a", voice: "v", language: "en-US" });
+    const result = await p.synthesize({
+      text: "a",
+      voice: "v",
+      language: "en-US",
+    });
     expect(result.durationMs).toBe(500);
   });
 
@@ -134,9 +146,16 @@ describe("EdgeTTSProvider.synthesize (mocked edge-tts-universal)", () => {
 
 describe("parseSubtitleToWords edge cases (via synthesize)", () => {
   it("ignores a non-array subtitle", async () => {
-    synthesizeMock.mockResolvedValue({ audio: blobOf([0]), subtitle: "not-an-array" });
+    synthesizeMock.mockResolvedValue({
+      audio: blobOf([0]),
+      subtitle: "not-an-array",
+    });
     const p = new EdgeTTSProvider();
-    const result = await p.synthesize({ text: "x", voice: "v", language: "en-US" });
+    const result = await p.synthesize({
+      text: "x",
+      voice: "v",
+      language: "en-US",
+    });
     expect(result.words).toEqual([]);
   });
 
@@ -153,7 +172,11 @@ describe("parseSubtitleToWords edge cases (via synthesize)", () => {
       ],
     });
     const p = new EdgeTTSProvider();
-    const result = await p.synthesize({ text: "x", voice: "v", language: "en-US" });
+    const result = await p.synthesize({
+      text: "x",
+      voice: "v",
+      language: "en-US",
+    });
     expect(result.words).toEqual([
       { text: "ok", startMs: 0, endMs: 0 },
       { text: "full", startMs: 5, endMs: 25 },

@@ -14,18 +14,28 @@ describe("REGISTRY accepts LLM-drifted component props (loose schemas)", () => {
   });
 
   it("Paragraph accepts extra props the LLM invented (e.g. highlight_keywords)", () => {
-    const r = validate("Paragraph", { text: "lo", highlight_keywords: ["a", "b"] });
+    const r = validate("Paragraph", {
+      text: "lo",
+      highlight_keywords: ["a", "b"],
+    });
     expect(r.success).toBe(true);
   });
 
   it("FlowChart accepts extra props (e.g. layout)", () => {
-    const r = validate("FlowChart", { nodes: ["a"], edges: [], layout: "horizontal" });
+    const r = validate("FlowChart", {
+      nodes: ["a"],
+      edges: [],
+      layout: "horizontal",
+    });
     expect(r.success).toBe(true);
   });
 
   it("Callout accepts icon/content as alias for kind/text", () => {
     // LLM sends icon+content; we coerce: icon="info", content="text" default
-    const r = validate("Callout", { icon: "info", content: "important message" });
+    const r = validate("Callout", {
+      icon: "info",
+      content: "important message",
+    });
     expect(r.success).toBe(true);
   });
 

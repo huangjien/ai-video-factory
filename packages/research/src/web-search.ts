@@ -26,7 +26,10 @@ export class MiniMaxWebSearch {
   private readonly retrySleeps: number[];
 
   constructor(opts: MiniMaxWebSearchOptions = {}) {
-    this.apiHost = opts.apiHost ?? process.env["MINIMAX_API_HOST"] ?? "https://api.minimax.io";
+    this.apiHost =
+      opts.apiHost ??
+      process.env["MINIMAX_API_HOST"] ??
+      "https://api.minimax.io";
     this.defaultLimit = opts.defaultLimit ?? 10;
     this.retrySleeps = opts.retrySleeps ?? [1000, 2000, 4000];
   }
@@ -34,7 +37,9 @@ export class MiniMaxWebSearch {
   async search(query: string): Promise<WebSearchResult[]> {
     const key = process.env["MINIMAX_API_KEY"];
     if (!key) {
-      const err = new Error("MINIMAX_API_KEY not set in environment") as WebSearchError;
+      const err = new Error(
+        "MINIMAX_API_KEY not set in environment",
+      ) as WebSearchError;
       err.provider = this.name;
       throw err;
     }
@@ -63,7 +68,10 @@ export class MiniMaxWebSearch {
           organic?: { url: string; title: string; snippet: string }[];
         };
       },
-      { isRetriable: (err) => !/40[1-9]/.test(String(err)), sleeps: this.retrySleeps },
+      {
+        isRetriable: (err) => !/40[1-9]/.test(String(err)),
+        sleeps: this.retrySleeps,
+      },
     );
     return (data.organic ?? []).slice(0, this.defaultLimit).map((r) => ({
       url: r.url,

@@ -75,7 +75,9 @@ describe("runs + retry + resume (todo 12) — §62.1 / §62.2", () => {
     const fn = vi.fn(async () => {
       throw new Error("boom");
     });
-    await expect(withRetry(fn, { sleeps: [10, 10, 10] })).rejects.toThrow("boom");
+    await expect(withRetry(fn, { sleeps: [10, 10, 10] })).rejects.toThrow(
+      "boom",
+    );
     expect(fn).toHaveBeenCalledTimes(4); // initial + 3 retries
   });
 

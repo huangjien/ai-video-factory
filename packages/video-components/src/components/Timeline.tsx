@@ -16,9 +16,7 @@ export const Timeline: FC<TimelineProps> = ({ events, frame }) => {
   const span = maxRight - margin * 2;
   const step = events.length > 1 ? span / (events.length - 1) : 0;
   return (
-    <AbsoluteFill
-      style={{ backgroundColor: darkTechTheme.colors.background }}
-    >
+    <AbsoluteFill style={{ backgroundColor: darkTechTheme.colors.background }}>
       <svg width="100%" height="100%" viewBox="0 0 1920 1080">
         <line
           x1={margin}

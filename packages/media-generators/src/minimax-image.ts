@@ -1,5 +1,10 @@
 import { withRetry } from "@vf/llm";
-import { ImageGenerationError, type ImageProvider, type ImageRequest, type ImageResult } from "./image.js";
+import {
+  ImageGenerationError,
+  type ImageProvider,
+  type ImageRequest,
+  type ImageResult,
+} from "./image.js";
 
 export interface MiniMaxImageProviderOptions {
   apiHost?: string | undefined;
@@ -50,7 +55,10 @@ export class MiniMaxImageProvider implements ImageProvider {
   private readonly retrySleeps: number[];
 
   constructor(opts: MiniMaxImageProviderOptions = {}) {
-    this.apiHost = opts.apiHost ?? process.env["MINIMAX_API_HOST"] ?? "https://api.minimax.io";
+    this.apiHost =
+      opts.apiHost ??
+      process.env["MINIMAX_API_HOST"] ??
+      "https://api.minimax.io";
     this.defaultModel = opts.defaultModel ?? DEFAULT_MODEL;
     this.retrySleeps = opts.retrySleeps ?? [1000, 2000, 4000];
   }
@@ -87,8 +95,11 @@ export class MiniMaxImageProvider implements ImageProvider {
             `MiniMax image API ${res.status}: ${excerpt.slice(0, 80)}`,
             this.name,
           );
-          (err as ImageGenerationError & { status: number }).status = res.status;
-          (err as ImageGenerationError & { body_excerpt: string }).body_excerpt = excerpt;
+          (err as ImageGenerationError & { status: number }).status =
+            res.status;
+          (
+            err as ImageGenerationError & { body_excerpt: string }
+          ).body_excerpt = excerpt;
           throw err;
         }
         return JSON.parse(text) as {

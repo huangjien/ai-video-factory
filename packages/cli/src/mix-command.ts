@@ -138,7 +138,10 @@ export async function runMix(opts: MixOptions): Promise<number> {
     }
     if (!opts.bgmPath && spec.bgm) {
       try {
-        bgmPath = pickBgm(projectRoot, `${projectRoot}/assets/audio-assets/bgm/${spec.bgm}.wav`);
+        bgmPath = pickBgm(
+          projectRoot,
+          `${projectRoot}/assets/audio-assets/bgm/${spec.bgm}.wav`,
+        );
       } catch {
         // ignore — fall back to flag/default
       }
@@ -231,6 +234,8 @@ export async function runMix(opts: MixOptions): Promise<number> {
   console.log(
     `  narration=${narrationPaths.length} files  bgm=${path.basename(bgmPath)}  sfx=${sfxCues.length} cues  fade=${fadeIn}s/${fadeOut}s`,
   );
-  console.log(`  next: this is the audio you ship — replaces per-scene narration TTS as the final mix`);
+  console.log(
+    `  next: this is the audio you ship — replaces per-scene narration TTS as the final mix`,
+  );
   return 0;
 }

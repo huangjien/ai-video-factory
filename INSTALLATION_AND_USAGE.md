@@ -756,4 +756,3 @@ without an AI in the loop.
 npm run acceptance
 # Expect: "ALL 11 §62.4 acceptance checks passed"
 ```
-

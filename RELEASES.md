@@ -70,13 +70,13 @@ vf research → script → storyboard → audio (TTS) → audio-asset (BGM+SFX)
 
 ## How the tags map to branches
 
-| Tag | Branch(es) | Merged in commit(s) |
-|---|---|---|
-| `v0.2` | `feat/video-agent-v01` | merge commit on main |
-| `v0.3` | `feat/v0.3-advanced-media` + `feat/v0.3-minimax-video` | merge commit on main |
-| `v0.3.3` | `feat/v0.3-audio-assets` | merge commit on main |
-| `v0.3.4` | `feat/v0.3-audio-mix` | merge commit on main |
-| `v0.3.5` | `feat/v0.3-sfx-cues-and-fade` | merge commit on main |
+| Tag      | Branch(es)                                             | Merged in commit(s)  |
+| -------- | ------------------------------------------------------ | -------------------- |
+| `v0.2`   | `feat/video-agent-v01`                                 | merge commit on main |
+| `v0.3`   | `feat/v0.3-advanced-media` + `feat/v0.3-minimax-video` | merge commit on main |
+| `v0.3.3` | `feat/v0.3-audio-assets`                               | merge commit on main |
+| `v0.3.4` | `feat/v0.3-audio-mix`                                  | merge commit on main |
+| `v0.3.5` | `feat/v0.3-sfx-cues-and-fade`                          | merge commit on main |
 
 All release tags are on `origin` and pushed.
 

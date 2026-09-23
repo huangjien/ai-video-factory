@@ -1,5 +1,10 @@
 import { execFileSync } from "node:child_process";
-import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
+import {
+  createServer,
+  type IncomingMessage,
+  type Server,
+  type ServerResponse,
+} from "node:http";
 import { mkdtempSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import type { AddressInfo } from "node:net";
@@ -74,7 +79,11 @@ describe("vf research end-to-end (todo 4) — mock MiniMax", () => {
       const url = req.url ?? "";
       let body: string;
       if (url.includes("/v1/coding_plan/search")) {
-        body = JSON.stringify({ organic: [], related_searches: [], base_resp: { status_code: 0 } });
+        body = JSON.stringify({
+          organic: [],
+          related_searches: [],
+          base_resp: { status_code: 0 },
+        });
       } else {
         // Handle BOTH MiniMax (/v1/chat/completions) and GLM (/chat/completions) paths
         body = JSON.stringify({
@@ -90,17 +99,12 @@ describe("vf research end-to-end (todo 4) — mock MiniMax", () => {
       }
       res.end(body);
     });
-    await new Promise<void>((r) =>
-      server.listen(0, "127.0.0.1", () => r()),
-    );
+    await new Promise<void>((r) => server.listen(0, "127.0.0.1", () => r()));
     const addr = server.address() as AddressInfo;
     baseUrl = `http://127.0.0.1:${addr.port}`;
   });
 
-  afterAll(
-    async () =>
-      new Promise<void>((r) => server.close(() => r())),
-  );
+  afterAll(async () => new Promise<void>((r) => server.close(() => r())));
 
   it("writes research.md, sources.yaml, claims.yaml + runs/<id>.yaml", async () => {
     const cwd = mkdtempSync(path.join(tmpdir(), "vf-rb-"));
@@ -111,17 +115,28 @@ describe("vf research end-to-end (todo 4) — mock MiniMax", () => {
     const code = await runResearch({ topic: "AI 思维链", cwd });
     expect(code).toBe(0);
     const projectRoot = path.join(cwd, "projects", "ai-思维链");
-    const md = readFileSync(path.join(projectRoot, "research", "research.md"), "utf8");
+    const md = readFileSync(
+      path.join(projectRoot, "research", "research.md"),
+      "utf8",
+    );
     expect(md).toContain("## Needs human review");
     expect(md).toContain("[fact] The sky is blue.");
-    const sources = readFileSync(path.join(projectRoot, "research", "sources.yaml"), "utf8");
+    const sources = readFileSync(
+      path.join(projectRoot, "research", "sources.yaml"),
+      "utf8",
+    );
     expect(sources).toContain("s1");
     expect(sources).toContain("https://example.com/sky");
-    const claims = readFileSync(path.join(projectRoot, "research", "claims.yaml"), "utf8");
+    const claims = readFileSync(
+      path.join(projectRoot, "research", "claims.yaml"),
+      "utf8",
+    );
     expect(claims).toContain("c1");
     expect(claims).toContain("status: fact");
     const runsDir = path.join(projectRoot, "runs");
-    const files = execFileSync("ls", [runsDir], { encoding: "utf8" }).trim().split("\n");
+    const files = execFileSync("ls", [runsDir], { encoding: "utf8" })
+      .trim()
+      .split("\n");
     expect(files.length).toBe(1);
     const record = readFileSync(path.join(runsDir, files[0] ?? ""), "utf8");
     expect(record).toContain("provider: glm");

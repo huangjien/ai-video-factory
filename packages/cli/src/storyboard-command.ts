@@ -31,7 +31,9 @@ function providerInstance(name: string): Provider {
 }
 
 function sha256OfMessages(messages: ChatMessage[]): string {
-  const canon = JSON.stringify(messages.map((m) => ({ role: m.role, content: m.content })));
+  const canon = JSON.stringify(
+    messages.map((m) => ({ role: m.role, content: m.content })),
+  );
   return "sha256:" + createHash("sha256").update(canon).digest("hex");
 }
 
@@ -64,9 +66,7 @@ export async function runStoryboard(opts: StoryboardOptions): Promise<number> {
   const model = chosenName === "glm" ? "glm-4.6" : "MiniMax-M2.7";
 
   // Optional research + script context (v0.2 phases 2 & 3)
-  let researchContext:
-    | { markdown: string; claimSummary: string }
-    | undefined;
+  let researchContext: { markdown: string; claimSummary: string } | undefined;
   let scriptContext: { markdown: string } | undefined;
   const { readFile } = await import("node:fs/promises");
 
@@ -86,7 +86,9 @@ export async function runStoryboard(opts: StoryboardOptions): Promise<number> {
       console.error(
         `\u2717 --from-research dir missing research.md or claims.yaml: ${opts.fromResearch}`,
       );
-      console.error(`  run \`vf research <topic>\` first to produce these files`);
+      console.error(
+        `  run \`vf research <topic>\` first to produce these files`,
+      );
       return 1;
     }
     researchContext = {
@@ -182,7 +184,10 @@ export async function runStoryboard(opts: StoryboardOptions): Promise<number> {
 /** Rough cost estimates per 1K tokens (MiniMax / GLM Coding Plan pricing
  * is bundled; we use a conservative blended rate for token tracking only,
  * NOT billing — see doc §45 cost strategy. */
-function estimateCost(provider: string, usage: { input: number; output: number }): number {
+function estimateCost(
+  provider: string,
+  usage: { input: number; output: number },
+): number {
   const rate = provider === "glm" ? 0.0008 : 0.001; // $0.8/M input, $1/M output roughly
   return (usage.input / 1000) * rate + (usage.output / 1000) * rate;
 }

@@ -19,9 +19,7 @@ export const SfxCueKeySchema = z
 export const MixSpecSchema = z
   .object({
     bgm: z.string().min(1).optional(),
-    sfx: z
-      .record(SfxCueKeySchema, z.string().min(1))
-      .optional(),
+    sfx: z.record(SfxCueKeySchema, z.string().min(1)).optional(),
     bgm_fade_in_sec: z.number().nonnegative().optional(),
     bgm_fade_out_sec: z.number().nonnegative().optional(),
   })

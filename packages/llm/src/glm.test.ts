@@ -1,5 +1,10 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { createServer, type Server, type IncomingMessage, type ServerResponse } from "node:http";
+import {
+  createServer,
+  type Server,
+  type IncomingMessage,
+  type ServerResponse,
+} from "node:http";
 import type { AddressInfo } from "node:net";
 import { GLMProvider } from "./glm.js";
 
@@ -20,7 +25,9 @@ describe("GLMProvider (todo 3) — docs.z.ai/devpack", () => {
   let lastAuth: string | undefined;
   let statusToSend = 200;
   let responseBody: unknown = {
-    choices: [{ message: { content: "ok-glm" }, index: 0, finish_reason: "stop" }],
+    choices: [
+      { message: { content: "ok-glm" }, index: 0, finish_reason: "stop" },
+    ],
     usage: { prompt_tokens: 30, completion_tokens: 18 },
   };
 
@@ -66,7 +73,9 @@ describe("GLMProvider (todo 3) — docs.z.ai/devpack", () => {
     });
     statusToSend = 200;
     responseBody = {
-      choices: [{ message: { content: "ok-glm" }, index: 0, finish_reason: "stop" }],
+      choices: [
+        { message: { content: "ok-glm" }, index: 0, finish_reason: "stop" },
+      ],
       usage: { prompt_tokens: 30, completion_tokens: 18 },
     };
   });
@@ -88,7 +97,9 @@ describe("GLMProvider (todo 3) — docs.z.ai/devpack", () => {
     expect(err.body_excerpt).toContain("glmfail");
     statusToSend = 200;
     responseBody = {
-      choices: [{ message: { content: "ok-glm" }, index: 0, finish_reason: "stop" }],
+      choices: [
+        { message: { content: "ok-glm" }, index: 0, finish_reason: "stop" },
+      ],
       usage: { prompt_tokens: 30, completion_tokens: 18 },
     };
   });

@@ -1,5 +1,10 @@
 import { execFileSync } from "node:child_process";
-import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
+import {
+  createServer,
+  type IncomingMessage,
+  type Server,
+  type ServerResponse,
+} from "node:http";
 import { mkdtempSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import type { AddressInfo } from "node:net";
@@ -36,9 +41,7 @@ describe("vf script end-to-end (todo 3) — mock MiniMax", () => {
         }),
       );
     });
-    await new Promise<void>((r) =>
-      server.listen(0, "127.0.0.1", () => r()),
-    );
+    await new Promise<void>((r) => server.listen(0, "127.0.0.1", () => r()));
     const addr = server.address() as AddressInfo;
     baseUrl = `http://127.0.0.1:${addr.port}`;
   });
@@ -54,12 +57,17 @@ describe("vf script end-to-end (todo 3) — mock MiniMax", () => {
     const code = await runScript({ topic: "AI 思维链", cwd });
     expect(code).toBe(0);
     const projectRoot = path.join(cwd, "projects", "ai-思维链");
-    const md = readFileSync(path.join(projectRoot, "script", "script.zh-CN.md"), "utf8");
+    const md = readFileSync(
+      path.join(projectRoot, "script", "script.zh-CN.md"),
+      "utf8",
+    );
     expect(md).toContain("## Hook");
     expect(md).toContain("## Conclusion");
     expect(md).toContain("Hook line.");
     const runsDir = path.join(projectRoot, "runs");
-    const files = execFileSync("ls", [runsDir], { encoding: "utf8" }).trim().split("\n");
+    const files = execFileSync("ls", [runsDir], { encoding: "utf8" })
+      .trim()
+      .split("\n");
     expect(files.length).toBe(1);
     const record = readFileSync(path.join(runsDir, files[0] ?? ""), "utf8");
     expect(record).toContain("provider: minimax");

@@ -50,7 +50,11 @@ export async function appendCheckpoint(
       throw err;
     });
   const merged: CheckpointRecord = existing
-    ? { ...existing, ...record, human_changes: [...existing.human_changes, ...record.human_changes] }
+    ? {
+        ...existing,
+        ...record,
+        human_changes: [...existing.human_changes, ...record.human_changes],
+      }
     : record;
   await writeFile(file, stringifyYaml(merged), "utf8");
   return file;

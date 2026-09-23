@@ -11,25 +11,25 @@ approach: Implement doc §53 (Storyboard Agent) as one CLI command — `vf story
 
 ## Components (topology ledger)
 
-| id | outcome | status | evidence |
-| --- | --- | --- | --- |
-| llm-providers | `@vf/llm` package: Provider interface + MiniMax + GLM impls + YAML config (primary/fallback per role, §6) | active | doc §6 lines 205-247; MiniMax OpenAI-compatible `api.minimax.io/v1/chat/completions` Bearer MINIMAX_API_KEY; GLM Coding Plan OpenAI-compatible `api.z.ai/api/coding/paas/v4` Bearer GLM_API_KEY |
-| storyboard-agent | `@vf/agent-storyboard` package: prompt template (system role + few-shot examples from §21.1 sample + §13 flowchart), LLM call, response→VDSL parse, reuse `@vf/vdsl` for shape validation | active | doc §53 (lines 1921-1938); §21.1 sample lines 889-922 |
-| cli-storyboard | `vf storyboard <topic>` in `@vf/cli`: scaffolds `projects/<slug>/`, writes draft storyboard.yaml, prompts human to edit/approve | active | doc §53 "Human Approval" + §39 verb |
-| runs-trace | Extend run records to include provider/model/prompt_hash/tokens/estimated_cost_usd fields per §62.2 lines 2247-2258 (omitted in v0.1, added in v0.2) | active | doc §62.2 lines 2247-2258 |
-| docs | README quickstart update + ARCHITECTURE addendum for v0.2 Storyboard Agent | active | doc §66 line 2416 |
+| id               | outcome                                                                                                                                                                                   | status | evidence                                                                                                                                                                                        |
+| ---------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| llm-providers    | `@vf/llm` package: Provider interface + MiniMax + GLM impls + YAML config (primary/fallback per role, §6)                                                                                 | active | doc §6 lines 205-247; MiniMax OpenAI-compatible `api.minimax.io/v1/chat/completions` Bearer MINIMAX_API_KEY; GLM Coding Plan OpenAI-compatible `api.z.ai/api/coding/paas/v4` Bearer GLM_API_KEY |
+| storyboard-agent | `@vf/agent-storyboard` package: prompt template (system role + few-shot examples from §21.1 sample + §13 flowchart), LLM call, response→VDSL parse, reuse `@vf/vdsl` for shape validation | active | doc §53 (lines 1921-1938); §21.1 sample lines 889-922                                                                                                                                           |
+| cli-storyboard   | `vf storyboard <topic>` in `@vf/cli`: scaffolds `projects/<slug>/`, writes draft storyboard.yaml, prompts human to edit/approve                                                           | active | doc §53 "Human Approval" + §39 verb                                                                                                                                                             |
+| runs-trace       | Extend run records to include provider/model/prompt_hash/tokens/estimated_cost_usd fields per §62.2 lines 2247-2258 (omitted in v0.1, added in v0.2)                                      | active | doc §62.2 lines 2247-2258                                                                                                                                                                       |
+| docs             | README quickstart update + ARCHITECTURE addendum for v0.2 Storyboard Agent                                                                                                                | active | doc §66 line 2416                                                                                                                                                                               |
 
 ## Open assumptions (announced defaults)
 
-| assumption | adopted default | rationale | reversible? |
-| --- | --- | --- | --- |
-| Model defaults | MiniMax primary for `storyboard` role, GLM fallback (per §6 example config) | doc §6 names this exact pairing; user owns both coding plans | yes |
-| Model IDs | MiniMax `MiniMax-M2.7` (reasoning model recommended); GLM `glm-4.6` | canonical docs defaults as of 2026-09; both support JSON output | yes |
-| Temperature | 0.7 for storyboard drafting | balance creativity vs determinism | yes |
-| Prompt template | One system prompt + one user prompt containing topic, audience, duration, language, style; response must be valid VDSL YAML | reuses doc §21.1 sample + §13 flowchart example as few-shot | yes |
-| Output location | Draft lands at `projects/<slug>/storyboard/storyboard.yaml`; LLM call records go to `runs/<run-id>.yaml` with prompt_hash, tokens, cost | reuses v0.1 project structure | yes |
-| Credentials | `MINIMAX_API_KEY`, `GLM_API_KEY` read from `process.env` only; never written to disk or logs | doc §62.2 line 2259 forbids credential persistence | one-way (env-level; reversible by rotating keys) |
-| Failure mode | Network/HTTP 4xx/5xx → non-zero exit with readable error naming the provider; NEVER mark a step succeeded when the LLM call failed | doc §62.1 line 2221 (validation never auto-retries); failures must be visible | yes |
+| assumption      | adopted default                                                                                                                         | rationale                                                                     | reversible?                                      |
+| --------------- | --------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------- | ------------------------------------------------ |
+| Model defaults  | MiniMax primary for `storyboard` role, GLM fallback (per §6 example config)                                                             | doc §6 names this exact pairing; user owns both coding plans                  | yes                                              |
+| Model IDs       | MiniMax `MiniMax-M2.7` (reasoning model recommended); GLM `glm-4.6`                                                                     | canonical docs defaults as of 2026-09; both support JSON output               | yes                                              |
+| Temperature     | 0.7 for storyboard drafting                                                                                                             | balance creativity vs determinism                                             | yes                                              |
+| Prompt template | One system prompt + one user prompt containing topic, audience, duration, language, style; response must be valid VDSL YAML             | reuses doc §21.1 sample + §13 flowchart example as few-shot                   | yes                                              |
+| Output location | Draft lands at `projects/<slug>/storyboard/storyboard.yaml`; LLM call records go to `runs/<run-id>.yaml` with prompt_hash, tokens, cost | reuses v0.1 project structure                                                 | yes                                              |
+| Credentials     | `MINIMAX_API_KEY`, `GLM_API_KEY` read from `process.env` only; never written to disk or logs                                            | doc §62.2 line 2259 forbids credential persistence                            | one-way (env-level; reversible by rotating keys) |
+| Failure mode    | Network/HTTP 4xx/5xx → non-zero exit with readable error naming the provider; NEVER mark a step succeeded when the LLM call failed      | doc §62.1 line 2221 (validation never auto-retries); failures must be visible | yes                                              |
 
 ## Findings (cited - path:lines)
 
@@ -74,7 +74,9 @@ approach: Implement doc §53 (Storyboard Agent) as one CLI command — `vf story
 None — both providers verified via context7 against the canonical docs. Defaults adopted (MiniMax primary, GLM fallback) match doc §6 example verbatim.
 
 ## Approval gate
+
 status: plan-written (approved by user 2026-09-20; plan generated same turn)
 <!-- When exploration is exhausted and unknowns are answered, set status: awaiting-approval. -->
 <!-- That durable record is the loop guard: on a later turn read it and resume at the gate instead of re-running exploration. -->
+
 Plan: .omo/plans/storyboard-agent.md — 8 todos / 3 waves / F1-F4 verification wave. TL;DR filled last. Delivered with the start-vs-high-accuracy-review question; awaiting user decision. Execution NOT started.

@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { loadProviderConfig, withRetry } from "./index.js";
-import type { ChatMessage, ChatRequest, ChatResponse, Provider } from "./provider.js";
+import type {
+  ChatMessage,
+  ChatRequest,
+  ChatResponse,
+  Provider,
+} from "./provider.js";
 
 const okResponse = (): ChatResponse => ({
   content: "ok",

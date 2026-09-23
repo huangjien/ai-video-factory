@@ -39,40 +39,41 @@ PR and push to `main`. See `.github/workflows/test.yml`.
 
 ## Codebase orientation
 
-| Path | What's there |
-|---|---|
-| `packages/vdsl/` | VDSL schema (zod) + validator + compiler. The video format's source of truth. |
-| `packages/video-components/` | 10 React components + 5 animation primitives + `dark-tech` theme. |
-| `packages/video-renderer/` | Remotion composition that consumes `RenderPlan`. The renderer. |
-| `packages/llm/` | Provider abstraction: `MiniMaxProvider`, `GLMProvider`. Used by every agent. |
-| `packages/agent-storyboard/` | Storyboard Agent (system prompt + agent). |
-| `packages/research/` | Research Agent + MiniMax `web_search`. |
-| `packages/script/` | Script Agent (7-section spine). |
-| `packages/tts/` | Edge TTS voiceover. |
-| `packages/audio-assets/` | BGM + SFX providers (mock + file-based). |
-| `packages/audio-mix/` | ffmpeg-driven audio mixing (BGM + narration + SFX cues + fades). |
-| `packages/media-generators/` | Image + video provider abstractions + MiniMax implementations. |
-| `packages/review/` | Read-only Content/Visual/Technical review agent. |
-| `packages/youtube/` | YouTube publishing package (title/description/chapters.vtt/...). |
-| `packages/workflow/` | 10-state machine + checkpoints + run records. |
-| `packages/cli/` | The `vf` CLI (entry point + all `bin/video` verbs). |
-| `packages/cli/src/audio-command.ts` | TTS per scene. |
-| `packages/cli/src/audio-asset-command.ts` | `vf audio-asset` (BGM/SFX). |
-| `packages/cli/src/mix-command.ts` | `vf mix` (read `audio-assets/mix.yaml`). |
-| `packages/cli/src/render-command.ts` | `vf preview` / `vf final` (Remotion render + mix chaining). |
-| `packages/cli/src/youtube-command.ts` | `vf youtube` (title + description + chapters.vtt). |
-| `packages/cli/src/thumbnail-command.ts` | `vf thumbnail` (mock + MiniMax image). |
-| `packages/cli/src/shorts-command.ts` | `vf shorts` (mock + MiniMax video). |
-| `bin/video` | Shell wrapper: `video <verb> [args...]` → `node packages/cli/dist/index.js ...` |
-| `.opencode/command/video.md` | Slash-command definition for OpenCode / Cursor / Claude Code. |
-| `projects/benchmark-v01/` | Canonical end-to-end project (39s zh-CN CoT explainer). |
-| `scripts/acceptance.mjs` | §62.4 audit script (ffprobe-based). |
-| `scripts/benchmark-verify.mjs` | Render-twice structural identity. |
-| `docs/` | Project docs (kept in repo for visibility). |
+| Path                                      | What's there                                                                    |
+| ----------------------------------------- | ------------------------------------------------------------------------------- |
+| `packages/vdsl/`                          | VDSL schema (zod) + validator + compiler. The video format's source of truth.   |
+| `packages/video-components/`              | 10 React components + 5 animation primitives + `dark-tech` theme.               |
+| `packages/video-renderer/`                | Remotion composition that consumes `RenderPlan`. The renderer.                  |
+| `packages/llm/`                           | Provider abstraction: `MiniMaxProvider`, `GLMProvider`. Used by every agent.    |
+| `packages/agent-storyboard/`              | Storyboard Agent (system prompt + agent).                                       |
+| `packages/research/`                      | Research Agent + MiniMax `web_search`.                                          |
+| `packages/script/`                        | Script Agent (7-section spine).                                                 |
+| `packages/tts/`                           | Edge TTS voiceover.                                                             |
+| `packages/audio-assets/`                  | BGM + SFX providers (mock + file-based).                                        |
+| `packages/audio-mix/`                     | ffmpeg-driven audio mixing (BGM + narration + SFX cues + fades).                |
+| `packages/media-generators/`              | Image + video provider abstractions + MiniMax implementations.                  |
+| `packages/review/`                        | Read-only Content/Visual/Technical review agent.                                |
+| `packages/youtube/`                       | YouTube publishing package (title/description/chapters.vtt/...).                |
+| `packages/workflow/`                      | 10-state machine + checkpoints + run records.                                   |
+| `packages/cli/`                           | The `vf` CLI (entry point + all `bin/video` verbs).                             |
+| `packages/cli/src/audio-command.ts`       | TTS per scene.                                                                  |
+| `packages/cli/src/audio-asset-command.ts` | `vf audio-asset` (BGM/SFX).                                                     |
+| `packages/cli/src/mix-command.ts`         | `vf mix` (read `audio-assets/mix.yaml`).                                        |
+| `packages/cli/src/render-command.ts`      | `vf preview` / `vf final` (Remotion render + mix chaining).                     |
+| `packages/cli/src/youtube-command.ts`     | `vf youtube` (title + description + chapters.vtt).                              |
+| `packages/cli/src/thumbnail-command.ts`   | `vf thumbnail` (mock + MiniMax image).                                          |
+| `packages/cli/src/shorts-command.ts`      | `vf shorts` (mock + MiniMax video).                                             |
+| `bin/video`                               | Shell wrapper: `video <verb> [args...]` → `node packages/cli/dist/index.js ...` |
+| `.opencode/command/video.md`              | Slash-command definition for OpenCode / Cursor / Claude Code.                   |
+| `projects/benchmark-v01/`                 | Canonical end-to-end project (39s zh-CN CoT explainer).                         |
+| `scripts/acceptance.mjs`                  | §62.4 audit script (ffprobe-based).                                             |
+| `scripts/benchmark-verify.mjs`            | Render-twice structural identity.                                               |
+| `docs/`                                   | Project docs (kept in repo for visibility).                                     |
 
 ## Conventions
 
 ### Commits
+
 - **One commit per todo.** Each commit's message is `<type>(<scope>): <summary>`.
 - Use **`pnpm`** — never commit `package-lock.json` (the lockfile is `pnpm-lock.yaml`).
   - `feat(<pkg>): <feature>` for new functionality.
@@ -83,20 +84,24 @@ PR and push to `main`. See `.github/workflows/test.yml`.
 - Messages are short (one line). Detail lives in the PR description or commit body.
 
 ### Branches
+
 - **One branch per phase.** Naming convention: `feat/v<X>.<Y>-<slug>` (e.g. `feat/v0.3-audio-mix`).
 - Keep branch scope tight — a branch should land a single coherent change.
 
 ### Tags / releases
+
 - After a phase ships, merge the branch to `main` with `--no-ff`, then tag `v<X>.<Y>` (or `v<X>.<Y>.<N>` for sub-releases).
 - Tags are immutable; new work creates a new tag.
 - Bump the version in the merge commit message and tag message.
 
 ### Testing
+
 - **TDD for everything that has shape.** New package = write failing tests first, then implement. Schema files (`*.test.ts` beside `*.ts`) are the contract.
 - **One assertion per test.** Smoke tests live in CLI integration tests (`packages/cli/src/*.integration.test.ts`).
 - **Test files must end with `.test.ts` or `.test.tsx`** so vitest picks them up.
 
 ### Branches and CI
+
 - CI runs on every push/PR to `main` (`.github/workflows/test.yml`).
 - A PR should pass CI before merge.
 - Recommend branch protection: require CI check + 1 review before merge to `main` (see "Branch protection" section below).

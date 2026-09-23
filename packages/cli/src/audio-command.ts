@@ -19,7 +19,10 @@ const ZH_VOICE = "zh-CN-XiaoxiaoNeural";
 const EN_VOICE = "en-US-EmmaMultilingualNeural";
 
 /** Run ffmpeg to convert mp3 bytes (from TTS) to wav of exact scene duration. */
-async function mp3ToWav(mp3Bytes: Uint8Array, targetDurationSec: number): Promise<Uint8Array> {
+async function mp3ToWav(
+  mp3Bytes: Uint8Array,
+  targetDurationSec: number,
+): Promise<Uint8Array> {
   const { mkdtemp, rm } = await import("node:fs/promises");
   const { tmpdir } = await import("node:os");
   const dir = await mkdtemp(path.join(tmpdir(), "vf-tts-"));
@@ -29,10 +32,14 @@ async function mp3ToWav(mp3Bytes: Uint8Array, targetDurationSec: number): Promis
     await writeFile(inPath, mp3Bytes);
     await execFileAsync("ffmpeg", [
       "-y",
-      "-i", inPath,
-      "-ar", "44100",
-      "-ac", "1",
-      "-af", `apad,atrim=0:${targetDurationSec}`,
+      "-i",
+      inPath,
+      "-ar",
+      "44100",
+      "-ac",
+      "1",
+      "-af",
+      `apad,atrim=0:${targetDurationSec}`,
       outPath,
     ]);
     const { readFile } = await import("node:fs/promises");
@@ -59,7 +66,8 @@ export async function runAudio(opts: AudioOptions): Promise<number> {
   const enPath = path.join(projectRoot, "script", "script.en-US.md");
   const { readFile } = await import("node:fs/promises");
   const { existsSync } = await import("node:fs");
-  const language: "zh-CN" | "en-US" = existsSync(enPath) && !existsSync(scriptPath) ? "en-US" : "zh-CN";
+  const language: "zh-CN" | "en-US" =
+    existsSync(enPath) && !existsSync(scriptPath) ? "en-US" : "zh-CN";
   const activeScript = language === "en-US" ? enPath : scriptPath;
   if (!existsSync(projectRoot)) {
     console.error(`project not found: ${projectRoot}`);
@@ -70,7 +78,9 @@ export async function runAudio(opts: AudioOptions): Promise<number> {
     return 1;
   }
   if (!existsSync(activeScript)) {
-    console.error(`script not found: ${activeScript} — run "vf script <topic>" first`);
+    console.error(
+      `script not found: ${activeScript} — run "vf script <topic>" first`,
+    );
     return 1;
   }
 
@@ -88,16 +98,15 @@ export async function runAudio(opts: AudioOptions): Promise<number> {
   const scriptText = await readFile(activeScript, "utf8");
   const sections = parseScriptSections(scriptText);
   // Naive 1:1 mapping: scene i gets sections[i] (or last section if i >= sections.length)
-  const sceneNarrations: { sceneId: string; text: string; duration: number }[] = scenes.map(
-    (s, i) => {
+  const sceneNarrations: { sceneId: string; text: string; duration: number }[] =
+    scenes.map((s, i) => {
       const sectionText = sections[i] ?? sections[sections.length - 1] ?? "";
       return {
         sceneId: s.id,
         text: s.narration?.text || sectionText || "",
         duration: s.duration,
       };
-    },
-  );
+    });
 
   const provider: TTSProvider = opts.fake
     ? new FakeTTSProvider({ sampleBytes: 256 })
@@ -137,7 +146,9 @@ export async function runAudio(opts: AudioOptions): Promise<number> {
       );
       totalActualMs += result.durationMs;
     } catch (err) {
-      console.error(`TTS failed for ${scene.sceneId}: ${(err as Error).message}`);
+      console.error(
+        `TTS failed for ${scene.sceneId}: ${(err as Error).message}`,
+      );
       return 1;
     }
   }
@@ -148,10 +159,18 @@ export async function runAudio(opts: AudioOptions): Promise<number> {
     const start = scenes.slice(0, i).reduce((acc, x) => acc + x.duration, 0);
     const end = start + s.duration;
     const fmt = (sec: number) => {
-      const h = Math.floor(sec / 3600).toString().padStart(2, "0");
-      const m = Math.floor((sec % 3600) / 60).toString().padStart(2, "0");
-      const s2 = Math.floor(sec % 60).toString().padStart(2, "0");
-      const ms = Math.round((sec - Math.floor(sec)) * 1000).toString().padStart(3, "0");
+      const h = Math.floor(sec / 3600)
+        .toString()
+        .padStart(2, "0");
+      const m = Math.floor((sec % 3600) / 60)
+        .toString()
+        .padStart(2, "0");
+      const s2 = Math.floor(sec % 60)
+        .toString()
+        .padStart(2, "0");
+      const ms = Math.round((sec - Math.floor(sec)) * 1000)
+        .toString()
+        .padStart(3, "0");
       return `${h}:${m}:${s2},${ms}`;
     };
     const narration = s.narration?.text ?? "";
@@ -160,7 +179,9 @@ export async function runAudio(opts: AudioOptions): Promise<number> {
   await writeFile(srtPath, srtLines.join("\n"), "utf8");
 
   // Run record (provider/tool/prompt_hash/tokens absent — no LLM, just TTS)
-  const runId = `tts-${new Date().toISOString().replace(/\.\d+Z$/, "Z")}-${Math.floor(Math.random() * 1000)
+  const runId = `tts-${new Date().toISOString().replace(/\.\d+Z$/, "Z")}-${Math.floor(
+    Math.random() * 1000,
+  )
     .toString()
     .padStart(3, "0")}`;
   const record = {
@@ -182,9 +203,15 @@ export async function runAudio(opts: AudioOptions): Promise<number> {
   const { writeRun } = await import("@vf/workflow");
   await writeRun(projectRoot, record);
 
-  console.log(`\u2713 generated audio for ${sceneNarrations.filter((s) => s.text).length}/${scenes.length} scenes`);
-  console.log(`  provider=${provider.name}  voice=${voice}  srt=captions/${language}.srt`);
-  console.log(`  next: \`vf preview\` will pick up the real audio automatically`);
+  console.log(
+    `\u2713 generated audio for ${sceneNarrations.filter((s) => s.text).length}/${scenes.length} scenes`,
+  );
+  console.log(
+    `  provider=${provider.name}  voice=${voice}  srt=captions/${language}.srt`,
+  );
+  console.log(
+    `  next: \`vf preview\` will pick up the real audio automatically`,
+  );
   return 0;
 }
 

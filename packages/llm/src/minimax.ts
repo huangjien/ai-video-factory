@@ -22,14 +22,19 @@ export class MiniMaxProvider implements Provider {
   private readonly defaultModel: string;
 
   constructor(opts: MiniMaxProviderOptions = {}) {
-    this.apiHost = opts.apiHost ?? process.env["MINIMAX_API_HOST"] ?? "https://api.minimax.io";
+    this.apiHost =
+      opts.apiHost ??
+      process.env["MINIMAX_API_HOST"] ??
+      "https://api.minimax.io";
     this.defaultModel = opts.defaultModel ?? DEFAULT_MODEL;
   }
 
   async chat(req: ChatRequest): Promise<ChatResponse> {
     const key = process.env["MINIMAX_API_KEY"];
     if (!key) {
-      const err = new Error("MINIMAX_API_KEY not set in environment") as ChatError;
+      const err = new Error(
+        "MINIMAX_API_KEY not set in environment",
+      ) as ChatError;
       err.provider = this.name;
       throw err;
     }
@@ -42,7 +47,9 @@ export class MiniMaxProvider implements Provider {
       body: JSON.stringify({
         model: req.model ?? this.defaultModel,
         messages: req.messages,
-        ...(req.temperature !== undefined ? { temperature: req.temperature } : {}),
+        ...(req.temperature !== undefined
+          ? { temperature: req.temperature }
+          : {}),
       }),
     });
     const body = await res.text();

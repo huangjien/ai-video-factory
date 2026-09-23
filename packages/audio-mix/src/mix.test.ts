@@ -117,7 +117,11 @@ describe("mixTracks (todo 1) — ffmpeg amix + sidechain ducking", () => {
 
   it("throws when narration paths list is empty", async () => {
     await expect(
-      mixTracks({ narrationPaths: [], bgmPath, outPath: path.join(dir, "x.wav") }),
+      mixTracks({
+        narrationPaths: [],
+        bgmPath,
+        outPath: path.join(dir, "x.wav"),
+      }),
     ).rejects.toThrow(/at least one narration/i);
   });
 });

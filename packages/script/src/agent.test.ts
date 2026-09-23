@@ -39,7 +39,10 @@ describe("callScript (todo 2) — §28", () => {
   it("rejects missing fenced block with ScriptError", async () => {
     const p = new CannedProvider(["Just prose, no fence."]);
     await expect(
-      callScript({ topic: "t", audience: "a", language: "zh-CN", duration: 40 }, p),
+      callScript(
+        { topic: "t", audience: "a", language: "zh-CN", duration: 40 },
+        p,
+      ),
     ).rejects.toThrow(ScriptError);
   });
 
@@ -52,7 +55,10 @@ comparison: "c"
 implication: "i"`; // missing conclusion
     const p = new CannedProvider(["```yaml\n" + bad + "\n```"]);
     await expect(
-      callScript({ topic: "t", audience: "a", language: "zh-CN", duration: 40 }, p),
+      callScript(
+        { topic: "t", audience: "a", language: "zh-CN", duration: 40 },
+        p,
+      ),
     ).rejects.toThrow(ScriptError);
   });
 
@@ -67,7 +73,10 @@ conclusion: "k"
 extra: "no"`;
     const p = new CannedProvider(["```yaml\n" + bad + "\n```"]);
     await expect(
-      callScript({ topic: "t", audience: "a", language: "zh-CN", duration: 40 }, p),
+      callScript(
+        { topic: "t", audience: "a", language: "zh-CN", duration: 40 },
+        p,
+      ),
     ).rejects.toThrow(ScriptError);
   });
 });

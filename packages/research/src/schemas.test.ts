@@ -98,9 +98,7 @@ describe("ResearchOutputSchema (todo 1)", () => {
           snippet: "x",
         },
       ],
-      claims: [
-        { id: "c1", claim: "x", status: "fact", sources: ["s1"] },
-      ],
+      claims: [{ id: "c1", claim: "x", status: "fact", sources: ["s1"] }],
       meta: {
         web_search_used: false,
         web_search_failed: false,

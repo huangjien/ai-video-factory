@@ -21,7 +21,9 @@ function providerInstance(name: string): Provider {
 }
 
 function sha256OfMessages(messages: ChatMessage[]): string {
-  const canon = JSON.stringify(messages.map((m) => ({ role: m.role, content: m.content })));
+  const canon = JSON.stringify(
+    messages.map((m) => ({ role: m.role, content: m.content })),
+  );
   return "sha256:" + createHash("sha256").update(canon).digest("hex");
 }
 
@@ -64,7 +66,10 @@ export async function runReview(opts: ReviewOptions): Promise<number> {
   try {
     result = await callReview({ storyboard, script, claims }, provider);
   } catch (err) {
-    console.error(`\u2717 ${chosenName} review agent failed:`, (err as Error).message);
+    console.error(
+      `\u2717 ${chosenName} review agent failed:`,
+      (err as Error).message,
+    );
     return 1;
   }
 
@@ -104,7 +109,11 @@ export async function runReview(opts: ReviewOptions): Promise<number> {
     actor: "agent" as const,
     tool: "vf-review",
     input_commit: safeGitHead(projectRoot),
-    input_files: ["storyboard/storyboard.yaml", "script/script.zh-CN.md", "research/claims.yaml"],
+    input_files: [
+      "storyboard/storyboard.yaml",
+      "script/script.zh-CN.md",
+      "research/claims.yaml",
+    ],
     output_files: [
       "review/content-review.yaml",
       "review/visual-review.yaml",
@@ -134,7 +143,9 @@ export async function runReview(opts: ReviewOptions): Promise<number> {
     `  provider=${chosenName}  content=${overall[0]}  visual=${overall[1]}  technical=${overall[2]}`,
   );
   if (overall.some((v) => v !== "pass")) {
-    console.log(`  note: one or more sections are warn/fail — review the YAML files before publishing`);
+    console.log(
+      `  note: one or more sections are warn/fail — review the YAML files before publishing`,
+    );
   }
   return 0;
 }

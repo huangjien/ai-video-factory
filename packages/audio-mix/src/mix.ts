@@ -84,7 +84,15 @@ export async function mixTracks(opts: MixOptions): Promise<MixResult> {
     "[0:a]aresample=44100[nar]",
     `[1:a]aresample=44100,volume=${bgmLinear}[bgm_pre]`,
     `[bgm_pre][nar]sidechaincompress=threshold=${duckerThresholdDb}:ratio=8:attack=5:release=400[bgm]`,
-    "[nar][bgm]amix=inputs=2:duration=longest:dropout_transition=0[out]",
+    // Use [0:a] (original narration) for the final amix, not [nar]
+    // (the resampled narration). ffmpeg 6.x has a parser bug that rejects
+    // reusing the same label as BOTH a sidechain input AND an amix input
+    // in the same graph — the parser reports "Invalid stream specifier"
+    // and "matches no streams" for [nar] even though it's clearly defined
+    // earlier. Using [0:a] for the final mix sidesteps the bug; the audio
+    // is semantically equivalent (amix doesn't care about the 44.1kHz
+    // resample that sidechaincompress needs).
+    "[0:a][bgm]amix=inputs=2:duration=longest:dropout_transition=0[out]",
   ].join(";");
   await execFileAsync("ffmpeg", [
     "-y",
@@ -235,7 +243,12 @@ export async function mixTracksWithSpec(
     );
     sfxMergeLabels.push(`[${label}]`);
   }
-  const mixInputs = ["[nar]", `[${bgmLabel}]`, ...sfxMergeLabels].join("");
+  // Use [0:a] (original narration) for the final amix, not [nar]
+  // (the resampled narration). ffmpeg 6.x has a parser bug that rejects
+  // reusing the same label as BOTH a sidechain input AND an amix input
+  // in the same graph; using [0:a] sidesteps it. See mixTracks() for
+  // the full explanation.
+  const mixInputs = ["[0:a]", `[${bgmLabel}]`, ...sfxMergeLabels].join("");
   const mixFilter = `${mixInputs}amix=inputs=${2 + sfxMergeLabels.length}:duration=longest:dropout_transition=0:normalize=0[out]`;
   filterParts.push(mixFilter);
 

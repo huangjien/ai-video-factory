@@ -10,7 +10,7 @@ export interface MiniMaxProviderOptions {
   defaultModel?: string | undefined;
 }
 
-const DEFAULT_MODEL = "MiniMax-M2.7";
+const DEFAULT_MODEL = "MiniMax-M3";
 
 /** OpenAI-compatible MiniMax chat client.
  * Endpoint: `${apiHost}/v1/chat/completions` · Auth: Bearer `MINIMAX_API_KEY`
@@ -49,6 +49,9 @@ export class MiniMaxProvider implements Provider {
         messages: req.messages,
         ...(req.temperature !== undefined
           ? { temperature: req.temperature }
+          : {}),
+        ...(req.response_format
+          ? { response_format: req.response_format }
           : {}),
       }),
     });

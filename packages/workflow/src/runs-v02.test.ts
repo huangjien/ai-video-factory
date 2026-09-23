@@ -32,7 +32,7 @@ describe("run records — v0.2 schema (todo 7) — §62.2 lines 2247-2258", () =
     const root = tmpRoot();
     const record = baseRecord({
       provider: "minimax",
-      model: "MiniMax-M2.7",
+      model: "MiniMax-M3",
       prompt_hash: "sha256:abc",
       tokens: { input: 200, output: 90 },
       estimated_cost_usd: 0.0002,
@@ -40,7 +40,7 @@ describe("run records — v0.2 schema (todo 7) — §62.2 lines 2247-2258", () =
     await writeRun(root, record);
     const list = await listRuns(root);
     expect(list[0]?.provider).toBe("minimax");
-    expect(list[0]?.model).toBe("MiniMax-M2.7");
+    expect(list[0]?.model).toBe("MiniMax-M3");
     expect(list[0]?.prompt_hash).toBe("sha256:abc");
     expect(list[0]?.tokens).toEqual({ input: 200, output: 90 });
     expect(list[0]?.estimated_cost_usd).toBe(0.0002);

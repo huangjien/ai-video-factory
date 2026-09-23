@@ -31,7 +31,11 @@ export class EdgeTTSProvider implements TTSProvider {
   }
 
   async synthesize(req: TTSRequest): Promise<TTSResult> {
-    const tts = new EdgeTTS(req.text, req.voice, {
+    const ssmlText = injectSsmlBreaks(
+      req.text,
+      req.pauseBetweenSentencesSec ?? 0,
+    );
+    const tts = new EdgeTTS(ssmlText, req.voice, {
       ...(this.opts.rate !== undefined ? { rate: this.opts.rate } : {}),
       ...(this.opts.volume !== undefined ? { volume: this.opts.volume } : {}),
       ...(this.opts.pitch !== undefined ? { pitch: this.opts.pitch } : {}),
@@ -45,6 +49,30 @@ export class EdgeTTSProvider implements TTSProvider {
         : estimateDurationMs(req.text, this.opts.charsPerSecond);
     return { audio, durationMs, words };
   }
+}
+
+/** When `pauseMs > 0`, wraps `text` in `<speak>` SSML with `<break time="Nms"/>`
+ * after each sentence-ending punctuation (`。！？.!?`). Returns the input
+ * unchanged when pauseMs is 0, or when it already begins with `<speak>`. */
+export function injectSsmlBreaks(text: string, pauseMs: number): string {
+  if (pauseMs <= 0) return text;
+  if (text.trimStart().startsWith("<speak")) return text;
+  const parts = text.split(/([。！？.!?]+\s*)/);
+  const frags: string[] = [];
+  for (let i = 0; i < parts.length; i++) {
+    if (i % 2 === 0) {
+      const t = escapeXml(parts[i] ?? "");
+      if (t) frags.push(t);
+    } else {
+      frags.push(escapeXml(parts[i] ?? ""));
+      frags.push(`<break time="${Math.round(pauseMs * 1000)}ms"/>`);
+    }
+  }
+  return `<speak version="1.0">${frags.join("")}</speak>`;
+}
+
+function escapeXml(s: string): string {
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
 function parseSubtitleToWords(subtitle: unknown): TTSWord[] {

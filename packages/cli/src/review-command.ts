@@ -60,7 +60,7 @@ export async function runReview(opts: ReviewOptions): Promise<number> {
   const cfg = loadProviderConfig();
   const chosenName = opts.model ?? cfg["research"].primary; // research role provider is the most "careful" default
   const provider = providerInstance(chosenName);
-  const model = chosenName === "glm" ? "glm-4.6" : "MiniMax-M2.7";
+  const model = chosenName === "glm" ? "glm-5.3" : "MiniMax-M3";
 
   let result;
   try {

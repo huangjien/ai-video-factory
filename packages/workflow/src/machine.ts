@@ -3,14 +3,15 @@ import type { Stage, TransitionRecord, WorkflowStatus } from "./states.js";
 export type Action =
   | { kind: "start" }
   | { kind: "regenerate" }
-  | { kind: "approve" }
+  | { kind: "approve"; force?: boolean }
   | { kind: "edit" }
   | { kind: "rollback"; toCheckpoint: string }
   | { kind: "retry" }
   | { kind: "block"; reason: string }
   | { kind: "final_approve" }
   | { kind: "validate_ok" }
-  | { kind: "validate_fail" };
+  | { kind: "validate_fail" }
+  | { kind: "reset"; force?: boolean };
 
 export interface MachineState {
   status: WorkflowStatus;
@@ -88,6 +89,11 @@ function nextStatus(
     case "edit":
       return allowed.includes("EDITING") ? "EDITING" : null;
     case "approve":
+      if (action.force) {
+        // Force bypasses the legality check, but FINAL_APPROVED is
+        // terminal and must remain so even under force.
+        return status === "FINAL_APPROVED" ? null : "APPROVED";
+      }
       return allowed.includes("APPROVED") ? "APPROVED" : null;
     case "final_approve":
       return allowed.includes("FINAL_APPROVED") ? "FINAL_APPROVED" : null;
@@ -95,12 +101,18 @@ function nextStatus(
       return allowed.includes("ROLLED_BACK") ? "ROLLED_BACK" : null;
     case "block":
       return allowed.includes("BLOCKED") ? "BLOCKED" : null;
+    case "reset":
+      // FINAL_APPROVED is terminal; only `force` can rewind from there.
+      if (status === "FINAL_APPROVED") return action.force ? "DRAFT" : null;
+      return "DRAFT";
   }
 }
 
 function actionReason(action: Action): string {
   if (action.kind === "block") return action.reason;
   if (action.kind === "rollback") return `rollback to ${action.toCheckpoint}`;
+  if (action.kind === "approve" && action.force) return "approve [forced]";
+  if (action.kind === "reset" && action.force) return "reset [forced]";
   return action.kind;
 }
 

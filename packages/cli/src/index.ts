@@ -1,9 +1,13 @@
 #!/usr/bin/env node
 import { Command } from "commander";
 import { runAudio } from "./audio-command.js";
+import { runAudioAsset } from "./audio-asset-command.js";
 import { runMix } from "./mix-command.js";
 import { runNew } from "./new-command.js";
 import { runResearch } from "./research-command.js";
+import { runDraft } from "./draft-command.js";
+import { runAudioPlan } from "./audio-plan-command.js";
+import { runMakeCli } from "./make-command.js";
 import { runReview } from "./review-command.js";
 import { runScript } from "./script-command.js";
 import { runStoryboard } from "./storyboard-command.js";
@@ -15,6 +19,7 @@ import { runStatus } from "./status-command.js";
 import {
   runApprove,
   runReject,
+  runReset,
   runResume,
   runRollback,
 } from "./workflow-commands.js";
@@ -123,6 +128,111 @@ program
         ...(opts.lang !== undefined ? { lang: opts.lang } : {}),
         ...(opts.duration !== undefined ? { duration: opts.duration } : {}),
         ...(opts.audience !== undefined ? { audience: opts.audience } : {}),
+      });
+    },
+  );
+
+program
+  .command("draft")
+  .argument(
+    "<topic>",
+    "topic — used as project slug (slugify the topic for the directory name)",
+  )
+  .option("--cwd <dir>", "base directory for the project")
+  .option("--model <provider>", "model provider: minimax|glm (default: glm)")
+  .option("--no-web", "disable MiniMax web search (use LLM knowledge only)")
+  .option("--lang <lang>", "language: zh-CN|en-US (default zh-CN)")
+  .option(
+    "--duration <seconds>",
+    "total duration target in seconds (default: 40)",
+    (v) => parseInt(v, 10),
+  )
+  .option("--audience <text>", "target audience (default: developers)")
+  .option(
+    "--from <file>",
+    "path to a file containing pre-existing content to revise",
+  )
+  .action(
+    async (
+      topic: string,
+      opts: {
+        cwd?: string;
+        model?: "minimax" | "glm";
+        web?: boolean;
+        lang?: "zh-CN" | "en-US";
+        duration?: number;
+        audience?: string;
+        from?: string;
+      },
+    ) => {
+      process.exitCode = await runDraft({
+        topic,
+        ...(opts.cwd !== undefined ? { cwd: opts.cwd } : {}),
+        ...(opts.model !== undefined ? { model: opts.model } : {}),
+        noWeb: opts.web === false,
+        ...(opts.lang !== undefined ? { lang: opts.lang } : {}),
+        ...(opts.duration !== undefined ? { duration: opts.duration } : {}),
+        ...(opts.audience !== undefined ? { audience: opts.audience } : {}),
+        ...(opts.from !== undefined ? { from: opts.from } : {}),
+      });
+    },
+  );
+
+program
+  .command("audio-plan")
+  .argument("<project>", "project id")
+  .option("--cwd <dir>", "base directory for the project")
+  .option(
+    "--model <provider>",
+    "model provider: minimax|glm (default: glm)",
+  )
+  .option(
+    "--from <file>",
+    "path to an existing audio-config.yaml to revise",
+  )
+  .action(
+    async (
+      project: string,
+      opts: {
+        cwd?: string;
+        model?: "minimax" | "glm";
+        from?: string;
+      },
+    ) => {
+      process.exitCode = await runAudioPlan({
+        project,
+        ...(opts.cwd !== undefined ? { cwd: opts.cwd } : {}),
+        ...(opts.model !== undefined ? { model: opts.model } : {}),
+        ...(opts.from !== undefined ? { from: opts.from } : {}),
+      });
+    },
+  );
+
+program
+  .command("make")
+  .argument(
+    "<project>",
+    "project id (defaults to cwd-discovered single project)",
+  )
+  .option("--cwd <dir>", "base directory for the project")
+  .option(
+    "--fake",
+    "use FakeTTSProvider (no Edge-TTS network call) — produces silent placeholder WAVs",
+  )
+  .option(
+    "--dry-run",
+    "log which steps would run without executing them",
+  )
+  .action(
+    async (
+      project: string,
+      opts: { cwd?: string; fake?: boolean; dryRun?: boolean },
+    ) => {
+      process.exitCode = await runMakeCli({
+        project,
+        ...(opts.cwd !== undefined ? { cwd: opts.cwd } : {}),
+        ...(opts.fake !== undefined ? { fake: opts.fake } : {}),
+        ...(opts.dryRun !== undefined ? { dryRun: opts.dryRun } : {}),
       });
     },
   );
@@ -243,7 +353,41 @@ program
     });
   });
 
-program.command("audio-asset");
+program
+  .command("audio-asset")
+  .argument("<project>", "project id")
+  .option("--cwd <dir>", "base directory for the project")
+  .option("--bgm <tag>", "BGM tag (mock provider) or filename (file-based)")
+  .option("--sfx <tag>", "SFX tag (mock provider) or filename (file-based)")
+  .option(
+    "--bgm-dir <dir>",
+    "BGM directory for the file-based provider (enables real-file lookup)",
+  )
+  .option(
+    "--sfx-dir <dir>",
+    "SFX directory for the file-based provider (enables real-file lookup)",
+  )
+  .action(
+    async (
+      project: string,
+      opts: {
+        cwd?: string;
+        bgm?: string;
+        sfx?: string;
+        bgmDir?: string;
+        sfxDir?: string;
+      },
+    ) => {
+      process.exitCode = await runAudioAsset({
+        project,
+        ...(opts.cwd !== undefined ? { cwd: opts.cwd } : {}),
+        ...(opts.bgm !== undefined ? { bgmTag: opts.bgm } : {}),
+        ...(opts.sfx !== undefined ? { sfxTag: opts.sfx } : {}),
+        ...(opts.bgmDir !== undefined ? { bgmDir: opts.bgmDir } : {}),
+        ...(opts.sfxDir !== undefined ? { sfxDir: opts.sfxDir } : {}),
+      });
+    },
+  );
 
 program
   .command("review")
@@ -380,16 +524,20 @@ program
 
 program
   .command("approve")
-  .argument("[project]", "project name (slug) — optional")
   .argument("[stage]", "stage to approve (defaults to current_stage)")
+  .argument("[project]", "project name (slug) — optional")
   .option("--cwd <dir>", "project root")
+  .option(
+    "--force",
+    "bypass state-machine legality check (emergency use only); prints [FORCE] warning and records [forced] in audit trail",
+  )
   .action(
     async (
-      project: string | undefined,
       stage: string | undefined,
-      opts: { cwd?: string },
+      project: string | undefined,
+      opts: { cwd?: string; force?: boolean },
     ) => {
-      process.exitCode = await runApprove(project, stage, opts.cwd);
+      process.exitCode = await runApprove(project, stage, opts.cwd, opts.force);
     },
   );
 
@@ -426,6 +574,28 @@ program
   .action(async (project: string | undefined, opts: { cwd?: string }) => {
     process.exitCode = await runResume(project, opts.cwd);
   });
+
+program
+  .command("reset")
+  .argument("[project]", "project name (slug) — optional")
+  .argument(
+    "[to-stage]",
+    "stage to set current_stage to after reset (default: init; one of init|storyboard|compile|render|review|final)",
+  )
+  .option("--cwd <dir>", "project root")
+  .option(
+    "--force",
+    "rewind even when the project is in FINAL_APPROVED (the only state from which reset normally refuses); prints [FORCE] warning and records [forced] in audit trail",
+  )
+  .action(
+    async (
+      project: string | undefined,
+      toStage: string | undefined,
+      opts: { cwd?: string; force?: boolean },
+    ) => {
+      process.exitCode = await runReset(project, toStage, opts.cwd, opts.force);
+    },
+  );
 
 program
   .command("preview")

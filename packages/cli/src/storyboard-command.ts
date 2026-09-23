@@ -63,7 +63,7 @@ export async function runStoryboard(opts: StoryboardOptions): Promise<number> {
   const roleCfg = cfg["storyboard"];
   const chosenName = opts.model ?? roleCfg.primary;
   const provider = providerInstance(chosenName);
-  const model = chosenName === "glm" ? "glm-4.6" : "MiniMax-M2.7";
+  const model = chosenName === "glm" ? "glm-5.3" : "MiniMax-M3";
 
   // Optional research + script context (v0.2 phases 2 & 3)
   let researchContext: { markdown: string; claimSummary: string } | undefined;

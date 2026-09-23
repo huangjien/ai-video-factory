@@ -1,9 +1,18 @@
-# AI Video Factory (v0.1)
+# AI Video Factory (v0.4)
 
-A small video factory that turns a hand-written outline file into a finished
-1080p Chinese MP4 — with pause-points where you review, approve, reject,
-or rewind to any earlier step, and a 39-second explainer video about AI
-chain-of-thought built with it as proof it all works.
+A small video factory that turns a topic into a finished 1080p Chinese MP4
+in three commands: `vf draft` (LLM writes article.md), `vf audio-plan`
+(LLM writes audio-config.yaml), `vf make` (renders the video). Two
+human-edit files, one output. 39-second AI chain-of-thought explainer
+ships as proof.
+
+## Principles
+
+> AI generates · Human decides · Code renders · Git remembers — `AI_Video_Factory_Design_and_Plan_v1.1.md` §65.
+
+Two human-edit checkpoints (`article.md`, `audio-config.yaml`) are the
+only place humans engage with the pipeline. Everything else is derived
+from those two files.
 
 ## Principles
 
@@ -57,30 +66,66 @@ The global install keeps source and build files out of the user's project
 folders. `vf new <id>` creates `projects/<id>` below the current directory;
 use `--cwd <dir>` to choose another project root.
 
+## Quickstart (minimal API — recommended)
+
+```bash
+vf new "transformer architectures"   # scaffold project/<slug>/
+
+# Two human-edit checkpoints:
+vf draft "transformer architectures"  # writes article.md (LLM)
+#   → edit projects/.../article.md
+vf audio-plan "transformer architectures"  # writes audio-config.yaml (LLM)
+#   → edit projects/.../audio-config.yaml
+
+# One command does everything:
+vf make "transformer architectures"    # TTS → assets → render → mix
+#   → projects/.../output/preview.mp4
+#   → projects/.../output/final-mixed.mp4
+```
+
+That is the entire workflow. Three commands, two human-edit checkpoints, one
+output. Re-run `vf make` after editing either file — it skips work whose
+outputs are newer than its inputs (`--dry-run` shows what it would do).
+
 ## Commands
+
+### Minimal API (recommended)
+
+| Command                       | Purpose                                                                                  |
+| ----------------------------- | ---------------------------------------------------------------------------------------- |
+| `vf new <id>`                 | scaffold a project under `projects/<id>/`                                                |
+| `vf draft <topic>`            | write `article.md` from a topic via MiniMax/GLM (research + script + storyboard in one)  |
+| `vf audio-plan <project>`     | write `audio-config.yaml` for the project's article.md via GLM                            |
+| `vf make <project>`           | TTS → audio assets → render → mix (`--dry-run` to preview, `--fake` for offline TTS)      |
+
+The two human-edit artifacts are `article.md` (narrative + scene data) and
+`audio-config.yaml` (BGM/SFX cues + fades + voice, plus optional
+`pause_between_sentences_sec` for SSML breaks between sentences).
+Everything else is derived.
+
+### Legacy commands (still working)
+
+The old per-stage pipeline is preserved for back-compat. New commands are
+built on top of the same underlying packages, just consolidated.
 
 | Command                       | Purpose                                                                                                                                                   |
 | ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `vf new <id>`                 | scaffold a project under `projects/<id>/`                                                                                                                 |
-| `vf research <topic>`         | (v0.2.2) AI-gather facts + sources + claims via MiniMax/GLM (+ optional web search)                                                                       |
-| `vf script <topic>`           | (v0.2.3) AI-draft a 7-section script (Hook→Conclusion) via MiniMax/GLM (optionally consumes `vf research` via `--from-research`)                          |
-| `vf audio <project>`          | (v0.2.4) Synthesize per-scene voiceover via Edge TTS + write `captions/<lang>.srt` (`--fake` for offline test)                                            |
-| `vf review <project>`         | (v0.2.5) Generate Content/Visual/Technical review YAMLs via MiniMax/GLM (read-only — never auto-gates)                                                    |
-| `vf youtube <project>`        | (v0.2.7) Generate YouTube title/description/chapters.vtt/package.yaml + thumbnail-prompt + shorts-hook (text-only; thumbnail/shorts land in v0.2 phase 8) |
-| `vf thumbnail <project>`      | (v0.2.8) Generate YouTube thumbnail PNG from `thumbnail-prompt.txt` (MockImageProvider; real provider deferred to v0.3)                                   |
-| `vf shorts <project>`         | (v0.2.8) Clip a 9:16 vertical Shorts MP4 from `final-faststart.mp4` via ffmpeg (60s default, configurable via `--start`/`--duration`)                     |
-| `vf audio-asset <project>`    | (v0.3.3) Add BGM + SFX to the project (`--bgm <tag>` + `--sfx <tag>`, optional `--bgm-dir`/`--sfx-dir` for file-based lookup)                             |
-| `vf mix <project>`            | (v0.3.4) Mix per-scene narration + BGM into `output/final-mixed.mp4` (ffmpeg amix + sidechaincompress; configurable `--bgm`/`--bgm-attenuation`)          |
-| `vf final <project> --mix`    | (v0.3.5) Same as `vf final` but also runs `vf mix` to produce the audio-mixed published artifact                                                          |
-| `vf storyboard <topic>`       | (v0.2) AI-draft a storyboard from a topic via MiniMax/GLM (optionally consumes `vf research` via `--from-research`)                                       |
+| `vf research <topic>`         | (legacy v0.2.2) writes `research/{research.md,sources.yaml,claims.yaml}` — superseded by `vf draft`                                                       |
+| `vf script <topic>`           | (legacy v0.2.3) writes `script/script.<lang>.md`                                                                                                            |
+| `vf storyboard <topic>`       | (legacy v0.2) writes `storyboard/storyboard.yaml`                                                                                                          |
+| `vf audio <project>`          | (legacy v0.2.4) per-scene TTS via Edge TTS — now part of `vf make`                                                                                         |
+| `vf review <project>`         | (legacy v0.2.5) review YAMLs                                                                                                                              |
+| `vf youtube <project>`        | (legacy v0.2.7) YouTube metadata                                                                                                                            |
+| `vf thumbnail <project>`      | (legacy v0.2.8) thumbnail from `thumbnail-prompt.txt`                                                                                                       |
+| `vf shorts <project>`         | (legacy v0.2.8) clip Shorts MP4                                                                                                                            |
+| `vf audio-asset <project>`    | (legacy v0.3.3) BGM/SFX assets — now part of `vf make`                                                                                                     |
+| `vf mix <project>`            | (legacy v0.3.4) narration + BGM mix — now part of `vf make`                                                                                                |
+| `vf final <project> --mix`    | (legacy v0.3.5) the audio-mixed final                                                                                                                     |
 | `vf validate <file>`          | shape + asset + registry + audio/caption check                                                                                                            |
-| `vf status`                   | per-stage checklist + current checkpoint + status                                                                                                         |
-| `vf approve [stage]`          | human approve; advances state machine                                                                                                                     |
-| `vf reject <reason>`          | record feedback, transition to regenerate                                                                                                                 |
-| `vf rollback <checkpoint-id>` | confirm + invalidate downstream stages                                                                                                                    |
-| `vf resume`                   | resume from last successful stage                                                                                                                         |
-| `vf preview`                  | validate → compile → render → faststart preview.mp4                                                                                                       |
-| `vf final`                    | render final.mp4 (requires review APPROVED)                                                                                                               |
+| `vf status` / `vf resume`     | inspection (legacy state-machine commands; still wired)                                                                                                   |
+| `vf approve / reject / rollback` | legacy state-machine verbs (still working; superseded by the edit-and-re-run workflow)                                                                |
+| `vf preview`                  | (legacy) validate → compile → render preview.mp4 — invoked transitively by `vf make`                                                                     |
+| `vf final`                    | (legacy) render final.mp4                                                                                                                                |
 
 ## Scripts
 
@@ -263,38 +308,39 @@ and records the license on the run record. Otherwise the run record
 labels the asset "user-provided (no license file found)" — humans are
 responsible for verifying licensing.
 
-## ## YouTube Automation (v0.2.7)
+## ## YouTube Automation
 
 `vf youtube` produces the text-only publishing package for the video:
 title, description, chapter timestamps, a thumbnail prompt, and a Shorts
 script beat.
 
 ```bash
-node packages/cli/dist/index.js youtube "AI 思维链"
-# → projects/ai-思维链/youtube/title.txt
-# → projects/ai-思维链/youtube/description.md
-# → projects/ai-思维链/youtube/chapters.vtt   (WebVTT format — paste into YouTube Studio)
-# → projects/ai-思维链/youtube/package.yaml  (full structured metadata)
-# → projects/ai-思维链/youtube/thumbnail-prompt.txt  (describe what to design)
-# → projects/ai-思维链/youtube/shorts-hook.txt  (60-second Shorts beat)
+node packages/cli/dist/index.js youtube "<topic>"
+# Prefers article.md (the new minimal artifact). Falls back to the legacy
+# research.md + script.md + storyboard.yaml triple if article.md is absent.
+# → projects/<slug>/youtube/title.txt
+# → projects/<slug>/youtube/description.md
+# → projects/<slug>/youtube/chapters.vtt   (WebVTT format — paste into YouTube Studio)
+# → projects/<slug>/youtube/package.yaml  (full structured metadata)
+# → projects/<slug>/youtube/thumbnail-prompt.txt  (describe what to design)
+# → projects/<slug>/youtube/shorts-hook.txt  (60-second Shorts beat)
 ```
 
 ### Workflow
 
-1. Run `vf youtube` after the project is FINAL_APPROVED.
+1. Run `vf youtube` after `vf make` has produced `output/final-mixed.mp4`.
 2. Copy `title.txt` and `description.md` into YouTube Studio's upload form.
 3. Paste `chapters.vtt` into the description box (YouTube parses it for
    the chapter markers on the timeline).
-4. Use `thumbnail-prompt.txt` to design the thumbnail manually (the actual
-   thumbnail image generation lands in v0.2 phase 8 / Advanced Media).
+4. Use `thumbnail-prompt.txt` to design the thumbnail manually
+   (or run `vf thumbnail` to generate one).
 5. Record a separate Short from `shorts-hook.txt`.
 
 ### What's NOT here yet
 
-Per doc §58 / Phase 9, YouTube automation also covers **thumbnail
-generation** and **Shorts clipping**. v0.2 phase 7 ships the text
-metadata only — the image generation and MP4 clipping ship in v0.2 phase 8
-(Advanced Media §60).
+Thumbnail generation (`vf thumbnail` is mock-only by default) and Shorts
+clipping (`vf shorts`) are part of v0.2 phase 8 (Advanced Media §60) and
+ship separately.
 
 ## Pi Extension (v0.2.6)
 

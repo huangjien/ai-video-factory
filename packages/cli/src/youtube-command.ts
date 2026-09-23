@@ -4,7 +4,8 @@ import { execSync } from "node:child_process";
 import path from "node:path";
 import { existsSync } from "node:fs";
 import { GLMProvider, loadProviderConfig, MiniMaxProvider } from "@vf/llm";
-import { callYouTube, chaptersToVtt } from "@vf/youtube";
+import { callYouTube, chaptersToVtt, type YouTubeInput } from "@vf/youtube";
+import { parseArticle, type Scene } from "@vf/draft";
 import { stringify as yamlStringify } from "yaml";
 import type { ChatMessage, Provider } from "@vf/llm";
 import { formatRunId } from "@vf/workflow";
@@ -43,28 +44,56 @@ export async function runYouTube(opts: YouTubeOptions): Promise<number> {
     return 1;
   }
   const { readFile } = await import("node:fs/promises");
-  const sbPath = path.join(projectRoot, "storyboard", "storyboard.yaml");
-  const scriptPath = path.join(projectRoot, "script", "script.zh-CN.md");
-  const researchMdPath = path.join(projectRoot, "research", "research.md");
-  for (const f of [sbPath, scriptPath, researchMdPath]) {
-    if (!existsSync(f)) {
-      console.error(`missing input: ${f}`);
-      console.error(`  run vf storyboard / vf script / vf research first`);
-      return 1;
+
+// Two input shapes supported: article.md (preferred) OR the legacy triple
+  // (research.md + script.md + storyboard.yaml). The agent takes the
+  // legacy triple; article.md is synthesized to that shape below.
+  let articleInput: ReturnType<typeof synthFromArticle> | null = null;
+  let legacyInput: YouTubeInput | null = null;
+  const articlePath = path.join(projectRoot, "article.md");
+  if (existsSync(articlePath)) {
+    articleInput = await synthFromArticle(
+      await readFile(articlePath, "utf8"),
+    );
+  } else {
+    const sbPath = path.join(projectRoot, "storyboard", "storyboard.yaml");
+    const scriptPath = path.join(projectRoot, "script", "script.zh-CN.md");
+    const researchMdPath = path.join(projectRoot, "research", "research.md");
+    for (const f of [sbPath, scriptPath, researchMdPath]) {
+      if (!existsSync(f)) {
+        console.error(`missing input: ${f}`);
+        console.error(
+          `  run \`vf draft <topic>\` to generate article.md (preferred),`,
+        );
+        console.error(
+          `  or run the legacy pipeline: vf research / vf script / vf storyboard`,
+        );
+        return 1;
+      }
     }
+    legacyInput = {
+      storyboard: await readFile(sbPath, "utf8"),
+      script: await readFile(scriptPath, "utf8"),
+      research: await readFile(researchMdPath, "utf8"),
+    };
   }
-  const storyboard = await readFile(sbPath, "utf8");
-  const script = await readFile(scriptPath, "utf8");
-  const research = await readFile(researchMdPath, "utf8");
+  const input: YouTubeInput = articleInput ?? (legacyInput as YouTubeInput);
+  const inputFiles = articleInput
+    ? ["article.md"]
+    : [
+        "storyboard/storyboard.yaml",
+        "script/script.zh-CN.md",
+        "research/research.md",
+      ];
 
   const cfg = loadProviderConfig();
   const chosenName = opts.model ?? cfg["review"].primary; // review-role default → conservative
   const provider = providerInstance(chosenName);
-  const model = chosenName === "glm" ? "glm-4.6" : "MiniMax-M2.7";
+  const model = chosenName === "glm" ? "glm-5.3" : "MiniMax-M3";
 
   let result;
   try {
-    result = await callYouTube({ storyboard, script, research }, provider);
+    result = await callYouTube(input, provider);
   } catch (err) {
     console.error(
       `\u2717 ${chosenName} youtube agent failed:`,
@@ -125,11 +154,7 @@ export async function runYouTube(opts: YouTubeOptions): Promise<number> {
     actor: "agent" as const,
     tool: "vf-youtube",
     input_commit: safeGitHead(projectRoot),
-    input_files: [
-      "storyboard/storyboard.yaml",
-      "script/script.zh-CN.md",
-      "research/research.md",
-    ],
+    input_files: inputFiles,
     output_files: [
       "youtube/title.txt",
       "youtube/description.md",
@@ -160,4 +185,32 @@ export async function runYouTube(opts: YouTubeOptions): Promise<number> {
     `  next: copy title + description into YouTube Studio; thumbnail + Shorts land in v0.2 phase 8`,
   );
   return 0;
+}
+
+/** Build a legacy-shaped YouTubeInput from the new article.md —
+ * the YouTube agent consumes three string fields; this maps each. */
+function synthFromArticle(articleMd: string): YouTubeInput {
+  const article = parseArticle(articleMd);
+  const storyboard = synthStoryboardYaml(article.scenes);
+  const script = `# ${article.frontmatter.project}\n\n${article.proseBody.trim()}\n`;
+  const research = articleMd;
+  return { storyboard, script, research };
+}
+
+function synthStoryboardYaml(scenes: Scene[]): string {
+  const lines = [
+    `scenes:`,
+    ...scenes.flatMap((s) => [
+      `  - id: ${s.id}`,
+      `    duration: ${s.duration}`,
+      `    caption: ${yamlScalar(s.caption)}`,
+      `    visual: ${yamlScalar(s.visual)}`,
+    ]),
+  ];
+  return lines.join("\n") + "\n";
+}
+
+function yamlScalar(s: string): string {
+  if (/[:#\n]/.test(s)) return JSON.stringify(s);
+  return s;
 }

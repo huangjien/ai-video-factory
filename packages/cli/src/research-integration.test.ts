@@ -38,7 +38,7 @@ meta:
   web_search_used: false
   web_search_failed: false
   provider: minimax
-  model: MiniMax-M2.7
+  model: MiniMax-M3
 `;
 
 const uncertainYaml = `markdown: |
@@ -63,7 +63,7 @@ meta:
   web_search_used: false
   web_search_failed: false
   provider: minimax
-  model: MiniMax-M2.7
+  model: MiniMax-M3
 `;
 
 describe("vf research end-to-end (todo 4) — mock MiniMax", () => {
@@ -140,7 +140,7 @@ describe("vf research end-to-end (todo 4) — mock MiniMax", () => {
     expect(files.length).toBe(1);
     const record = readFileSync(path.join(runsDir, files[0] ?? ""), "utf8");
     expect(record).toContain("provider: glm");
-    expect(record).toContain("model: glm-4.6");
+    expect(record).toContain("model: glm-5.3");
     expect(record).toContain("prompt_hash: sha256:");
   });
 

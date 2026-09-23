@@ -16,6 +16,7 @@ export async function runApprove(
   projectName: string | undefined,
   stage: string | undefined,
   cwd: string | undefined,
+  force: boolean = false,
 ): Promise<number> {
   let root: string;
   if (projectName) {
@@ -49,17 +50,36 @@ export async function runApprove(
     stage: state.current_stage,
   };
   let next: ReturnType<typeof transition>;
-  if (target === "final") {
-    next = transition(
-      machineState,
-      { kind: "final_approve" },
-      ctx("approve-final"),
-    );
-  } else {
-    next = transition(
-      machineState,
-      { kind: "approve" },
-      ctx(`approve-${target}`),
+  try {
+    if (target === "final") {
+      next = transition(
+        machineState,
+        { kind: "final_approve" },
+        ctx("approve-final"),
+      );
+    } else {
+      next = transition(
+        machineState,
+        { kind: "approve", ...(force ? { force: true } : {}) },
+        ctx(`approve-${target}`),
+      );
+    }
+  } catch (err) {
+    if (force) {
+      console.error(
+        `[FORCE] cannot approve ${target}: ${(err as Error).message}`,
+      );
+      console.error(
+        `[FORCE] target status was ${state.status} — even --force respects the terminal FINAL_APPROVED state`,
+      );
+    } else {
+      console.error(`approve: ${(err as Error).message}`);
+    }
+    return 1;
+  }
+  if (force) {
+    console.warn(
+      `[FORCE] ${target} approved from ${state.status}`,
     );
   }
   state.status = next.state.status;
@@ -72,7 +92,7 @@ export async function runApprove(
     created_at: next.record.at,
     approved_at: next.record.at,
     human_changes: [],
-    notes: "approved via vf approve",
+    notes: force ? "force-approved via vf approve --force" : "approved via vf approve",
   });
   console.log(`Checkpoint ${target} approved.`);
   return 0;
@@ -183,6 +203,85 @@ export async function runResume(
     encoding: "utf8",
   }).trim();
   console.log(`Resume from stage ${state.current_stage} at commit ${head}.`);
+  return 0;
+}
+
+export async function runReset(
+  projectName: string | undefined,
+  toStage: string | undefined,
+  cwd: string | undefined,
+  force: boolean = false,
+): Promise<number> {
+  let root: string;
+  if (projectName) {
+    const base = path.resolve(cwd ?? ".");
+    root = path.join(base, "projects", slugifyForProject(projectName));
+  } else {
+    const resolved = resolveProjectRoot(cwd);
+    if (!resolved.ok) {
+      console.error(resolved.message);
+      return 1;
+    }
+    root = resolved.root;
+  }
+  const target = (toStage ?? "init").trim();
+  if (!(V01_STAGES as readonly string[]).includes(target)) {
+    console.error(`reset: unknown stage "${target}"`);
+    return 1;
+  }
+  const state = await readProjectState(root);
+  if (!state) {
+    console.error("reset: no project state found; nothing to reset");
+    return 1;
+  }
+  const machineState: MachineState = {
+    status: state.status,
+    stage: state.current_stage,
+  };
+  let next: ReturnType<typeof transition>;
+  try {
+    next = transition(
+      machineState,
+      { kind: "reset", ...(force ? { force: true } : {}) },
+      ctx("reset-to-" + target),
+    );
+  } catch (err) {
+    if (force) {
+      console.error(`[FORCE] cannot reset: ${(err as Error).message}`);
+    } else {
+      console.error(`reset: ${(err as Error).message}`);
+      console.error(
+        `reset: if the project is in FINAL_APPROVED, pass --force to rewind anyway`,
+      );
+    }
+    return 1;
+  }
+  if (force) {
+    console.warn(
+      `[FORCE] resetting ${state.status} → DRAFT, current_stage=${state.current_stage} → ${target}`,
+    );
+  } else {
+    console.warn(
+      `reset: ${state.status} → DRAFT, current_stage=${state.current_stage} → ${target}`,
+    );
+  }
+  state.status = next.state.status;
+  state.current_stage = target as (typeof V01_STAGES)[number];
+  state.checkpoint = { id: state.checkpoint.id, status: next.state.status };
+  await writeProjectState(root, state);
+  await appendCheckpoint(root, {
+    id: `reset-${next.record.run_id}`,
+    stage: target as (typeof V01_STAGES)[number],
+    status: "approved",
+    created_at: next.record.at,
+    approved_at: next.record.at,
+    human_changes: [],
+    notes: force ? "reset via vf reset --force" : "reset via vf reset",
+  });
+  console.log(`Project reset to DRAFT / ${target}.`);
+  console.log(
+    `next: re-run the pipeline (e.g. \`vf storyboard ...\` or \`vf audio ...\`)`,
+  );
   return 0;
 }
 

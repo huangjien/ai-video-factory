@@ -10,12 +10,14 @@ export interface GLMProviderOptions {
   defaultModel?: string | undefined;
 }
 
-const DEFAULT_BASE = "https://api.z.ai/api/coding/paas/v4";
-const DEFAULT_MODEL = "glm-4.6";
+// Zhipu paas/v4 (OpenAI-compatible). The GLM Coding Plan endpoint
+// (api.z.ai/api/coding/paas/v4) uses the same protocol but is tied to a
+// separate Coding Plan balance; override via GLM_BASE_URL to switch.
+const DEFAULT_BASE = "https://open.bigmodel.cn/api/coding/paas/v4";
+const DEFAULT_MODEL = "glm-5.3";
 
-/** OpenAI-compatible GLM Coding Plan chat client.
+/** OpenAI-compatible GLM (Zhipu) chat client.
  * Endpoint: `${baseUrl}/chat/completions` · Auth: Bearer `GLM_API_KEY`
- * Source: https://docs.z.ai/devpack/tool/others (OpenAI Chat Completions base)
  */
 export class GLMProvider implements Provider {
   readonly name = "glm";
@@ -45,6 +47,9 @@ export class GLMProvider implements Provider {
         messages: req.messages,
         ...(req.temperature !== undefined
           ? { temperature: req.temperature }
+          : {}),
+        ...(req.response_format
+          ? { response_format: req.response_format }
           : {}),
       }),
     });

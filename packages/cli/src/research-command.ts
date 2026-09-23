@@ -61,7 +61,7 @@ export async function runResearch(opts: ResearchOptions): Promise<number> {
   const roleCfg = cfg["research"];
   const chosenName = opts.model ?? roleCfg.primary;
   const provider = providerInstance(chosenName);
-  const model = chosenName === "glm" ? "glm-4.6" : "MiniMax-M2.7";
+  const model = chosenName === "glm" ? "glm-5.3" : "MiniMax-M3";
 
   const web = opts.noWeb ? null : new MiniMaxWebSearch();
 

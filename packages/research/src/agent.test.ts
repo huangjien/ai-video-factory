@@ -46,7 +46,7 @@ meta:
   web_search_used: false
   web_search_failed: false
   provider: minimax
-  model: MiniMax-M2.7
+  model: MiniMax-M3
 `;
 
 describe("callResearch (todo 3) — §55", () => {

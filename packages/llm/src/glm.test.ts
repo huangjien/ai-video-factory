@@ -49,17 +49,17 @@ describe("GLMProvider (todo 3) — docs.z.ai/devpack", () => {
   it("sends Bearer auth and parses GLM OpenAI-compatible response", async () => {
     process.env["GLM_API_KEY"] = "glm-test-key";
     const p = new GLMProvider({ baseUrl });
-    const r = await p.chat({ ...baseReq, model: "glm-4.6" });
+    const r = await p.chat({ ...baseReq, model: "glm-5.3" });
     expect(r.content).toBe("ok-glm");
     expect(r.usage).toEqual({ input: 30, output: 18 });
     expect(lastAuth).toBe("Bearer glm-test-key");
   });
 
-  it("default model is glm-4.6", async () => {
+  it("default model is glm-5.3", async () => {
     process.env["GLM_API_KEY"] = "glm-test-key";
     const p = new GLMProvider({ baseUrl });
     await p.chat(baseReq);
-    expect(p["defaultModel"]).toBe("glm-4.6");
+    expect(p["defaultModel"]).toBe("glm-5.3");
   });
 
   it("throws ChatError with provider=glm on 401", async () => {

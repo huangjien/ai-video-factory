@@ -24,7 +24,7 @@ approach: Implement doc §53 (Storyboard Agent) as one CLI command — `vf story
 | assumption      | adopted default                                                                                                                         | rationale                                                                     | reversible?                                      |
 | --------------- | --------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------- | ------------------------------------------------ |
 | Model defaults  | MiniMax primary for `storyboard` role, GLM fallback (per §6 example config)                                                             | doc §6 names this exact pairing; user owns both coding plans                  | yes                                              |
-| Model IDs       | MiniMax `MiniMax-M2.7` (reasoning model recommended); GLM `glm-4.6`                                                                     | canonical docs defaults as of 2026-09; both support JSON output               | yes                                              |
+| Model IDs       | MiniMax `MiniMax-M3` (reasoning model recommended); GLM `glm-5.3`                                                                     | canonical docs defaults as of 2026-09; both support JSON output               | yes                                              |
 | Temperature     | 0.7 for storyboard drafting                                                                                                             | balance creativity vs determinism                                             | yes                                              |
 | Prompt template | One system prompt + one user prompt containing topic, audience, duration, language, style; response must be valid VDSL YAML             | reuses doc §21.1 sample + §13 flowchart example as few-shot                   | yes                                              |
 | Output location | Draft lands at `projects/<slug>/storyboard/storyboard.yaml`; LLM call records go to `runs/<run-id>.yaml` with prompt_hash, tokens, cost | reuses v0.1 project structure                                                 | yes                                              |
@@ -40,8 +40,8 @@ approach: Implement doc §53 (Storyboard Agent) as one CLI command — `vf story
 - §39 (1543-1163): CLI verbs — `vf storyboard` is already in the canonical verb list.
 - §62.2 (2247-2258): Run-record schema for external model calls (provider, model, prompt_hash, tokens, estimated_cost_usd).
 - §67 (2449-2498): Review questions — A.2 "Research/Script/Storyboard should completely independent context?" — answer: yes, separate package.
-- MiniMax API: OpenAI-compatible `https://api.minimax.io/v1/chat/completions`, Bearer `MINIMAX_API_KEY`, model `MiniMax-M2.7` (per platform.minimax.io docs).
-- GLM Coding Plan: OpenAI-compatible `https://api.z.ai/api/coding/paas/v4`, Bearer `ZAI_API_KEY` (use `GLM_API_KEY` env name for parity), model `glm-4.6` (per docs.z.ai/devpack).
+- MiniMax API: OpenAI-compatible `https://api.minimax.io/v1/chat/completions`, Bearer `MINIMAX_API_KEY`, model `MiniMax-M3` (per platform.minimax.io docs).
+- GLM Coding Plan: OpenAI-compatible `https://api.z.ai/api/coding/paas/v4`, Bearer `ZAI_API_KEY` (use `GLM_API_KEY` env name for parity), model `glm-5.3` (per docs.z.ai/devpack).
 - Repo state (verified 2026-09-20): v0.1 shipped — 17/17 todos, 68 tests passing, benchmark renders end-to-end. v0.1 outputs (`vf preview/final/validate/status/approve/reject/rollback/resume/new`) consumed unchanged.
 
 ## Decisions (with rationale)

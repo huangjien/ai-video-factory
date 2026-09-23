@@ -57,7 +57,7 @@ export async function runScript(opts: ScriptOptions): Promise<number> {
   const roleCfg = cfg["script"];
   const chosenName = opts.model ?? roleCfg.primary;
   const provider = providerInstance(chosenName);
-  const model = chosenName === "glm" ? "glm-4.6" : "MiniMax-M2.7";
+  const model = chosenName === "glm" ? "glm-5.3" : "MiniMax-M3";
 
   let researchContext: { markdown: string } | undefined;
   if (opts.fromResearch) {

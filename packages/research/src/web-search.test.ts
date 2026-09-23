@@ -24,12 +24,12 @@ describe("MiniMaxWebSearch (todo 2) — platform.minimax.io docs", () => {
   let responseBody: unknown = {
     organic: [
       {
-        url: "https://example.com/1",
+        link: "https://example.com/1",
         title: "First",
         snippet: "Snippet one",
       },
       {
-        url: "https://example.com/2",
+        link: "https://example.com/2",
         title: "Second",
         snippet: "Snippet two",
       },
@@ -70,7 +70,7 @@ describe("MiniMaxWebSearch (todo 2) — platform.minimax.io docs", () => {
     });
     statusToSend = 200;
     responseBody = {
-      organic: [{ url: "https://example.com/1", title: "First", snippet: "x" }],
+      organic: [{ link: "https://example.com/1", title: "First", snippet: "x" }],
       related_searches: [],
       base_resp: { status_code: 0, status_msg: "ok" },
     };
@@ -105,7 +105,7 @@ describe("MiniMaxWebSearch (todo 2) — platform.minimax.io docs", () => {
     process.env["MINIMAX_API_KEY"] = "test-key";
     responseBody = {
       organic: Array.from({ length: 25 }, (_, i) => ({
-        url: `https://example.com/${i}`,
+        link: `https://example.com/${i}`,
         title: `R${i}`,
         snippet: `S${i}`,
       })),

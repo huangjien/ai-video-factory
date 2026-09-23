@@ -66,6 +66,53 @@ describe("transition (todo 11) — §18.1", () => {
     ).toThrow(/illegal/);
   });
 
+  it("force-approve bypasses legality from any non-terminal state", () => {
+    const draft: MachineState = { status: "DRAFT", stage: "init" };
+    const out = transition(draft, { kind: "approve", force: true }, makeCtx());
+    expect(out.state.status).toBe("APPROVED");
+    expect(out.record.reason).toBe("approve [forced]");
+  });
+
+  it("force-approve refuses FINAL_APPROVED (terminal)", () => {
+    const final: MachineState = {
+      status: "FINAL_APPROVED",
+      stage: "final",
+    };
+    expect(() =>
+      transition(final, { kind: "approve", force: true }, makeCtx()),
+    ).toThrow(/illegal/);
+  });
+
+  it("reset rewinds any non-terminal state to DRAFT", () => {
+    const generating: MachineState = {
+      status: "GENERATING",
+      stage: "storyboard",
+    };
+    const out = transition(generating, { kind: "reset" }, makeCtx());
+    expect(out.state.status).toBe("DRAFT");
+    expect(out.record.reason).toBe("reset");
+  });
+
+  it("reset refuses FINAL_APPROVED without --force", () => {
+    const final: MachineState = {
+      status: "FINAL_APPROVED",
+      stage: "final",
+    };
+    expect(() => transition(final, { kind: "reset" }, makeCtx())).toThrow(
+      /illegal/,
+    );
+  });
+
+  it("reset with --force rewinds FINAL_APPROVED and marks [forced]", () => {
+    const final: MachineState = {
+      status: "FINAL_APPROVED",
+      stage: "final",
+    };
+    const out = transition(final, { kind: "reset", force: true }, makeCtx());
+    expect(out.state.status).toBe("DRAFT");
+    expect(out.record.reason).toBe("reset [forced]");
+  });
+
   it("every transition returns a TransitionRecord with run_id, actor, timestamps", () => {
     const cur: MachineState = { status: "DRAFT", stage: "init" };
     const { record } = transition(cur, { kind: "start" }, makeCtx("run-1"));

@@ -56,12 +56,12 @@ describe("MiniMaxProvider (todo 2) — platform.minimax.io docs", () => {
   it("sends Bearer auth and parses MiniMax response", async () => {
     process.env["MINIMAX_API_KEY"] = "test-key";
     const p = new MiniMaxProvider({ apiHost: baseUrl });
-    const r = await p.chat({ ...baseReq, model: "MiniMax-M2.7" });
+    const r = await p.chat({ ...baseReq, model: "MiniMax-M3" });
     expect(r.content).toBe("hello");
     expect(r.usage).toEqual({ input: 12, output: 7 });
     expect(lastAuth).toBe("Bearer test-key");
     const body = JSON.parse(lastBody ?? "{}");
-    expect(body.model).toBe("MiniMax-M2.7");
+    expect(body.model).toBe("MiniMax-M3");
     expect(body.messages[0].content).toBe("hi");
   });
 
@@ -102,11 +102,11 @@ describe("MiniMaxProvider (todo 2) — platform.minimax.io docs", () => {
     };
   });
 
-  it("default model is MiniMax-M2.7 when not specified", async () => {
+it("default model is MiniMax-M3 when not specified", async () => {
     process.env["MINIMAX_API_KEY"] = "test-key";
     const p = new MiniMaxProvider({ apiHost: baseUrl });
     await p.chat(baseReq);
     const body = JSON.parse(lastBody ?? "{}");
-    expect(body.model).toBe("MiniMax-M2.7");
+    expect(body.model).toBe("MiniMax-M3");
   });
 });

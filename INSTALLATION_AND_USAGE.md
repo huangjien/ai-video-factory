@@ -2,27 +2,29 @@
 
 Installation and usage manual for the current repository.
 
-AI Video Factory turns a structured storyboard into a 1920×1080 MP4. The
-workflow is:
+## Overview
+
+As of v0.4, AI Video Factory exposes only **three commands** — two LLM
+drafts of files humans edit, and one command that does the rest:
 
 ```text
-Storyboard YAML
-    ↓
-Validate
-    ↓
-Compile to VDSL / RenderPlan
-    ↓
-Remotion + FFmpeg
-    ↓
-Preview MP4
-    ↓
-Human review
-    ↓
-Final MP4
+topic  ──►  vf draft  ──►  article.md  ──┐
+                                         │  human edits
+                              ◄── vf audio-plan
+                                         │
+                                         ▼
+                                       vf make  ──►  preview.mp4
+                                                  ►  final-mixed.mp4
 ```
 
-The repository also contains optional AI agents for research, script writing,
-storyboard generation, review, and YouTube metadata.
+The two human-edit files are **`article.md`** (narrative + a Scenes YAML
+block) and **`audio-config.yaml`** (voice / bgm / sfx / fades). Everything
+else is derived; `vf make` is idempotent — it skips a step when its
+output is newer than its inputs (`--dry-run` shows what it would do).
+
+Legacy multi-stage commands (`vf research` / `vf script` / `vf storyboard`
+/ `vf audio` / `vf approve` / `vf reject` / `vf rollback` etc.) remain
+working but are **not recommended for new projects**; see §8 and §12.8.
 
 ## 1. Requirements
 
@@ -234,111 +236,103 @@ The current component registry includes `Title`, `Paragraph`, `Image`,
 `CodeBlock`, `Terminal`, `Callout`, `FlowChart`, `Timeline`, `Comparison`,
 and `EndCard`.
 
-## 6. Core local workflow
+## 6. Core local workflow (v0.4 recommended)
 
-### 6.1 Validate
+The new local flow is collapsed to a single `vf make` command.
 
-Validate the storyboard and its assets:
-
-```bash
-node packages/cli/dist/index.js validate \
-  projects/demo/storyboard/storyboard.yaml \
-  --root projects/demo
-```
-
-On success, the command exits with code `0`. On failure it reports the file,
-line, field, and validation error.
-
-### 6.2 Check status
+### 6.1 One-time prep: `article.md` + `audio-config.yaml`
 
 ```bash
-node packages/cli/dist/index.js status --cwd projects/demo
+vf new my-topic
+vf draft "my-topic"           # → projects/<slug>/article.md
+vf audio-plan my-topic        # → projects/<slug>/audio-config.yaml
+
+# Then human edits:
+$EDITOR projects/<slug>/article.md
+$EDITOR projects/<slug>/audio-config.yaml
 ```
 
-The status command shows the current stage, checkpoint, and workflow state.
-
-### 6.3 Review the source
-
-Review and edit `storyboard/storyboard.yaml` after validation. The initial
-scaffold is in `DRAFT`; the CLI's first approval gate is created after a
-successful preview render. Agents and renderers do not publish or make the
-final decision automatically.
-
-### 6.4 Render a preview
+### 6.2 Render with one command: `vf make`
 
 ```bash
-node packages/cli/dist/index.js preview demo
+vf make my-topic              # TTS → audio assets → render → mix
+vf make my-topic --fake       # offline: write silent placeholder WAVs (no Edge TTS)
+vf make my-topic --dry-run    # print what would run, do not execute
 ```
-
-This performs validation, compilation, Remotion rendering, and FFmpeg
-faststart processing. The positional `demo` is the project slug (the
-project dir name) — equivalent to passing `--cwd projects/demo`. The
-shorter form works when there's exactly one project to disambiguate; use
-`--cwd` explicitly when multiple exist.
 
 Outputs:
 
 ```text
-projects/demo/output/preview.mp4
-projects/demo/output/preview-faststart.mp4
+projects/<slug>/output/preview.mp4           # visual preview
+projects/<slug>/output/preview-faststart.mp4 # same, faststart metadata
+projects/<slug>/output/final-mixed.mp4       # narration + BGM + SFX — the publishable artifact
+projects/<slug>/assets/audio/scene_*.wav
+projects/<slug>/assets/audio-assets/{bgm,sfx}/*.wav
+projects/<slug>/captions/<lang>.srt
 ```
 
-The preview command moves the project to the `review` stage with status
-`WAITING_REVIEW`.
+### 6.3 Re-run after editing
 
-### 6.5 Approve review and render final
+`vf make` is **idempotent** — outputs newer than inputs are skipped. So
+when you edit either human-edit file and re-run, only the affected step
+re-executes:
 
 ```bash
-node packages/cli/dist/index.js approve review demo
-node packages/cli/dist/index.js final demo
+# You changed only audio-config.yaml's BGM tag
+vf make my-topic
+# → skips already-fresh TTS + preview; re-runs audio-assets + mix
 ```
 
-Final outputs:
-
-```text
-projects/demo/output/final.mp4
-projects/demo/output/final-faststart.mp4
-```
-
-`final` requires the `review` checkpoint to be `APPROVED`. A successful final
-render sets the project state to `FINAL_APPROVED`.
-
-## 7. Editing, rejection, rollback, and resume
-
-Edit the storyboard directly with any text editor, then validate and preview
-again:
+### 6.4 Validate the lower-level format (optional)
 
 ```bash
 node packages/cli/dist/index.js validate \
-  projects/demo/storyboard/storyboard.yaml --root projects/demo
-node packages/cli/dist/index.js preview --cwd projects/demo
+  projects/<slug>/storyboard/storyboard.yaml \
+  --root projects/<slug>
 ```
 
-Reject the current checkpoint with a reason:
+Reports file / line / field / reason on errors.
+
+### 6.5 Legacy core workflow (preserved as back-compat path)
+
+For old projects still using the multi-stage pipeline:
 
 ```bash
-node packages/cli/dist/index.js reject wrong-pacing --cwd projects/demo
+vf preview --cwd projects/<slug>   # render preview.mp4
+vf final   --cwd projects/<slug>   # render final.mp4 (requires review APPROVED)
 ```
 
-Typical reason values are `wrong-content`, `wrong-pacing`, `wrong-style`,
-`missing-information`, or another short descriptive value.
+See §12.8 for the full legacy flow. New projects should not need §6.5.
 
-Rollback requires interactive confirmation:
+## 7. Editing, iteration, and recovery
+
+The new flow no longer needs `approve` / `reject` / `rollback` — **edit
+the file, re-run `vf make`**:
 
 ```bash
-node packages/cli/dist/index.js rollback storyboard-v2 --cwd projects/demo
+# Tweaked a narrative section in article.md
+$EDITOR projects/<slug>/article.md
+vf make <slug>          # only TTS + render + mix re-execute (rest is skipped)
+
+# Tweaked audio-config.yaml
+$EDITOR projects/<slug>/audio-config.yaml
+vf make <slug>          # only audio-assets + mix re-execute
 ```
 
-Rollback changes the active workflow state and does not delete Git history or
-existing output files. Re-run validation and preview after inspecting the
-selected checkpoint.
+`vf make` does not produce a review checkpoint — its output,
+`final-mixed.mp4`, is the publishable artifact.
 
-Resume reports the current stage and Git commit so you can continue the
-appropriate command after an interruption:
+### 7.1 Legacy workflow commands (still available, back-compat only)
 
 ```bash
-node packages/cli/dist/index.js resume --cwd projects/demo
+vf status   --cwd projects/<slug>             # stage + checkpoint summary
+vf reject   wrong-pacing --cwd projects/<slug>
+vf rollback storyboard-v2 --cwd projects/<slug>   # interactive confirmation
+vf resume   --cwd projects/<slug>             # stage + git commit
 ```
+
+`vf rollback` does not delete Git history or existing outputs. After a
+rollback, re-run `vf validate` + `vf preview` (or simply `vf make`).
 
 ## 8. Optional AI workflow
 
@@ -375,212 +369,226 @@ To use a custom routing file:
 export LL_CONFIG="$PWD/llm.config.yaml"
 ```
 
-### Research
+### v0.4 recommended: `vf draft` + `vf audio-plan`
+
+The new AI workflow collapses to two commands producing the two human-edit
+files:
 
 ```bash
-node packages/cli/dist/index.js research "AI Agent Memory"
+# 1. Write article.md (consolidated narrative + Scenes YAML block)
+vf draft "AI Agent Memory"
+vf draft "AI Agent Memory" --no-web
+vf draft "AI Agent Memory" --model glm --lang zh-CN --duration 60 --audience developers
+vf draft "AI Agent Memory" --from outline.md   # revise an existing outline
+
+# 2. Write audio-config.yaml from the parsed article
+vf audio-plan ai-agent-memory
 ```
 
 Outputs:
 
 ```text
-projects/ai-agent-memory/research/research.md
-projects/ai-agent-memory/research/sources.yaml
-projects/ai-agent-memory/research/claims.yaml
+projects/<slug>/article.md           # human edits: narrative + Scenes YAML
+projects/<slug>/audio-config.yaml    # human edits: voice / bgm / sfx / fades
 ```
 
-Useful options:
+After human edits to these two files, `vf make <slug>` produces the
+publishable mp4 in a single command.
+
+### Legacy AI agents (still available, for old projects only)
+
+If your project is already using the old multi-stage format, the commands
+below still work — but **new projects should use `vf draft` +
+`vf audio-plan`** instead.
+
+| Old command                 | Output                                                   | Replaced by           |
+| --------------------------- | -------------------------------------------------------- | --------------------- |
+| `vf research`               | `research/{research.md,sources.yaml,claims.yaml}`        | `vf draft`            |
+| `vf script`                 | `script/script.<lang>.md`                                | `vf draft`            |
+| `vf storyboard`             | `storyboard/storyboard.yaml`                             | `vf draft` (in scope) |
+| `vf review`                 | `review/{content,visual,technical}-review.yaml`          | removed — humans ARE the reviewer |
+
+Reference flags for the legacy commands:
 
 ```bash
-vf research "AI Agent Memory" --no-web
-vf research "AI Agent Memory" --model glm --lang zh-CN --duration 60 --audience developers
-```
+# Research — web search optional; model optional; duration up to 60s
+vf research "AI Agent Memory" --no-web --model glm --duration 60 --lang zh-CN --audience developers
 
-Review the generated sources and claims before using them downstream.
-
-### Script
-
-```bash
+# Script — default spine Hook → Problem → Explanation → Example → Comparison → Implication → Conclusion
 vf script "AI Agent Memory" \
-  --from-research projects/ai-agent-memory/research \
-  --duration 60 \
-  --lang zh-CN
-```
+  --from-research projects/<slug>/research \
+  --duration 60 --lang zh-CN
 
-Output:
-
-```text
-projects/ai-agent-memory/script/script.zh-CN.md
-```
-
-The default script structure is Hook → Problem → Explanation → Example →
-Comparison → Implication → Conclusion. The Markdown file can be edited before
-it is passed to the storyboard agent.
-
-### Storyboard agent
-
-```bash
+# Storyboard — human must review the YAML before rendering
 vf storyboard "AI Agent Memory" \
-  --from-research projects/ai-agent-memory/research \
-  --from-script projects/ai-agent-memory/script/script.zh-CN.md \
-  --duration 60 \
-  --style dark-tech
+  --from-research projects/<slug>/research \
+  --from-script    projects/<slug>/script/script.zh-CN.md \
+  --duration 60 --style dark-tech
+
+# Review — read-only, does not modify the project
+vf review <slug>
 ```
-
-The agent writes `storyboard/storyboard.yaml`. Validate and manually approve
-the result before rendering.
-
-### Review agent
-
-```bash
-vf review ai-agent-memory
-```
-
-This writes:
-
-```text
-review/content-review.yaml
-review/visual-review.yaml
-review/technical-review.yaml
-```
-
-The review agent is advisory and read-only. It does not approve, reject, or
-modify the project automatically.
 
 ### YouTube package
 
-```bash
-vf youtube ai-agent-memory
-```
-
-This writes title, description, chapters in WebVTT format, a package YAML,
-thumbnail prompt, and Shorts hook under `youtube/`. It does not upload to
-YouTube or generate the thumbnail/Shorts MP4.
-
-## 9. Voice and subtitles
-
-The audio command requires a storyboard and a generated script:
+Not part of `vf make`; invoke separately when needed:
 
 ```bash
-vf script "AI Agent Memory"
-vf audio ai-agent-memory
+vf youtube <slug>
 ```
 
-**`vf script` works with or without `--from-research`**: when omitted, the
-script agent drafts from the topic alone. When you pass
-`--from-research <dir>`, it injects `research/research.md` + `research/claims.yaml`
-as supporting context (production-quality output). If the path is missing
-`research.md`, the command fails with a readable hint pointing you to
-`vf research <topic>`.
+Writes title, description, WebVTT chapters, package YAML, thumbnail
+prompt, and Shorts hook under `youtube/`. Does **not** upload to YouTube
+nor generate the thumbnail / Shorts MP4 (those come from `vf thumbnail`
+and `vf shorts` — see §12.5).
 
-The default provider is Edge TTS and does not require an API key. It uses an
-online Microsoft Edge TTS endpoint, so it requires network access and may be
-rate-limited or unavailable offline. It is not an offline engine.
+## 9. Voice, subtitles, and audio (v0.4)
 
-For offline tests:
+### 9.1 Recommended: subsumed into `vf make`
+
+As of v0.4, TTS, BGM/SFX assets, mixing, and SRT subtitles are all
+produced by `vf make` in one invocation — no need for separate `vf audio`,
+`vf audio-asset`, or `vf mix` calls:
 
 ```bash
-vf audio ai-agent-memory --fake
+vf make <slug>           # real Edge TTS (requires network)
+vf make <slug> --fake    # silent placeholder WAVs (offline / CI-friendly)
 ```
+
+Default provider is Edge TTS (free, no API key). It depends on the
+online Microsoft Edge TTS endpoint — rate limits and network failures
+apply.
 
 Outputs:
 
 ```text
-projects/ai-agent-memory/assets/audio/scene-01.wav
-projects/ai-agent-memory/captions/zh-CN.srt
+projects/<slug>/assets/audio/scene_*.wav
+projects/<slug>/assets/audio-assets/bgm/<tag>.wav
+projects/<slug>/assets/audio-assets/sfx/<tag>.wav
+projects/<slug>/captions/<lang>.srt
 ```
 
-The command maps script sections to scenes and generates one WAV per scene.
-To include the generated audio in the preview, ensure the corresponding scene
-has an audio path:
+The `.srt` file is SRT-formatted (despite the extension), drop-in
+compatible with most subtitle workflows.
+
+### 9.2 Inter-sentence pauses (`pause_between_sentences_sec`)
+
+Insert silence between sentences in TTS output by setting a single
+field in `audio-config.yaml`:
 
 ```yaml
-narration:
-  text: "Scene narration"
-  audio: assets/audio/scene-01.wav
+voice: zh-CN-XiaoxiaoNeural
+bgm: "calm"
+bgm_fade_in_sec: 1.5
+bgm_fade_out_sec: 2
+pause_between_sentences_sec: 1     # 1-second pause after every sentence
+sfx: {}
 ```
 
-The audio path is resolved relative to the project root.
+- Range `0–5` seconds; `0` disables.
+- Implementation: `vf make` wraps the text in `<speak>...</speak>`
+  SSML with `<break time="Nms"/>` after each `.`, `!`, `?`, `。`, `！`,
+  `？`. Edge TTS treats each `break` as literal silence in the audio.
+- Typical values: `0.5–1.0` sec. `vf audio-plan` defaults to `0`;
+  if a scene has 2+ sentences and you want clearer pacing, bump it up.
+- Editing only this field and re-running `vf make` re-executes just the
+  TTS step; mix/preview outputs are skipped because nothing they
+  depend on changed.
 
-Although Edge TTS has no direct API charge, commercial redistribution and
-long-term production use should be checked against the service terms. Use the
-TTS provider interface to replace it when a formally licensed production
-provider is required.
+### 9.3 Edge TTS caveats
+
+Edge TTS has no direct API charge, but commercial redistribution and
+long-term production use should be checked against the service terms. To
+replace with a formally licensed provider (MiniMax TTS, ElevenLabs,
+etc.), implement the `TTSProvider` interface in `@vf/tts` and pass it to
+`vf make` (CLI integration in a follow-up).
+
+### 9.4 Legacy `vf audio` command (still available)
+
+The old `vf audio <slug>` reads `storyboard/storyboard.yaml`'s
+`narration.text` and writes WAVs + a captions SRT. `vf make` runs the
+same logic internally against `article.md` instead. Use the legacy
+command only if you have a pre-existing storyboard without an article.
 
 ## 10. Project artifacts and provenance
 
-Important files:
+### v0.4 recommended layout
 
 ```text
-project.yaml                 project metadata
-storyboard/storyboard.yaml   human-editable source
-vdsl/vdsl.yaml               normalized compiled VDSL
-state.yaml                   active workflow state
-checkpoints/                 approval and invalidation records
-runs/<run-id>.yaml           execution and provenance records
-assets/                      audio, images, screenshots, and fonts
-output/                      preview and final MP4 files
+projects/<slug>/
+├── project.yaml                     project metadata
+├── article.md                       ⭐ human edits: narrative + Scenes YAML (vf draft writes)
+├── audio-config.yaml                ⭐ human edits: voice / bgm / sfx / fades (vf audio-plan writes)
+├── storyboard/storyboard.yaml       read by the renderer (vf make derives internally)
+├── vdsl/vdsl.yaml                   normalized compiled VDSL
+├── state.yaml                       state (legacy workflow; new flow can ignore)
+├── checkpoints/                     audit trail from the legacy workflow
+├── runs/<run-id>.yaml               per-LLM/tool-call run records
+├── assets/
+│   ├── audio/scene_*.wav           per-scene TTS (vf make writes)
+│   └── audio-assets/{bgm,sfx}/     BGM/SFX assets (vf make writes)
+├── captions/<lang>.srt              subtitles (vf make writes)
+└── output/
+    ├── preview.mp4                  vf make writes
+    ├── preview-faststart.mp4        vf make writes
+    └── final-mixed.mp4              ⭐ publishable artifact (vf make writes)
 ```
 
-Run records include the stage, tool, input/output files, Git commit when
-available, timestamp, status, and—in AI runs—provider, model, token usage,
-prompt hash, and estimated cost.
+`⭐` marks the two human-edit files; everything else is derived.
 
-Keep API keys outside the project tree. Do not commit `.env` files, raw
-credentials, or private source material.
+### Run record fields
 
-## 11. Troubleshooting
+`runs/<run-id>.yaml` entries carry `provider`, `model`, `tokens`
+(`{input, output}`), `prompt_hash`, `estimated_cost_usd`,
+`input_files`, `output_files` references, and an ISO timestamp.
 
-### `ffmpeg: command not found` or `ffprobe: command not found`
-
-Install FFmpeg and confirm it is on `PATH`:
-
-```bash
-which ffmpeg
-which ffprobe
-```
-
-### `Cannot find module .../dist/index.js`
-
-Build the workspace:
-
-```bash
-npm run build
-```
-
-### `MINIMAX_API_KEY not set` or `GLM_API_KEY not set`
-
-Export the required key in the same shell that runs the command. The AI
-commands cannot run without a provider key.
+**Never** commit API keys, `.env`, private source material, tokens, or
+cookies.
 
 ### Validation reports a missing asset
 
-Paths such as `assets/audio/scene-01.wav` are relative to the project root,
-not the directory containing the YAML file. Check the path and run:
+Paths such as `assets/audio/scene_01.wav` are relative to the project
+root, not the directory containing the YAML file. Check the path and run:
 
 ```bash
 vf validate projects/demo/storyboard/storyboard.yaml --root projects/demo
 ```
 
-### `final` says review is not approved
+### `vf make` complains about missing files
 
-Run:
+`vf make` needs both `article.md` and `audio-config.yaml` at
+`projects/<slug>/`. The error surfaces a hint for each missing file:
+
+```text
+article.md not found at .../article.md
+# hint: run `vf draft <topic>` first
+
+audio-config.yaml not found at .../audio-config.yaml
+# hint: run `vf draft <topic>` first   # (yes, both files come out of vf draft + vf audio-plan together)
+```
+
+Run `vf draft <topic>` and `vf audio-plan <topic>` first, then re-run
+`vf make`.
+
+### Edge TTS fails
+
+Check network access, retry later, or fall back to offline mode:
+
+```bash
+vf make <project> --fake
+```
+
+### Legacy `final` says review is not approved
+
+If you still have old code paths hitting `vf final` directly:
 
 ```bash
 vf status --cwd projects/demo
 vf approve review --cwd projects/demo
 ```
 
-Then retry `vf final --cwd projects/demo`.
-
-### Edge TTS fails
-
-Check network access, retry later, or use a prepared/local audio file. For
-offline CI use:
-
-```bash
-vf audio <project> --fake
-```
+Then retry `vf final --cwd projects/demo`. New code should not hit this
+— `vf make` does not require an approve step.
 
 ### Remotion cannot find a port
 
@@ -590,8 +598,30 @@ loopback sockets are permitted.
 
 ## 12. Step-by-step: create a video from a topic
 
-This is the canonical end-to-end walkthrough. Every command runs locally;
-no cloud account is required unless you opt into the AI provider flags.
+### 12.0 Recommended: 3-command minimal API (v0.4+)
+
+The entire pipeline is **3 commands + 2 human-edit files + 1 rendered
+output**:
+
+1. `vf draft <topic>` → writes `article.md` (LLM consolidates research + script + storyboard)
+2. `vf audio-plan <project>` → writes `audio-config.yaml` (LLM produces voice / BGM / SFX suggestion based on the article)
+3. `vf make <project>` → everything else: TTS → audio assets → render → mix → mp4
+
+```
+┌────────────────────────────────────────────────────────────────┐
+│  topic  ──►  vf draft  ──►  article.md  ──┐                   │
+│                                          │  human edits      │
+│                                          ▼                   │
+│                                 audio-config.yaml ◄─ vf audio-plan
+│                                          │                   │
+│                                          ▼                   │
+│                                        vf make  ──►  preview.mp4
+│                                                 ►  final-mixed.mp4
+└────────────────────────────────────────────────────────────────┘
+```
+
+`vf make` is **idempotent** — outputs newer than inputs are skipped. Use
+`--dry-run` to preview what would run without executing.
 
 ### 12.1 One-time setup
 
@@ -608,142 +638,157 @@ npm run build
 ### 12.2 Scaffold a project
 
 ```bash
-# Pick a topic slug (the project directory will be projects/<slug>/).
 TOPIC="ai-thinking"
-bin/video new "$TOPIC"
-# Creates:
-#   projects/<slug>/project.yaml
-#   projects/<slug>/storyboard/storyboard.yaml    (template — 2 scenes)
-#   projects/<slug>/script/script.zh-CN.md        (template)
-#   projects/<slug>/state.yaml
-#   projects/<slug>/runs/, checkpoints/, output/, assets/, etc.
+vf new "$TOPIC"
+# Creates projects/<slug>/ with:
+#   project.yaml
+#   storyboard/storyboard.yaml    (template — 2 scenes, used by vf make rendering)
+#   state.yaml
+#   runs/, checkpoints/, output/, assets/, etc.
 ```
 
-### 12.3 AI-driven path (recommended): research → script → storyboard
+### 12.3 Two LLM commands (the recommended path)
 
-Requires `MINIMAX_API_KEY` and/or `GLM_API_KEY` in your environment.
+Requires `GLM_API_KEY` (default) or `MINIMAX_API_KEY` in the environment.
 
 ```bash
-# 1. Research — produces research/{research.md, sources.yaml, claims.yaml}
-bin/video research "$TOPIC"
-
-# 2. Script — produces script/script.zh-CN.md (7-section spine)
-bin/video script "$TOPIC" --from-research "projects/$TOPIC/research"
-
-# 3. Storyboard — produces storyboard/storyboard.yaml (VDSL format)
-bin/video storyboard "$TOPIC" \
-  --from-research "projects/$TOPIC/research" \
-  --from-script    "projects/$TOPIC/script/script.zh-CN.md"
+# 1. Draft — writes article.md (combines research + script + storyboard in one)
+#    Output: projects/<slug>/article.md
+#      - YAML frontmatter (project / language / duration_target_sec / voice)
+#      - # <title> + > **Hook**
+#      - ## <n>. <Section> + <body> paragraphs (human-editable)
+#      - ## Scenes  fenced YAML block (drives downstream tools)
+vf draft "$TOPIC"                    # default: enable MiniMax web search
+vf draft "$TOPIC" --no-web            # disable web, model knowledge only
+vf draft "$TOPIC" --model glm --duration 40 --lang zh-CN --audience developers
+vf draft "$TOPIC" --from outline.md  # revise from an existing outline
 ```
 
-If you don't have API keys set, skip steps 1–3 and write `storyboard.yaml`
-by hand using the format in section 5.
-
-### 12.4 Voice and audio assets
-
 ```bash
-# 4. TTS per scene — produces assets/audio/scene-NN.wav
-bin/video audio "$TOPIC"           # uses Edge TTS (free, no key needed)
-                                  # pass --fake to skip Edge TTS and write silent WAVs
-
-# 5. Background music + sound effects — produces assets/audio-assets/
-bin/video audio-asset "$TOPIC" --bgm calm --sfx whoosh
-# Writes a deterministic silent WAV per tag (mock provider).
-# For real music/SFX, drop files into projects/$TOPIC/assets/audio-assets/
-# matching the tag name and re-run with --bgm-dir/--sfx-dir.
-
-# 6. (optional) Tell the mixer what SFX cues trigger on which scene and
-#    how long the BGM fades. Create projects/$TOPIC/audio-assets/mix.yaml:
-cat > "projects/$TOPIC/audio-assets/mix.yaml" <<'YAML'
-bgm: calm
-sfx:
-  scene_2: whoosh
-bgm_fade_in_sec: 1.5
-bgm_fade_out_sec: 2
-YAML
+# 2. Audio-plan — reads article.md's scenes, writes audio-config.yaml
+#    One file holds all audio knobs (voice / bgm tag / sfx cues / fades)
+vf audio-plan "$TOPIC"
 ```
 
-### 12.5 Render and ship
+Then human edits the two files:
 
 ```bash
-# 7. Review — generates review/{content-review,visual-review,technical-review}.yaml
-bin/video review "$TOPIC"
-
-# 8. Preview — renders output/preview-faststart.mp4 (silent or TTS audio)
-bin/video preview
-
-# 9. Approve review (human gate — the AI never approves itself)
-bin/video approve review
-
-# 10. Final + audio mix — produces output/final-mixed.mp4 (narration + BGM + SFX)
-bin/video final --mix
+$EDITOR "projects/$TOPIC/article.md"          # narrative, scene tweaks, durations
+$EDITOR "projects/$TOPIC/audio-config.yaml"   # BGM tag, SFX cues, fades
 ```
 
-The published artifact at this point is `projects/$TOPIC/output/final-mixed.mp4`.
-
-### 12.6 Publishing package + thumbnails + Shorts
+### 12.4 Render with one command
 
 ```bash
-# 11. YouTube package — title, description, chapters.vtt, thumbnail prompt,
-#     shorts hook. Produces files under projects/$TOPIC/youtube/.
-bin/video youtube "$TOPIC"
+vf make "$TOPIC"                       # TTS → audio assets → render → mix (real Edge TTS)
+vf make "$TOPIC" --fake                # FakeTTSProvider (no network; silent placeholder WAVs)
+vf make "$TOPIC" --dry-run             # print which steps would run; do not execute
+```
 
-# 12. Thumbnail — uses mock by default; pass --provider minimax for real AI
-bin/video thumbnail "$TOPIC"
+Outputs:
+
+```text
+projects/$TOPIC/output/preview.mp4           # visual preview
+projects/$TOPIC/output/preview-faststart.mp4 # same, faststart metadata
+projects/$TOPIC/output/final-mixed.mp4       # narration + BGM + SFX — publishable artifact
+projects/$TOPIC/assets/audio/scene_*.wav
+projects/$TOPIC/assets/audio-assets/bgm/*.wav
+projects/$TOPIC/assets/audio-assets/sfx/*.wav
+projects/$TOPIC/captions/<lang>.srt
+```
+
+Not happy? Edit either human-edit file and re-run `vf make` — only the
+affected steps re-execute.
+
+### 12.5 Optional: YouTube package + thumbnail + Shorts
+
+Publishing metadata is not part of `vf make`; invoke separately:
+
+```bash
+# YouTube text package — title, description, chapters.vtt, thumbnail prompt, Shorts hook
+vf youtube "$TOPIC"
+# Prefers article.md (the new minimal artifact); falls back to legacy
+# research.md + script.md + storyboard.yaml for old projects.
+# → projects/$TOPIC/youtube/{title.txt,description.md,chapters.vtt,thumbnail-prompt.txt,shorts-hook.txt}
+
+# Thumbnail — uses mock by default; pass --provider minimax for real AI
+vf thumbnail "$TOPIC"
 # → projects/$TOPIC/youtube/thumbnail.png (1280x720)
 
-# 13. Shorts clip — extracts a vertical 9:16 segment from final-faststart.mp4
-bin/video shorts "$TOPIC"
+# Shorts clip — extracts a vertical 9:16 segment from final-mixed.mp4
+vf shorts "$TOPIC"
 # → projects/$TOPIC/youtube/shorts.mp4
-
-# Add --provider minimax to both for real AI (needs MINIMAX_API_KEY + quota):
-#   bin/video thumbnail "$TOPIC" --provider minimax
-#   bin/video shorts "$TOPIC"     --provider minimax
 ```
 
-### 12.7 Inspect what shipped
+`vf youtube` no longer requires the legacy `research/`, `script/`, and
+`storyboard/storyboard.yaml` triple to exist — if `article.md` is present,
+it derives the title, hook, sections, and chapter timings from there.
+
+Add `--provider minimax` to both for real AI (needs `MINIMAX_API_KEY` + quota):
 
 ```bash
-bin/video status                  # per-stage checklist + current checkpoint
-ls "projects/$TOPIC/output/"
-ls "projects/$TOPIC/youtube/"
-ls "projects/$TOPIC/runs/"         # one run record per agent invocation
+vf thumbnail "$TOPIC" --provider minimax
+vf shorts "$TOPIC"     --provider minimax
 ```
 
-### 12.8 The canonical end-to-end in one block
+### 12.6 Inspect what shipped
 
-A copy-paste-runnable summary (assumes `bin/video` is on PATH and you have
-the API keys for steps 3–5; otherwise replace those with hand-written
-content):
+```bash
+ls "projects/$TOPIC/output/"
+ls "projects/$TOPIC/assets/audio/"
+ls "projects/$TOPIC/assets/audio-assets/"
+ls "projects/$TOPIC/captions/"
+ls "projects/$TOPIC/runs/"            # one run record per LLM/tool call
+```
+
+### 12.7 The canonical end-to-end in one block
+
+A copy-paste-runnable summary (assumes `vf` is on PATH and `GLM_API_KEY`
+is set; replace with `--fake` if offline):
 
 ```bash
 TOPIC="ai-thinking"
-bin/video new "$TOPIC"
-bin/video research "$TOPIC"
-bin/video script "$TOPIC" --from-research "projects/$TOPIC/research"
-bin/video storyboard "$TOPIC" \
-  --from-research "projects/$TOPIC/research" \
-  --from-script    "projects/$TOPIC/script/script.zh-CN.md"
-bin/video audio "$TOPIC"
-bin/video audio-asset "$TOPIC" --bgm calm --sfx whoosh
-cat > "projects/$TOPIC/audio-assets/mix.yaml" <<'YAML'
-bgm: calm
-sfx:
-  scene_2: whoosh
-bgm_fade_in_sec: 1.5
-bgm_fade_out_sec: 2
-YAML
-bin/video review "$TOPIC"
-bin/video preview
-bin/video approve review
-bin/video final --mix
-bin/video youtube "$TOPIC"
-bin/video thumbnail "$TOPIC"
-bin/video shorts "$TOPIC"
+vf new "$TOPIC"
+vf draft "$TOPIC"
+vf audio-plan "$TOPIC"
+
+# Human edits (any editor)
+$EDITOR "projects/$TOPIC/article.md"
+$EDITOR "projects/$TOPIC/audio-config.yaml"
+# Want a 1-second pause between every sentence? Add it to audio-config.yaml:
+#   echo 'pause_between_sentences_sec: 1' >> "projects/$TOPIC/audio-config.yaml"
+
+vf make "$TOPIC"                  # → preview.mp4 + final-mixed.mp4
+
+# Optional
+vf youtube "$TOPIC"               # works directly off article.md
+vf thumbnail "$TOPIC"
+vf shorts "$TOPIC"
 ```
 
-The output is `projects/$TOPIC/output/final-mixed.mp4` plus a YouTube
-publishing package under `projects/$TOPIC/youtube/`.
+The publishable artifact is `projects/$TOPIC/output/final-mixed.mp4`
+plus the YouTube package under `projects/$TOPIC/youtube/`.
+
+### 12.8 Legacy multi-command pipeline (preserved as back-compat)
+
+The old per-stage commands (`vf research` / `vf script` / `vf storyboard`
+/ `vf audio` / `vf audio-asset` / `vf mix` / `vf review` / `vf approve`
+/ `vf reject` / `vf rollback` / `vf preview` / `vf final`) still work —
+new projects **should not use them**. The new `vf draft` + `vf
+audio-plan` + `vf make` subsume them:
+
+| Old command                                       | New replacement                                                 |
+| ------------------------------------------------- | --------------------------------------------------------------- |
+| `vf research` / `vf script` / `vf storyboard`      | `vf draft` (one output = `article.md`)                          |
+| `vf audio`                                         | subsumed by `vf make`                                           |
+| `vf audio-asset`                                   | subsumed by `vf make`                                           |
+| `vf mix`                                           | subsumed by `vf make`                                           |
+| `vf preview` + `vf final`                          | unified into `vf make`                                          |
+| `vf approve` / `vf reject` / `vf rollback`         | not needed — edit `article.md` / `audio-config.yaml` and re-run `vf make` |
+
+If your project is already on the old format (`research/`, `script/`,
+`storyboard.yaml`), it continues to work; an optional `vf migrate <project>`
+helper to consolidate them into `article.md` can ship in a follow-up.
 
 ## 13. Verifying with the acceptance audit
 

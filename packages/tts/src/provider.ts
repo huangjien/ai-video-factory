@@ -2,6 +2,9 @@ export interface TTSRequest {
   text: string;
   voice: string;
   language: "zh-CN" | "en-US" | (string & {});
+  /** When > 0, providers insert SSML `<break>` between sentences.
+   * Honored by EdgeTTSProvider; defaults to 0 (no pause). */
+  pauseBetweenSentencesSec?: number;
 }
 
 export interface TTSWord {

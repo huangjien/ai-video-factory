@@ -50,7 +50,7 @@ function pickNarrations(projectRoot: string): string[] {
     );
   }
   const files = readdirSync(audioDir)
-    .filter((f) => /^scene-\d+\.wav$/.test(f))
+    .filter((f) => /^scene[-_]\d+\.wav$/.test(f))
     .sort()
     .map((f) => path.join(audioDir, f));
   if (files.length === 0) {

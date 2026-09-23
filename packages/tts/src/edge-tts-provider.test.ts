@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { EdgeTTSProvider } from "./edge-tts.js";
+import { EdgeTTSProvider, injectSsmlBreaks } from "./edge-tts.js";
 
 /**
  * The real EdgeTTSProvider talks to Microsoft's online TTS service via the
@@ -141,6 +141,93 @@ describe("EdgeTTSProvider.synthesize (mocked edge-tts-universal)", () => {
     await expect(
       p.synthesize({ text: "x", voice: "v", language: "en-US" }),
     ).rejects.toThrow(/network down/);
+  });
+
+  it("injects SSML <break> when pauseBetweenSentencesSec > 0", async () => {
+    synthesizeMock.mockResolvedValue({ audio: blobOf([0]), subtitle: [] });
+    const p = new EdgeTTSProvider();
+    await p.synthesize({
+      text: "今天天气好。我们去公园。",
+      voice: "zh-CN-XiaoxiaoNeural",
+      language: "zh-CN",
+      pauseBetweenSentencesSec: 1.0,
+    });
+    const sent = lastConstructorArgs?.[0] ?? "";
+    expect(sent).toContain("<speak");
+    expect(sent).toContain(`<break time="1000ms"/>`);
+    expect(sent).toContain("今天天气好。");
+    expect(sent).toContain("我们去公园。");
+  });
+
+  it("does NOT inject SSML when pauseBetweenSentencesSec is 0 or undefined", async () => {
+    synthesizeMock.mockResolvedValue({ audio: blobOf([0]), subtitle: [] });
+    const p = new EdgeTTSProvider();
+    await p.synthesize({
+      text: "今天天气好。我们去公园。",
+      voice: "zh-CN-XiaoxiaoNeural",
+      language: "zh-CN",
+    });
+    expect(lastConstructorArgs?.[0]).toBe("今天天气好。我们去公园。");
+
+    await p.synthesize({
+      text: "今天天气好。我们去公园。",
+      voice: "zh-CN-XiaoxiaoNeural",
+      language: "zh-CN",
+      pauseBetweenSentencesSec: 0,
+    });
+    expect(lastConstructorArgs?.[0]).toBe("今天天气好。我们去公园。");
+  });
+
+  it("passes raw SSML through unchanged when caller already built it", async () => {
+    synthesizeMock.mockResolvedValue({ audio: blobOf([0]), subtitle: [] });
+    const p = new EdgeTTSProvider();
+    const raw = "<speak>custom</speak>";
+    await p.synthesize({
+      text: raw,
+      voice: "v",
+      language: "en-US",
+      pauseBetweenSentencesSec: 1.0,
+    });
+    expect(lastConstructorArgs?.[0]).toBe(raw);
+  });
+
+  it("rounds pauseMs to whole milliseconds in the SSML", async () => {
+    synthesizeMock.mockResolvedValue({ audio: blobOf([0]), subtitle: [] });
+    const p = new EdgeTTSProvider();
+    await p.synthesize({
+      text: "Hi there. World.",
+      voice: "v",
+      language: "en-US",
+      pauseBetweenSentencesSec: 0.5,
+    });
+    expect(lastConstructorArgs?.[0]).toContain(`<break time="500ms"/>`);
+  });
+});
+
+describe("injectSsmlBreaks (unit)", () => {
+  it("returns input unchanged when pauseMs is 0", () => {
+    expect(injectSsmlBreaks("hi. there.", 0)).toBe("hi. there.");
+  });
+  it("returns input unchanged when input already starts with <speak>", () => {
+    expect(injectSsmlBreaks("<speak>custom</speak>", 1.5)).toBe(
+      "<speak>custom</speak>",
+    );
+  });
+  it("wraps Chinese punctuation with breaks", () => {
+    const out = injectSsmlBreaks("今天好。我们去。", 1.0);
+    expect(out).toContain("<speak");
+    expect(out).toContain("今天好。");
+    expect(out).toContain("我们去。");
+    expect(out).toContain(`<break time="1000ms"/>`);
+    expect(out.indexOf("<break")).toBeGreaterThan(0);
+  });
+  it("XML-escapes & < > in the input", () => {
+    const out = injectSsmlBreaks("a & b < c.", 0.5);
+    expect(out).toContain("a &amp; b &lt; c.");
+  });
+  it("splits on multiple punctuation marks", () => {
+    const out = injectSsmlBreaks("One. Two! Three?", 0.5);
+    expect(out.match(/<break/g)?.length).toBeGreaterThanOrEqual(3);
   });
 });
 

@@ -71,7 +71,7 @@ describe("vf script end-to-end (todo 3) — mock MiniMax", () => {
     expect(files.length).toBe(1);
     const record = readFileSync(path.join(runsDir, files[0] ?? ""), "utf8");
     expect(record).toContain("provider: minimax");
-    expect(record).toContain("model: MiniMax-M2.7");
+    expect(record).toContain("model: MiniMax-M3");
   });
 
   it("never writes the API key into projects/ or runs/", async () => {

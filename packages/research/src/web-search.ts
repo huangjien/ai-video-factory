@@ -65,7 +65,7 @@ export class MiniMaxWebSearch {
           throw err;
         }
         return JSON.parse(text) as {
-          organic?: { url: string; title: string; snippet: string }[];
+          organic?: { link: string; title: string; snippet: string }[];
         };
       },
       {
@@ -74,7 +74,8 @@ export class MiniMaxWebSearch {
       },
     );
     return (data.organic ?? []).slice(0, this.defaultLimit).map((r) => ({
-      url: r.url,
+      // MiniMax Coding Plan search returns the URL as `link` (not `url`).
+      url: r.link,
       title: r.title,
       snippet: r.snippet,
     }));

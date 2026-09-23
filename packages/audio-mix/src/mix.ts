@@ -81,10 +81,10 @@ export async function mixTracks(opts: MixOptions): Promise<MixResult> {
   ]);
 
   const filter = [
-    "[0:a]aresample=44100[n]",
+    "[0:a]aresample=44100[nar]",
     `[1:a]aresample=44100,volume=${bgmLinear}[bgm_pre]`,
-    `[bgm_pre][n]sidechaincompress=threshold=${duckerThresholdDb}:ratio=8:attack=5:release=400[bgm]`,
-    "[n][bgm]amix=inputs=2:duration=longest:dropout_transition=0[out]",
+    `[bgm_pre][nar]sidechaincompress=threshold=${duckerThresholdDb}:ratio=8:attack=5:release=400[bgm]`,
+    "[nar][bgm]amix=inputs=2:duration=longest:dropout_transition=0[out]",
   ].join(";");
   await execFileAsync("ffmpeg", [
     "-y",
@@ -190,16 +190,21 @@ export async function mixTracksWithSpec(
   );
 
   // Step 2: build the combined filter graph.
-  //   [0:a]aresample=44100[n]
+  //   [0:a]aresample=44100[nar]
   //   [1:a]aresample=44100,volume=<bgm>[bgm_pre]
-  //   [bgm_pre][n]sidechaincompress=...[bgm]                 ; duck under narration
+  //   [bgm_pre][nar]sidechaincompress=...[bgm]               ; duck under narration
   //   [bgm]afade=...[bgm_faded]                              ; optional fade envelope
   //   <each SFX input>[sfx_n]                                 ; one filter per cue
-  //   [sfx_0][sfx_1]...[n][bgm_faded][sfx_merged]amix=...[out]
+  //   [sfx_0][sfx_1]...[nar][bgm_faded][sfx_merged]amix=...[out]
+  //
+  // Label `nar` (not `n`): the johnvansickle static ffmpeg builds
+  // (6.1, 7.0.2) reject the single-letter label `n` with "Invalid stream
+  // specifier: n" when it appears as a sidechain input to `sidechaincompress`.
+  // Multi-char labels parse cleanly across builds.
   const filterParts: string[] = [
-    "[0:a]aresample=44100[n]",
+    "[0:a]aresample=44100[nar]",
     `[1:a]aresample=44100,volume=${bgmLinear}[bgm_pre]`,
-    `[bgm_pre][n]sidechaincompress=threshold=${duckerThresholdDb}:ratio=8:attack=5:release=400[bgm]`,
+    `[bgm_pre][nar]sidechaincompress=threshold=${duckerThresholdDb}:ratio=8:attack=5:release=400[bgm]`,
   ];
   let bgmLabel = "bgm";
   if (fadeIn > 0 || fadeOut > 0) {
@@ -232,7 +237,7 @@ export async function mixTracksWithSpec(
     );
     sfxMergeLabels.push(`[${label}]`);
   }
-  const mixInputs = ["[n]", `[${bgmLabel}]`, ...sfxMergeLabels].join("");
+  const mixInputs = ["[nar]", `[${bgmLabel}]`, ...sfxMergeLabels].join("");
   const mixFilter = `${mixInputs}amix=inputs=${2 + sfxMergeLabels.length}:duration=longest:dropout_transition=0:normalize=0[out]`;
   filterParts.push(mixFilter);
 

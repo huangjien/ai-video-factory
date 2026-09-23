@@ -26,6 +26,13 @@ jobs:
 
       - name: Install ffmpeg
         uses: FedericoCarboni/setup-ffmpeg@v3
+        with:
+          # Pin ffmpeg 6.1.x. The johnvansickle 7.0.2 static build has a
+          # regression that rejects our audio-mix filter graph
+          # ("Invalid stream specifier: n" for the `n` label inside
+          # sidechaincompress). 6.1.x accepts the same graph and is the
+          # last release before that regression. Bump once upstream fixes it.
+          ffmpeg-version: "6.1"
 
       # No pnpm-store cache: a stale global store can hide workspace
       # symlinks and break `@vf/*` imports across the package graph.

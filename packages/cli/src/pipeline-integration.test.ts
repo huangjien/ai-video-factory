@@ -31,7 +31,13 @@ import {
 
 async function seedProject(root: string): Promise<string> {
   // runNew's cwd is the BASE dir; the project lands at ${cwd}/projects/<projectId>.
-  const projectId = path.basename(root);
+  // runNew slugifies projectId (lowercase, non-alnum → '-'), so the directory
+  // name on disk is the slug, NOT the raw basename. On case-sensitive CI
+  // filesystems (Linux ext4) reading/writing the raw mixed-case name will
+  // ENOENT because mkdtempSync suffixes are mixed case. Match what runNew
+  // actually wrote.
+  const { slugifyProjectName } = await import("./project-path.js");
+  const projectId = slugifyProjectName(path.basename(root));
   const { runNew } = await import("./new-command.js");
   await runNew({ projectId, cwd: root });
   const projectDir = path.join(root, "projects", projectId);
@@ -119,16 +125,17 @@ function gitInit(root: string): void {
 describe("CLI pipeline integration — runPreview / runFinal / runStatus / workflow verbs", () => {
   let cwd: string;
   let projectDir: string;
-  // seedProject calls runNew({projectId: path.basename(cwd)}) which
-  // creates the project at cwd/projects/<basename(cwd)>. So projectName
-  // matches the projectId used at scaffold time.
+  // seedProject slugifies the basename before passing it to runNew, so the
+  // project directory on disk is the lowercase slug. projectName must match
+  // it — on case-sensitive CI filesystems (Linux ext4) the raw mixed-case
+  // basename will not resolve.
   let projectName: string;
   let projectCwd: string;
 
   beforeEach(async () => {
     cwd = mkdtempSync(path.join(tmpdir(), "vf-cli-pipeline-"));
     projectDir = await seedProject(cwd);
-    projectName = path.basename(cwd);
+    projectName = path.basename(projectDir);
     projectCwd = cwd;
     gitInit(projectDir);
   });

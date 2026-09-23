@@ -197,10 +197,8 @@ export async function mixTracksWithSpec(
   //   <each SFX input>[sfx_n]                                 ; one filter per cue
   //   [sfx_0][sfx_1]...[nar][bgm_faded][sfx_merged]amix=...[out]
   //
-  // Label `nar` (not `n`): the johnvansickle static ffmpeg builds
-  // (6.1, 7.0.2) reject the single-letter label `n` with "Invalid stream
-  // specifier: n" when it appears as a sidechain input to `sidechaincompress`.
-  // Multi-char labels parse cleanly across builds.
+  // Label `nar` instead of `n` (cosmetic; not a workaround for any ffmpeg
+  // build bug — the parser accepts both). Kept multi-char for readability.
   const filterParts: string[] = [
     "[0:a]aresample=44100[nar]",
     `[1:a]aresample=44100,volume=${bgmLinear}[bgm_pre]`,

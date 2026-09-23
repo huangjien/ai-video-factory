@@ -25,14 +25,15 @@ jobs:
           version: 12.5.1
 
       - name: Install ffmpeg
-        uses: FedericoCarboni/setup-ffmpeg@v3
-        with:
-          # Pin ffmpeg 6.1.x. The latest johnvansickle release builds have
-          # been rolling forward through regressions in filter-graph
-          # parsing. 6.1.x is the last release our audio-mix filter graph
-          # is verified against end-to-end. Bump deliberately once the
-          # graph is re-verified on a newer release.
-          ffmpeg-version: "6.1"
+        # Use the apt-packaged ffmpeg (Ubuntu 24.04 ships 6.1.1) rather than
+        # the johnvansickle static build from FedericoCarboni/setup-ffmpeg.
+        # The static 6.1 build has a filter-graph parser bug that rejects
+        # our audio-mix graph with "Invalid stream specifier" — see
+        # packages/audio-mix/src/mix.ts for the workaround status. apt
+        # ffmpeg is built from upstream source and parses the same graph
+        # correctly. The pipeline calls ffmpeg only for mix/integration
+        # tests; coverage of newer codecs doesn't matter here.
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg && ffmpeg -version | head -1
 
       # No pnpm-store cache: a stale global store can hide workspace
       # symlinks and break `@vf/*` imports across the package graph.

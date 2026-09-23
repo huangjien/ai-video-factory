@@ -1,0 +1,19 @@
+run_id: shorts-2026-09-20T20:14:02Z-584
+stage: shorts
+status: succeeded
+actor: tool
+tool: ffmpeg
+input_commit: 54e0cf55cf98c232788b5d3469a66943ec9e4855
+input_files:
+  - output/final-faststart.mp4
+output_files:
+  - youtube/shorts.mp4
+created_at: 2026-09-20T20:14:02.726Z
+duration_ms: 0
+provider: ffmpeg
+model: 9:16 1080x1920 60s@0
+prompt_hash: sha256:d02b98dbfec70a476a6d779edc95c34e980f07e4de1a4d876c9cce9f3583e16f
+tokens:
+  input: 0
+  output: 0
+estimated_cost_usd: 0

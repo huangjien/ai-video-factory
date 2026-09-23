@@ -1,0 +1,99 @@
+schema_version: "0.1"
+
+project:
+  id: benchmark-v01
+  language: zh-CN
+  fps: 30
+  width: 1920
+  height: 1080
+
+style:
+  theme: dark-tech
+
+scenes:
+  - id: scene-01
+    duration: 5
+    narration:
+      text: "AI 思维链有什么用？"
+      audio: assets/audio/scene-01.wav
+    visual:
+      component: Title
+      props:
+        text: "AI 思维链有什么用？"
+    animation:
+      entrance: fade
+    captions:
+      source: narration
+  - id: scene-02
+    duration: 6
+    narration:
+      text: "直接向大模型提问复杂问题，往往会得到错误的答案。"
+      audio: assets/audio/scene-02.wav
+    visual:
+      component: Callout
+      props:
+        kind: warning
+        text: "直接提问为什么出错"
+    animation:
+      entrance: slide
+    captions:
+      source: narration
+  - id: scene-03
+    duration: 8
+    narration:
+      text: "思维链是把问题拆解成一步一步的推理，再把每一步的答案串起来。"
+      audio: assets/audio/scene-03.wav
+    visual:
+      component: FlowChart
+      props:
+        nodes: ["问题", "步骤 1", "步骤 2", "步骤 3", "答案"]
+        edges: [[0,1], [1,2], [2,3], [3,4]]
+        direction: left-to-right
+    animation:
+      entrance: draw
+    captions:
+      source: narration
+  - id: scene-04
+    duration: 8
+    narration:
+      text: "在提示里给出几个推理示例，模型就能模仿这种思维过程。"
+      audio: assets/audio/scene-04.wav
+    visual:
+      component: Terminal
+      props:
+        title: "prompt.py"
+        lines: ["Q: 24 * 7 = ?", "Let's think step by step.", "1. 24 * 7 = 168", "A: 168"]
+        prompt: "▶"
+    animation:
+      entrance: typewriter
+    captions:
+      source: narration
+  - id: scene-05
+    duration: 7
+    narration:
+      text: "加入思维链后，模型的推理能力和可解释性都明显提高。"
+      audio: assets/audio/scene-05.wav
+    visual:
+      component: Comparison
+      props:
+        left: {title: "无 CoT", items: ["直接给答案", "难以解释", "复杂问题易错"]}
+        right: {title: "有 CoT", items: ["逐步推理", "过程可见", "准确率提升"]}
+    animation:
+      entrance: slide
+    captions:
+      source: narration
+  - id: scene-06
+    duration: 5
+    narration:
+      text: "谢谢观看。"
+      audio: assets/audio/scene-06.wav
+    visual:
+      component: EndCard
+      props:
+        title: "谢谢观看"
+        subtitle: "AI 视频工厂 v0.1"
+        cta: "订阅 / 点赞 / 评论"
+    animation:
+      entrance: fade
+    captions:
+      source: narration

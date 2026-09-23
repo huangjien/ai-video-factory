@@ -59,6 +59,12 @@ jobs:
       - name: §62.4 acceptance audit
         run: |
           node packages/cli/dist/index.js preview --cwd projects/benchmark-v01
-          yes | node packages/cli/dist/index.js approve review --cwd projects/benchmark-v01
+          # `vf approve` takes `[project] [stage]` — omit the stage so it
+          # auto-resolves from state.yaml.current_stage (set to `review` by
+          # `vf preview`). The previous invocation `approve review --cwd`
+          # was parsed as `project="review"`, which silently created a
+          # non-existent projects/benchmark-v01/projects/review/ root and
+          # then failed with "could not determine stage".
+          yes | node packages/cli/dist/index.js approve --cwd projects/benchmark-v01
           node packages/cli/dist/index.js final --cwd projects/benchmark-v01
           pnpm run acceptance

@@ -169,12 +169,16 @@ export async function runMix(opts: MixOptions): Promise<number> {
   const outPath = path.join(projectRoot, "output", "final-mixed.mp4");
   await mkdir(path.dirname(outPath), { recursive: true });
 
+  const previewPath = path.join(projectRoot, "output", "preview.mp4");
+  const videoPath = existsSync(previewPath) ? previewPath : undefined;
+
   try {
     if (sfxCues.length > 0 || fadeIn > 0 || fadeOut > 0) {
       await mixTracksWithSpec({
         narrationPaths,
         bgmPath,
         outPath,
+        ...(videoPath !== undefined ? { videoPath } : {}),
         sfxCues,
         bgmFadeInSec: fadeIn,
         bgmFadeOutSec: fadeOut,
@@ -187,6 +191,7 @@ export async function runMix(opts: MixOptions): Promise<number> {
         narrationPaths,
         bgmPath,
         outPath,
+        ...(videoPath !== undefined ? { videoPath } : {}),
         ...(opts.bgmAttenuationDb !== undefined
           ? { bgmAttenuationDb: opts.bgmAttenuationDb }
           : {}),
@@ -234,8 +239,8 @@ export async function runMix(opts: MixOptions): Promise<number> {
   console.log(
     `  narration=${narrationPaths.length} files  bgm=${path.basename(bgmPath)}  sfx=${sfxCues.length} cues  fade=${fadeIn}s/${fadeOut}s`,
   );
-  console.log(
-    `  next: this is the audio you ship — replaces per-scene narration TTS as the final mix`,
-  );
+console.log(
+     `  next: this is the audio you ship`,
+   );
   return 0;
 }

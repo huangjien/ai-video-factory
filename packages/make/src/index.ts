@@ -251,7 +251,8 @@ async function runRenderPreview(
     ],
     { cwd: workspaceRoot },
   );
-  return [`output/preview-${slug}.mp4`];
+  // Mirror what `vf preview` actually writes.
+  return ["output/preview.mp4", "output/preview-faststart.mp4"];
 }
 
 async function runMix(
@@ -279,7 +280,8 @@ async function runMix(
     mixArgs.push("--bgm-fade-out", String(config.bgm_fade_out_sec));
   }
   await runCli(mixArgs, { cwd: workspaceRoot });
-  return [`output/final-mixed-${slugify(config.bgm ?? "no-bgm")}.mp4`];
+  // Mirror what `vf mix` actually writes.
+  return ["output/final-mixed.mp4"];
 }
 
 async function runCli(

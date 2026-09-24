@@ -8,6 +8,7 @@ export {
 export {
   EdgeTTSProvider,
   mockEdgeTTSProvider,
+  splitSentences,
   type EdgeTTSProviderOptions,
   type MockEdgeTTSOptions,
 } from "./edge-tts.js";

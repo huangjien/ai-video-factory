@@ -11,6 +11,12 @@ export interface MixOptions {
   narrationPaths: string[];
   bgmPath: string;
   outPath: string;
+  /**
+   * When set, mux this file's video stream into `outPath` via
+   * `-c:v copy`. Its audio is ignored — `outPath`'s audio is the
+   * mixed narrative + BGM. Undefined = audio-only output.
+   */
+  videoPath?: string;
   bgmAttenuationDb?: number;
   duckerThresholdDb?: number;
 }
@@ -94,24 +100,26 @@ export async function mixTracks(opts: MixOptions): Promise<MixResult> {
     // resample that sidechaincompress needs).
     "[0:a][bgm]amix=inputs=2:duration=longest:dropout_transition=0[out]",
   ].join(";");
-  await execFileAsync("ffmpeg", [
-    "-y",
-    "-i",
-    tmpNarration,
-    "-i",
-    opts.bgmPath,
-    "-filter_complex",
-    filter,
-    "-map",
-    "[out]",
-    "-c:a",
-    "aac",
-    "-b:a",
-    "192k",
+  const inputArgs: string[] = ["-i", tmpNarration, "-i", opts.bgmPath];
+  let videoIndex: number | null = null;
+  if (opts.videoPath && existsSync(opts.videoPath)) {
+    videoIndex = 2; // narration=0, bgm=1, video=2
+    inputArgs.push("-i", opts.videoPath);
+  }
+  const mapArgs: string[] = ["-map", "[out]"];
+  const codecArgs: string[] = ["-c:a", "aac", "-b:a", "192k"];
+  if (videoIndex !== null) {
+    mapArgs.push("-map", `${videoIndex}:v`, "-c:v", "copy");
+  }
+  mapArgs.push(
     "-movflags",
     "+faststart",
     opts.outPath,
-  ]);
+  );
+  await execFileAsync(
+    "ffmpeg",
+    ["-y", ...inputArgs, "-filter_complex", filter, ...mapArgs, ...codecArgs],
+  );
   await rm(tmpDir, { recursive: true, force: true }).catch(() => undefined);
   return { outPath: opts.outPath };
 }
@@ -243,6 +251,11 @@ export async function mixTracksWithSpec(
     );
     sfxMergeLabels.push(`[${label}]`);
   }
+  let videoIndex: number | null = null;
+  if (opts.videoPath && existsSync(opts.videoPath)) {
+    videoIndex = inputs.length;
+    inputs.push(opts.videoPath);
+  }
   // Use [0:a] (original narration) for the final amix, not [nar]
   // (the resampled narration). ffmpeg 6.x has a parser bug that rejects
   // reusing the same label as BOTH a sidechain input AND an amix input
@@ -252,21 +265,24 @@ export async function mixTracksWithSpec(
   const mixFilter = `${mixInputs}amix=inputs=${2 + sfxMergeLabels.length}:duration=longest:dropout_transition=0:normalize=0[out]`;
   filterParts.push(mixFilter);
 
-  await execFileAsync("ffmpeg", [
-    "-y",
-    ...inputs.flatMap((p) => ["-i", p]),
-    "-filter_complex",
-    filterParts.join(";"),
-    "-map",
-    "[out]",
-    "-c:a",
-    "aac",
-    "-b:a",
-    "192k",
-    "-movflags",
-    "+faststart",
-    opts.outPath,
-  ]);
+  const mapArgs: string[] = ["-map", "[out]"];
+  const codecArgs: string[] = ["-c:a", "aac", "-b:a", "192k"];
+  if (videoIndex !== null) {
+    mapArgs.push("-map", `${videoIndex}:v`, "-c:v", "copy");
+  }
+  mapArgs.push("-movflags", "+faststart", opts.outPath);
+
+  await execFileAsync(
+    "ffmpeg",
+    [
+      "-y",
+      ...inputs.flatMap((p) => ["-i", p]),
+      "-filter_complex",
+      filterParts.join(";"),
+      ...mapArgs,
+      ...codecArgs,
+    ],
+  );
   await rm(tmpDir, { recursive: true, force: true }).catch(() => undefined);
   return { outPath: opts.outPath };
 }

@@ -73,6 +73,7 @@ vf new "transformer architectures"   # scaffold project/<slug>/
 
 # Two human-edit checkpoints:
 vf draft "transformer architectures"  # writes article.md (LLM)
+#   also derives storyboard.yaml (VDSL) so video length matches audio
 #   → edit projects/.../article.md
 vf audio-plan "transformer architectures"  # writes audio-config.yaml (LLM)
 #   → edit projects/.../audio-config.yaml

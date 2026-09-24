@@ -231,6 +231,7 @@ scenes:
 ```bash
 vf new my-topic
 vf draft "my-topic"           # → projects/<slug>/article.md
+                            #   同时刷新 storyboard.yaml（VDSL，由 article.md 派生）
 vf audio-plan my-topic       # → projects/<slug>/audio-config.yaml
 # 人工编辑：
 $EDITOR projects/<slug>/article.md
@@ -299,10 +300,25 @@ vf make <slug>          # 只重跑 TTS + render + mix（其余跳过）
 # 改了 audio-config.yaml
 $EDITOR projects/<slug>/audio-config.yaml
 vf make <slug>          # 只重跑 audio-assets + mix
+
+# 想给某一场换组件（比如用 Image 替代 Paragraph）
+$EDITOR projects/<slug>/storyboard.yaml
+vf make <slug>          # 只重跑 render + mix
 ```
 
 `vf make` 不会产生 review checkpoint；它产出的 `final-mixed.mp4` 就是
 发布件。
+
+### 关于手改 `storyboard.yaml`
+
+`storyboard.yaml` 是 `article.md` 的派生文件，每次 `vf draft` 跑都会
+重新生成。如果你在 `vf draft` 之后手工编辑了 `storyboard.yaml`（例
+如换 `Image` 组件或调 `props`），下一次 `vf draft` 会把它**覆盖**
+回去。常见流程：
+
+- 想让 `vf draft` 出来的内容去噪 → 直接编辑 `article.md`
+- 想做像素级的视觉控制 → 手工编辑 `storyboard.yaml` 后跑 `vf make`
+  （**不要**再跑 `vf draft`，否则会覆盖）
 
 ### 7.1 旧版 workflow 命令（仍可用，仅供旧项目回退）
 
@@ -471,7 +487,7 @@ projects/<slug>/
 ├── project.yaml                     项目元数据
 ├── article.md                       ⭐ 可人工编辑：叙事 + Scenes YAML（vf draft 写）
 ├── audio-config.yaml                ⭐ 可人工编辑：voice / bgm / sfx / fades（vf audio-plan 写）
-├── storyboard/storyboard.yaml       渲染器读（vf make 内部派生）
+├── storyboard/storyboard.yaml       vf draft 从 article.md 派生；vf preview 读它（手改会被下次 draft 覆盖）
 ├── vdsl/vdsl.yaml                   编译后的标准 VDSL
 ├── state.yaml                       状态（旧 workflow；新版可以忽略）
 ├── checkpoints/                     旧 workflow 留下的审计
@@ -487,6 +503,13 @@ projects/<slug>/
 ```
 
 `⭐` 标记的是两个人类编辑点；其余都是派生产物。
+
+`storyboard.yaml` 是 **article.md 的派生**（由 `vf draft` 在每次
+draft 运行时从 `article.md` 同步生成）。第一场映射到 `Title` 组件，
+其余场映射到 `Paragraph` 组件，`caption` 作为屏显文字。如果想要像素
+级别的视觉控制（例如换 `Image` 组件或调整 `props`），可以手工编辑
+`storyboard.yaml` 后跑 `vf make` —— 但下一次 `vf draft` 会把它
+**覆盖**回去。如果手改很重要，跑 `vf make` 之前不要重新跑 `vf draft`。
 
 ### AI 调用记录字段
 
@@ -623,6 +646,9 @@ vf new "$TOPIC"
 #      - # <title> + > **Hook**
 #      - ## <n>. <Section> + <body> 段落（人类可改）
 #      - ## Scenes  围栏 YAML 块（驱动器下游工具）
+#    同时派生 storyboard.yaml（VDSL），第一场映射到 Title，其余到 Paragraph，
+#    caption 作为屏显文字。vf make 渲染的就是这个文件，所以视频长度
+#    与音频自动对齐。
 vf draft "$TOPIC"                  # 默认开启 MiniMax 联网搜索
 vf draft "$TOPIC" --no-web          # 关闭联网，纯模型知识
 vf draft "$TOPIC" --model glm --duration 40 --lang zh-CN --audience developers
@@ -712,7 +738,7 @@ ls "projects/$TOPIC/runs/"            # 每次 agent / tool 调用一条 run 记
 ```bash
 TOPIC="ai-thinking"
 vf new "$TOPIC"
-vf draft "$TOPIC"
+vf draft "$TOPIC"                     # 写 article.md + 派生 storyboard.yaml
 vf audio-plan "$TOPIC"
 
 # 人工编辑文章与音频计划（任意编辑器）

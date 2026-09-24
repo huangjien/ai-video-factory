@@ -245,6 +245,7 @@ The new local flow is collapsed to a single `vf make` command.
 ```bash
 vf new my-topic
 vf draft "my-topic"           # → projects/<slug>/article.md
+                            #   also refreshes storyboard.yaml (VDSL, derived from article.md)
 vf audio-plan my-topic        # → projects/<slug>/audio-config.yaml
 
 # Then human edits:
@@ -317,10 +318,27 @@ vf make <slug>          # only TTS + render + mix re-execute (rest is skipped)
 # Tweaked audio-config.yaml
 $EDITOR projects/<slug>/audio-config.yaml
 vf make <slug>          # only audio-assets + mix re-execute
+
+# Want a specific scene to use a different component (e.g. Image instead of Paragraph)
+$EDITOR projects/<slug>/storyboard.yaml
+vf make <slug>          # only render + mix re-execute
 ```
 
 `vf make` does not produce a review checkpoint — its output,
 `final-mixed.mp4`, is the publishable artifact.
+
+### About hand-editing `storyboard.yaml`
+
+`storyboard.yaml` is derived from `article.md` and gets refreshed on
+every `vf draft` run. If you hand-edit it after a draft (e.g. swap to
+the `Image` component or tweak `props`), the **next `vf draft` will
+overwrite** your edits. The supported flows are:
+
+- Editorial tweaks → edit `article.md`, then `vf draft` regenerates
+  storyboard.yaml cleanly.
+- Pixel-level art direction → hand-edit `storyboard.yaml`, then run
+  `vf make` directly. **Don't** re-run `vf draft` until you're ready
+  to lose those tweaks.
 
 ### 7.1 Legacy workflow commands (still available, back-compat only)
 
@@ -519,7 +537,7 @@ projects/<slug>/
 ├── project.yaml                     project metadata
 ├── article.md                       ⭐ human edits: narrative + Scenes YAML (vf draft writes)
 ├── audio-config.yaml                ⭐ human edits: voice / bgm / sfx / fades (vf audio-plan writes)
-├── storyboard/storyboard.yaml       read by the renderer (vf make derives internally)
+├── storyboard/storyboard.yaml       derived by vf draft from article.md; read by the renderer (hand edits get overwritten on the next vf draft)
 ├── vdsl/vdsl.yaml                   normalized compiled VDSL
 ├── state.yaml                       state (legacy workflow; new flow can ignore)
 ├── checkpoints/                     audit trail from the legacy workflow
@@ -535,6 +553,14 @@ projects/<slug>/
 ```
 
 `⭐` marks the two human-edit files; everything else is derived.
+
+`storyboard.yaml` is **derived from `article.md`** (every `vf draft`
+run refreshes it from the parsed article). The first scene maps to
+the `Title` component; the rest map to `Paragraph`; `caption` becomes
+on-screen text. If you want pixel-level visual control (swap to
+`Image`, tweak props), hand-edit `storyboard.yaml` and run `vf make`
+— but the next `vf draft` **overwrites** your edits. If hand-edits
+matter, run `vf make` directly without re-drafting.
 
 ### Run record fields
 
@@ -658,10 +684,13 @@ Requires `GLM_API_KEY` (default) or `MINIMAX_API_KEY` in the environment.
 #      - # <title> + > **Hook**
 #      - ## <n>. <Section> + <body> paragraphs (human-editable)
 #      - ## Scenes  fenced YAML block (drives downstream tools)
-vf draft "$TOPIC"                    # default: enable MiniMax web search
-vf draft "$TOPIC" --no-web            # disable web, model knowledge only
+#    Also derives storyboard.yaml (VDSL): first scene → Title, rest → Paragraph,
+#    `caption` becomes on-screen text. `vf make` renders this file, so the
+#    video length stays in sync with the audio automatically.
+vf draft "$TOPIC"                  # default: enable MiniMax web search
+vf draft "$TOPIC" --no-web          # disable web, model knowledge only
 vf draft "$TOPIC" --model glm --duration 40 --lang zh-CN --audience developers
-vf draft "$TOPIC" --from outline.md  # revise from an existing outline
+vf draft "$TOPIC" --from outline.md  # revise an existing outline
 ```
 
 ```bash
@@ -749,7 +778,7 @@ is set; replace with `--fake` if offline):
 ```bash
 TOPIC="ai-thinking"
 vf new "$TOPIC"
-vf draft "$TOPIC"
+vf draft "$TOPIC"                     # writes article.md + derives storyboard.yaml
 vf audio-plan "$TOPIC"
 
 # Human edits (any editor)

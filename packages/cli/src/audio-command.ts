@@ -18,10 +18,12 @@ export interface AudioOptions {
 const ZH_VOICE = "zh-CN-XiaoxiaoNeural";
 const EN_VOICE = "en-US-EmmaMultilingualNeural";
 
-/** Run ffmpeg to convert mp3 bytes (from TTS) to wav of exact scene duration. */
+/** Run ffmpeg to convert mp3 bytes (from TTS) to 44.1kHz mono WAV. Pads to
+ * `minDurationSec` if the TTS is shorter; never truncates if it's longer.
+ * (Truncating used to chop off long narrations mid-sentence.) */
 async function mp3ToWav(
   mp3Bytes: Uint8Array,
-  targetDurationSec: number,
+  minDurationSec: number,
 ): Promise<Uint8Array> {
   const { mkdtemp, rm } = await import("node:fs/promises");
   const { tmpdir } = await import("node:os");
@@ -39,7 +41,7 @@ async function mp3ToWav(
       "-ac",
       "1",
       "-af",
-      `apad,atrim=0:${targetDurationSec}`,
+      `apad=pad_dur=${minDurationSec}`,
       outPath,
     ]);
     const { readFile } = await import("node:fs/promises");

@@ -1,5 +1,5 @@
 import { execFile } from "node:child_process";
-import { mkdir, writeFile, readFile, stat } from "node:fs/promises";
+import { mkdir, writeFile, readFile, readdir, stat } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { promisify } from "node:util";
 import os from "node:os";
@@ -71,6 +71,11 @@ export async function runMake(opts: MakeOptions): Promise<MakeReport> {
     }),
   );
 
+  // 1b. Resync storyboard.yaml durations to actual TTS lengths.
+  await runStep(report, "sync-durations", idempotent, dryRun, () =>
+    syncStoryboardDurations(opts.projectRoot),
+  );
+
   // 2. Materialize declared BGM/SFX assets.
   await runStep(report, "audio-assets", idempotent, dryRun, () =>
     runAudioAssets(opts.projectRoot, audioConfig),
@@ -127,6 +132,80 @@ interface AudioConfigShape {
   bgm_fade_out_sec?: number;
   pause_between_sentences_sec?: number;
   sfx?: Record<string, string>;
+}
+
+/**
+ * Probe each scene's TTS WAV and rewrite storyboard.yaml so its
+ * `duration:` field matches actual audio length. Without this, the
+ * renderer's frame count comes from the LLM-estimated duration in
+ * article.md — which the LLM consistently underestimates — so the
+ * video freezes at the planned length while the audio continues.
+ *
+ * Regex-based line replacement rather than yaml round-trip: that
+ * would lose comments and reformat the file.
+ */
+async function syncStoryboardDurations(projectRoot: string): Promise<string[]> {
+  const audioDir = path.join(projectRoot, "assets", "audio");
+  const storyboardPath = path.join(projectRoot, "storyboard", "storyboard.yaml");
+  if (!existsSync(audioDir) || !existsSync(storyboardPath)) return [];
+
+  const wavs = (await readdir(audioDir))
+    .filter((f) => /^scene[-_]?(\d+)\.wav$/.test(f))
+    .sort();
+  if (wavs.length === 0) return [];
+
+  const durations = new Map<string, number>();
+  for (const w of wavs) {
+    const m = w.match(/^scene[-_]?(\d+)\.wav$/);
+    if (!m) continue;
+    // Storyboard IDs are zero-padded (scene-01, scene-02 …). Keep the
+    // captured string verbatim so the lookup matches the YAML id line.
+    const idKey = m[1]!;
+    try {
+      const { stdout } = await execFileAsync("ffprobe", [
+        "-v",
+        "error",
+        "-select_streams",
+        "a:0",
+        "-show_entries",
+        "stream=duration",
+        "-of",
+        "csv=p=0",
+        path.join(audioDir, w),
+      ]);
+      const sec = parseFloat(stdout.trim());
+      if (Number.isFinite(sec) && sec > 0) {
+        durations.set(idKey, sec);
+      }
+    } catch {
+      // ignore unprobeable files
+    }
+  }
+  if (durations.size === 0) return [];
+
+  const yaml = await readFile(storyboardPath, "utf8");
+  const lines = yaml.split("\n");
+  const outputs: string[] = [];
+  for (let i = 0; i < lines.length; i++) {
+    const idMatch = lines[i]!.match(/^\s*-\s*id:\s*scene[-_]?(\d+)\s*$/);
+    if (!idMatch) continue;
+    // YAML ids are zero-padded (scene-01, scene-02 …); wav filenames
+    // are not. parseInt collapses both to the integer key the Map uses.
+    const sceneKey = String(parseInt(idMatch[1]!, 10));
+    const measured = durations.get(sceneKey);
+    if (measured === undefined) continue;
+    for (let j = i + 1; j < Math.min(lines.length, i + 6); j++) {
+      const durMatch = lines[j]!.match(/^(\s*)duration:\s*\d+(?:\.\d+)?\s*$/);
+      if (durMatch) {
+        const newSec = measured.toFixed(2);
+        lines[j] = `${durMatch[1]}duration: ${newSec}`;
+        outputs.push(`storyboard.yaml: scene_${sceneKey} duration=${newSec}s`);
+        break;
+      }
+    }
+  }
+  await writeFile(storyboardPath, lines.join("\n"), "utf8");
+  return outputs;
 }
 
 async function runTts(

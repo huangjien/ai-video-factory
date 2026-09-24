@@ -312,9 +312,19 @@ vf make <slug>          # 只重跑 render + mix
 ### 关于手改 `storyboard.yaml`
 
 `storyboard.yaml` 是 `article.md` 的派生文件，每次 `vf draft` 跑都会
-重新生成。如果你在 `vf draft` 之后手工编辑了 `storyboard.yaml`（例
-如换 `Image` 组件或调 `props`），下一次 `vf draft` 会把它**覆盖**
-回去。常见流程：
+重新生成。另外，`vf make` 在 TTS 后会按实测音频长度校正每场
+`duration:` —— 没有这一步，渲染器会用文章里估算的时长，音频放完时画面
+还卡在最后帧。
+
+如果你手工编辑了 `storyboard.yaml`（例如换 `Image` 组件或调 `props`）：
+
+- 每场 `duration:` 和其他 `vf draft` 派生的字段，下次 `vf draft` 时
+  会被覆盖。
+- 每场 `duration:` 在下次 `vf make` 时也会被覆盖（实测后重写）。
+- 其它字段（组件、props、subtext 等）因为 `syncStoryboardDurations`
+  只动 `duration:` 行，所以会被保留。
+
+常见流程：
 
 - 想让 `vf draft` 出来的内容去噪 → 直接编辑 `article.md`
 - 想做像素级的视觉控制 → 手工编辑 `storyboard.yaml` 后跑 `vf make`
@@ -487,7 +497,7 @@ projects/<slug>/
 ├── project.yaml                     项目元数据
 ├── article.md                       ⭐ 可人工编辑：叙事 + Scenes YAML（vf draft 写）
 ├── audio-config.yaml                ⭐ 可人工编辑：voice / bgm / sfx / fades（vf audio-plan 写）
-├── storyboard/storyboard.yaml       vf draft 从 article.md 派生；vf preview 读它（手改会被下次 draft 覆盖）
+├── storyboard/storyboard.yaml       vf draft 从 article.md 派生；vf make 在 TTS 后按实测时长校正每场 duration（手改其他字段保留；duration 会被下次 make 覆盖）
 ├── vdsl/vdsl.yaml                   编译后的标准 VDSL
 ├── state.yaml                       状态（旧 workflow；新版可以忽略）
 ├── checkpoints/                     旧 workflow 留下的审计

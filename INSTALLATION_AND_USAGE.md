@@ -330,9 +330,23 @@ vf make <slug>          # only render + mix re-execute
 ### About hand-editing `storyboard.yaml`
 
 `storyboard.yaml` is derived from `article.md` and gets refreshed on
-every `vf draft` run. If you hand-edit it after a draft (e.g. swap to
-the `Image` component or tweak `props`), the **next `vf draft` will
-overwrite** your edits. The supported flows are:
+every `vf draft` run. Additionally, `vf make` rewrites each scene's
+`duration:` field after TTS to match the actual measured audio length —
+without this, the renderer would use the article's planned duration and
+freeze on a still frame when audio plays past it.
+
+If you hand-edit `storyboard.yaml` (e.g. swap to the `Image` component
+or tweak `props`):
+
+- Per-scene `duration:` and other `vf draft`-derived fields get
+  overwritten on the next `vf draft`.
+- The per-scene `duration:` also gets overwritten on the next `vf make`
+  (since it re-measures audio).
+- Everything else (component choice, props, subtext, etc.) survives
+  the next `vf make` because `syncStoryboardDurations` only touches the
+  `duration:` line.
+
+The supported flows are:
 
 - Editorial tweaks → edit `article.md`, then `vf draft` regenerates
   storyboard.yaml cleanly.
@@ -537,7 +551,7 @@ projects/<slug>/
 ├── project.yaml                     project metadata
 ├── article.md                       ⭐ human edits: narrative + Scenes YAML (vf draft writes)
 ├── audio-config.yaml                ⭐ human edits: voice / bgm / sfx / fades (vf audio-plan writes)
-├── storyboard/storyboard.yaml       derived by vf draft from article.md; read by the renderer (hand edits get overwritten on the next vf draft)
+├── storyboard/storyboard.yaml       derived by vf draft from article.md; per-scene duration is re-measured after TTS by vf make (hand edits to other fields survive; durations get overwritten on the next make)
 ├── vdsl/vdsl.yaml                   normalized compiled VDSL
 ├── state.yaml                       state (legacy workflow; new flow can ignore)
 ├── checkpoints/                     audit trail from the legacy workflow

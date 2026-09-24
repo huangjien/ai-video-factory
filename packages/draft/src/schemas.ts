@@ -45,6 +45,56 @@ export interface ParsedArticle {
   markdown: string;
 }
 
+/** Convert a parsed article into the renderer's VDSL storyboard YAML.
+ * Keeps `vf make`'s video length in sync with `article.md` scenes —
+ * without this, the default `storyboard.yaml` from `vf new` (1 scene)
+ * would render only 8s of video while `vf make` synthesizes all N scenes.
+ * First scene → `Title`; rest → `Paragraph`. The article's prose-y
+ * `visual` field maps to `Title.subtext` for the opening scene only. */
+export function articleToStoryboardYaml(article: ParsedArticle): string {
+  const f = article.frontmatter;
+  const lines: string[] = [
+    `schema_version: "0.1"`,
+    ``,
+    `project:`,
+    `  id: ${f.project}`,
+    `  language: ${f.language}`,
+    `  fps: 30`,
+    `  width: 1920`,
+    `  height: 1080`,
+    ``,
+    `style:`,
+    `  theme: dark-tech`,
+    ``,
+    `scenes:`,
+  ];
+  article.scenes.forEach((s, i) => {
+    const id = `scene-${String(i + 1).padStart(2, "0")}`;
+    const isFirst = i === 0;
+    const component = isFirst ? "Title" : "Paragraph";
+    const props =
+      isFirst && s.visual && s.visual.length > 0
+        ? `    visual:\n      component: ${component}\n      props:\n        text: ${yamlStr(s.caption ?? "")}\n        subtext: ${yamlStr(s.visual ?? "")}`
+        : `    visual:\n      component: ${component}\n      props:\n        text: ${yamlStr(s.caption ?? "")}`;
+    lines.push(`  - id: ${id}`);
+    lines.push(`    duration: ${s.duration ?? 0}`);
+    lines.push(`    narration:`);
+    lines.push(`      text: ${yamlStr(s.narration ?? "")}`);
+    lines.push(props);
+  });
+  return lines.join("\n") + "\n";
+}
+
+function yamlStr(s: string): string {
+  const escaped = s
+    .replace(/\\/g, "\\\\")
+    .replace(/"/g, '\\"')
+    .replace(/\n/g, "\\n")
+    .replace(/\r/g, "\\r")
+    .replace(/\t/g, "\\t");
+  return `"${escaped}"`;
+}
+
 /** Parse the article.md shape: frontmatter (YAML), prose body, and a
  * `## Scenes` section containing a fenced YAML block. Tolerates extra
  * structure (sections, hooks, etc.) — keeps them in `proseBody`. */

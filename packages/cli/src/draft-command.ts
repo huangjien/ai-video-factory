@@ -7,7 +7,11 @@ import {
   type Provider,
 } from "@vf/llm";
 import { MiniMaxWebSearch } from "@vf/research";
-import { callDraft } from "@vf/draft";
+import {
+  articleToStoryboardYaml,
+  callDraft,
+  parseArticle,
+} from "@vf/draft";
 import { slugifyProjectName } from "./project-path.js";
 
 export interface DraftOptions {
@@ -79,6 +83,21 @@ export async function runDraft(opts: DraftOptions): Promise<number> {
   const articlePath = path.join(projectRoot, "article.md");
   await mkdir(path.dirname(articlePath), { recursive: true });
   await writeFile(articlePath, markdown, "utf8");
+
+  // Sync storyboard.yaml with article.md so vf make doesn't render
+  // 1 scene while TTS synthesizes N.
+  const storyboardPath = path.join(projectRoot, "storyboard", "storyboard.yaml");
+  try {
+    const article = parseArticle(markdown);
+    await writeFile(storyboardPath, articleToStoryboardYaml(article), "utf8");
+  } catch (err) {
+    console.error(
+      `  ! could not refresh storyboard.yaml from article.md: ${(err as Error).message}`,
+    );
+    console.error(
+      "  (article.md was written; render will still use the existing storyboard.yaml)",
+    );
+  }
 
   console.log(`✓ drafted ${articlePath}`);
   console.log(

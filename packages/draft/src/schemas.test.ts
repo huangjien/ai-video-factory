@@ -1,8 +1,11 @@
 import { describe, expect, it } from "vitest";
+import { parse as parseYaml } from "yaml";
 import {
   ArticleFrontmatterSchema,
   SceneBlockSchema,
   parseArticle,
+  articleToStoryboardYaml,
+  type ParsedArticle,
 } from "./schemas.js";
 
 const SAMPLE_MD = `---
@@ -193,5 +196,95 @@ describe("buildMessages (prompt structure)", () => {
       fromContent: "old draft here",
     });
     expect(m[1]?.content).toContain("old draft here");
+  });
+});
+
+describe("articleToStoryboardYaml (VDSL sync)", () => {
+  const fixture: ParsedArticle = {
+    frontmatter: {
+      project: "ai-think",
+      language: "zh-CN",
+      duration_target_sec: 40,
+      voice: "zh-CN-XiaoxiaoNeural",
+    },
+    proseBody: "",
+    scenes: [
+      {
+        id: "scene_1",
+        duration: 8,
+        caption: "开场",
+        visual: "两个数据库图标之间流动的同步箭头动画",
+        narration: "今天我们谈一下同步测试",
+      },
+      {
+        id: "scene_2",
+        duration: 6,
+        caption: "细节",
+        visual: "",
+        narration: "对账脚本是最常用的方法",
+      },
+    ],
+    markdown: "",
+  };
+
+  it("renders the VDSL header (schema_version + project + style)", () => {
+    const yaml = articleToStoryboardYaml(fixture);
+    const parsed = parseYaml(yaml) as Record<string, unknown>;
+    expect(parsed["schema_version"]).toBe("0.1");
+    expect(parsed["project"]).toMatchObject({ id: "ai-think", language: "zh-CN", fps: 30 });
+    expect(parsed["style"]).toMatchObject({ theme: "dark-tech" });
+  });
+
+  it("emits one scene per article scene with zero-padded IDs", () => {
+    const yaml = articleToStoryboardYaml(fixture);
+    const parsed = parseYaml(yaml) as { scenes: { id: string; duration: number }[] };
+    expect(parsed.scenes).toHaveLength(2);
+    expect(parsed.scenes[0]?.id).toBe("scene-01");
+    expect(parsed.scenes[0]?.duration).toBe(8);
+    expect(parsed.scenes[1]?.id).toBe("scene-02");
+    expect(parsed.scenes[1]?.duration).toBe(6);
+  });
+
+  it("uses Title for the first scene with subtext from article.visual", () => {
+    const yaml = articleToStoryboardYaml(fixture);
+    const parsed = parseYaml(yaml) as {
+      scenes: { visual: { component: string; props: Record<string, string> } }[];
+    };
+    expect(parsed.scenes[0]?.visual.component).toBe("Title");
+    expect(parsed.scenes[0]?.visual.props.text).toBe("开场");
+    expect(parsed.scenes[0]?.visual.props.subtext).toBe(
+      "两个数据库图标之间流动的同步箭头动画",
+    );
+  });
+
+  it("uses Paragraph for subsequent scenes", () => {
+    const yaml = articleToStoryboardYaml(fixture);
+    const parsed = parseYaml(yaml) as {
+      scenes: { visual: { component: string; props: Record<string, string> } }[];
+    };
+    expect(parsed.scenes[1]?.visual.component).toBe("Paragraph");
+    expect(parsed.scenes[1]?.visual.props.subtext).toBeUndefined();
+  });
+
+  it("escapes newlines and quotes in narration so the YAML parses", () => {
+    const withNewline: ParsedArticle = {
+      ...fixture,
+      scenes: [
+        {
+          id: "scene_1",
+          duration: 8,
+          caption: "X",
+          visual: "",
+          narration: "line one\nline two with \"quote\"",
+        },
+      ],
+    };
+    const yaml = articleToStoryboardYaml(withNewline);
+    const parsed = parseYaml(yaml) as {
+      scenes: { narration: { text: string } }[];
+    };
+    expect(parsed.scenes[0]?.narration.text).toBe(
+      'line one\nline two with "quote"',
+    );
   });
 });

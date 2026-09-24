@@ -2,6 +2,7 @@ export {
   ArticleFrontmatterSchema,
   SceneBlockSchema,
   parseArticle,
+  articleToStoryboardYaml,
   type ArticleFrontmatter,
   type Scene,
   type SceneBlock,

@@ -2,11 +2,13 @@ import type { ComponentType } from "react";
 import { z } from "zod";
 import { AnimatedIllustration } from "./components/Illustration.js";
 import { Callout } from "./components/Callout.js";
+import { Character } from "./components/Character.js";
 import { CodeBlock } from "./components/CodeBlock.js";
 import { Comparison } from "./components/Comparison.js";
 import { EndCard } from "./components/EndCard.js";
 import { FlowChart } from "./components/FlowChart.js";
 import { Image } from "./components/Image.js";
+import { ImageBackground } from "./components/ImageBackground.js";
 import { Paragraph } from "./components/Paragraph.js";
 import { Terminal } from "./components/Terminal.js";
 import { Timeline } from "./components/Timeline.js";
@@ -132,6 +134,20 @@ const endCardProps = z
   })
   .passthrough();
 
+const characterProps = z
+  .object({
+    mouthOpen: z.number().min(0).max(1).default(0),
+  })
+  .passthrough();
+
+const imageBackgroundProps = z
+  .object({
+    src: z.string().min(1),
+    fit: z.enum(["cover", "contain"]).default("cover"),
+    kenBurnsScale: z.number().min(0).max(0.5).default(0.08),
+  })
+  .passthrough();
+
 const CALL_OUT_ALIAS: Record<string, string> = {
   icon: "kind",
   content: "text",
@@ -231,6 +247,14 @@ export const REGISTRY: Record<string, RegistryEntry> = {
     propsSchema: withAlias("EndCard", endCardProps),
     component: EndCard as ComponentType<unknown>,
   },
+  Character: {
+    propsSchema: characterProps,
+    component: Character as ComponentType<unknown>,
+  },
+  ImageBackground: {
+    propsSchema: imageBackgroundProps,
+    component: ImageBackground as ComponentType<unknown>,
+  },
 };
 
 export const COMPONENT_NAMES = Object.keys(REGISTRY);
@@ -258,4 +282,10 @@ export type RegistryPropsByName = {
     text: string;
   };
   EndCard: { title: string; subtitle?: string; cta?: string };
+  Character: { mouthOpen: number };
+  ImageBackground: {
+    src: string;
+    fit?: "cover" | "contain";
+    kenBurnsScale?: number;
+  };
 };

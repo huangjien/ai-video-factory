@@ -25,8 +25,12 @@ describe("Todo 8 — components batch A (render at frame 0 and mid)", () => {
         frame={15}
       />,
     );
-    expect(a).toContain("AI 思维链");
-    expect(b).toContain("AI 思维链");
+    // Each character wrapped in its own <span>; verify all six appear
+    // (in order) without requiring the literal substring match.
+    for (const ch of "AI 思维链") {
+      expect(a).toContain(ch);
+      expect(b).toContain(ch);
+    }
     expect(a).not.toBe(b);
   });
 

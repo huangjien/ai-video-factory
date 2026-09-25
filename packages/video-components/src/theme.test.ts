@@ -19,16 +19,18 @@ describe("Todo 7 — theme tokens", () => {
     expect(ratio).toBeGreaterThan(7);
   });
 
-  it("registry exports the 11 components (10 v0.1 + AnimatedIllustration)", () => {
+  it("registry exports the 13 components (10 v0.1 + AnimatedIllustration + Character + ImageBackground)", () => {
     expect(COMPONENT_NAMES.sort()).toEqual(
       [
         "AnimatedIllustration",
         "Callout",
+        "Character",
         "CodeBlock",
         "Comparison",
         "EndCard",
         "FlowChart",
         "Image",
+        "ImageBackground",
         "Paragraph",
         "Terminal",
         "Timeline",

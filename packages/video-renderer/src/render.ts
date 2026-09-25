@@ -1,5 +1,14 @@
 import { execFile } from "node:child_process";
-import { mkdtemp, mkdir, readdir, rm, stat, writeFile } from "node:fs/promises";
+import {
+  mkdtemp,
+  mkdir,
+  rm,
+  writeFile,
+  readdir,
+  stat,
+  readFile,
+} from "node:fs/promises";
+import { existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -80,27 +89,57 @@ export async function renderPlanToVideo(
 ): Promise<void> {
   void sweepRemotionTemp().catch(() => {});
   await mkdir(path.dirname(outPath), { recursive: true });
+  const resolvedPlan = await resolveImageSources(renderPlan);
   const workDir = await mkdtemp(path.join(tmpdir(), "vf-render-"));
   const entry = path.join(workDir, "entry.tsx");
-  await writeFile(entry, renderEntryTemplate(renderPlan), "utf8");
+  await writeFile(entry, renderEntryTemplate(resolvedPlan), "utf8");
   try {
     const serveUrl = await bundle({ entryPoint: entry });
     const composition = await selectComposition({
       serveUrl,
       id: "video-factory",
-      inputProps: { renderPlan },
+      inputProps: { renderPlan: resolvedPlan },
     });
     await renderMedia({
       composition,
       serveUrl,
       codec: "h264",
       outputLocation: outPath,
-      inputProps: { renderPlan },
+      inputProps: { renderPlan: resolvedPlan },
       overwrite: true,
     });
   } finally {
     await rm(workDir, { recursive: true, force: true }).catch(() => {});
   }
+}
+
+/**
+ * Convert ImageBackground scene `src` file paths to base64 data URLs.
+ * Remotion's bundler serves the entry over HTTP, so file:// and
+ * relative paths won't resolve in the headless browser. Data URLs
+ * bypass that entirely. Non-existent files leave the src unchanged
+ * (the dark background renders instead of crashing).
+ */
+async function resolveImageSources(
+  plan: RenderPlan,
+): Promise<RenderPlan> {
+  const scenes = await Promise.all(
+    plan.scenes.map(async (scene) => {
+      if (scene.component !== "ImageBackground") return scene;
+      const src = (scene.props as { src?: unknown }).src;
+      if (typeof src !== "string" || src.startsWith("data:")) return scene;
+      if (!existsSync(src)) return scene;
+      const bytes = await readFile(src);
+      const ext = path.extname(src).toLowerCase();
+      const mime = ext === ".png" ? "image/png" : "image/jpeg";
+      const dataUrl = `data:${mime};base64,${Buffer.from(bytes).toString("base64")}`;
+      return {
+        ...scene,
+        props: { ...scene.props, src: dataUrl },
+      };
+    }),
+  );
+  return { ...plan, scenes };
 }
 
 /** Re-mux with +faststart for streamable MP4 without recompressing video. */

@@ -1,12 +1,11 @@
 import type { FC } from "react";
-import { AbsoluteFill, staticFile } from "remotion";
+import { AbsoluteFill } from "remotion";
 import { darkTechTheme } from "../theme.js";
 
 export interface ImageBackgroundProps {
-  /** Path to a project image (relative to the project root or
-   * absolute). Read from `assets/images/` by convention; can also be
-   * `staticFile("...")`-wrapped if you want to use Remotion's
-   * asset-pipeline bundling. */
+  /** Image source — data URL (`data:image/jpeg;base64,...`) or any
+   * URL the headless browser can resolve. File paths must be converted
+   * to data URLs upstream (see renderPlanToVideo). */
   src: string;
   /** Fit mode — cover fills the frame (may crop); contain fits
    * without cropping. Defaults to cover for background use. */
@@ -23,14 +22,10 @@ const easeInOut = (t: number): number =>
   t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
 
 /**
- * Static project image rendered as the scene background with subtle
- * Ken-Burns motion (slow zoom + pan). When no image is provided the
- * scene falls back to the shared animated `Background` component in
- * the parent (`Root.tsx`) — so this is opt-in for users that want a
- * specific image per scene.
- *
- * Reads from the project's `assets/images/` directory by convention
- * (the same path the v0.2 image asset pipeline writes to).
+ * Scene background from an AI-generated image with subtle Ken-Burns
+ * motion (slow zoom + pan). Accepts data URLs — file paths must be
+ * resolved to data URLs by the caller because Remotion's bundler
+ * serves the entry over HTTP, blocking file:// access.
  */
 export const ImageBackground: FC<ImageBackgroundProps> = ({
   src,
@@ -52,7 +47,8 @@ export const ImageBackground: FC<ImageBackgroundProps> = ({
       }}
     >
       <img
-        src={staticFile(src)}
+        src={src}
+        alt=""
         style={{
           position: "absolute",
           inset: 0,

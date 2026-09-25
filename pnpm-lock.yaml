@@ -373,6 +373,9 @@ importers:
       '@vf/draft':
         specifier: workspace:*
         version: link:../draft
+      '@vf/media-generators':
+        specifier: workspace:*
+        version: link:../media-generators
       '@vf/tts':
         specifier: workspace:*
         version: link:../tts

@@ -10,6 +10,7 @@
     { "path": "../audio-plan" },
     { "path": "../tts" },
     { "path": "../audio-assets" },
-    { "path": "../audio-mix" }
+    { "path": "../audio-mix" },
+    { "path": "../media-generators" }
   ]
 }

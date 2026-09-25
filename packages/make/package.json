@@ -15,6 +15,7 @@
     "@vf/audio-mix": "workspace:*",
     "@vf/audio-plan": "workspace:*",
     "@vf/draft": "workspace:*",
+    "@vf/media-generators": "workspace:*",
     "@vf/tts": "workspace:*",
     "yaml": "^2.7.0"
   }

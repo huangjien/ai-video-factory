@@ -220,18 +220,30 @@ program
     "use FakeTTSProvider (no Edge-TTS network call) — produces silent placeholder WAVs",
   )
   .option(
+    "--image-provider <provider>",
+    "image provider for scene visuals: minimax (real AI), mock, none (default: minimax; --fake implies mock)",
+  )
+  .option(
     "--dry-run",
     "log which steps would run without executing them",
   )
   .action(
     async (
       project: string,
-      opts: { cwd?: string; fake?: boolean; dryRun?: boolean },
+      opts: {
+        cwd?: string;
+        fake?: boolean;
+        imageProvider?: "minimax" | "mock" | "none";
+        dryRun?: boolean;
+      },
     ) => {
       process.exitCode = await runMakeCli({
         project,
         ...(opts.cwd !== undefined ? { cwd: opts.cwd } : {}),
         ...(opts.fake !== undefined ? { fake: opts.fake } : {}),
+        ...(opts.imageProvider !== undefined
+          ? { imageProvider: opts.imageProvider }
+          : {}),
         ...(opts.dryRun !== undefined ? { dryRun: opts.dryRun } : {}),
       });
     },

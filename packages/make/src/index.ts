@@ -1,17 +1,32 @@
 import { execFile } from "node:child_process";
-import { mkdir, writeFile, readFile, readdir, stat } from "node:fs/promises";
-import { existsSync } from "node:fs";
+import {
+  mkdir,
+  writeFile,
+  readFile,
+  readdir,
+  stat,
+} from "node:fs/promises";
+import {
+  existsSync,
+  readFileSync,
+  writeFileSync,
+} from "node:fs";
 import { promisify } from "node:util";
 import os from "node:os";
 import path from "node:path";
-import { parseArticle, type ParsedArticle } from "@vf/draft";
-import { parse as parseYaml } from "yaml";
+import { parseArticle, articleToStoryboardYaml, type ParsedArticle } from "@vf/draft";
+import { parse as parseYaml, stringify as yamlStringify } from "yaml";
 import {
   FakeTTSProvider,
   EdgeTTSProvider,
   type TTSProvider,
 } from "@vf/tts";
 import { MockAudioAssetProvider } from "@vf/audio-assets";
+import {
+  MiniMaxImageProvider,
+  MockImageProvider,
+  type ImageProvider,
+} from "@vf/media-generators";
 
 const execFileAsync = promisify(execFile);
 
@@ -23,6 +38,10 @@ export interface MakeOptions {
   idempotent?: boolean;
   /** If true, log what would be done without executing. */
   dryRun?: boolean;
+  /** Image provider for scene visuals: "minimax" (real AI), "mock"
+   * (deterministic placeholder), or "none" (skip image generation;
+   * scenes fall back to AnimatedIllustration geometric shapes). */
+  imageProvider?: "minimax" | "mock" | "none";
 }
 
 export interface MakeStep {
@@ -66,7 +85,19 @@ export async function runMake(opts: MakeOptions): Promise<MakeReport> {
     await readFile(audioConfigPath, "utf8"),
   ) as AudioConfigShape;
 
-  // 1. TTS scenes — narrate each scene's voice-over text.
+  await runStep(report, "sync-storyboard", idempotent, dryRun, () =>
+    syncStoryboardFromArticle(opts.projectRoot, article),
+  );
+
+  // 1. Generate scene visuals from article's visual descriptions.
+  //    Produces assets/images/scene_N.jpg used by ImageBackground.
+  await runStep(report, "generate-visuals", idempotent, dryRun, () =>
+    generateSceneVisuals(opts.projectRoot, article, {
+      provider: opts.imageProvider ?? (opts.fake ? "mock" : "minimax"),
+    }),
+  );
+
+  // 1b. TTS scenes — narrate each scene's voice-over text.
   await runStep(report, "tts", idempotent, dryRun, () =>
     runTts(opts.projectRoot, article, audioConfig, {
       fake: opts.fake === true,
@@ -125,6 +156,167 @@ async function runStep(
 
 function failStep(report: MakeReport, name: string, message: string): void {
   report.steps.push({ name, status: "fail", message });
+}
+
+/**
+ * Refresh storyboard.yaml from the current article.md so the renderer
+ * always sees the up-to-date scene list. Only rewrites when the
+ * article's scene IDs differ from the storyboard's (preserves
+ * hand-edited component/props on matching scenes).
+ */
+async function syncStoryboardFromArticle(
+  projectRoot: string,
+  article: ParsedArticle,
+): Promise<string[]> {
+  const storyboardPath = path.join(
+    projectRoot,
+    "storyboard",
+    "storyboard.yaml",
+  );
+  if (!existsSync(storyboardPath)) {
+    await mkdir(path.dirname(storyboardPath), { recursive: true });
+    await writeFile(
+      storyboardPath,
+      articleToStoryboardYaml(article),
+      "utf8",
+    );
+    return ["storyboard.yaml: created from article.md"];
+  }
+
+  const yamlText = readFileSync(storyboardPath, "utf8");
+  let parsed: {
+    scenes?: { id?: string; visual?: { component?: string } }[];
+  };
+  try {
+    parsed = parseYaml(yamlText) as typeof parsed;
+  } catch {
+    parsed = { scenes: [] };
+  }
+
+  const articleIds = article.scenes.map((_, i) => `scene-${String(i + 1).padStart(2, "0")}`);
+  const storyboardIds = (parsed.scenes ?? []).map((s) => s.id ?? "");
+  const idsMatch =
+    articleIds.length === storyboardIds.length &&
+    articleIds.every((id, i) => id === storyboardIds[i]);
+
+  if (idsMatch) return [];
+
+  await writeFile(storyboardPath, articleToStoryboardYaml(article), "utf8");
+  return [`storyboard.yaml: ${articleIds.length} scenes synced from article.md`];
+}
+
+/**
+ * Generate an AI image for each scene's `visual:` description and save
+ * to `assets/images/scene_N.jpg`. Idempotent — skips scenes whose image
+ * already exists. When the provider is "none" or a scene has no visual
+ * description, it's skipped and the renderer falls back to
+ * AnimatedIllustration geometric shapes.
+ */
+async function generateSceneVisuals(
+  projectRoot: string,
+  article: ParsedArticle,
+  opts: { provider: "minimax" | "mock" | "none" },
+): Promise<string[]> {
+  if (opts.provider === "none") return [];
+
+  const imageDir = path.join(projectRoot, "assets", "images");
+  await mkdir(imageDir, { recursive: true });
+
+  const isMock = opts.provider === "mock";
+  const provider: ImageProvider =
+    opts.provider === "minimax"
+      ? new MiniMaxImageProvider()
+      : new MockImageProvider();
+  const reqWidth = isMock ? 64 : 1920;
+  const reqHeight = isMock ? 36 : 1080;
+
+  const outputs: string[] = [];
+  const generatedImages: string[] = [];
+  for (let i = 0; i < article.scenes.length; i++) {
+    const scene = article.scenes[i]!;
+    const visual = scene.visual ?? "";
+    if (!visual || visual.trim().length === 0) continue;
+
+    const imagePath = path.join(imageDir, `scene_${i + 1}.jpg`);
+    if (existsSync(imagePath)) {
+      generatedImages.push(imagePath);
+      continue; // idempotent
+    }
+
+    try {
+      const result = await provider.generate({
+        prompt: visual,
+        width: reqWidth,
+        height: reqHeight,
+      });
+      await writeFile(imagePath, result.bytes);
+      outputs.push(`assets/images/scene_${i + 1}.jpg`);
+      generatedImages.push(imagePath);
+    } catch (err) {
+      // Non-fatal: scene falls back to AnimatedIllustration.
+      outputs.push(
+        `scene_${i + 1}: image gen failed — ${(err as Error).message.slice(0, 60)}`,
+      );
+    }
+  }
+
+  if (generatedImages.length > 0) {
+    updateStoryboardForImages(projectRoot, generatedImages);
+    outputs.push(
+      `storyboard.yaml: ${generatedImages.length} scenes switched to ImageBackground`,
+    );
+  }
+  return outputs;
+}
+
+/**
+ * Swap AnimatedIllustration → ImageBackground in storyboard.yaml for
+ * scenes that have a generated image. Uses yaml parse/stringify (not
+ * line regex) because this is a structural change, not a value tweak.
+ */
+function updateStoryboardForImages(
+  projectRoot: string,
+  imagePaths: string[],
+): void {
+  const storyboardPath = path.join(
+    projectRoot,
+    "storyboard",
+    "storyboard.yaml",
+  );
+  if (!existsSync(storyboardPath)) return;
+
+  const yamlText = readFileSync(storyboardPath, "utf8");
+  let parsed: {
+    scenes?: {
+      id?: string;
+      visual?: { component?: string; props?: Record<string, unknown> };
+    }[];
+  };
+  try {
+    parsed = parseYaml(yamlText) as typeof parsed;
+  } catch {
+    return;
+  }
+  if (!parsed.scenes) return;
+
+  let changed = false;
+  for (const scene of parsed.scenes) {
+    if (scene.visual?.component !== "AnimatedIllustration") continue;
+    const idNum = scene.id?.match(/scene[-_]?(\d+)/)?.[1];
+    if (!idNum) continue;
+    const imagePath = imagePaths.find((p) =>
+      p.includes(`scene_${parseInt(idNum, 10)}.`),
+    );
+    if (!imagePath) continue;
+
+    scene.visual.component = "ImageBackground";
+    scene.visual.props = { src: imagePath };
+    changed = true;
+  }
+
+  if (changed) {
+    writeFileSync(storyboardPath, yamlStringify(parsed), "utf8");
+  }
 }
 
 interface AudioConfigShape {

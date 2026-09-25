@@ -49,8 +49,10 @@ const drift = (frame: number, period = 240): number =>
 
 /**
  * Per-scene animated SVG illustration. Picks a shape set from
- * keywords in `visual:`, draws it with a 1-second entrance + a
- * continuous drift cycle thereafter.
+ * keywords in `visual:`, draws it with a 1-second entrance, a
+ * continuous drift cycle thereafter, and a slow scale "breathing"
+ * pulse for the rest of the scene so the illustration stays alive
+ * even when nothing else is happening.
  */
 export const AnimatedIllustration: FC<IllustrationProps> = ({
   text,
@@ -60,9 +62,10 @@ export const AnimatedIllustration: FC<IllustrationProps> = ({
   frame,
 }) => {
   const localFrame = frame;
-  const enterFrames = 30; // 1s at 30fps
+  const enterFrames = 30;
   const enterT = easeOut(progress(localFrame, enterFrames));
   const ambient = drift(localFrame);
+  const breath = 1 + Math.sin(drift(localFrame, 96) * Math.PI * 2) * 0.02;
   const set = pickShapeSet(visual);
 
   return (
@@ -84,7 +87,7 @@ export const AnimatedIllustration: FC<IllustrationProps> = ({
           margin: 0,
           marginBottom: 24,
           opacity: enterT,
-          transform: `translateY(${(1 - enterT) * 30}px)`,
+          transform: `translateY(${(1 - enterT) * 30}px) scale(${breath})`,
         }}
       >
         {text}
@@ -95,7 +98,7 @@ export const AnimatedIllustration: FC<IllustrationProps> = ({
         height="60%"
         style={{
           opacity: enterT,
-          transform: `scale(${0.85 + enterT * 0.15})`,
+          transform: `scale(${(0.85 + enterT * 0.15) * breath})`,
           maxWidth: 1080,
         }}
       >

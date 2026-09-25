@@ -176,7 +176,8 @@ async function syncStoryboardDurations(projectRoot: string): Promise<string[]> {
         path.join(audioDir, w),
       ]);
       const sec = parseFloat(stdout.trim());
-      if (Number.isFinite(sec) && sec > 0) {
+      // Skip near-zero WAVs (fake TTS placeholder, partial downloads).
+      if (Number.isFinite(sec) && sec >= 1) {
         durations.set(idKey, sec);
       }
     } catch {

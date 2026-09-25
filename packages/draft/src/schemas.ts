@@ -71,11 +71,12 @@ export function articleToStoryboardYaml(article: ParsedArticle): string {
   article.scenes.forEach((s, i) => {
     const id = `scene-${String(i + 1).padStart(2, "0")}`;
     const isFirst = i === 0;
-    const component = isFirst ? "Title" : "Paragraph";
-    const props =
-      isFirst && s.visual && s.visual.length > 0
+    const component = isFirst ? "Title" : "AnimatedIllustration";
+    const props = isFirst
+      ? s.visual && s.visual.length > 0
         ? `    visual:\n      component: ${component}\n      props:\n        text: ${yamlStr(s.caption ?? "")}\n        subtext: ${yamlStr(s.visual ?? "")}`
-        : `    visual:\n      component: ${component}\n      props:\n        text: ${yamlStr(s.caption ?? "")}`;
+        : `    visual:\n      component: ${component}\n      props:\n        text: ${yamlStr(s.caption ?? "")}`
+      : `    visual:\n      component: ${component}\n      props:\n        text: ${yamlStr(s.caption ?? "")}\n        visual: ${yamlStr(s.visual ?? "")}`;
     lines.push(`  - id: ${id}`);
     lines.push(`    duration: ${s.duration ?? 0}`);
     lines.push(`    narration:`);

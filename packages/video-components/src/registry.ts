@@ -1,5 +1,6 @@
 import type { ComponentType } from "react";
 import { z } from "zod";
+import { AnimatedIllustration } from "./components/Illustration.js";
 import { Callout } from "./components/Callout.js";
 import { CodeBlock } from "./components/CodeBlock.js";
 import { Comparison } from "./components/Comparison.js";
@@ -38,6 +39,13 @@ const paragraphProps = z
   .object({
     text: z.string().min(1),
     align: z.enum(["left", "center"]).default("center"),
+  })
+  .passthrough();
+
+const illustrationProps = z
+  .object({
+    text: z.string().min(1),
+    visual: z.string().optional(),
   })
   .passthrough();
 
@@ -187,6 +195,10 @@ export const REGISTRY: Record<string, RegistryEntry> = {
     propsSchema: withAlias("Paragraph", paragraphProps),
     component: Paragraph as ComponentType<unknown>,
   },
+  AnimatedIllustration: {
+    propsSchema: illustrationProps,
+    component: AnimatedIllustration as ComponentType<unknown>,
+  },
   CodeBlock: {
     propsSchema: codeBlockProps,
     component: CodeBlock as ComponentType<unknown>,
@@ -226,6 +238,7 @@ export const COMPONENT_NAMES = Object.keys(REGISTRY);
 export type RegistryPropsByName = {
   Title: { text: string; subtext?: string };
   Paragraph: { text: string; align?: "left" | "center" };
+  AnimatedIllustration: { text: string; visual?: string };
   CodeBlock: { code: string; language?: string; highlightLines?: number[] };
   Terminal: { title?: string; lines: string[]; prompt?: string };
   Image: { src: string; fit?: "contain" | "cover" };

@@ -257,13 +257,14 @@ describe("articleToStoryboardYaml (VDSL sync)", () => {
     );
   });
 
-  it("uses Paragraph for subsequent scenes", () => {
+  it("uses AnimatedIllustration for subsequent scenes (caption + visual)", () => {
     const yaml = articleToStoryboardYaml(fixture);
     const parsed = parseYaml(yaml) as {
       scenes: { visual: { component: string; props: Record<string, string> } }[];
     };
-    expect(parsed.scenes[1]?.visual.component).toBe("Paragraph");
-    expect(parsed.scenes[1]?.visual.props.subtext).toBeUndefined();
+    expect(parsed.scenes[1]?.visual.component).toBe("AnimatedIllustration");
+    expect(parsed.scenes[1]?.visual.props.text).toBe(fixture.scenes[1]?.caption);
+    expect(parsed.scenes[1]?.visual.props.visual).toBe(fixture.scenes[1]?.visual);
   });
 
   it("escapes newlines and quotes in narration so the YAML parses", () => {

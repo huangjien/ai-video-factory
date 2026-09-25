@@ -4,6 +4,7 @@ import type {
   ChatResponse,
   Provider,
 } from "./provider.js";
+import { longTimeoutAgent } from "./timeout.js";
 
 export interface MiniMaxProviderOptions {
   apiHost?: string | undefined;
@@ -54,6 +55,8 @@ export class MiniMaxProvider implements Provider {
           ? { response_format: req.response_format }
           : {}),
       }),
+      // @ts-expect-error undici-specific; raises headersTimeout 300s → 900s
+      dispatcher: longTimeoutAgent,
     });
     const body = await res.text();
     if (!res.ok) {

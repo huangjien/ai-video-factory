@@ -15,5 +15,6 @@ export {
   type Usage,
 } from "./provider.js";
 export { withRetry, chatWithFallback } from "./retry.js";
+export { longTimeoutAgent } from "./timeout.js";
 export { GLMProvider, type GLMProviderOptions } from "./glm.js";
 export { MiniMaxProvider, type MiniMaxProviderOptions } from "./minimax.js";

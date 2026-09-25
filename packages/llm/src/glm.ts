@@ -4,6 +4,7 @@ import type {
   ChatResponse,
   Provider,
 } from "./provider.js";
+import { longTimeoutAgent } from "./timeout.js";
 
 export interface GLMProviderOptions {
   baseUrl?: string | undefined;
@@ -52,6 +53,8 @@ export class GLMProvider implements Provider {
           ? { response_format: req.response_format }
           : {}),
       }),
+      // @ts-expect-error undici-specific; raises headersTimeout 300s → 900s
+      dispatcher: longTimeoutAgent,
     });
     const body = await res.text();
     if (!res.ok) {

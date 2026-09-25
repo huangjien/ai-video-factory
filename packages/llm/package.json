@@ -20,6 +20,7 @@
     "build": "tsc -p tsconfig.json"
   },
   "dependencies": {
+    "undici": "^8.11.2",
     "yaml": "^2.7.0"
   }
 }

@@ -60,7 +60,10 @@ export async function callAudioPlan(
   fallback?: Provider | null,
 ): Promise<CallAudioPlanResult> {
   const messages = buildMessages(input);
-  const out = await chatWithFallback(provider, fallback ?? null, { messages });
+  const out = await chatWithFallback(provider, fallback ?? null, {
+    messages,
+    response_format: { type: "json_object" },
+  });
   const res = out.response;
   const raw = res.content.trim();
   if (!raw) {
@@ -71,24 +74,22 @@ export async function callAudioPlan(
   try {
     parsed = JSON.parse(jsonText);
   } catch (err) {
-    // Some LLM calls return YAML; try that.
     try {
       parsed = parseYaml(jsonText);
     } catch (err2) {
       throw new AudioPlanError(
         `JSON/YAML parse failed: ${(err as Error).message}`,
-        provider.name,
+        out.provider,
         err,
       );
     }
   }
-  // Merge with defaults so partial plans still produce a complete config.
   const merged: AudioConfig = { ...DEFAULT_AUDIO_CONFIG, ...(parsed as AudioConfig) };
   const validation = AudioConfigSchema.safeParse(merged);
   if (!validation.success) {
     throw new AudioPlanError(
       `audio-config invalid: ${validation.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; ")}`,
-      provider.name,
+      out.provider,
       validation.error,
     );
   }
@@ -100,9 +101,18 @@ export async function callAudioPlan(
   };
 }
 
+/** Strip `` tags GLM-5.3 emits despite JSON mode + unwrap
+ * any surrounding ```json``` fence. Tolerant to either order. */
 function unwrapJson(text: string): string {
+  let out = text;
+  const thinkMatch = out.match(/<think>([\s\S]*?)<\/think>/);
+  while (thinkMatch && thinkMatch[1] !== undefined) {
+    out = out.replace(/<think>[\s\S]*?<\/think>/, "").trim();
+    const m = out.match(/<think>([\s\S]*?)<\/think>/);
+    if (!m) break;
+  }
   const fenced = /^```(?:json|yaml)?\s*\n?([\s\S]*?)\n?```\s*$/;
-  const m = text.match(fenced);
-  if (m && m[1] !== undefined) return m[1].trim();
-  return text;
+  const fm = out.match(fenced);
+  if (fm && fm[1] !== undefined) return fm[1].trim();
+  return out;
 }

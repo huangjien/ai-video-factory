@@ -1,6 +1,6 @@
 import { useCurrentFrame } from "remotion";
 import type { RenderPlan, RenderPlanScene } from "@vf/vdsl";
-import { REGISTRY } from "@vf/video-components";
+import { REGISTRY, Background } from "@vf/video-components";
 import { darkTechTheme } from "@vf/video-components";
 
 export interface RootProps {
@@ -107,6 +107,7 @@ export const Root = ({ renderPlan }: RootProps) => {
 
   return (
     <div style={wrapStyle}>
+      <Background frame={frame} />
       <div style={{ position: "absolute", inset: 0, opacity: fadeOut }}>
         <SceneComponent {...baseProps} />
       </div>

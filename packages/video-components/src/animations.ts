@@ -43,3 +43,36 @@ export function typewriter(
   const visible = Math.floor(frame * charsPerFrame);
   return text.slice(0, visible);
 }
+
+/**
+ * Composite entrance used by Title and (optionally) other headers.
+ * Combines fade-in, slide-in, and scale-up so each text block arrives
+ * with motion rather than just appearing.
+ */
+export function entrance(
+  frame: number,
+  durationFrames = 24,
+  direction: "left" | "right" | "up" | "down" = "up",
+): { opacity: number; translate: number; scale: number } {
+  const t = fade(frame, durationFrames);
+  const remaining = 40 * (1 - t);
+  const sign = direction === "left" || direction === "up" ? -1 : 1;
+  const translate = remaining === 0 ? 0 : sign * remaining;
+  const s = 0.92 + (1 - 0.92) * t;
+  return { opacity: t, translate, scale: s };
+}
+
+/**
+ * Hold-then-exit: full opacity for the body of the scene, then fade
+ * out in the last `exitFrames` frames. Used for scene-to-scene
+ * transitions.
+ */
+export function fadeOut(
+  frame: number,
+  totalFrames: number,
+  exitFrames = 15,
+): number {
+  const start = totalFrames - exitFrames;
+  if (frame < start) return 1;
+  return Math.max(0, 1 - (frame - start) / exitFrames);
+}

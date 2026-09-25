@@ -76,7 +76,7 @@ describe("callDraft (JSON-mode assembly)", () => {
     );
     expect(markdown.startsWith("---\n")).toBe(true);
     expect(markdown).toContain("language: zh-CN");
-    expect(markdown).toContain("voice: zh-CN-XiaoxiaoNeural");
+    expect(markdown).toContain("voice: zh-CN-YunjianNeural");
     expect(markdown).toContain("# AI 思维链");
     expect(markdown).toContain("> **Hook**");
     expect(markdown).toContain("## 1. 问题");
@@ -96,7 +96,7 @@ describe("callDraft (JSON-mode assembly)", () => {
       { topic: "AI chain of thought", audience: "developers", language: "en-US", duration: 40 },
       p,
     );
-    expect(markdown).toContain("voice: en-US-AriaNeural");
+    expect(markdown).toContain("voice: en-US-ChristopherNeural");
   });
 
   it("falls back to defaults when LLM omits fields", async () => {

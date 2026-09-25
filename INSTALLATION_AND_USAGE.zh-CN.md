@@ -476,13 +476,27 @@ sfx: {}
 只改 `pause_between_sentences_sec` 后再跑 `vf make`，只重跑 TTS
 那一步，其它产物按 mtime 跳过。
 
-### 9.3 Edge TTS 注意事项
+### 9.3 音色选择
+
+默认音色取决于 article 的 `language` 字段。想按项目自定义，改
+`audio-config.yaml` 里的 `voice:`；想改全局默认，改
+`packages/make/src/index.ts` 的 `ZH_VOICE` / `EN_VOICE` 常量并重新构建。
+
+| 语言 | 默认（男声） | 女声备选 | 其它男声备选 |
+| --- | --- | --- | --- |
+| `zh-CN` | `zh-CN-YunjianNeural`（纪录片风格） | `zh-CN-XiaoxiaoNeural` | `zh-CN-YunxiNeural`（温暖）、`zh-CN-YunyangNeural`（新闻） |
+| `en-US` | `en-US-ChristopherNeural`（平静旁白） | `en-US-AriaNeural` | `en-US-GuyNeural`、`en-US-EricNeural` |
+
+任何 Edge TTS 支持的 voice ID 都可以用 — 直接写到 `audio-config.yaml`
+的 `voice:` 字段即可。除非显式覆盖，文章一直使用默认男声。
+
+### 9.4 Edge TTS 注意事项
 
 Edge TTS 不收取直接 API 费，但商业再分发和长期生产使用应先确认服务
 条款。需要正式授权的生产服务时，可通过 `@vf/tts` 的 `TTSProvider`
 接口替换（例如 MiniMax TTS / ElevenLabs）。
 
-### 9.4 旧版 `vf audio` 命令（仍可用）
+### 9.5 旧版 `vf audio` 命令（仍可用）
 
 旧项目若要单独跑 TTS，可继续用 `vf audio <slug>`，它读
 `storyboard/storyboard.yaml` 的 `narration.text` 字段。`vf make` 内部
@@ -594,6 +608,30 @@ vf final --cwd projects/demo
 
 可能是其他渲染进程占用端口，或当前执行环境禁止本地 loopback。停止
 残留进程后重试，并确认本地端口绑定权限。
+
+### 磁盘占用增长很快（`node_modules` / `/tmp`）
+
+两个临时目录会在高频使用下持续累积：
+
+- **`node_modules/.cache/webpack`** — Remotion 的持久化 webpack 缓存。
+  每次渲染配置变化都会增量增长。直接删除即可，下次渲染会重建。
+
+  ```bash
+  rm -rf node_modules/.cache/webpack
+  ```
+
+- **系统 `$TMPDIR`**（macOS 默认 `$TMPDIR`、Linux 默认 `/tmp`）—
+  每次 Remotion 渲染会留下 `remotion-webpack-bundle-*` 与
+  `remotion-v*-assets-*` 目录。每个渲染 ~26MB；几百次测试/make
+  跑下来可以积到几十 GB。`vf make` 每次渲染会自动清理 1 小时前
+  的条目，但本地直接跑 `vf preview` 时不一定走这条路径。立即清理：
+
+  ```bash
+  # macOS 默认：
+  rm -rf "$TMPDIR"/remotion-webpack-bundle-* "$TMPDIR"/remotion-v*-assets*
+  # Linux：
+  rm -rf /tmp/remotion-webpack-bundle-* /tmp/remotion-v*-assets*
+  ```
 
 ## 12. 一步步：从一个主题开始创建视频
 

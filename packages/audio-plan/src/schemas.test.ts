@@ -5,7 +5,7 @@ import { AudioConfigSchema, DEFAULT_AUDIO_CONFIG } from "./schemas.js";
 describe("AudioConfigSchema", () => {
   it("accepts the canonical shape", () => {
     const r = AudioConfigSchema.safeParse({
-      voice: "zh-CN-XiaoxiaoNeural",
+      voice: "zh-CN-YunjianNeural",
       bgm: "calm",
       bgm_fade_in_sec: 1.5,
       bgm_fade_out_sec: 2.0,
@@ -50,13 +50,13 @@ describe("AudioConfigSchema", () => {
 describe("renderAudioConfig (YAML serializer)", () => {
   it("renders a complete config with SFX", () => {
     const yaml = renderAudioConfig({
-      voice: "zh-CN-XiaoxiaoNeural",
+      voice: "zh-CN-YunjianNeural",
       bgm: "calm",
       bgm_fade_in_sec: 1.5,
       bgm_fade_out_sec: 2.0,
       sfx: { scene_2: "whoosh", scene_4: "ding" },
     });
-    expect(yaml).toContain("voice: zh-CN-XiaoxiaoNeural");
+    expect(yaml).toContain("voice: zh-CN-YunjianNeural");
     expect(yaml).toContain('bgm: "calm"');
     expect(yaml).toContain("bgm_fade_in_sec: 1.5");
     expect(yaml).toContain("sfx:");

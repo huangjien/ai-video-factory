@@ -12,7 +12,7 @@ const SAMPLE_MD = `---
 project: ai-think
 language: zh-CN
 duration_target_sec: 40
-voice: zh-CN-XiaoxiaoNeural
+voice: zh-CN-YunjianNeural
 ---
 
 # AI 思维链
@@ -53,7 +53,7 @@ describe("parseArticle (markdown-first)", () => {
     expect(r.frontmatter.project).toBe("ai-think");
     expect(r.frontmatter.language).toBe("zh-CN");
     expect(r.frontmatter.duration_target_sec).toBe(40);
-    expect(r.frontmatter.voice).toBe("zh-CN-XiaoxiaoNeural");
+    expect(r.frontmatter.voice).toBe("zh-CN-YunjianNeural");
     expect(r.scenes).toHaveLength(2);
     expect(r.scenes[0]?.id).toBe("scene_1");
     expect(r.scenes[0]?.duration).toBe(10);
@@ -75,7 +75,7 @@ describe("parseArticle (markdown-first)", () => {
 project: t
 language: zh-CN
 duration_target_sec: 40
-voice: zh-CN-XiaoxiaoNeural
+voice: zh-CN-YunjianNeural
 ---
 
 # title
@@ -90,7 +90,7 @@ no scenes heading
 project: t
 language: zh-CN
 duration_target_sec: 40
-voice: zh-CN-XiaoxiaoNeural
+voice: zh-CN-YunjianNeural
 ---
 
 ## Scenes
@@ -107,7 +107,7 @@ describe("ArticleFrontmatterSchema", () => {
       project: "t",
       language: "zh-CN",
       duration_target_sec: 40,
-      voice: "zh-CN-XiaoxiaoNeural",
+      voice: "zh-CN-YunjianNeural",
     });
     expect(fm.project).toBe("t");
   });
@@ -205,7 +205,7 @@ describe("articleToStoryboardYaml (VDSL sync)", () => {
       project: "ai-think",
       language: "zh-CN",
       duration_target_sec: 40,
-      voice: "zh-CN-XiaoxiaoNeural",
+      voice: "zh-CN-YunjianNeural",
     },
     proseBody: "",
     scenes: [

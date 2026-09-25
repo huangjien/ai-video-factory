@@ -15,8 +15,10 @@ export interface AudioOptions {
   fake?: boolean | undefined;
 }
 
-const ZH_VOICE = "zh-CN-XiaoxiaoNeural";
-const EN_VOICE = "en-US-EmmaMultilingualNeural";
+// Default: male narration voices. Female alternatives: zh-CN-XiaoxiaoNeural,
+// en-US-AriaNeural.
+const ZH_VOICE = "zh-CN-YunjianNeural";
+const EN_VOICE = "en-US-ChristopherNeural";
 
 /** Run ffmpeg to convert mp3 bytes (from TTS) to 44.1kHz mono WAV. Pads to
  * `minDurationSec` if the TTS is shorter; never truncates if it's longer.

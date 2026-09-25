@@ -17,7 +17,7 @@ markdown, no code fences).
 Shape:
 
 {
-  "voice": "<Edge TTS voice ID, e.g. zh-CN-XiaoxiaoNeural or en-US-AriaNeural>",
+  "voice": "<Edge TTS voice ID, e.g. zh-CN-YunjianNeural (male, default) or en-US-ChristopherNeural (male, default); female alternatives zh-CN-XiaoxiaoNeural, en-US-AriaNeural>",
   "bgm": "<bgm tag like 'calm' or null to disable>",
   "bgm_fade_in_sec": <number 0..10>,
   "bgm_fade_out_sec": <number 0..10>,
@@ -31,7 +31,8 @@ Shape:
 Rules:
 - Only suggest SFX on scene boundaries or section transitions, never mid-scene.
 - Use 0-3 SFX cues total. Most videos need only 1-2.
-- Default voice: zh-CN-XiaoxiaoNeural (zh-CN) or en-US-AriaNeural (en-US).
+- Default voice: zh-CN-YunjianNeural (zh-CN) or en-US-ChristopherNeural (en-US).
+  Female alternatives: zh-CN-XiaoxiaoNeural, en-US-AriaNeural.
 - Default bgm: 'calm' unless the article mood demands something else.
 - Fade timings: bgm_fade_in 1-3s typical, bgm_fade_out 1.5-3s typical.
 - pause_between_sentences_sec: 0 by default. Suggest 0.5–1.0 when the article has multiple sentences per scene and you want clearer pacing; omit (defaults to 0) for short single-sentence narrations.

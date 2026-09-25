@@ -37,8 +37,10 @@ export interface MakeReport {
   outputFiles: string[];
 }
 
-const ZH_VOICE = "zh-CN-XiaoxiaoNeural";
-const EN_VOICE = "en-US-AriaNeural";
+// Default: male narration voices. Female alternatives: zh-CN-XiaoxiaoNeural,
+// en-US-AriaNeural.
+const ZH_VOICE = "zh-CN-YunjianNeural";
+const EN_VOICE = "en-US-ChristopherNeural";
 
 /** Run the make pipeline against an article.md + audio-config.yaml project. */
 export async function runMake(opts: MakeOptions): Promise<MakeReport> {

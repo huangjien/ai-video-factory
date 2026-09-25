@@ -527,7 +527,23 @@ sfx: {}
   TTS step; mix/preview outputs are skipped because nothing they
   depend on changed.
 
-### 9.3 Edge TTS caveats
+### 9.3 Voice selection
+
+The default voice depends on the article's `language` field. To override
+per-project, edit `voice:` in `audio-config.yaml`. To change the global
+default, edit `ZH_VOICE` / `EN_VOICE` in
+`packages/make/src/index.ts` and re-build.
+
+| Language | Default (male) | Female alt. | Other male alts |
+| --- | --- | --- | --- |
+| `zh-CN` | `zh-CN-YunjianNeural` (documentary-style) | `zh-CN-XiaoxiaoNeural` | `zh-CN-YunxiNeural` (warm), `zh-CN-YunyangNeural` (news) |
+| `en-US` | `en-US-ChristopherNeural` (calm narration) | `en-US-AriaNeural` | `en-US-GuyNeural`, `en-US-EricNeural` |
+
+Any voice ID listed by Edge TTS works — pass it as `voice:` in
+`audio-config.yaml`. The LLM-generated article always uses the male
+default unless your `voice:` line overrides it.
+
+### 9.4 Edge TTS caveats
 
 Edge TTS has no direct API charge, but commercial redistribution and
 long-term production use should be checked against the service terms. To
@@ -535,7 +551,7 @@ replace with a formally licensed provider (MiniMax TTS, ElevenLabs,
 etc.), implement the `TTSProvider` interface in `@vf/tts` and pass it to
 `vf make` (CLI integration in a follow-up).
 
-### 9.4 Legacy `vf audio` command (still available)
+### 9.5 Legacy `vf audio` command (still available)
 
 The old `vf audio <slug>` reads `storyboard/storyboard.yaml`'s
 `narration.text` and writes WAVs + a captions SRT. `vf make` runs the
@@ -635,6 +651,33 @@ Then retry `vf final --cwd projects/demo`. New code should not hit this
 Another process or the execution environment may prevent local port binding.
 Stop stale render processes, retry with a clean shell, and verify that local
 loopback sockets are permitted.
+
+### Disk usage grows fast (`node_modules` / `/tmp`)
+
+Two temp directories accumulate during heavy use:
+
+- **`node_modules/.cache/webpack`** — Remotion's persistent webpack cache.
+  Grows incrementally on every unique render config. Delete to reclaim
+  space; the next render rebuilds it.
+
+  ```bash
+  rm -rf node_modules/.cache/webpack
+  ```
+
+- **System `$TMPDIR` (e.g. `/tmp` on Linux, `$TMPDIR` on macOS)** —
+  `remotion-webpack-bundle-*` and `remotion-v*-assets-*` dirs from each
+  Remotion render. Each render leaks ~26MB; hundreds of test/make runs
+  can leave tens of GB. `vf make` sweeps these automatically every
+  render (entries older than 1 hour), but other Remotion invocations
+  (e.g. direct `vf preview` calls during local dev) may not. To
+  reclaim now:
+
+  ```bash
+  # macOS default:
+  rm -rf "$TMPDIR"/remotion-webpack-bundle-* "$TMPDIR"/remotion-v*-assets*
+  # Linux:
+  rm -rf /tmp/remotion-webpack-bundle-* /tmp/remotion-v*-assets*
+  ```
 
 ## 12. Step-by-step: create a video from a topic
 

@@ -211,9 +211,11 @@ function yamlScalar(s: string): string {
   return s;
 }
 
+// Default: male narration. Female alternatives: zh-CN-YunjianNeural,
+// en-US-ChristopherNeural.
 function pickVoice(lang: string): string {
-  if (lang === "en-US") return "en-US-AriaNeural";
-  return "zh-CN-XiaoxiaoNeural";
+  if (lang === "en-US") return "en-US-ChristopherNeural";
+  return "zh-CN-YunjianNeural";
 }
 
 function slugifyProjectName(s: string): string {

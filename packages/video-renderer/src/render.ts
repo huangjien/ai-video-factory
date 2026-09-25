@@ -1,5 +1,5 @@
 import { execFile } from "node:child_process";
-import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, mkdir, readdir, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -14,6 +14,43 @@ const rendererFile = fileURLToPath(import.meta.url);
 const rendererDir = path.dirname(rendererFile);
 const ext = rendererFile.endsWith(".ts") ? "tsx" : "js";
 const rootSrcPath = `${rendererDir}/Root.${ext}`;
+
+/** Remotion's bundler leaks a ~26MB `remotion-webpack-bundle-*` dir in
+ * os.tmpdir() per render (plus `remotion-v*-assets*` dirs) and never
+ * removes them — hundreds of renders accumulate tens of GB. This sweep
+ * removes entries older than `maxAgeMs`. Fire-and-forget; never throws. */
+export async function sweepRemotionTemp(
+  maxAgeMs: number = 3600_000,
+): Promise<number> {
+  const tmp = tmpdir();
+  let removed = 0;
+  let entries: string[];
+  try {
+    entries = await readdir(tmp);
+  } catch {
+    return 0;
+  }
+  const stalePatterns = [
+    /^remotion-webpack-bundle-/,
+    /^remotion-v\d+\.\d+\.\d+-assets/,
+  ];
+  const now = Date.now();
+  await Promise.all(
+    entries.map(async (name) => {
+      if (!stalePatterns.some((p) => p.test(name))) return;
+      const full = path.join(tmp, name);
+      try {
+        const st = await stat(full);
+        if (now - st.mtimeMs < maxAgeMs) return;
+        await rm(full, { recursive: true, force: true });
+        removed++;
+      } catch {
+        // already gone or in use — skip
+      }
+    }),
+  );
+  return removed;
+}
 
 const renderEntryTemplate = (
   renderPlan: RenderPlan,
@@ -41,6 +78,7 @@ export async function renderPlanToVideo(
   renderPlan: RenderPlan,
   outPath: string,
 ): Promise<void> {
+  void sweepRemotionTemp().catch(() => {});
   await mkdir(path.dirname(outPath), { recursive: true });
   const workDir = await mkdtemp(path.join(tmpdir(), "vf-render-"));
   const entry = path.join(workDir, "entry.tsx");

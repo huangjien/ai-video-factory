@@ -401,6 +401,27 @@ To use a custom routing file:
 export LL_CONFIG="$PWD/llm.config.yaml"
 ```
 
+### Provider fallback on quota / rate-limit errors
+
+When the primary provider returns a quota or rate-limit error (HTTP 429
+/ 402 / 403, or response bodies containing `insufficient_balance`,
+`quota_exceeded`, `rate_limit`), each AI command automatically retries
+once with the configured fallback before failing the run. The
+provider that actually served the request is recorded in
+`runs/<id>.yaml` under `provider:` — so users can audit whether
+fallback kicked in.
+
+Override the routing per-command:
+
+```bash
+vf draft "topic" --model minimax   # force minimax (no fallback to glm)
+vf storyboard "topic" --model glm --lang en-US
+```
+
+A non-quota error from the primary (e.g. HTTP 400 invalid payload) is
+**not** retried with the fallback — it surfaces immediately, because
+the fallback provider would return the same error on the same input.
+
 ### v0.4 recommended: `vf draft` + `vf audio-plan`
 
 The new AI workflow collapses to two commands producing the two human-edit

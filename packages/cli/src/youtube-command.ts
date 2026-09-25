@@ -87,13 +87,21 @@ export async function runYouTube(opts: YouTubeOptions): Promise<number> {
       ];
 
   const cfg = loadProviderConfig();
-  const chosenName = opts.model ?? cfg["review"].primary; // review-role default → conservative
+  const reviewCfg = cfg["review"];
+  const chosenName = opts.model ?? reviewCfg.primary;
   const provider = providerInstance(chosenName);
+  const fallbackName =
+    chosenName === reviewCfg.primary
+      ? reviewCfg.fallback
+      : chosenName === reviewCfg.fallback
+        ? reviewCfg.primary
+        : undefined;
+  const fallback = fallbackName ? providerInstance(fallbackName) : null;
   const model = chosenName === "glm" ? "glm-5.3" : "MiniMax-M3";
 
   let result;
   try {
-    result = await callYouTube(input, provider);
+    result = await callYouTube(input, provider, fallback);
   } catch (err) {
     console.error(
       `\u2717 ${chosenName} youtube agent failed:`,
@@ -165,13 +173,15 @@ export async function runYouTube(opts: YouTubeOptions): Promise<number> {
     ],
     created_at: new Date().toISOString(),
     duration_ms: 0,
-    provider: chosenName,
+    provider: result.providerName,
     model,
     prompt_hash: sha256OfMessages(messages),
     tokens: result.usage,
     estimated_cost_usd:
-      (result.usage.input / 1000) * (chosenName === "glm" ? 0.0008 : 0.001) +
-      (result.usage.output / 1000) * (chosenName === "glm" ? 0.0008 : 0.001),
+      (result.usage.input / 1000) *
+        (result.providerName === "glm" ? 0.0008 : 0.001) +
+      (result.usage.output / 1000) *
+        (result.providerName === "glm" ? 0.0008 : 0.001),
   };
   const { writeRun } = await import("@vf/workflow");
   await writeRun(projectRoot, record);

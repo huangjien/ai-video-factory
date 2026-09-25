@@ -63,6 +63,13 @@ export async function runStoryboard(opts: StoryboardOptions): Promise<number> {
   const roleCfg = cfg["storyboard"];
   const chosenName = opts.model ?? roleCfg.primary;
   const provider = providerInstance(chosenName);
+  const fallbackName =
+    chosenName === roleCfg.primary
+      ? roleCfg.fallback
+      : chosenName === roleCfg.fallback
+        ? roleCfg.primary
+        : undefined;
+  const fallback = fallbackName ? providerInstance(fallbackName) : null;
   const model = chosenName === "glm" ? "glm-5.3" : "MiniMax-M3";
 
   // Optional research + script context (v0.2 phases 2 & 3)
@@ -120,6 +127,7 @@ export async function runStoryboard(opts: StoryboardOptions): Promise<number> {
       },
       provider,
       { model, temperature: 0.7 },
+      fallback,
     );
   } catch (err) {
     console.error(`\u2717 ${chosenName} agent failed:`, (err as Error).message);
@@ -149,7 +157,7 @@ export async function runStoryboard(opts: StoryboardOptions): Promise<number> {
       content: `Topic: ${opts.topic} | Audience: ${audience} | Language: ${lang} | Duration: ${duration}s | Style: ${style}`,
     },
   ];
-  const costUsd = estimateCost(chosenName, result.usage);
+  const costUsd = estimateCost(result.providerName, result.usage);
   const record = {
     run_id: runId,
     stage: "storyboard" as const,
@@ -161,7 +169,7 @@ export async function runStoryboard(opts: StoryboardOptions): Promise<number> {
     output_files: ["storyboard/storyboard.yaml"],
     created_at: new Date().toISOString(),
     duration_ms: 0,
-    provider: chosenName,
+    provider: result.providerName,
     model,
     prompt_hash: sha256OfMessages(messages),
     tokens: result.usage,
@@ -173,7 +181,7 @@ export async function runStoryboard(opts: StoryboardOptions): Promise<number> {
 
   console.log(`\u2713 drafted ${slug}/storyboard/storyboard.yaml`);
   console.log(
-    `  provider=${chosenName}  model=${model}  scenes=${result.storyboard.scenes.length}  tokens=${result.usage.input}+${result.usage.output}  cost=$${costUsd.toFixed(4)}`,
+    `  provider=${result.providerName}  model=${model}  scenes=${result.storyboard.scenes.length}  tokens=${result.usage.input}+${result.usage.output}  cost=$${costUsd.toFixed(4)}`,
   );
   console.log(
     `  next: edit storyboard, then \`vf approve storyboard\` then \`vf preview --cwd ${path.relative(cwd, projectRoot) || "."}\``,

@@ -104,6 +104,14 @@ The two human-edit artifacts are `article.md` (narrative + scene data) and
 `pause_between_sentences_sec` for SSML breaks between sentences).
 Everything else is derived.
 
+Each AI command auto-falls-back to the configured secondary provider
+on quota / rate-limit errors (HTTP 429 / 402 / 403, or bodies
+containing `insufficient_balance` / `quota_exceeded`). The provider
+that actually served is recorded in `runs/<id>.yaml` under
+`provider:` so you can audit whether fallback fired. Override the
+routing per-command with `--model <provider>` or globally via the
+`LL_CONFIG` YAML file.
+
 ### Legacy commands (still working)
 
 The old per-stage pipeline is preserved for back-compat. New commands are

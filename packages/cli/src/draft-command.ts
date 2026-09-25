@@ -4,6 +4,8 @@ import { existsSync } from "node:fs";
 import {
   GLMProvider,
   MiniMaxProvider,
+  loadProviderConfig,
+  providerForRole,
   type Provider,
 } from "@vf/llm";
 import { MiniMaxWebSearch } from "@vf/research";
@@ -26,9 +28,10 @@ export interface DraftOptions {
   noWeb?: boolean;
 }
 
-function providerInstance(name: "minimax" | "glm"): Provider {
+function providerInstance(name: string): Provider {
   if (name === "glm") return new GLMProvider();
-  return new MiniMaxProvider();
+  if (name === "minimax") return new MiniMaxProvider();
+  throw new Error(`unsupported provider: ${name}`);
 }
 
 export async function runDraft(opts: DraftOptions): Promise<number> {
@@ -52,7 +55,19 @@ export async function runDraft(opts: DraftOptions): Promise<number> {
     fromContent = await readFile(fromPath, "utf8");
   }
 
-  const provider = providerInstance(opts.model ?? "glm");
+  const cfg = loadProviderConfig();
+  const chosenName = opts.model ?? providerForRole(cfg, "research");
+  const provider = providerInstance(chosenName);
+  // Per-config fallback (minimax → glm or vice versa). When the chosen
+  // provider returns a quota / rate-limit error, `callDraft` retries
+  // with the fallback once instead of failing the whole run.
+  const fallbackName =
+    chosenName === cfg.research.primary
+      ? cfg.research.fallback
+      : chosenName === cfg.research.fallback
+        ? cfg.research.primary
+        : undefined;
+  const fallback = fallbackName ? providerInstance(fallbackName) : null;
   const language = opts.lang ?? "zh-CN";
   const duration = opts.duration ?? 40;
   const audience = opts.audience ?? "developers";
@@ -78,6 +93,7 @@ export async function runDraft(opts: DraftOptions): Promise<number> {
       ...(webContext && webContext.length > 0 ? { webContext } : {}),
     },
     provider,
+    fallback,
   );
 
   const articlePath = path.join(projectRoot, "article.md");

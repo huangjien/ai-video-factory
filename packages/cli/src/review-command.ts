@@ -58,13 +58,25 @@ export async function runReview(opts: ReviewOptions): Promise<number> {
   const claims = await readFile(claimsPath, "utf8");
 
   const cfg = loadProviderConfig();
-  const chosenName = opts.model ?? cfg["research"].primary; // research role provider is the most "careful" default
+  const researchCfg = cfg["research"];
+  const chosenName = opts.model ?? researchCfg.primary;
   const provider = providerInstance(chosenName);
+  const fallbackName =
+    chosenName === researchCfg.primary
+      ? researchCfg.fallback
+      : chosenName === researchCfg.fallback
+        ? researchCfg.primary
+        : undefined;
+  const fallback = fallbackName ? providerInstance(fallbackName) : null;
   const model = chosenName === "glm" ? "glm-5.3" : "MiniMax-M3";
 
   let result;
   try {
-    result = await callReview({ storyboard, script, claims }, provider);
+    result = await callReview(
+      { storyboard, script, claims },
+      provider,
+      fallback,
+    );
   } catch (err) {
     console.error(
       `\u2717 ${chosenName} review agent failed:`,
@@ -121,13 +133,15 @@ export async function runReview(opts: ReviewOptions): Promise<number> {
     ],
     created_at: new Date().toISOString(),
     duration_ms: 0,
-    provider: chosenName,
+    provider: result.providerName,
     model,
     prompt_hash: sha256OfMessages(messages),
     tokens: result.usage,
     estimated_cost_usd:
-      (result.usage.input / 1000) * (chosenName === "glm" ? 0.0008 : 0.001) +
-      (result.usage.output / 1000) * (chosenName === "glm" ? 0.0008 : 0.001),
+      (result.usage.input / 1000) *
+        (result.providerName === "glm" ? 0.0008 : 0.001) +
+      (result.usage.output / 1000) *
+        (result.providerName === "glm" ? 0.0008 : 0.001),
   };
   const { writeRun } = await import("@vf/workflow");
   await writeRun(projectRoot, record);
@@ -140,7 +154,7 @@ export async function runReview(opts: ReviewOptions): Promise<number> {
   ];
   console.log(`\u2713 reviewed ${opts.project}/review/`);
   console.log(
-    `  provider=${chosenName}  content=${overall[0]}  visual=${overall[1]}  technical=${overall[2]}`,
+    `  provider=${result.providerName}  content=${overall[0]}  visual=${overall[1]}  technical=${overall[2]}`,
   );
   if (overall.some((v) => v !== "pass")) {
     console.log(

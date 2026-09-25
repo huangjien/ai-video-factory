@@ -1,4 +1,5 @@
 import type { Provider } from "@vf/llm";
+import { chatWithFallback } from "@vf/llm";
 import { parse as parseYaml } from "yaml";
 import { buildScriptMessages, type ScriptInput } from "./prompt.js";
 import { ScriptSchema, type Script } from "./schemas.js";
@@ -19,6 +20,9 @@ export class ScriptError extends Error {
 export interface CallScriptResult {
   script: Script;
   usage: { input: number; output: number };
+  /** Name of the provider that actually served the request
+   * (primary or its fallback, per `chatWithFallback`). */
+  providerName: string;
 }
 
 export function extractYaml(content: string): string {
@@ -31,12 +35,15 @@ export function extractYaml(content: string): string {
 export async function callScript(
   input: ScriptInput,
   provider: Provider,
+  fallback?: Provider | null,
 ): Promise<CallScriptResult> {
   const messages = buildScriptMessages(input);
-  const res = await provider.chat({ messages });
+  const out = await chatWithFallback(provider, fallback ?? null, { messages });
+  const res = out.response;
+  const actualProvider = out.provider;
   const yamlText = extractYaml(res.content);
   if (!yamlText) {
-    throw new ScriptError("no YAML in response", provider.name);
+    throw new ScriptError("no YAML in response", actualProvider);
   }
   let parsed: unknown;
   try {
@@ -44,7 +51,7 @@ export async function callScript(
   } catch (err) {
     throw new ScriptError(
       `YAML parse failed: ${(err as Error).message}`,
-      provider.name,
+      actualProvider,
       err,
     );
   }
@@ -52,9 +59,9 @@ export async function callScript(
   if (!result.success) {
     throw new ScriptError(
       `Script schema invalid: ${result.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; ")}`,
-      provider.name,
+      actualProvider,
       result.error,
     );
   }
-  return { script: result.data, usage: res.usage };
+  return { script: result.data, usage: res.usage, providerName: actualProvider };
 }

@@ -1,4 +1,5 @@
 import type { ChatMessage, Provider } from "@vf/llm";
+import { chatWithFallback } from "@vf/llm";
 import { parse as parseYaml } from "yaml";
 import {
   YouTubePackageSchema,
@@ -64,6 +65,9 @@ export class YouTubeError extends Error {
 export interface CallYouTubeResult {
   youtube: YouTubePackage;
   usage: { input: number; output: number };
+  /** Name of the provider that actually served the request
+   * (primary or its fallback, per `chatWithFallback`). */
+  providerName: string;
 }
 
 export function extractYaml(content: string): string {
@@ -103,12 +107,15 @@ export function chaptersToVtt(chapters: Chapter[]): string {
 export async function callYouTube(
   input: YouTubeInput,
   provider: Provider,
+  fallback?: Provider | null,
 ): Promise<CallYouTubeResult> {
   const messages = buildYouTubeMessages(input);
-  const res = await provider.chat({ messages });
+  const out = await chatWithFallback(provider, fallback ?? null, { messages });
+  const res = out.response;
+  const actualProvider = out.provider;
   const yamlText = extractYaml(res.content);
   if (!yamlText) {
-    throw new YouTubeError("no YAML in response", provider.name);
+    throw new YouTubeError("no YAML in response", actualProvider);
   }
   let parsed: unknown;
   try {
@@ -116,7 +123,7 @@ export async function callYouTube(
   } catch (err) {
     throw new YouTubeError(
       `YAML parse failed: ${(err as Error).message}`,
-      provider.name,
+      actualProvider,
       err,
     );
   }
@@ -124,7 +131,7 @@ export async function callYouTube(
   if (!result.success) {
     throw new YouTubeError(
       `YouTube package schema invalid: ${result.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; ")}`,
-      provider.name,
+      actualProvider,
       result.error,
     );
   }
@@ -140,8 +147,12 @@ export async function callYouTube(
   if (sorted.some((c, i) => c !== result.data.chapters[i])) {
     throw new YouTubeError(
       "chapters must be sorted by timestamp",
-      provider.name,
+      actualProvider,
     );
   }
-  return { youtube: result.data, usage: res.usage };
+  return {
+    youtube: result.data,
+    usage: res.usage,
+    providerName: actualProvider,
+  };
 }

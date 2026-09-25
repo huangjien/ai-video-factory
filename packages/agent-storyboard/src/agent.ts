@@ -1,4 +1,5 @@
 import type { Provider } from "@vf/llm";
+import { chatWithFallback } from "@vf/llm";
 import { validateStoryboard } from "@vf/vdsl/validate.js";
 import type { Storyboard } from "@vf/vdsl/schema.js";
 import { buildMessages, type AgentInput } from "./prompt.js";
@@ -6,6 +7,8 @@ import { buildMessages, type AgentInput } from "./prompt.js";
 export interface AgentResult {
   storyboard: Storyboard;
   usage: { input: number; output: number };
+  /** Name of the provider that actually served the request
+   * (primary or its fallback, per `chatWithFallback`). */
   providerName: string;
 }
 
@@ -35,30 +38,32 @@ export async function callAgent(
   input: AgentInput,
   provider: Provider,
   opts: { model?: string; temperature?: number } = {},
+  fallback?: Provider | null,
 ): Promise<AgentResult> {
   const messages = buildMessages(input);
-  const res = await provider.chat({
+  const out = await chatWithFallback(provider, fallback ?? null, {
     messages,
     ...(opts.model !== undefined ? { model: opts.model } : {}),
     ...(opts.temperature !== undefined
       ? { temperature: opts.temperature }
       : {}),
   });
+  const res = out.response;
   const yamlText = extractYaml(res.content);
   if (!yamlText) {
-    throw new AgentError("no YAML in response", provider.name);
+    throw new AgentError("no YAML in response", out.provider);
   }
   const result = validateStoryboard(yamlText, "storyboard.yaml");
   if (!result.ok) {
     throw new AgentError(
       `VDSL validation failed: ${result.errors.map((e) => `${e.field}: ${e.message}`).join("; ")}`,
-      provider.name,
+      out.provider,
       result.errors,
     );
   }
   return {
     storyboard: result.data,
     usage: res.usage,
-    providerName: provider.name,
+    providerName: out.provider,
   };
 }

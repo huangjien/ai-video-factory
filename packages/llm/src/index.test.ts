@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { loadProviderConfig, withRetry } from "./index.js";
+import { chatWithFallback, loadProviderConfig, withRetry } from "./index.js";
 import type {
+  ChatError,
   ChatMessage,
   ChatRequest,
   ChatResponse,
@@ -135,5 +136,106 @@ describe("ChatMessage shape (todo 1)", () => {
       { role: "assistant", content: "a" },
     ];
     expect(m).toHaveLength(3);
+  });
+});
+
+class FakeProvider implements Provider {
+  calls = 0;
+  private readonly outcome: () => Promise<ChatResponse>;
+  constructor(
+    readonly name: string,
+    outcome: () => ChatResponse,
+    private readonly failWith?: Error,
+  ) {
+    this.outcome = () => Promise.resolve(outcome());
+  }
+  async chat(_req: ChatRequest): Promise<ChatResponse> {
+    this.calls += 1;
+    if (this.failWith) throw this.failWith;
+    return this.outcome();
+  }
+}
+
+const quotaErr = (provider: string): ChatError => {
+  const e = new Error("insufficient_balance") as ChatError;
+  e.provider = provider;
+  e.status = 429;
+  return e;
+};
+const badReqErr = (provider: string): ChatError => {
+  const e = new Error("invalid schema") as ChatError;
+  e.provider = provider;
+  e.status = 400;
+  return e;
+};
+
+describe("chatWithFallback (todo 5) — quota fallback", () => {
+  const req: ChatRequest = { messages: [{ role: "user", content: "hi" }] };
+  const ok = (): ChatResponse => ({
+    content: "ok",
+    usage: { input: 1, output: 2 },
+  });
+
+  it("returns primary's result when primary succeeds", async () => {
+    const p = new FakeProvider("glm", ok);
+    const f = new FakeProvider("minimax", ok);
+    const out = await chatWithFallback(p, f, req);
+    expect(out.provider).toBe("glm");
+    expect(out.response.content).toBe("ok");
+    expect(p.calls).toBe(1);
+    expect(f.calls).toBe(0);
+  });
+
+  it("falls back on 429 / quota-error", async () => {
+    const p = new FakeProvider("glm", ok, quotaErr("glm"));
+    const f = new FakeProvider("minimax", ok);
+    const out = await chatWithFallback(p, f, req);
+    expect(out.provider).toBe("minimax");
+    expect(f.calls).toBe(1);
+  });
+
+  it("falls back on body_excerpt containing 'quota' / 'balance'", async () => {
+    const e = new Error("provider said quota exceeded") as ChatError;
+    e.provider = "glm";
+    e.body_excerpt = '{"error":"quota_exceeded"}';
+    const p = new FakeProvider("glm", ok, e);
+    const f = new FakeProvider("minimax", ok);
+    const out = await chatWithFallback(p, f, req);
+    expect(out.provider).toBe("minimax");
+  });
+
+  it("does NOT fall back on a 400 — non-quota error surfaces immediately", async () => {
+    const p = new FakeProvider("glm", ok, badReqErr("glm"));
+    const f = new FakeProvider("minimax", ok);
+    await expect(chatWithFallback(p, f, req)).rejects.toThrow(/invalid schema/);
+    expect(f.calls).toBe(0);
+  });
+
+  it("if both fail, surfaces the fallback's error", async () => {
+    const p = new FakeProvider("glm", ok, quotaErr("glm"));
+    const f = new FakeProvider(
+      "minimax",
+      ok,
+      new Error("minimax also down"),
+    );
+    await expect(chatWithFallback(p, f, req)).rejects.toThrow(/also down/);
+  });
+
+  it("if fallback is null and primary fails with quota error, surfaces the primary's quota error", async () => {
+    const p = new FakeProvider("glm", ok, quotaErr("glm"));
+    await expect(chatWithFallback(p, null, req)).rejects.toThrow(/insufficient_balance/);
+    expect(p.calls).toBe(1);
+  });
+
+  it("primary's usage stats are NOT counted when fallback served the request", async () => {
+    const p = new FakeProvider("glm", ok, quotaErr("glm"));
+    const f = new FakeProvider("minimax", () => ({
+      content: "fallback",
+      usage: { input: 5, output: 10 },
+    }));
+    const out = await chatWithFallback(p, f, req);
+    expect(p.calls).toBe(1);
+    expect(f.calls).toBe(1);
+    expect(out.response.usage.input).toBe(5);
   });
 });

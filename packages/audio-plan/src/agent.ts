@@ -1,4 +1,5 @@
 import type { Provider } from "@vf/llm";
+import { chatWithFallback } from "@vf/llm";
 import { parse as parseYaml } from "yaml";
 import { buildMessages, type AudioPlanInput } from "./prompt.js";
 import { AudioConfigSchema, DEFAULT_AUDIO_CONFIG, type AudioConfig } from "./schemas.js";
@@ -21,6 +22,9 @@ export interface CallAudioPlanResult {
   /** Serialized audio-config.yaml the human can edit. */
   yaml: string;
   usage: { input: number; output: number };
+  /** Name of the provider that actually served the request
+   * (primary or its fallback, per `chatWithFallback`). */
+  providerName: string;
 }
 
 /** Render AudioConfig to YAML — keys in a stable order, comments off by default. */
@@ -50,12 +54,17 @@ export function renderAudioConfig(c: AudioConfig): string {
 export async function callAudioPlan(
   input: AudioPlanInput,
   provider: Provider,
+  /** Optional fallback provider — when `provider` returns a quota /
+   * rate-limit error, retry the request with `fallback` instead of
+   * failing the run. */
+  fallback?: Provider | null,
 ): Promise<CallAudioPlanResult> {
   const messages = buildMessages(input);
-  const res = await provider.chat({ messages });
+  const out = await chatWithFallback(provider, fallback ?? null, { messages });
+  const res = out.response;
   const raw = res.content.trim();
   if (!raw) {
-    throw new AudioPlanError("empty response from provider", provider.name);
+    throw new AudioPlanError("empty response from provider", out.provider);
   }
   const jsonText = unwrapJson(raw);
   let parsed: unknown;
@@ -87,6 +96,7 @@ export async function callAudioPlan(
     config: validation.data,
     yaml: renderAudioConfig(validation.data),
     usage: res.usage,
+    providerName: out.provider,
   };
 }
 

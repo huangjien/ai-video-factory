@@ -1,4 +1,5 @@
 import type { ChatMessage, Provider } from "@vf/llm";
+import { chatWithFallback } from "@vf/llm";
 import { buildMessages, type DraftInput } from "./prompt.js";
 
 export class DraftError extends Error {
@@ -18,6 +19,9 @@ export interface CallDraftResult {
   /** Assembled article.md (frontmatter + title + hook + sections + scenes). */
   markdown: string;
   usage: { input: number; output: number };
+  /** Name of the provider that actually served the request
+   * (primary or its fallback, per `chatWithFallback`). */
+  providerName: string;
 }
 
 interface RawArticle {
@@ -36,9 +40,15 @@ interface RawArticle {
 export async function callDraft(
   input: DraftInput,
   provider: Provider,
+  /** Optional fallback provider — when `provider` returns a quota /
+   * rate-limit error, retry the request with `fallback` instead of
+   * failing the run. */
+  fallback?: Provider | null,
 ): Promise<CallDraftResult> {
-  let res = await provider.chat({ messages: buildMessages(input) });
-  let parsed = tryParse(res.content);
+  let res = await chatWithFallback(provider, fallback ?? null, {
+    messages: buildMessages(input),
+  });
+  let parsed = tryParse(res.response.content);
   let lastErr: unknown;
   if (!parsed.ok) {
     lastErr = parsed.error;
@@ -52,18 +62,21 @@ export async function callDraft(
           "Your previous response was not valid JSON. Reply with ONLY a single JSON object — no prose, no code fence, no markdown.",
       },
     ];
-    res = await provider.chat({ messages: retryMessages });
-    parsed = tryParse(res.content);
+    const retry = await chatWithFallback(provider, fallback ?? null, {
+      messages: retryMessages,
+    });
+    res = retry;
+    parsed = tryParse(res.response.content);
     if (!parsed.ok) {
       throw new DraftError(
         `JSON parse failed after retry: ${(parsed.error as Error).message}`,
-        provider.name,
+        res.provider,
         lastErr,
       );
     }
   }
   const markdown = renderArticleMd(input, parsed.value);
-  return { markdown, usage: res.usage };
+  return { markdown, usage: res.response.usage, providerName: res.provider };
 }
 
 /** Result of attempting to parse the LLM response into JSON. */

@@ -57,6 +57,13 @@ export async function runScript(opts: ScriptOptions): Promise<number> {
   const roleCfg = cfg["script"];
   const chosenName = opts.model ?? roleCfg.primary;
   const provider = providerInstance(chosenName);
+  const fallbackName =
+    chosenName === roleCfg.primary
+      ? roleCfg.fallback
+      : chosenName === roleCfg.fallback
+        ? roleCfg.primary
+        : undefined;
+  const fallback = fallbackName ? providerInstance(fallbackName) : null;
   const model = chosenName === "glm" ? "glm-5.3" : "MiniMax-M3";
 
   let researchContext: { markdown: string } | undefined;
@@ -95,6 +102,7 @@ export async function runScript(opts: ScriptOptions): Promise<number> {
         ...(opts.direction ? { direction: opts.direction } : {}),
       },
       provider,
+      fallback,
     );
   } catch (err) {
     console.error(
@@ -131,20 +139,22 @@ export async function runScript(opts: ScriptOptions): Promise<number> {
     output_files: [`script/${filename}`],
     created_at: new Date().toISOString(),
     duration_ms: 0,
-    provider: chosenName,
+    provider: result.providerName,
     model,
     prompt_hash: sha256OfMessages(messages),
     tokens: result.usage,
     estimated_cost_usd:
-      (result.usage.input / 1000) * (chosenName === "glm" ? 0.0008 : 0.001) +
-      (result.usage.output / 1000) * (chosenName === "glm" ? 0.0008 : 0.001),
+      (result.usage.input / 1000) *
+        (result.providerName === "glm" ? 0.0008 : 0.001) +
+      (result.usage.output / 1000) *
+        (result.providerName === "glm" ? 0.0008 : 0.001),
   };
   const { writeRun } = await import("@vf/workflow");
   await writeRun(projectRoot, record);
 
   console.log(`\u2713 drafted ${slug}/script/${filename}`);
   console.log(
-    `  provider=${chosenName}  sections=7  tokens=${result.usage.input}+${result.usage.output}`,
+    `  provider=${result.providerName}  sections=7  tokens=${result.usage.input}+${result.usage.output}`,
   );
   console.log(
     `  next: edit, then \`vf storyboard "${opts.topic}"\` (storyboard picks up the script's structure)`,

@@ -28,3 +28,61 @@ export async function withRetry<T>(
   }
   throw lastErr instanceof Error ? lastErr : new Error(String(lastErr));
 }
+
+/** An error that indicates the primary provider is exhausted / quotaed
+ * out, so we should switch to the fallback provider rather than retry. */
+function isQuotaError(err: unknown): boolean {
+  if (!err || typeof err !== "object") return false;
+  const e = err as { status?: unknown; provider?: unknown; message?: unknown };
+  if (typeof e.status === "number") {
+    if (e.status === 429 || e.status === 402 || e.status === 403) {
+      return true;
+    }
+  }
+  const body = (e as { body_excerpt?: unknown }).body_excerpt;
+  if (typeof body === "string") {
+    const lower = body.toLowerCase();
+    if (
+      lower.includes("insufficient") ||
+      lower.includes("quota") ||
+      lower.includes("balance") ||
+      lower.includes("rate_limit") ||
+      lower.includes("rate limit") ||
+      lower.includes("exhausted")
+    ) {
+      return true;
+    }
+  }
+  const msg = typeof e.message === "string" ? e.message.toLowerCase() : "";
+  if (
+    msg.includes("insufficient") ||
+    msg.includes("quota") ||
+    msg.includes("rate limit")
+  ) {
+    return true;
+  }
+  return false;
+}
+
+/** Try `primary.chat(req)`; if it errors with a quota/rate-limit signal,
+ * fall back to `fallback.chat(req)`. The returned object carries the name
+ * of the provider that actually served the request so callers can log it.
+ *
+ * Only retries on the primary. If the fallback also fails, its error
+ * propagates. Non-quota errors (e.g. 400 invalid input) on the primary
+ * surface immediately — they are not "use up quota, switch provider"
+ * signals. */
+export async function chatWithFallback(
+  primary: import("./provider.js").Provider,
+  fallback: import("./provider.js").Provider | null,
+  req: import("./provider.js").ChatRequest,
+): Promise<{ provider: string; response: import("./provider.js").ChatResponse }> {
+  try {
+    const response = await primary.chat(req);
+    return { provider: primary.name, response };
+  } catch (err) {
+    if (!fallback || !isQuotaError(err)) throw err;
+    const response = await fallback.chat(req);
+    return { provider: fallback.name, response };
+  }
+}

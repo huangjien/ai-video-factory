@@ -1,4 +1,5 @@
 import type { ChatMessage, Provider } from "@vf/llm";
+import { chatWithFallback } from "@vf/llm";
 import { parse as parseYaml } from "yaml";
 import { ReviewPackageSchema, type ReviewPackage } from "./schemas.js";
 
@@ -57,6 +58,9 @@ export class ReviewError extends Error {
 export interface CallReviewResult {
   review: ReviewPackage;
   usage: { input: number; output: number };
+  /** Name of the provider that actually served the request
+   * (primary or its fallback, per `chatWithFallback`). */
+  providerName: string;
 }
 
 export function extractYaml(content: string): string {
@@ -69,12 +73,15 @@ export function extractYaml(content: string): string {
 export async function callReview(
   input: ReviewInput,
   provider: Provider,
+  fallback?: Provider | null,
 ): Promise<CallReviewResult> {
   const messages = buildReviewMessages(input);
-  const res = await provider.chat({ messages });
+  const out = await chatWithFallback(provider, fallback ?? null, { messages });
+  const res = out.response;
+  const actualProvider = out.provider;
   const yamlText = extractYaml(res.content);
   if (!yamlText) {
-    throw new ReviewError("no YAML in response", provider.name);
+    throw new ReviewError("no YAML in response", actualProvider);
   }
   let parsed: unknown;
   try {
@@ -82,7 +89,7 @@ export async function callReview(
   } catch (err) {
     throw new ReviewError(
       `YAML parse failed: ${(err as Error).message}`,
-      provider.name,
+      actualProvider,
       err,
     );
   }
@@ -90,9 +97,9 @@ export async function callReview(
   if (!result.success) {
     throw new ReviewError(
       `Review package schema invalid: ${result.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; ")}`,
-      provider.name,
+      actualProvider,
       result.error,
     );
   }
-  return { review: result.data, usage: res.usage };
+  return { review: result.data, usage: res.usage, providerName: actualProvider };
 }

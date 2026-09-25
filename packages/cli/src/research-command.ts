@@ -61,6 +61,13 @@ export async function runResearch(opts: ResearchOptions): Promise<number> {
   const roleCfg = cfg["research"];
   const chosenName = opts.model ?? roleCfg.primary;
   const provider = providerInstance(chosenName);
+  const fallbackName =
+    chosenName === roleCfg.primary
+      ? roleCfg.fallback
+      : chosenName === roleCfg.fallback
+        ? roleCfg.primary
+        : undefined;
+  const fallback = fallbackName ? providerInstance(fallbackName) : null;
   const model = chosenName === "glm" ? "glm-5.3" : "MiniMax-M3";
 
   const web = opts.noWeb ? null : new MiniMaxWebSearch();
@@ -71,6 +78,7 @@ export async function runResearch(opts: ResearchOptions): Promise<number> {
       { topic: opts.topic, audience, language: lang, duration },
       provider,
       { web },
+      fallback,
     );
   } catch (err) {
     console.error(
@@ -124,20 +132,22 @@ export async function runResearch(opts: ResearchOptions): Promise<number> {
     ],
     created_at: new Date().toISOString(),
     duration_ms: 0,
-    provider: chosenName,
+    provider: result.providerName,
     model,
     prompt_hash: sha256OfMessages(messages),
     tokens: result.usage,
     estimated_cost_usd:
-      (result.usage.input / 1000) * (chosenName === "glm" ? 0.0008 : 0.001) +
-      (result.usage.output / 1000) * (chosenName === "glm" ? 0.0008 : 0.001),
+      (result.usage.input / 1000) *
+        (result.providerName === "glm" ? 0.0008 : 0.001) +
+      (result.usage.output / 1000) *
+        (result.providerName === "glm" ? 0.0008 : 0.001),
   };
   const { writeRun } = await import("@vf/workflow");
   await writeRun(projectRoot, record);
 
   console.log(`\u2713 drafted ${slug}/research/`);
   console.log(
-    `  provider=${chosenName}  sources=${result.output.sources.length}  claims=${result.output.claims.length}  needs_human=${result.output.claims.filter((c) => c.status === "needs_human" || c.status === "uncertain").length}`,
+    `  provider=${result.providerName}  sources=${result.output.sources.length}  claims=${result.output.claims.length}  needs_human=${result.output.claims.filter((c) => c.status === "needs_human" || c.status === "uncertain").length}`,
   );
   console.log(
     `  next: edit research.md / claims.yaml, then \`vf storyboard --from-research projects/${slug}/research\``,

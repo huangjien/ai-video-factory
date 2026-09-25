@@ -1,4 +1,5 @@
 import type { Provider } from "@vf/llm";
+import { chatWithFallback } from "@vf/llm";
 import { parse as parseYaml } from "yaml";
 import { buildMessages, type ResearchInput } from "./prompt.js";
 import {
@@ -33,6 +34,9 @@ export interface CallResearchDeps {
 export interface CallResearchResult {
   output: ResearchOutput;
   usage: { input: number; output: number };
+  /** Name of the provider that actually served the request
+   * (primary or its fallback, per `chatWithFallback`). */
+  providerName: string;
 }
 
 /** Extract the first YAML code block from the LLM response and parse it. */
@@ -47,6 +51,10 @@ export async function callResearch(
   input: ResearchInput,
   provider: Provider,
   deps: CallResearchDeps,
+  /** Optional fallback provider — when `provider` returns a quota /
+   * rate-limit error, retry the request with `fallback` instead of
+   * failing the run. */
+  fallback?: Provider | null,
 ): Promise<CallResearchResult> {
   let webContext: WebSearchResult[] | undefined;
   let webSearchUsed = false;
@@ -63,10 +71,12 @@ export async function callResearch(
     ...input,
     ...(webContext && webContext.length > 0 ? { webContext } : {}),
   });
-  const res = await provider.chat({ messages });
+  const out = await chatWithFallback(provider, fallback ?? null, { messages });
+  const res = out.response;
+  const actualProvider = out.provider;
   const yamlText = extractYaml(res.content);
   if (!yamlText) {
-    throw new ResearchError("no YAML in response", provider.name);
+    throw new ResearchError("no YAML in response", actualProvider);
   }
   let parsed: unknown;
   try {
@@ -74,7 +84,7 @@ export async function callResearch(
   } catch (err) {
     throw new ResearchError(
       `YAML parse failed: ${(err as Error).message}`,
-      provider.name,
+      actualProvider,
       err,
     );
   }
@@ -82,7 +92,7 @@ export async function callResearch(
   if (!result.success) {
     throw new ResearchError(
       `Research output schema invalid: ${result.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; ")}`,
-      provider.name,
+      actualProvider,
       result.error,
     );
   }
@@ -93,7 +103,7 @@ export async function callResearch(
       if (!sourceIds.has(sid)) {
         throw new ResearchError(
           `unknown source id ${sid} in claim ${claim.id}`,
-          provider.name,
+          actualProvider,
         );
       }
     }
@@ -105,9 +115,9 @@ export async function callResearch(
       ...result.data.meta,
       web_search_used: webSearchUsed,
       web_search_failed: webSearchFailed,
-      provider: provider.name,
+      provider: actualProvider,
       model: result.data.meta.provider,
     },
   };
-  return { output, usage: res.usage };
+  return { output, usage: res.usage, providerName: actualProvider };
 }

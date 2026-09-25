@@ -358,6 +358,24 @@ export GLM_API_KEY="..."        # vf draft / vf audio-plan 默认使用 GLM
 export LL_CONFIG="$PWD/llm.config.yaml"
 ```
 
+### 配额 / 限流自动降级到 fallback
+
+当 primary provider 返回配额或限流错误（HTTP 429 / 402 / 403，
+或响应体里包含 `insufficient_balance`、`quota_exceeded`、
+`rate_limit`）时，每个 AI 命令会自动用配置的 fallback 重试一次，不会
+直接报错。真正服务的 provider 会写到 `runs/<id>.yaml` 的 `provider:`
+字段里，方便审计是否触发了降级。
+
+按命令临时指定 provider：
+
+```bash
+vf draft "topic" --model minimax   # 强制用 minimax（不会降级到 glm）
+vf storyboard "topic" --model glm --lang en-US
+```
+
+非配额类错误（例如 HTTP 400 输入不合法）**不会**触发降级，因为同样的
+输入在 fallback 上也是同样的错，会直接报错。
+
 ### v0.4 推荐：`vf draft` + `vf audio-plan`
 
 新版 AI 工作流只有这两步 — 全部内聚到两个人类可编辑的产物：

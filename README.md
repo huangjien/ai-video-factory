@@ -1,10 +1,9 @@
 # AI Video Factory (v0.4)
 
 A small video factory that turns a topic into a finished 1080p Chinese MP4
-in three commands: `vf draft` (LLM writes article.md), `vf audio-plan`
-(LLM writes audio-config.yaml), `vf make` (renders the video). Two
-human-edit files, one output. 39-second AI chain-of-thought explainer
-ships as proof.
+in two commands: `vf draft` (LLM writes article.md + audio-config.yaml),
+`vf make` (renders the video). Two human-edit files, one output. 39-second
+AI chain-of-thought explainer ships as proof.
 
 ## Principles
 

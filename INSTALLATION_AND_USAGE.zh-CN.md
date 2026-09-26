@@ -4,17 +4,19 @@
 
 ## 概览
 
-v0.4 起，AI Video Factory 的对外接口**只保留 3 个命令** ——
-两个 LLM 写入辅助文件，1 个命令完成剩下的所有事情：
+v0.3.9 起，AI Video Factory 的对外接口**只保留 2 个命令** ——
+一个 LLM 写入所有辅助文件（article.md + audio-config.yaml），1 个
+命令完成剩下的所有事情：
 
-```text
-主题  ──►  vf draft  ──►  article.md  ────►
-                                       │  人工编辑
-                              ◄── vf audio-plan
-                                       │
-                                       ▼
-                                     vf make  ──►  preview.mp4
-                                                ►  final-mixed.mp4
+```mermaid
+flowchart LR
+    topic[主题] --> vfDraft["vf draft (LLM)"]
+    vfDraft --> articleMD["article.md ⭐ 人工编辑"]
+    vfDraft --> audioConfig["audio-config.yaml ⭐ 人工编辑"]
+    articleMD --> vfMake["vf make"]
+    audioConfig --> vfMake
+    vfMake --> previewMp4[preview.mp4]
+    vfMake --> finalMixedMp4[final-mixed.mp4]
 ```
 
 两个人工编辑文件就是 **`article.md`**（叙事 + Scenes YAML 块）和
@@ -413,19 +415,22 @@ vf storyboard "topic" --model glm --lang en-US
 非配额类错误（例如 HTTP 400 输入不合法）**不会**触发降级，因为同样的
 输入在 fallback 上也是同样的错，会直接报错。
 
-### v0.4 推荐：`vf draft` + `vf audio-plan`
+### v0.3.9+ 推荐：`vf draft` (合并 audio-plan) + `vf make`
 
 新版 AI 工作流只有这两步 — 全部内聚到两个人类可编辑的产物：
 
 ```bash
-# 1. 写 article.md（一篇可编辑的长 markdown + 一个 Scenes YAML 块）
+# 1. 一条命令写两个文件：article.md（一篇可编辑的长 markdown + Scenes
+#    YAML 块）和 audio-config.yaml（voice / bgm / sfx / fades）。
+#    --no-audio-plan 跳过 audio 步；已有的 audio-config.yaml 不会被覆盖。
 vf draft "AI Agent Memory"
 vf draft "AI Agent Memory" --no-web
 vf draft "AI Agent Memory" --model glm --lang zh-CN --duration 60 --audience developers
 vf draft "AI Agent Memory" --from draft-outline.md   # 基于已有大纲改写
+vf draft "AI Agent Memory" --no-audio-plan          # 仅写 article.md
 
-# 2. 读 article.md，写 audio-config.yaml（一个音频相关的旋钮全在这里）
-vf audio-plan ai-agent-memory
+# 2. 渲染 mp4 —— TTS → 音频资源 → 渲染 → 混音
+vf make ai-agent-memory
 ```
 
 输出：
@@ -722,25 +727,22 @@ vf final --cwd projects/demo
 
 ## 12. 一步步：从一个主题开始创建视频
 
-### 12.0 推荐：3 命令最小 API（v0.4+）
+### 12.0 推荐：2 命令最小 API（v0.3.9+）
 
-整个流水线被压缩到 **3 个命令 + 2 个人工编辑点 + 1 个渲染输出**：
+整个流水线被压缩到 **2 个命令 + 2 个人工编辑点 + 1 个渲染输出**：
 
-1. `vf draft <topic>` → 写出 `article.md`（LLM 综合 research + script + storyboard 三件事）
-2. `vf audio-plan <project>` → 写出 `audio-config.yaml`（LLM 基于 article.md 给出 BGM/SFX/voice 建议）
-3. `vf make <project>` → 一切自动：TTS → 音频素材 → 渲染 → 混音 → 输出 mp4
+1. `vf draft <topic>` → 写出 `article.md` 和 `audio-config.yaml`（一次 LLM 调用合并 research + script + storyboard + audio plan；`--no-audio-plan` 跳过 audio 步；已有的 `audio-config.yaml` 不会被覆盖，重新生成用 `vf audio-plan`）
+2. `vf make <project>` → 一切自动：TTS → 音频素材 → 渲染 → 混音 → 输出 mp4
 
-```
-┌────────────────────────────────────────────────────────────────┐
-│  主题  ──►  vf draft  ──►  article.md  ──┐                      │
-│                                         │  人工编辑           │
-│                                         ▼                      │
-│                                  audio-config.yaml  ◄── vf audio-plan
-│                                         │                      │
-│                                         ▼                      │
-│                                       vf make  ──►  preview.mp4
-│                                                  ►  final-mixed.mp4
-└────────────────────────────────────────────────────────────────┘
+```mermaid
+flowchart LR
+    topic[主题] --> vfDraft["vf draft (LLM)"]
+    vfDraft --> articleMD["article.md ⭐ 人工编辑"]
+    vfDraft --> audioConfig["audio-config.yaml ⭐ 人工编辑"]
+    articleMD --> vfMake["vf make"]
+    audioConfig --> vfMake
+    vfMake --> previewMp4[preview.mp4]
+    vfMake --> finalMixedMp4[final-mixed.mp4]
 ```
 
 `vf make` 是**幂等**的：已产出的 WAV / mp4 比源文件新就跳过；只用
@@ -878,8 +880,9 @@ ls "projects/$TOPIC/runs/"            # 每次 agent / tool 调用一条 run 记
 ```bash
 TOPIC="ai-thinking"
 vf new "$TOPIC"
-vf draft "$TOPIC"                     # 写 article.md + 派生 storyboard.yaml
-vf audio-plan "$TOPIC"
+vf draft "$TOPIC"                     # 一条命令写 article.md + audio-config.yaml + 派生 storyboard.yaml
+# （仅在手工修改 article.md 后想重新生成 audio-config.yaml 时才用）
+# vf audio-plan "$TOPIC"
 
 # 人工编辑文章与音频计划（任意编辑器）
 $EDITOR "projects/$TOPIC/article.md"
@@ -903,12 +906,12 @@ vf shorts "$TOPIC"
 旧版保留了细粒度的多阶段命令（`vf research` / `vf script` /
 `vf storyboard` / `vf audio` / `vf audio-asset` / `vf mix` / `vf review` /
 `vf approve` / `vf reject` / `vf rollback` / `vf preview` / `vf final`），
-新项目**不建议**使用。新版的 `vf draft` + `vf audio-plan` + `vf make`
+新项目**不建议**使用。新版的 `vf draft`（已合并 audio-plan） + `vf make`
 已经把它们内化：
 
 | 旧命令                                       | 新版替代                                                       |
 | -------------------------------------------- | -------------------------------------------------------------- |
-| `vf research` / `vf script` / `vf storyboard` | `vf draft`（一次产出 article.md，等同三者合并）                |
+| `vf research` / `vf script` / `vf storyboard` / `vf audio-plan` | `vf draft`（一次产出 article.md + audio-config.yaml）          |
 | `vf audio`                                   | 由 `vf make` 内化                                              |
 | `vf audio-asset`                             | 由 `vf make` 内化                                              |
 | `vf mix`                                     | 由 `vf make` 内化                                              |

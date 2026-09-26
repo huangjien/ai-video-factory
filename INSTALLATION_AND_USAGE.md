@@ -4,17 +4,19 @@ Installation and usage manual for the current repository.
 
 ## Overview
 
-As of v0.4, AI Video Factory exposes only **three commands** — two LLM
-drafts of files humans edit, and one command that does the rest:
+As of v0.3.9, AI Video Factory exposes only **two commands** — one LLM
+call writes both human-edit files in one go, and one command that
+renders the video:
 
-```text
-topic  ──►  vf draft  ──►  article.md  ──┐
-                                         │  human edits
-                              ◄── vf audio-plan
-                                         │
-                                         ▼
-                                       vf make  ──►  preview.mp4
-                                                  ►  final-mixed.mp4
+```mermaid
+flowchart LR
+    topic[topic] --> vfDraft["vf draft (LLM)"]
+    vfDraft --> articleMD["article.md ⭐ human-edit"]
+    vfDraft --> audioConfig["audio-config.yaml ⭐ human-edit"]
+    articleMD --> vfMake["vf make"]
+    audioConfig --> vfMake
+    vfMake --> previewMp4[preview.mp4]
+    vfMake --> finalMixedMp4[final-mixed.mp4]
 ```
 
 The two human-edit files are **`article.md`** (narrative + a Scenes YAML
@@ -779,26 +781,27 @@ Two temp directories accumulate during heavy use:
 
 ## 12. Step-by-step: create a video from a topic
 
-### 12.0 Recommended: 3-command minimal API (v0.4+)
+### 12.0 Recommended: 2-command minimal API (v0.3.9+)
 
-The entire pipeline is **3 commands + 2 human-edit files + 1 rendered
+The entire pipeline is **2 commands + 2 human-edit files + 1 rendered
 output**:
 
-1. `vf draft <topic>` → writes `article.md` (LLM consolidates research + script + storyboard)
-2. `vf audio-plan <project>` → writes `audio-config.yaml` (LLM produces voice / BGM / SFX suggestion based on the article)
-3. `vf make <project>` → everything else: TTS → audio assets → render → mix → mp4
+1. `vf draft <topic>` → writes `article.md` and `audio-config.yaml`
+   (LLM consolidates research + script + storyboard + audio plan in one
+   call; `--no-audio-plan` skips the audio step; an existing
+   `audio-config.yaml` is never overwritten — regenerate with
+   `vf audio-plan`)
+2. `vf make <project>` → everything else: TTS → audio assets → render → mix → mp4
 
-```
-┌────────────────────────────────────────────────────────────────┐
-│  topic  ──►  vf draft  ──►  article.md  ──┐                   │
-│                                          │  human edits      │
-│                                          ▼                   │
-│                                 audio-config.yaml ◄─ vf audio-plan
-│                                          │                   │
-│                                          ▼                   │
-│                                        vf make  ──►  preview.mp4
-│                                                 ►  final-mixed.mp4
-└────────────────────────────────────────────────────────────────┘
+```mermaid
+flowchart LR
+    topic[topic] --> vfDraft["vf draft (LLM)"]
+    vfDraft --> articleMD["article.md ⭐ human-edit"]
+    vfDraft --> audioConfig["audio-config.yaml ⭐ human-edit"]
+    articleMD --> vfMake["vf make"]
+    audioConfig --> vfMake
+    vfMake --> previewMp4[preview.mp4]
+    vfMake --> finalMixedMp4[final-mixed.mp4]
 ```
 
 `vf make` is **idempotent** — outputs newer than inputs are skipped. Use
@@ -939,8 +942,8 @@ is set; replace with `--fake` if offline):
 ```bash
 TOPIC="ai-thinking"
 vf new "$TOPIC"
-vf draft "$TOPIC"                     # writes article.md + derives storyboard.yaml
-vf audio-plan "$TOPIC"
+vf draft "$TOPIC"                     # writes article.md + audio-config.yaml + derives storyboard.yaml
+# (vf audio-plan "$TOPIC" is only needed to regenerate audio-config.yaml after hand-editing article.md)
 
 # Human edits (any editor)
 $EDITOR "projects/$TOPIC/article.md"

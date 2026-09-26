@@ -6,9 +6,14 @@ import { slugifyForProject } from "./project-path.js";
 export interface MakeOptions {
   project: string;
   cwd?: string;
-  /** Use offline fake TTS provider (no Edge-TTS network call). */
   fake?: boolean;
   dryRun?: boolean;
+  /** Image provider for scene visuals: minimax (real AI), mock, or none. */
+  imageProvider?: "minimax" | "mock" | "none";
+  /** Local music library dir — BGM tags resolve to {tag}.wav inside it. */
+  bgmDir?: string;
+  /** Local SFX library dir — same lookup rule as bgmDir. */
+  sfxDir?: string;
 }
 
 export async function runMakeCli(opts: MakeOptions): Promise<number> {
@@ -25,6 +30,11 @@ export async function runMakeCli(opts: MakeOptions): Promise<number> {
     projectRoot,
     ...(opts.fake !== undefined ? { fake: opts.fake } : {}),
     ...(opts.dryRun !== undefined ? { dryRun: opts.dryRun } : {}),
+    ...(opts.imageProvider !== undefined
+      ? { imageProvider: opts.imageProvider }
+      : {}),
+    ...(opts.bgmDir !== undefined ? { bgmDir: opts.bgmDir } : {}),
+    ...(opts.sfxDir !== undefined ? { sfxDir: opts.sfxDir } : {}),
   });
 
   // Pretty-print the report.

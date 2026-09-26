@@ -21,7 +21,10 @@ import {
   EdgeTTSProvider,
   type TTSProvider,
 } from "@vf/tts";
-import { MockAudioAssetProvider } from "@vf/audio-assets";
+import {
+  FileBasedAudioAssetProvider,
+  MockAudioAssetProvider,
+} from "@vf/audio-assets";
 import {
   MiniMaxImageProvider,
   MockImageProvider,
@@ -42,6 +45,12 @@ export interface MakeOptions {
    * (deterministic placeholder), or "none" (skip image generation;
    * scenes fall back to AnimatedIllustration geometric shapes). */
   imageProvider?: "minimax" | "mock" | "none";
+  /** Local music library for real BGM — a directory containing
+   * `{tag}.wav` (or any .wav whose name contains the tag). Without it
+   * the audio-assets step writes a mock silent placeholder. */
+  bgmDir?: string;
+  /** Local SFX library, same lookup rule as bgmDir. */
+  sfxDir?: string;
 }
 
 export interface MakeStep {
@@ -131,7 +140,10 @@ export async function runMake(opts: MakeOptions): Promise<MakeReport> {
 
     // 2. Materialize declared BGM/SFX assets.
     await runStep(report, "audio-assets", idempotent, dryRun, () =>
-      runAudioAssets(opts.projectRoot, audioConfig),
+      runAudioAssets(opts.projectRoot, audioConfig, {
+        ...(opts.bgmDir !== undefined ? { bgmDir: opts.bgmDir } : {}),
+        ...(opts.sfxDir !== undefined ? { sfxDir: opts.sfxDir } : {}),
+      }),
     );
 
     // 3. Render preview (compile article → VDSL → mp4).
@@ -510,31 +522,54 @@ function formatSrtTime(sec: number): string {
   return `${h}:${m}:${s},${ms}`;
 }
 
-async function runAudioAssets(
+export interface AudioAssetDirs {
+  bgmDir?: string;
+  sfxDir?: string;
+}
+
+/** Materialize the BGM/SFX tags declared in audio-config.yaml into
+ *  assets/audio-assets/{bgm,sfx}/{tag}.wav. With bgmDir/sfxDir the
+ *  bytes come from the user's own library (file-based lookup); without
+ *  them a mock silent placeholder is written so downstream mixing has
+ *  valid audio. Exported for direct testing. */
+export async function runAudioAssets(
   projectRoot: string,
   config: AudioConfigShape,
+  dirs: AudioAssetDirs = {},
 ): Promise<string[]> {
-  const provider = new MockAudioAssetProvider();
   const outputs: string[] = [];
   const assetsDir = path.join(projectRoot, "assets", "audio-assets");
   await mkdir(path.join(assetsDir, "bgm"), { recursive: true });
   await mkdir(path.join(assetsDir, "sfx"), { recursive: true });
 
+  const mock = () => new MockAudioAssetProvider();
+  const fileBased = () =>
+    new FileBasedAudioAssetProvider({
+      bgmDirectory: dirs.bgmDir ?? dirs.sfxDir ?? ".",
+      sfxDirectory: dirs.sfxDir ?? dirs.bgmDir ?? ".",
+    });
+
   if (config.bgm && typeof config.bgm === "string") {
     const out = path.join(assetsDir, "bgm", `${config.bgm}.wav`);
     if (!existsSync(out)) {
+      const provider = dirs.bgmDir ? fileBased() : mock();
       const r = await provider.pickBackgroundMusic({ tag: config.bgm });
       await writeFile(out, r.bytes);
-      outputs.push(`assets/audio-assets/bgm/${config.bgm}.wav`);
+      outputs.push(
+        `assets/audio-assets/bgm/${config.bgm}.wav (${r.source}, ${r.license})`,
+      );
     }
   }
   const sfx = config.sfx ?? {};
   for (const [sceneId, tag] of Object.entries(sfx)) {
     const out = path.join(assetsDir, "sfx", `${tag}.wav`);
     if (!existsSync(out)) {
+      const provider = dirs.sfxDir ? fileBased() : mock();
       const r = await provider.pickSoundEffect({ tag });
       await writeFile(out, r.bytes);
-      outputs.push(`assets/audio-assets/sfx/${tag}.wav`);
+      outputs.push(
+        `assets/audio-assets/sfx/${tag}.wav [${sceneId}] (${r.source}, ${r.license})`,
+      );
     }
   }
   return outputs;

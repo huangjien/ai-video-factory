@@ -230,6 +230,14 @@ program
     "image provider for scene visuals: minimax (real AI), mock, none (default: minimax; --fake implies none)",
   )
   .option(
+    "--bgm-dir <dir>",
+    "local BGM library dir — the bgm tag from audio-config.yaml resolves to {tag}.wav inside it (default: mock silent placeholder)",
+  )
+  .option(
+    "--sfx-dir <dir>",
+    "local SFX library dir — sfx cue tags resolve to {tag}.wav inside it (default: mock silent placeholder)",
+  )
+  .option(
     "--dry-run",
     "log which steps would run without executing them",
   )
@@ -240,6 +248,8 @@ program
         cwd?: string;
         fake?: boolean;
         imageProvider?: "minimax" | "mock" | "none";
+        bgmDir?: string;
+        sfxDir?: string;
         dryRun?: boolean;
       },
     ) => {
@@ -250,6 +260,8 @@ program
         ...(opts.imageProvider !== undefined
           ? { imageProvider: opts.imageProvider }
           : {}),
+        ...(opts.bgmDir !== undefined ? { bgmDir: opts.bgmDir } : {}),
+        ...(opts.sfxDir !== undefined ? { sfxDir: opts.sfxDir } : {}),
         ...(opts.dryRun !== undefined ? { dryRun: opts.dryRun } : {}),
       });
     },

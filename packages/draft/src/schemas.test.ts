@@ -257,6 +257,29 @@ describe("articleToStoryboardYaml (VDSL sync)", () => {
     );
   });
 
+  it("truncates long Title.subtext so it does not overflow the 36px <p>", () => {
+    const longVisual: ParsedArticle = {
+      ...fixture,
+      scenes: [
+        {
+          id: "scene_1",
+          duration: 8,
+          caption: "开场",
+          visual:
+            "电影感开场：黑屏渐亮，浮现 2024 年科技发布会现场的大屏幕，屏幕上循环播放 Sora 生成的六十秒东京街景视频片段，镜头缓慢推近屏幕表面。",
+          narration: "今天我们谈一下同步测试",
+        },
+      ],
+    };
+    const yaml = articleToStoryboardYaml(longVisual);
+    const parsed = parseYaml(yaml) as {
+      scenes: { visual: { props: { subtext: string } } }[];
+    };
+    const sub = parsed.scenes[0]?.visual.props.subtext ?? "";
+    expect(sub.length).toBeLessThanOrEqual(51);
+    expect(sub).toMatch(/…$/);
+  });
+
   it("uses AnimatedIllustration for subsequent scenes (caption + visual)", () => {
     const yaml = articleToStoryboardYaml(fixture);
     const parsed = parseYaml(yaml) as {
@@ -286,6 +309,107 @@ describe("articleToStoryboardYaml (VDSL sync)", () => {
     };
     expect(parsed.scenes[0]?.narration.text).toBe(
       'line one\nline two with "quote"',
+    );
+  });
+});
+
+describe("parseArticleLenient + recoverEmptyNarrations (malformed draft)", () => {
+  const MALFORMED_ARTICLE = `---
+project: harness-engineering
+language: zh-CN
+duration_target_sec: 300
+voice: zh-CN-YunjianNeural
+---
+
+# Harness 工程:智能体的隐形引擎
+
+> Hook: 同一个模型,同样的提示词。
+
+## 1. Harness 到底是什么
+
+同一个模型在不同团队手里的表现可以天差地别:有的智能体能自动跑测试、直接提交拉取请求。差别通常不在模型本身,而在模型外围那套系统。
+
+## 2. 四大核心组件
+
+裸模型直接上岗,问题很快暴露:调用不存在的接口、改错文件、一本正经地编造结果。关键是边界由系统强制而非提示词恳求,反馈回路让错误在几秒内被纠正。
+
+## Scenes
+
+\`\`\`yaml
+scenes:
+  - id: scene_1
+    duration: 14
+    caption: A
+    visual: ""
+    narration: ""
+  - id: scene_2
+    duration: 14
+    caption: B
+    visual: ""
+    narration: ""
+  - id: scene_3
+    duration: 14
+    caption: C
+    visual: ""
+    narration: ""
+  - id: scene_4
+    duration: 14
+    caption: D
+    visual: ""
+    narration: ""
+\`\`\`
+`;
+
+  it("strict parseArticle rejects empty narrations", () => {
+    const { parseArticle } = require("@vf/draft");
+    expect(() => parseArticle(MALFORMED_ARTICLE)).toThrow(/too_small/);
+  });
+
+  it("parseArticleLenient accepts the malformed draft", () => {
+    const { parseArticleLenient } = require("@vf/draft");
+    const parsed = parseArticleLenient(MALFORMED_ARTICLE);
+    expect(parsed.scenes).toHaveLength(4);
+    expect(parsed.scenes[0]?.narration).toBe("");
+  });
+
+  it("recoverEmptyNarrations back-fills each scene from the matching section body", () => {
+    const { parseArticleLenient, recoverEmptyNarrations } = require("@vf/draft");
+    const parsed = parseArticleLenient(MALFORMED_ARTICLE);
+    const { article, recoveredCount } = recoverEmptyNarrations(parsed);
+    expect(recoveredCount).toBe(4);
+    expect(article.scenes[0]?.narration).toMatch(/同一个模型/);
+    expect(article.scenes[0]?.narration).not.toMatch(/Hook/);
+    expect(article.scenes[2]?.narration).toMatch(/调用不存在的接口/);
+    expect(article.scenes[3]?.narration).toMatch(/反馈回路/);
+  });
+
+  it("does not touch scenes that already have narration", () => {
+    const { parseArticleLenient, recoverEmptyNarrations } = require("@vf/draft");
+    const md = MALFORMED_ARTICLE.replace(
+      'caption: D\n    visual: ""\n    narration: ""',
+      'caption: D\n    visual: ""\n    narration: "kept verbatim"',
+    );
+    const parsed = parseArticleLenient(md);
+    const { article, recoveredCount } = recoverEmptyNarrations(parsed);
+    expect(recoveredCount).toBe(3);
+    expect(article.scenes[3]?.narration).toBe("kept verbatim");
+  });
+
+  it("parseArticleWithRecovery accepts good drafts unchanged and recovers malformed ones", () => {
+    const { parseArticleWithRecovery } = require("@vf/draft");
+    const good = parseArticleWithRecovery(SAMPLE_MD);
+    expect(good.recoveredCount).toBe(0);
+    expect(good.article.scenes).toHaveLength(2);
+
+    const bad = parseArticleWithRecovery(MALFORMED_ARTICLE);
+    expect(bad.recoveredCount).toBe(4);
+    expect(bad.article.scenes[0]?.narration).toMatch(/同一个模型/);
+  });
+
+  it("parseArticleWithRecovery rethrows non-narration parse errors", () => {
+    const { parseArticleWithRecovery } = require("@vf/draft");
+    expect(() => parseArticleWithRecovery("# title\n\nfoo\n")).toThrow(
+      /frontmatter/,
     );
   });
 });

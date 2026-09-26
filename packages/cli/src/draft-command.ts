@@ -12,7 +12,7 @@ import { MiniMaxWebSearch } from "@vf/research";
 import {
   articleToStoryboardYaml,
   callDraft,
-  parseArticle,
+  parseArticleWithRecovery,
 } from "@vf/draft";
 import { slugifyProjectName } from "./project-path.js";
 
@@ -104,8 +104,16 @@ export async function runDraft(opts: DraftOptions): Promise<number> {
   // 1 scene while TTS synthesizes N.
   const storyboardPath = path.join(projectRoot, "storyboard", "storyboard.yaml");
   try {
-    const article = parseArticle(markdown);
+    const { article, recoveredCount } = parseArticleWithRecovery(markdown);
     await writeFile(storyboardPath, articleToStoryboardYaml(article), "utf8");
+    if (recoveredCount > 0) {
+      console.error(
+        `  ! draft shipped ${recoveredCount} empty scene narrations — recovered from section bodies.`,
+      );
+      console.error(
+        `  (edit the narrations in article.md, or re-run with --from to revise)`,
+      );
+    }
   } catch (err) {
     console.error(
       `  ! could not refresh storyboard.yaml from article.md: ${(err as Error).message}`,

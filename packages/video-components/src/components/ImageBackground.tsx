@@ -13,6 +13,10 @@ export interface ImageBackgroundProps {
   /** Ken-Burns motion: slow zoom + pan throughout the scene so the
    * background reads as alive rather than static. Set to 0 to disable. */
   kenBurnsScale?: number;
+  /** Optional caption overlaid at the bottom — keeps the scene
+   *  informative even when the background image is a placeholder
+   *  (e.g. mock provider or failed real-provider generation). */
+  caption?: string | undefined;
   startFrame: number;
   durationInFrames: number;
   frame: number;
@@ -31,6 +35,7 @@ export const ImageBackground: FC<ImageBackgroundProps> = ({
   src,
   fit = "cover",
   kenBurnsScale = 0.08,
+  caption,
   frame,
   durationInFrames,
 }) => {
@@ -67,6 +72,32 @@ export const ImageBackground: FC<ImageBackgroundProps> = ({
             "linear-gradient(180deg, rgba(0,0,0,0.45) 0%, rgba(0,0,0,0.65) 100%)",
         }}
       />
+      {caption !== undefined && caption.length > 0 ? (
+        <div
+          style={{
+            position: "absolute",
+            left: 0,
+            right: 0,
+            bottom: 80,
+            padding: "0 80px",
+            textAlign: "center",
+            opacity: 0.6 + 0.4 * eased,
+          }}
+        >
+          <p
+            style={{
+              color: darkTechTheme.colors.primary,
+              fontFamily: darkTechTheme.typography.title.fontFamily,
+              fontSize: 48,
+              fontWeight: 600,
+              margin: 0,
+              textShadow: `0 0 24px ${darkTechTheme.colors.accent}`,
+            }}
+          >
+            {caption}
+          </p>
+        </div>
+      ) : null}
     </AbsoluteFill>
   );
 };

@@ -8,7 +8,7 @@ import {
   providerForRole,
   type Provider,
 } from "@vf/llm";
-import { parseArticle } from "@vf/draft";
+import { parseArticle, parseArticleWithRecovery } from "@vf/draft";
 import { callAudioPlan } from "@vf/audio-plan";
 import { slugifyForProject } from "./project-path.js";
 
@@ -17,6 +17,7 @@ export interface AudioPlanOptions {
   cwd?: string;
   model?: "minimax" | "glm";
   from?: string;
+  strict?: boolean;
 }
 
 function providerInstance(name: string): Provider {
@@ -43,11 +44,27 @@ export async function runAudioPlan(opts: AudioPlanOptions): Promise<number> {
 
   const articleMd = await readFile(articlePath, "utf8");
   let article;
-  try {
-    article = parseArticle(articleMd);
-  } catch (err) {
-    console.error(`failed to parse article.md: ${(err as Error).message}`);
-    return 1;
+  if (opts.strict) {
+    try {
+      article = parseArticle(articleMd);
+    } catch (err) {
+      console.error(`failed to parse article.md: ${(err as Error).message}`);
+      return 1;
+    }
+  } else {
+    try {
+      const parsed = parseArticleWithRecovery(articleMd);
+      article = parsed.article;
+      if (parsed.recoveredCount > 0) {
+        console.error(`! article.md had ${parsed.recoveredCount} empty scene narrations`);
+        console.error(`  (the LLM put all content in ## section bodies — recovered from them)`);
+        console.error(`  next: re-run \`vf draft --from ${articlePath}\` to regenerate cleanly,`);
+        console.error(`        or hand-edit each scene's narration in article.md.`);
+      }
+    } catch (err) {
+      console.error(`failed to parse article.md: ${(err as Error).message}`);
+      return 1;
+    }
   }
 
   let fromContent: string | undefined;

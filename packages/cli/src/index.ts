@@ -190,6 +190,10 @@ program
     "--from <file>",
     "path to an existing audio-config.yaml to revise",
   )
+  .option(
+    "--strict",
+    "fail loudly on empty scene narrations instead of auto-recovering from section bodies",
+  )
   .action(
     async (
       project: string,
@@ -197,6 +201,7 @@ program
         cwd?: string;
         model?: "minimax" | "glm";
         from?: string;
+        strict?: boolean;
       },
     ) => {
       process.exitCode = await runAudioPlan({
@@ -204,6 +209,7 @@ program
         ...(opts.cwd !== undefined ? { cwd: opts.cwd } : {}),
         ...(opts.model !== undefined ? { model: opts.model } : {}),
         ...(opts.from !== undefined ? { from: opts.from } : {}),
+        ...(opts.strict === true ? { strict: opts.strict } : {}),
       });
     },
   );
@@ -221,7 +227,7 @@ program
   )
   .option(
     "--image-provider <provider>",
-    "image provider for scene visuals: minimax (real AI), mock, none (default: minimax; --fake implies mock)",
+    "image provider for scene visuals: minimax (real AI), mock, none (default: minimax; --fake implies none)",
   )
   .option(
     "--dry-run",

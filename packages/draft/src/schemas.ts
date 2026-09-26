@@ -74,7 +74,7 @@ export function articleToStoryboardYaml(article: ParsedArticle): string {
     const component = isFirst ? "Title" : "AnimatedIllustration";
     const props = isFirst
       ? s.visual && s.visual.length > 0
-        ? `    visual:\n      component: ${component}\n      props:\n        text: ${yamlStr(s.caption ?? "")}\n        subtext: ${yamlStr(s.visual ?? "")}`
+        ? `    visual:\n      component: ${component}\n      props:\n        text: ${yamlStr(s.caption ?? "")}\n        subtext: ${yamlStr(truncateForSubtext(s.visual))}`
         : `    visual:\n      component: ${component}\n      props:\n        text: ${yamlStr(s.caption ?? "")}`
       : `    visual:\n      component: ${component}\n      props:\n        text: ${yamlStr(s.caption ?? "")}\n        visual: ${yamlStr(s.visual ?? "")}`;
     lines.push(`  - id: ${id}`);
@@ -96,6 +96,23 @@ function yamlStr(s: string): string {
   return `"${escaped}"`;
 }
 
+/** Title.subtext is rendered as one <p> at 36px on the title card — long
+ *  descriptions overflow and become unreadable. Trim to one short clause. */
+function truncateForSubtext(s: string): string {
+  const MAX = 50;
+  if (s.length <= MAX) return s;
+  const cut = s.slice(0, MAX);
+  const lastPunct = Math.max(
+    cut.lastIndexOf("。"),
+    cut.lastIndexOf("，"),
+    cut.lastIndexOf(","),
+    cut.lastIndexOf("."),
+    cut.lastIndexOf(" "),
+  );
+  const trimmed = lastPunct > 20 ? cut.slice(0, lastPunct) : cut;
+  return `${trimmed}…`;
+}
+
 /** Parse the article.md shape: frontmatter (YAML), prose body, and a
  * `## Scenes` section containing a fenced YAML block. Tolerates extra
  * structure (sections, hooks, etc.) — keeps them in `proseBody`. */
@@ -112,6 +129,161 @@ export function parseArticle(md: string): ParsedArticle {
     markdown: md,
   };
 }
+
+export function parseArticleLenient(md: string): ParsedArticle {
+  const { frontmatter, body } = splitFrontmatter(md);
+  const fm = ArticleFrontmatterSchema.parse(frontmatter);
+  const { proseBody, scenesYaml } = splitScenesBlock(body);
+  const parsedScenes = parseYaml(scenesYaml) as unknown;
+  const sb = SceneBlockLenientSchema.parse(parsedScenes);
+  return {
+    frontmatter: fm,
+    proseBody,
+    scenes: sb.scenes,
+    markdown: md,
+  };
+}
+
+export interface ArticleWithRecovery {
+  article: ParsedArticle;
+  recoveredCount: number;
+}
+
+/** Strict parse first; on the empty-narration failure mode, fall back to
+ *  lenient + section-body recovery. All article.md consumers (make,
+ *  audio-plan, draft storyboard-sync, youtube) should go through this so
+ *  a malformed LLM draft degrades uniformly instead of crashing one verb
+ *  but not another. Other parse errors still throw. */
+export function parseArticleWithRecovery(md: string): ArticleWithRecovery {
+  try {
+    return { article: parseArticle(md), recoveredCount: 0 };
+  } catch (err) {
+    if (!isEmptyNarrationZodError(err)) throw err;
+    const loose = parseArticleLenient(md);
+    const { article, recoveredCount } = recoverEmptyNarrations(loose);
+    if (recoveredCount === 0) throw err;
+    return { article, recoveredCount };
+  }
+}
+
+function isEmptyNarrationZodError(err: unknown): boolean {
+  const msg = err instanceof Error ? err.message : String(err);
+  return (
+    msg.includes("too_small") &&
+    msg.includes("scenes") &&
+    msg.includes("narration")
+  );
+}
+
+export function recoverEmptyNarrations(article: ParsedArticle): {
+  article: ParsedArticle;
+  recoveredCount: number;
+} {
+  const sections = parseProseSections(article.proseBody);
+  if (sections.length === 0) {
+    return { article, recoveredCount: 0 };
+  }
+  const perSection = Math.max(
+    1,
+    Math.ceil(article.scenes.length / sections.length),
+  );
+  const scenes = article.scenes.map((s) => ({ ...s }));
+  let recoveredCount = 0;
+
+  for (let i = 0; i < scenes.length; i++) {
+    const scene = scenes[i]!;
+    if (scene.narration && scene.narration.trim().length > 0) continue;
+    const sectionIdx = Math.min(
+      Math.floor(i / perSection),
+      sections.length - 1,
+    );
+    const section = sections[sectionIdx]!;
+    const slice = sliceSectionForScene(section.body, i % perSection, perSection);
+    if (slice.length > 0) {
+      scene.narration = slice;
+      recoveredCount++;
+    }
+  }
+
+  return {
+    article: { ...article, scenes },
+    recoveredCount,
+  };
+}
+
+interface ProseSection {
+  heading: string;
+  body: string;
+}
+
+function parseProseSections(proseBody: string): ProseSection[] {
+  const sections: ProseSection[] = [];
+  const lines = proseBody.split("\n");
+  let current: ProseSection | null = null;
+  for (const line of lines) {
+    const isNumberedSection = /^##\s+\d+\.\s+/.test(line);
+    if (isNumberedSection) {
+      if (current) sections.push(current);
+      current = {
+        heading: line.replace(/^##\s+/, "").trim(),
+        body: "",
+      };
+      continue;
+    }
+    if (current) {
+      current.body += (current.body ? "\n" : "") + line;
+    }
+  }
+  if (current) sections.push(current);
+  return sections
+    .map((s) => ({ heading: s.heading, body: s.body.trim() }))
+    .filter((s) => s.heading.length > 0);
+}
+
+function sliceSectionForScene(
+  body: string,
+  slot: number,
+  totalSlots: number,
+): string {
+  if (body.length === 0) return "";
+  const sentenceEnds: number[] = [];
+  for (let i = 0; i < body.length; i++) {
+    const ch = body[i];
+    if (ch === "。" || ch === "！" || ch === "？" || ch === "." || ch === "!" || ch === "?") {
+      sentenceEnds.push(i);
+    }
+  }
+  if (sentenceEnds.length >= totalSlots) {
+    const perSlot = sentenceEnds.length / totalSlots;
+    const startIdx = Math.floor(slot * perSlot);
+    const endIdx = Math.min(
+      sentenceEnds.length - 1,
+      Math.floor((slot + 1) * perSlot) - 1,
+    );
+    const start = startIdx === 0 ? 0 : sentenceEnds[startIdx - 1]! + 1;
+    const end = sentenceEnds[endIdx]! + 1;
+    return body.slice(start, end).trim();
+  }
+  const idealStart = Math.floor((slot * body.length) / totalSlots);
+  const idealEnd = Math.floor(((slot + 1) * body.length) / totalSlots);
+  return body.slice(idealStart, idealEnd).trim();
+}
+
+const SceneBlockLenientSchema = z
+  .object({
+    scenes: z
+      .array(
+        z.object({
+          id: z.string().min(1),
+          duration: z.number().int().positive(),
+          caption: z.string(),
+          visual: z.string(),
+          narration: z.string(),
+        }).passthrough(),
+      )
+      .min(1),
+  })
+  .passthrough();
 
 function splitFrontmatter(md: string): {
   frontmatter: unknown;

@@ -5,7 +5,7 @@ import path from "node:path";
 import { existsSync } from "node:fs";
 import { GLMProvider, loadProviderConfig, MiniMaxProvider } from "@vf/llm";
 import { callYouTube, chaptersToVtt, type YouTubeInput } from "@vf/youtube";
-import { parseArticle, type Scene } from "@vf/draft";
+import { parseArticleWithRecovery, type Scene } from "@vf/draft";
 import { stringify as yamlStringify } from "yaml";
 import type { ChatMessage, Provider } from "@vf/llm";
 import { formatRunId } from "@vf/workflow";
@@ -200,7 +200,7 @@ export async function runYouTube(opts: YouTubeOptions): Promise<number> {
 /** Build a legacy-shaped YouTubeInput from the new article.md —
  * the YouTube agent consumes three string fields; this maps each. */
 function synthFromArticle(articleMd: string): YouTubeInput {
-  const article = parseArticle(articleMd);
+  const { article } = parseArticleWithRecovery(articleMd);
   const storyboard = synthStoryboardYaml(article.scenes);
   const script = `# ${article.frontmatter.project}\n\n${article.proseBody.trim()}\n`;
   const research = articleMd;

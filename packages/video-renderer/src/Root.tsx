@@ -79,6 +79,7 @@ export const Root = ({ renderPlan }: RootProps) => {
   const localFrame = frame - scene.startFrame;
 
   const next = renderPlan.scenes[sceneIdx + 1];
+  const nextEntry = next ? REGISTRY[next.component] : undefined;
   const transitionFrames = 18;
   const fadeOut = crossfadeOpacity(frame, scene, next, transitionFrames);
   const fadeIn = nextSceneOpacity(frame, scene, next, transitionFrames);
@@ -111,9 +112,9 @@ export const Root = ({ renderPlan }: RootProps) => {
       <div style={{ position: "absolute", inset: 0, opacity: fadeOut }}>
         <SceneComponent {...baseProps} />
       </div>
-      {next && nextProps ? (
+      {next && nextProps && nextEntry ? (
         <div style={{ position: "absolute", inset: 0, opacity: fadeIn }}>
-          <SceneComponent {...nextProps} />
+          <nextEntry.component {...nextProps} />
         </div>
       ) : null}
     </div>

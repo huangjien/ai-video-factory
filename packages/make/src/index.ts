@@ -14,7 +14,7 @@ import {
 import { promisify } from "node:util";
 import os from "node:os";
 import path from "node:path";
-import { parseArticle, articleToStoryboardYaml, type ParsedArticle } from "@vf/draft";
+import { parseArticleWithRecovery, articleToStoryboardYaml, type ParsedArticle } from "@vf/draft";
 import { parse as parseYaml, stringify as yamlStringify } from "yaml";
 import {
   FakeTTSProvider,
@@ -80,49 +80,73 @@ export async function runMake(opts: MakeOptions): Promise<MakeReport> {
   }
 
   const articleMd = await readFile(articlePath, "utf8");
-  const article = parseArticle(articleMd);
+  let article;
+  try {
+    const parsed = parseArticleWithRecovery(articleMd);
+    article = parsed.article;
+    if (parsed.recoveredCount > 0) {
+      report.steps.push({
+        name: "recover-narrations",
+        status: "ran",
+        message:
+          `article.md had ${parsed.recoveredCount} empty scene narrations — ` +
+          `back-filled from ## section bodies (LLM draft was malformed)`,
+      });
+    }
+  } catch (err) {
+    failStep(report, "inputs", `failed to parse article.md: ${(err as Error).message}`);
+    return report;
+  }
   const audioConfig = parseYaml(
     await readFile(audioConfigPath, "utf8"),
   ) as AudioConfigShape;
 
-  await runStep(report, "sync-storyboard", idempotent, dryRun, () =>
-    syncStoryboardFromArticle(opts.projectRoot, article),
-  );
+  try {
+    await runStep(report, "sync-storyboard", idempotent, dryRun, () =>
+      syncStoryboardFromArticle(opts.projectRoot, article),
+    );
 
-  // 1. Generate scene visuals from article's visual descriptions.
-  //    Produces assets/images/scene_N.jpg used by ImageBackground.
-  await runStep(report, "generate-visuals", idempotent, dryRun, () =>
-    generateSceneVisuals(opts.projectRoot, article, {
-      provider: opts.imageProvider ?? (opts.fake ? "mock" : "minimax"),
-    }),
-  );
+    // 1. Generate scene visuals from article's visual descriptions.
+    //    Produces assets/images/scene_N.jpg used by ImageBackground.
+    //    `--fake` defaults to "none" so scenes stay as AnimatedIllustration
+    //    — mock placeholders are too small to be useful backgrounds.
+    await runStep(report, "generate-visuals", idempotent, dryRun, () =>
+      generateSceneVisuals(opts.projectRoot, article, {
+        provider:
+          opts.imageProvider ?? (opts.fake ? "none" : "minimax"),
+      }),
+    );
 
-  // 1b. TTS scenes — narrate each scene's voice-over text.
-  await runStep(report, "tts", idempotent, dryRun, () =>
-    runTts(opts.projectRoot, article, audioConfig, {
-      fake: opts.fake === true,
-    }),
-  );
+    // 1b. TTS scenes — narrate each scene's voice-over text.
+    await runStep(report, "tts", idempotent, dryRun, () =>
+      runTts(opts.projectRoot, article, audioConfig, {
+        fake: opts.fake === true,
+      }),
+    );
 
-  // 1b. Resync storyboard.yaml durations to actual TTS lengths.
-  await runStep(report, "sync-durations", idempotent, dryRun, () =>
-    syncStoryboardDurations(opts.projectRoot),
-  );
+    // 1b. Resync storyboard.yaml durations to actual TTS lengths.
+    await runStep(report, "sync-durations", idempotent, dryRun, () =>
+      syncStoryboardDurations(opts.projectRoot),
+    );
 
-  // 2. Materialize declared BGM/SFX assets.
-  await runStep(report, "audio-assets", idempotent, dryRun, () =>
-    runAudioAssets(opts.projectRoot, audioConfig),
-  );
+    // 2. Materialize declared BGM/SFX assets.
+    await runStep(report, "audio-assets", idempotent, dryRun, () =>
+      runAudioAssets(opts.projectRoot, audioConfig),
+    );
 
-  // 3. Render preview (compile article → VDSL → mp4).
-  await runStep(report, "render-preview", idempotent, dryRun, () =>
-    runRenderPreview(opts.projectRoot, article),
-  );
+    // 3. Render preview (compile article → VDSL → mp4).
+    await runStep(report, "render-preview", idempotent, dryRun, () =>
+      runRenderPreview(opts.projectRoot, article),
+    );
 
-  // 4. Mix narration + BGM + SFX cues.
-  await runStep(report, "mix", idempotent, dryRun, () =>
-    runMix(opts.projectRoot, audioConfig),
-  );
+    // 4. Mix narration + BGM + SFX cues.
+    await runStep(report, "mix", idempotent, dryRun, () =>
+      runMix(opts.projectRoot, audioConfig),
+    );
+  } catch {
+    // runStep already recorded the failure; later steps depend on the
+    // failed one's outputs, so stop here and let the CLI report it.
+  }
 
   // Collect outputs.
   report.outputFiles = await collectOutputs(opts.projectRoot);
@@ -289,7 +313,10 @@ function updateStoryboardForImages(
   let parsed: {
     scenes?: {
       id?: string;
-      visual?: { component?: string; props?: Record<string, unknown> };
+      visual?: {
+        component?: string;
+        props?: Record<string, unknown>;
+      };
     }[];
   };
   try {
@@ -309,8 +336,15 @@ function updateStoryboardForImages(
     );
     if (!imagePath) continue;
 
+    const prevText =
+      typeof scene.visual.props?.text === "string"
+        ? (scene.visual.props.text as string)
+        : undefined;
     scene.visual.component = "ImageBackground";
-    scene.visual.props = { src: imagePath };
+    scene.visual.props = {
+      src: imagePath,
+      ...(prevText !== undefined ? { caption: prevText } : {}),
+    };
     changed = true;
   }
 

@@ -2,11 +2,15 @@ export {
   ArticleFrontmatterSchema,
   SceneBlockSchema,
   parseArticle,
+  parseArticleLenient,
+  parseArticleWithRecovery,
+  recoverEmptyNarrations,
   articleToStoryboardYaml,
   type ArticleFrontmatter,
   type Scene,
   type SceneBlock,
   type ParsedArticle,
+  type ArticleWithRecovery,
 } from "./schemas.js";
 export {
   SYSTEM_PROMPT,

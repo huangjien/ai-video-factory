@@ -54,11 +54,22 @@ Rules:
 3. Use the dark-tech theme (theme: dark-tech).
 4. Use components from this registered set ONLY:
    Title, Paragraph, CodeBlock, Terminal, Image, FlowChart, Comparison,
-   Timeline, Callout, EndCard.
+   Timeline, Callout, EndCard, Character.
 5. Visual durations are in SECONDS; scene count 5-8; total duration <= 60.
 6. Each scene needs: id (snake_case), duration, visual.component+props.
    Optional: narration.text/audio, animation.entrance, captions.source.
 7. NO prose outside the YAML code block.
+8. VISUAL STYLE — prefer people over screens:
+   - Default to Character (lip-sync) or Image with a person for most scenes.
+   - Use CodeBlock / Terminal / Paragraph / Title only when the narration
+     genuinely requires showing code, a command, a definition, or a label.
+     Aim for at most 1-2 such text-heavy scenes per storyboard; never make
+     them consecutive.
+   - Diagrams (FlowChart / Comparison / Timeline / Callout) are fine, but
+     pair them with a person (Character or human in Image) when possible.
+   - Never describe software UI in the visual props (no fake dashboards,
+     terminal windows as decoration). Visual props for Image should describe
+     a person and scene, not a screen.
 
 Few-shot example:
 ${FEWSHOT_SAMPLE}

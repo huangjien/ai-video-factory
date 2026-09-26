@@ -230,15 +230,34 @@ scenes:
 
 ```bash
 vf new my-topic
-vf draft "my-topic"           # → projects/<slug>/article.md
+vf draft "my-topic"           # → projects/<slug>/article.md + audio-config.yaml
                             #   同时刷新 storyboard.yaml（VDSL，由 article.md 派生）
-vf audio-plan my-topic       # → projects/<slug>/audio-config.yaml
+# （vf audio-plan my-topic 只在手工修改 article.md 之后需要"重新生成"
+#   audio-config.yaml 时才用——draft 命令已经自动跑过这一步）
+
 # 人工编辑：
 $EDITOR projects/<slug>/article.md
 $EDITOR projects/<slug>/audio-config.yaml
 ```
 
+`vf draft` 会自动对新草稿跑 audio-plan 步骤。两条护栏：`--no-audio-plan`
+跳过该步骤（只出 article.md）；已存在的 `audio-config.yaml` 绝不会被
+覆盖——人工编辑优先，命令会打印提示并指向 `vf audio-plan`。若
+audio-plan 的 LLM 调用失败，draft 依然成功（article.md 是主产物），
+并提示单独运行 `vf audio-plan`。
+
 ### 6.2 一键渲染：`vf make`
+
+所有接收 `<project>` 参数的子命令都按同样的宽容顺序解析：
+
+1. 指向项目根目录的路径（如 `./projects/my-video`）
+2. `projects/` 下的精确文件夹名
+3. 人类可读的主题——做 slug 化、忽略大小写与分隔符
+   （`"Harness Engineering"`、`harness_engineering`、
+   `harness-engineering` 指向同一个项目）
+4. 唯一的文件夹名前缀（`vf make 长视频` 找到 `长视频测试`）
+
+前缀有歧义时报错并列出候选；完全匹配不到时列出全部可用项目。
 
 ```bash
 vf make my-topic                            # TTS → 音频素材 → 渲染 → 混音

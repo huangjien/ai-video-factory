@@ -1,7 +1,7 @@
 import path from "node:path";
 import { execSync } from "node:child_process";
 import { existsSync } from "node:fs";
-import { resolveProjectRoot, slugifyForProject } from "./project-path.js";
+import { resolveProjectDir, resolveProjectRoot } from "./project-path.js";
 import {
   appendCheckpoint,
   loadCheckpoint,
@@ -20,8 +20,12 @@ export async function runApprove(
 ): Promise<number> {
   let root: string;
   if (projectName) {
-    const base = path.resolve(cwd ?? ".");
-    root = path.join(base, "projects", slugifyForProject(projectName));
+    const resolved = resolveProjectDir(projectName, cwd);
+    if (!resolved.ok) {
+      console.error(resolved.message);
+      return 1;
+    }
+    root = resolved.root;
   } else {
     const resolved = resolveProjectRoot(cwd);
     if (!resolved.ok) {
@@ -105,8 +109,12 @@ export async function runReject(
 ): Promise<number> {
   let root: string;
   if (projectName) {
-    const base = path.resolve(cwd ?? ".");
-    root = path.join(base, "projects", slugifyForProject(projectName));
+    const resolved = resolveProjectDir(projectName, cwd);
+    if (!resolved.ok) {
+      console.error(resolved.message);
+      return 1;
+    }
+    root = resolved.root;
   } else {
     const resolved = resolveProjectRoot(cwd);
     if (!resolved.ok) {
@@ -145,8 +153,12 @@ export async function runRollback(
 ): Promise<number> {
   let root: string;
   if (projectName) {
-    const base = path.resolve(cwd ?? ".");
-    root = path.join(base, "projects", slugifyForProject(projectName));
+    const resolved = resolveProjectDir(projectName, cwd);
+    if (!resolved.ok) {
+      console.error(resolved.message);
+      return 1;
+    }
+    root = resolved.root;
   } else {
     const resolved = resolveProjectRoot(cwd);
     if (!resolved.ok) {
@@ -186,8 +198,12 @@ export async function runResume(
 ): Promise<number> {
   let root: string;
   if (projectName) {
-    const base = path.resolve(cwd ?? ".");
-    root = path.join(base, "projects", slugifyForProject(projectName));
+    const resolved = resolveProjectDir(projectName, cwd);
+    if (!resolved.ok) {
+      console.error(resolved.message);
+      return 1;
+    }
+    root = resolved.root;
   } else {
     const resolved = resolveProjectRoot(cwd);
     if (!resolved.ok) {
@@ -214,8 +230,12 @@ export async function runReset(
 ): Promise<number> {
   let root: string;
   if (projectName) {
-    const base = path.resolve(cwd ?? ".");
-    root = path.join(base, "projects", slugifyForProject(projectName));
+    const resolved = resolveProjectDir(projectName, cwd);
+    if (!resolved.ok) {
+      console.error(resolved.message);
+      return 1;
+    }
+    root = resolved.root;
   } else {
     const resolved = resolveProjectRoot(cwd);
     if (!resolved.ok) {

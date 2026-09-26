@@ -3,6 +3,7 @@ import { mkdir } from "node:fs/promises";
 import { createHash } from "node:crypto";
 import { execSync } from "node:child_process";
 import path from "node:path";
+import { resolveProjectDir } from "./project-path.js";
 import { mixTracks, mixTracksWithSpec, parseMixYaml } from "@vf/audio-mix";
 import { formatRunId } from "@vf/workflow";
 
@@ -107,11 +108,12 @@ function probeTotalDuration(narrationPaths: string[]): number[] {
 
 export async function runMix(opts: MixOptions): Promise<number> {
   const cwd = path.resolve(opts.cwd ?? ".");
-  const projectRoot = path.join(cwd, "projects", opts.project);
-  if (!existsSync(projectRoot)) {
-    console.error(`project not found: ${projectRoot}`);
+  const resolvedProject = resolveProjectDir(opts.project, opts.cwd);
+  if (!resolvedProject.ok) {
+    console.error(resolvedProject.message);
     return 1;
   }
+  const projectRoot = resolvedProject.root;
   let narrationPaths: string[];
   let bgmPath: string;
   try {

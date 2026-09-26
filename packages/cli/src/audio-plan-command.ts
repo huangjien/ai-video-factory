@@ -10,7 +10,7 @@ import {
 } from "@vf/llm";
 import { parseArticle, parseArticleWithRecovery } from "@vf/draft";
 import { callAudioPlan } from "@vf/audio-plan";
-import { slugifyForProject } from "./project-path.js";
+import { resolveProjectDir } from "./project-path.js";
 
 export interface AudioPlanOptions {
   project: string;
@@ -27,9 +27,12 @@ function providerInstance(name: string): Provider {
 }
 
 export async function runAudioPlan(opts: AudioPlanOptions): Promise<number> {
-  const cwd = path.resolve(opts.cwd ?? ".");
-  const projectId = slugifyForProject(opts.project);
-  const projectRoot = path.join(cwd, "projects", projectId);
+  const resolvedProject = resolveProjectDir(opts.project, opts.cwd);
+  if (!resolvedProject.ok) {
+    console.error(resolvedProject.message);
+    return 1;
+  }
+  const projectRoot = resolvedProject.root;
   const articlePath = path.join(projectRoot, "article.md");
 
   if (!existsSync(projectRoot)) {

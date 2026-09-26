@@ -15,6 +15,27 @@ vf research → script → storyboard → audio (TTS) → audio-asset (BGM+SFX)
        vf review                          → Content/Visual/Technical review YAMLs
 ```
 
+## v0.3.9 — `vf draft` merges the audio-plan step
+
+**Branch:** `feat/v0.3.9-draft-merges-audio-plan`
+**Tags:** `v0.3.9`
+
+- **`vf draft <topic>` now writes `article.md` AND `audio-config.yaml` in one invocation** (the audio-plan agent runs on the freshly drafted article, reusing the same provider + fallback routing). The minimal workflow drops from three commands to two: `vf new` → `vf draft` → `vf make`.
+- **Human-checkpoint guardrails**: an existing `audio-config.yaml` is never overwritten (hand edits win — the command prints a note pointing at `vf audio-plan` to regenerate); `--no-audio-plan` skips the step for article-only drafts. If the audio-plan LLM call fails, the draft still succeeds with a hint to run `vf audio-plan` separately.
+- `vf audio-plan` remains a first-class verb for regenerating the config after hand-editing article.md (incl. `--strict`).
+- New exported helper `writeAudioConfigIfAbsent` in `draft-command.ts` (unit-tested merge policy: written / kept / failed / skipped).
+- Tests: 364/364 pass; new `packages/cli/src/draft-merge.test.ts` (4 cases with a fake provider). Verified live end-to-end on a fresh project: one `vf draft` produced article.md + storyboard.yaml + audio-config.yaml (voice/bgm/2 SFX cues); re-run kept the existing audio-config.yaml.
+
+## v0.3.8 — every `<project>` argument accepts the topic, not just the folder name
+
+**Branch:** `feat/v0.3.8-project-arg-resolution`
+**Tags:** `v0.3.8`
+
+- **New `resolveProjectDir` in `packages/cli/src/project-path.ts`** — one forgiving resolution ladder for every verb that looks up an existing project: (1) direct path to a project root, (2) exact folder name under `projects/`, (3) human topic slugified + case/separator-insensitive (`"Harness Engineering"` / `harness_engineering` / `harness-engineering` all match), (4) unique folder-name prefix. Ambiguous prefixes error listing candidates; zero matches list every available project.
+- **Wired into all 14 lookup call sites**: `audio`, `audio-asset`, `mix`, `review`, `youtube`, `thumbnail`, `shorts` (previously raw `path.join` — exact folder name only), plus `make`, `audio-plan`, `draft` existence check, `preview`, `status`, and the five workflow verbs (`approve`/`reject`/`rollback`/`resume` + checkpoint). Generators (`new`/`research`/`script`/`storyboard`) keep slugifying, since they create directories.
+- CLI `--help` argument descriptions updated to say "topic, folder name, path, or unique prefix".
+- Tests: 360/360 pass; new `packages/cli/src/project-path.test.ts` (11 cases: exact / slug / underscore / CJK / unique prefix / ambiguous / zero-match listing / direct path / empty / non-project dir / missing projects dir).
+
 ## v0.3.7 — real BGM/SFX in `vf make` via `--bgm-dir` / `--sfx-dir`
 
 **Branch:** `feat/v0.3.7-make-audio-dirs`
@@ -104,6 +125,8 @@ vf research → script → storyboard → audio (TTS) → audio-asset (BGM+SFX)
 | `v0.3.5` | `feat/v0.3-sfx-cues-and-fade`                          | merge commit on main |
 | `v0.3.6` | `fix/v0.3.6-fake-image-default`                         | merge commit on main |
 | `v0.3.7` | `feat/v0.3.7-make-audio-dirs`                            | merge commit on main |
+| `v0.3.8` | `feat/v0.3.8-project-arg-resolution`                     | combined commit tagged `v0.3.9` |
+| `v0.3.9` | `feat/v0.3.9-draft-merges-audio-plan`                    | merge commit on main |
 
 All release tags are on `origin` and pushed.
 

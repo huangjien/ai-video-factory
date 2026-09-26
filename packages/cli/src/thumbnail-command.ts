@@ -2,6 +2,7 @@ import { mkdir, writeFile } from "node:fs/promises";
 import { createHash } from "node:crypto";
 import { execSync } from "node:child_process";
 import path from "node:path";
+import { resolveProjectDir } from "./project-path.js";
 import { existsSync } from "node:fs";
 import {
   MiniMaxImageProvider,
@@ -28,11 +29,12 @@ function safeGitHead(cwd: string): string {
 
 export async function runThumbnail(opts: ThumbnailOptions): Promise<number> {
   const cwd = path.resolve(opts.cwd ?? ".");
-  const projectRoot = path.join(cwd, "projects", opts.project);
-  if (!existsSync(projectRoot)) {
-    console.error(`project not found: ${projectRoot}`);
+  const resolvedProject = resolveProjectDir(opts.project, opts.cwd);
+  if (!resolvedProject.ok) {
+    console.error(resolvedProject.message);
     return 1;
   }
+  const projectRoot = resolvedProject.root;
   const promptPath = path.join(projectRoot, "youtube", "thumbnail-prompt.txt");
   if (!existsSync(promptPath)) {
     console.error(`missing thumbnail prompt: ${promptPath}`);

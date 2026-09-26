@@ -3,6 +3,7 @@ import { createHash } from "node:crypto";
 import { execSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import path from "node:path";
+import { resolveProjectDir } from "./project-path.js";
 import {
   FileBasedAudioAssetProvider,
   type AudioAssetProvider,
@@ -65,11 +66,12 @@ async function writeAsset(
 
 export async function runAudioAsset(opts: AudioAssetOptions): Promise<number> {
   const cwd = path.resolve(opts.cwd ?? ".");
-  const projectRoot = path.join(cwd, "projects", opts.project);
-  if (!existsSync(projectRoot)) {
-    console.error(`project not found: ${projectRoot}`);
+  const resolvedProject = resolveProjectDir(opts.project, opts.cwd);
+  if (!resolvedProject.ok) {
+    console.error(resolvedProject.message);
     return 1;
   }
+  const projectRoot = resolvedProject.root;
   if (!opts.bgmTag && !opts.sfxTag) {
     console.error("specify --bgm <tag> and/or --sfx <tag>");
     return 1;

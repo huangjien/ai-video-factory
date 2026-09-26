@@ -2,6 +2,7 @@ import { mkdir, writeFile } from "node:fs/promises";
 import { createHash } from "node:crypto";
 import { execSync } from "node:child_process";
 import path from "node:path";
+import { resolveProjectDir } from "./project-path.js";
 import { existsSync } from "node:fs";
 import { GLMProvider, loadProviderConfig, MiniMaxProvider } from "@vf/llm";
 import { callYouTube, chaptersToVtt, type YouTubeInput } from "@vf/youtube";
@@ -38,11 +39,12 @@ function safeGitHead(cwd: string): string {
 
 export async function runYouTube(opts: YouTubeOptions): Promise<number> {
   const cwd = path.resolve(opts.cwd ?? ".");
-  const projectRoot = path.join(cwd, "projects", opts.project);
-  if (!existsSync(projectRoot)) {
-    console.error(`project not found: ${projectRoot}`);
+  const resolvedProject = resolveProjectDir(opts.project, opts.cwd);
+  if (!resolvedProject.ok) {
+    console.error(resolvedProject.message);
     return 1;
   }
+  const projectRoot = resolvedProject.root;
   const { readFile } = await import("node:fs/promises");
 
 // Two input shapes supported: article.md (preferred) OR the legacy triple

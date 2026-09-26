@@ -1,7 +1,6 @@
 import path from "node:path";
-import { existsSync } from "node:fs";
 import { runMake } from "@vf/make";
-import { slugifyForProject } from "./project-path.js";
+import { resolveProjectDir } from "./project-path.js";
 
 export interface MakeOptions {
   project: string;
@@ -17,14 +16,12 @@ export interface MakeOptions {
 }
 
 export async function runMakeCli(opts: MakeOptions): Promise<number> {
-  const cwd = path.resolve(opts.cwd ?? ".");
-  const projectId = slugifyForProject(opts.project);
-  const projectRoot = path.join(cwd, "projects", projectId);
-
-  if (!existsSync(projectRoot)) {
-    console.error(`project not found: ${projectRoot}`);
+  const resolvedProject = resolveProjectDir(opts.project, opts.cwd);
+  if (!resolvedProject.ok) {
+    console.error(resolvedProject.message);
     return 1;
   }
+  const projectRoot = resolvedProject.root;
 
   const report = await runMake({
     projectRoot,

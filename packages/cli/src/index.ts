@@ -39,7 +39,7 @@ program
 
 program
   .command("mix")
-  .argument("<project>", "project id")
+  .argument("<project>", "project: topic, folder name, path, or unique prefix")
   .option("--cwd <dir>", "base directory for the project")
   .option(
     "--bgm <path>",
@@ -152,6 +152,10 @@ program
     "--from <file>",
     "path to a file containing pre-existing content to revise",
   )
+  .option(
+    "--no-audio-plan",
+    "skip the merged audio-plan step (write article.md only)",
+  )
   .action(
     async (
       topic: string,
@@ -163,6 +167,7 @@ program
         duration?: number;
         audience?: string;
         from?: string;
+        audioPlan?: boolean;
       },
     ) => {
       process.exitCode = await runDraft({
@@ -174,13 +179,14 @@ program
         ...(opts.duration !== undefined ? { duration: opts.duration } : {}),
         ...(opts.audience !== undefined ? { audience: opts.audience } : {}),
         ...(opts.from !== undefined ? { from: opts.from } : {}),
+        noAudioPlan: opts.audioPlan === false,
       });
     },
   );
 
 program
   .command("audio-plan")
-  .argument("<project>", "project id")
+  .argument("<project>", "project: topic, folder name, path, or unique prefix")
   .option("--cwd <dir>", "base directory for the project")
   .option(
     "--model <provider>",
@@ -218,7 +224,7 @@ program
   .command("make")
   .argument(
     "<project>",
-    "project id (defaults to cwd-discovered single project)",
+    "project: topic, folder name, path, or unique prefix (defaults to cwd-discovered single project)",
   )
   .option("--cwd <dir>", "base directory for the project")
   .option(
@@ -372,7 +378,7 @@ program
 
 program
   .command("audio")
-  .argument("<project>", "project id")
+  .argument("<project>", "project: topic, folder name, path, or unique prefix")
   .option("--cwd <dir>", "base directory for the project")
   .option("--fake", "use FakeTTSProvider (no network) for tests")
   .action(async (project: string, opts: { cwd?: string; fake?: boolean }) => {
@@ -385,7 +391,7 @@ program
 
 program
   .command("audio-asset")
-  .argument("<project>", "project id")
+  .argument("<project>", "project: topic, folder name, path, or unique prefix")
   .option("--cwd <dir>", "base directory for the project")
   .option("--bgm <tag>", "BGM tag (mock provider) or filename (file-based)")
   .option("--sfx <tag>", "SFX tag (mock provider) or filename (file-based)")
@@ -421,7 +427,7 @@ program
 
 program
   .command("review")
-  .argument("<project>", "project id to review")
+  .argument("<project>", "project to review: topic, folder name, path, or unique prefix")
   .option("--cwd <dir>", "base directory for the project")
   .option(
     "--model <provider>",
@@ -442,7 +448,7 @@ program
 
 program
   .command("youtube")
-  .argument("<project>", "project id to package for YouTube")
+  .argument("<project>", "project to package: topic, folder name, path, or unique prefix")
   .option("--cwd <dir>", "base directory for the project")
   .option(
     "--model <provider>",
@@ -463,7 +469,7 @@ program
 
 program
   .command("thumbnail")
-  .argument("<project>", "project id to generate a thumbnail for")
+  .argument("<project>", "project for the thumbnail: topic, folder name, path, or unique prefix")
   .option("--cwd <dir>", "base directory for the project")
   .option("--width <px>", "thumbnail width (default 1280)", (v) =>
     parseInt(v, 10),
@@ -497,7 +503,7 @@ program
 
 program
   .command("shorts")
-  .argument("<project>", "project id to clip a YouTube Short from")
+  .argument("<project>", "project to clip: topic, folder name, path, or unique prefix")
   .option("--cwd <dir>", "base directory for the project")
   .option(
     "--duration <seconds>",

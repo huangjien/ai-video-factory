@@ -2,7 +2,7 @@ import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { execSync } from "node:child_process";
-import { resolveProjectRoot, slugifyForProject } from "./project-path.js";
+import { resolveProjectDir, resolveProjectRoot } from "./project-path.js";
 import {
   formatRunId,
   readProjectState,
@@ -32,8 +32,12 @@ export async function runPreview(
   //   2. neither → auto-discover from `${cwd ?? "."}/projects/*` via resolveProjectRoot
   let root: string;
   if (projectName) {
-    const base = path.resolve(cwd ?? ".");
-    root = path.join(base, "projects", slugifyForProject(projectName));
+    const resolved = resolveProjectDir(projectName, cwd);
+    if (!resolved.ok) {
+      console.error(resolved.message);
+      return 1;
+    }
+    root = resolved.root;
   } else {
     const resolved = resolveProjectRoot(cwd);
     if (!resolved.ok) {

@@ -244,16 +244,37 @@ The new local flow is collapsed to a single `vf make` command.
 
 ```bash
 vf new my-topic
-vf draft "my-topic"           # → projects/<slug>/article.md
+vf draft "my-topic"           # → projects/<slug>/article.md + audio-config.yaml
                             #   also refreshes storyboard.yaml (VDSL, derived from article.md)
-vf audio-plan my-topic        # → projects/<slug>/audio-config.yaml
+# (vf audio-plan my-topic is only needed to REGENERATE audio-config.yaml
+#  after hand-editing article.md — the draft command already ran it)
 
 # Then human edits:
 $EDITOR projects/<slug>/article.md
 $EDITOR projects/<slug>/audio-config.yaml
 ```
 
+`vf draft` runs the audio-plan step on the fresh article automatically.
+Two guardrails: `--no-audio-plan` skips the step (article only), and an
+existing `audio-config.yaml` is never overwritten — hand edits win, and
+the command prints a note pointing at `vf audio-plan` when it kept one.
+If the audio-plan LLM call fails, the draft still succeeds (article.md
+is the primary artifact) with a hint to run `vf audio-plan` separately.
+
 ### 6.2 Render with one command: `vf make`
+
+Every verb that takes a `<project>` argument resolves it the same
+forgiving way, in order:
+
+1. a direct path to a project root (e.g. `./projects/my-video`)
+2. the exact folder name under `projects/`
+3. the human topic — slugified, case- and separator-insensitive
+   (`"Harness Engineering"`, `harness_engineering`, and
+   `harness-engineering` all find the same project)
+4. a unique folder-name prefix (`vf make 长视频` finds `长视频测试`)
+
+An ambiguous prefix errors listing the candidates; a zero-match error
+lists every available project.
 
 ```bash
 vf make my-topic                                  # TTS → audio assets → render → mix

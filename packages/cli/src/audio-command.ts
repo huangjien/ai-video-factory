@@ -5,6 +5,7 @@ import path from "node:path";
 import { execSync } from "node:child_process";
 import { parse as parseYaml } from "yaml";
 import { FakeTTSProvider, type TTSProvider } from "@vf/tts";
+import { resolveProjectDir } from "./project-path.js";
 
 const execFileAsync = promisify(execFile);
 
@@ -62,8 +63,12 @@ function safeGitHead(cwd: string): string {
 }
 
 export async function runAudio(opts: AudioOptions): Promise<number> {
-  const cwd = path.resolve(opts.cwd ?? ".");
-  const projectRoot = path.join(cwd, "projects", opts.project);
+  const resolvedProject = resolveProjectDir(opts.project, opts.cwd);
+  if (!resolvedProject.ok) {
+    console.error(resolvedProject.message);
+    return 1;
+  }
+  const projectRoot = resolvedProject.root;
   const sbPath = path.join(projectRoot, "storyboard", "storyboard.yaml");
   const scriptPath = path.join(projectRoot, "script", "script.zh-CN.md");
   // Allow en-US too
@@ -73,10 +78,6 @@ export async function runAudio(opts: AudioOptions): Promise<number> {
   const language: "zh-CN" | "en-US" =
     existsSync(enPath) && !existsSync(scriptPath) ? "en-US" : "zh-CN";
   const activeScript = language === "en-US" ? enPath : scriptPath;
-  if (!existsSync(projectRoot)) {
-    console.error(`project not found: ${projectRoot}`);
-    return 1;
-  }
   if (!existsSync(sbPath)) {
     console.error(`storyboard not found: ${sbPath}`);
     return 1;

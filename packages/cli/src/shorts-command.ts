@@ -3,6 +3,7 @@ import { promisify } from "node:util";
 import { createHash } from "node:crypto";
 import { execSync } from "node:child_process";
 import path from "node:path";
+import { resolveProjectDir } from "./project-path.js";
 import { existsSync, readFileSync } from "node:fs";
 import { formatRunId } from "@vf/workflow";
 import {
@@ -81,11 +82,12 @@ async function shortsFfmpeg(
 
 export async function runShorts(opts: ShortsOptions): Promise<number> {
   const cwd = path.resolve(opts.cwd ?? ".");
-  const projectRoot = path.join(cwd, "projects", opts.project);
-  if (!existsSync(projectRoot)) {
-    console.error(`project not found: ${projectRoot}`);
+  const resolvedProject = resolveProjectDir(opts.project, opts.cwd);
+  if (!resolvedProject.ok) {
+    console.error(resolvedProject.message);
     return 1;
   }
+  const projectRoot = resolvedProject.root;
   const shortsPath = path.join(projectRoot, "youtube", "shorts.mp4");
 
   const { mkdir } = await import("node:fs/promises");

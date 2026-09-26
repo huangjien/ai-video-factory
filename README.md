@@ -71,12 +71,12 @@ use `--cwd <dir>` to choose another project root.
 ```bash
 vf new "transformer architectures"   # scaffold project/<slug>/
 
-# Two human-edit checkpoints:
-vf draft "transformer architectures"  # writes article.md (LLM)
+# Two human-edit checkpoints, one command:
+vf draft "transformer architectures"  # writes article.md + audio-config.yaml (LLM)
 #   also derives storyboard.yaml (VDSL) so video length matches audio
-#   → edit projects/.../article.md
-vf audio-plan "transformer architectures"  # writes audio-config.yaml (LLM)
-#   → edit projects/.../audio-config.yaml
+#   → edit projects/.../article.md and projects/.../audio-config.yaml
+#   (--no-audio-plan skips the audio step; an existing audio-config.yaml
+#    is never overwritten — regenerate explicitly with `vf audio-plan`)
 
 # One command does everything:
 vf make "transformer architectures"    # TTS → assets → render → mix
@@ -84,9 +84,10 @@ vf make "transformer architectures"    # TTS → assets → render → mix
 #   → projects/.../output/final-mixed.mp4
 ```
 
-That is the entire workflow. Three commands, two human-edit checkpoints, one
-output. Re-run `vf make` after editing either file — it skips work whose
-outputs are newer than its inputs (`--dry-run` shows what it would do).
+That is the entire workflow. Two commands after scaffolding, two human-edit
+checkpoints, one output. Re-run `vf make` after editing either file — it skips
+work whose outputs are newer than its inputs (`--dry-run` shows what it would
+do).
 
 ## Commands
 
@@ -95,8 +96,8 @@ outputs are newer than its inputs (`--dry-run` shows what it would do).
 | Command                       | Purpose                                                                                  |
 | ----------------------------- | ---------------------------------------------------------------------------------------- |
 | `vf new <id>`                 | scaffold a project under `projects/<id>/`                                                |
-| `vf draft <topic>`            | write `article.md` from a topic via MiniMax/GLM (research + script + storyboard in one)  |
-| `vf audio-plan <project>`     | write `audio-config.yaml` for the project's article.md via GLM                            |
+| `vf draft <topic>`            | write `article.md` + `audio-config.yaml` from a topic via MiniMax/GLM (research + script + storyboard + audio plan in one; `--no-audio-plan` to split) |
+| `vf audio-plan <project>`     | (optional) regenerate `audio-config.yaml` after hand-editing article.md                   |
 | `vf make <project>`           | TTS → audio assets → render → mix (`--dry-run` to preview, `--fake` for offline TTS, `--image-provider mock\|minimax\|none`, `--bgm-dir`/`--sfx-dir <dir>` to use your own music library) |
 
 The two human-edit artifacts are `article.md` (narrative + scene data) and

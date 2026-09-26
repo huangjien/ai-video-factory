@@ -1,7 +1,7 @@
 import { existsSync } from "node:fs";
 import path from "node:path";
 import { loadCheckpoint, readProjectState, V01_STAGES } from "@vf/workflow";
-import { resolveProjectRoot, slugifyForProject } from "./project-path.js";
+import { resolveProjectDir, resolveProjectRoot } from "./project-path.js";
 
 const MARK: Record<string, string> = {
   approved: "✓",
@@ -16,8 +16,12 @@ export async function runStatus(
 ): Promise<number> {
   let root: string;
   if (projectName) {
-    const base = path.resolve(cwd ?? ".");
-    root = path.join(base, "projects", slugifyForProject(projectName));
+    const resolved = resolveProjectDir(projectName, cwd);
+    if (!resolved.ok) {
+      console.error(resolved.message);
+      return 1;
+    }
+    root = resolved.root;
   } else {
     const resolved = resolveProjectRoot(cwd);
     if (!resolved.ok) {

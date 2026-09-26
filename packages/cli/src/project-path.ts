@@ -37,8 +37,89 @@ function isProjectRoot(dir: string): boolean {
   );
 }
 
+/** Normalize for fuzzy comparison: lowercase, collapse any non-
+ * alphanumeric/CJK run to a single `-`, trim `-`. "Harness_Engineering",
+ * "harness engineering", and "harness-engineering" all normalize alike. */
+function normalizeForMatch(s: string): string {
+  return s
+    .toLowerCase()
+    .replace(/[^a-z0-9\u4e00-\u9fff]+/g, "-")
+    .replace(/^-|-$/g, "");
+}
+
 export type ResolvedProject =
-  { ok: true; root: string } | { ok: false; message: string };
+  | { ok: true; root: string }
+  | { ok: false; message: string };
+
+/**
+ * Resolve a user-supplied project argument to an existing project dir.
+ *
+ * Accepts any of:
+ *   1. a direct path to a project root (e.g. `./projects/my-video`)
+ *   2. the exact folder name under `projects/`
+ *   3. the human topic — slugified, case- and separator-insensitive
+ *      ("Harness Engineering" finds `harness-engineering`)
+ *   4. a unique folder-name prefix ("harness" finds `harness-engineering`;
+ *      ambiguous prefixes error listing the candidates)
+ *
+ * Zero matches → error listing every project under `projects/`.
+ */
+export function resolveProjectDir(
+  arg: string,
+  cwd?: string,
+): ResolvedProject {
+  const base = path.resolve(cwd ?? ".");
+  const trimmed = arg.trim();
+  if (trimmed.length === 0) {
+    return { ok: false, message: "project argument is empty" };
+  }
+
+  const direct = path.resolve(base, trimmed);
+  if (isProjectRoot(direct)) {
+    return { ok: true, root: direct };
+  }
+
+  const projectsDir = path.join(base, "projects");
+  const exact = path.join(projectsDir, trimmed);
+  if (isProjectRoot(exact)) {
+    return { ok: true, root: exact };
+  }
+
+  if (existsSync(projectsDir)) {
+    const dirs = readdirSync(projectsDir)
+      .filter((entry) => isProjectRoot(path.join(projectsDir, entry)))
+      .sort();
+    const target = normalizeForMatch(trimmed);
+    if (target.length > 0) {
+      const normalized = dirs.find((d) => normalizeForMatch(d) === target);
+      if (normalized !== undefined) {
+        return { ok: true, root: path.join(projectsDir, normalized) };
+      }
+      const prefixed = dirs.filter((d) =>
+        normalizeForMatch(d).startsWith(target),
+      );
+      if (prefixed.length === 1) {
+        return { ok: true, root: path.join(projectsDir, prefixed[0] ?? "") };
+      }
+      if (prefixed.length > 1) {
+        return {
+          ok: false,
+          message: `ambiguous project "${trimmed}": matches ${prefixed.join(", ")} — pass the full folder name`,
+        };
+      }
+    }
+    if (dirs.length > 0) {
+      return {
+        ok: false,
+        message: `no project matching "${trimmed}" under ${projectsDir} — available: ${dirs.join(", ")}`,
+      };
+    }
+  }
+  return {
+    ok: false,
+    message: `no project matching "${trimmed}" under ${projectsDir} — run \`vf new <topic>\` first`,
+  };
+}
 
 /**
  * Resolve which project directory a cwd-style verb should operate on.

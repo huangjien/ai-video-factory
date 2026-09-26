@@ -22,14 +22,6 @@ export function slugifyProjectName(s: string): string {
   );
 }
 
-/** Identity passthrough for the lookup path used by `vf preview` /
- * `vf status` / `vf approve` / etc. The user-supplied positional IS the
- * directory name on disk — slugifying here would mismatch what `runNew`
- * actually wrote (e.g. for legacy pre-slugify projects). */
-export function slugifyForProject(s: string): string {
-  return s;
-}
-
 function isProjectRoot(dir: string): boolean {
   return (
     existsSync(path.join(dir, "storyboard", "storyboard.yaml")) ||

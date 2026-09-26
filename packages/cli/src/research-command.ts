@@ -9,11 +9,7 @@ import { formatRunId } from "@vf/workflow";
 import { stringify as yamlStringify } from "yaml";
 import { runNew } from "./new-command.js";
 import { ensureProject } from "./ensure-project.js";
-import {
-  resolveProjectRoot,
-  slugifyForProject,
-  slugifyProjectName,
-} from "./project-path.js";
+import { resolveProjectRoot, slugifyProjectName } from "./project-path.js";
 
 export interface ResearchOptions {
   topic: string;

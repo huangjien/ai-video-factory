@@ -24,10 +24,6 @@ block) and **`audio-config.yaml`** (voice / bgm / sfx / fades). Everything
 else is derived; `vf make` is idempotent — it skips a step when its
 output is newer than its inputs (`--dry-run` shows what it would do).
 
-Legacy multi-stage commands (`vf research` / `vf script` / `vf storyboard`
-/ `vf audio` / `vf approve` / `vf reject` / `vf rollback` etc.) remain
-working but are **not recommended for new projects**; see §8 and §12.8.
-
 ## 1. Requirements
 
 Required:
@@ -344,16 +340,6 @@ node packages/cli/dist/index.js validate \
 
 Reports file / line / field / reason on errors.
 
-### 6.5 Legacy core workflow (preserved as back-compat path)
-
-For old projects still using the multi-stage pipeline:
-
-```bash
-vf preview --cwd projects/<slug>   # render preview.mp4
-vf final   --cwd projects/<slug>   # render final.mp4 (requires review APPROVED)
-```
-
-See §12.8 for the full legacy flow. New projects should not need §6.5.
 
 ## 7. Editing, iteration, and recovery
 
@@ -404,17 +390,6 @@ The supported flows are:
   `vf make` directly. **Don't** re-run `vf draft` until you're ready
   to lose those tweaks.
 
-### 7.1 Legacy workflow commands (still available, back-compat only)
-
-```bash
-vf status   --cwd projects/<slug>             # stage + checkpoint summary
-vf reject   wrong-pacing --cwd projects/<slug>
-vf rollback storyboard-v2 --cwd projects/<slug>   # interactive confirmation
-vf resume   --cwd projects/<slug>             # stage + git commit
-```
-
-`vf rollback` does not delete Git history or existing outputs. After a
-rollback, re-run `vf validate` + `vf preview` (or simply `vf make`).
 
 ## 8. Optional AI workflow
 
@@ -498,39 +473,6 @@ projects/<slug>/audio-config.yaml    # human edits: voice / bgm / sfx / fades
 After human edits to these two files, `vf make <slug>` produces the
 publishable mp4 in a single command.
 
-### Legacy AI agents (still available, for old projects only)
-
-If your project is already using the old multi-stage format, the commands
-below still work — but **new projects should use `vf draft` +
-`vf audio-plan`** instead.
-
-| Old command                 | Output                                                   | Replaced by           |
-| --------------------------- | -------------------------------------------------------- | --------------------- |
-| `vf research`               | `research/{research.md,sources.yaml,claims.yaml}`        | `vf draft`            |
-| `vf script`                 | `script/script.<lang>.md`                                | `vf draft`            |
-| `vf storyboard`             | `storyboard/storyboard.yaml`                             | `vf draft` (in scope) |
-| `vf review`                 | `review/{content,visual,technical}-review.yaml`          | removed — humans ARE the reviewer |
-
-Reference flags for the legacy commands:
-
-```bash
-# Research — web search optional; model optional; duration up to 60s
-vf research "AI Agent Memory" --no-web --model glm --duration 60 --lang zh-CN --audience developers
-
-# Script — default spine Hook → Problem → Explanation → Example → Comparison → Implication → Conclusion
-vf script "AI Agent Memory" \
-  --from-research projects/<slug>/research \
-  --duration 60 --lang zh-CN
-
-# Storyboard — human must review the YAML before rendering
-vf storyboard "AI Agent Memory" \
-  --from-research projects/<slug>/research \
-  --from-script    projects/<slug>/script/script.zh-CN.md \
-  --duration 60 --style dark-tech
-
-# Review — read-only, does not modify the project
-vf review <slug>
-```
 
 ### YouTube package
 
@@ -636,12 +578,6 @@ replace with a formally licensed provider (MiniMax TTS, ElevenLabs,
 etc.), implement the `TTSProvider` interface in `@vf/tts` and pass it to
 `vf make` (CLI integration in a follow-up).
 
-### 9.5 Legacy `vf audio` command (still available)
-
-The old `vf audio <slug>` reads `storyboard/storyboard.yaml`'s
-`narration.text` and writes WAVs + a captions SRT. `vf make` runs the
-same logic internally against `article.md` instead. Use the legacy
-command only if you have a pre-existing storyboard without an article.
 
 ## 10. Project artifacts and provenance
 
@@ -654,8 +590,7 @@ projects/<slug>/
 ├── audio-config.yaml                ⭐ human edits: voice / bgm / sfx / fades (vf audio-plan writes)
 ├── storyboard/storyboard.yaml       derived by vf draft from article.md; per-scene duration is re-measured after TTS by vf make (hand edits to other fields survive; durations get overwritten on the next make)
 ├── vdsl/vdsl.yaml                   normalized compiled VDSL
-├── state.yaml                       state (legacy workflow; new flow can ignore)
-├── checkpoints/                     audit trail from the legacy workflow
+├── state.yaml                       state machine state (unused by `vf make`; retained for back-compat)
 ├── runs/<run-id>.yaml               per-LLM/tool-call run records
 ├── assets/
 │   ├── audio/scene_*.wav           per-scene TTS (vf make writes)
@@ -740,17 +675,6 @@ For CI, keep the old fail-loudly behaviour on `vf audio-plan`:
 vf audio-plan <project> --strict
 ```
 
-### Legacy `final` says review is not approved
-
-If you still have old code paths hitting `vf final` directly:
-
-```bash
-vf status --cwd projects/demo
-vf approve review --cwd projects/demo
-```
-
-Then retry `vf final --cwd projects/demo`. New code should not hit this
-— `vf make` does not require an approve step.
 
 ### Remotion cannot find a port
 
@@ -908,8 +832,8 @@ Publishing metadata is not part of `vf make`; invoke separately:
 ```bash
 # YouTube text package — title, description, chapters.vtt, thumbnail prompt, Shorts hook
 vf youtube "$TOPIC"
-# Prefers article.md (the new minimal artifact); falls back to legacy
-# research.md + script.md + storyboard.yaml for old projects.
+# Prefers article.md; falls back to research.md + script.md + storyboard.yaml
+# when article.md is absent (back-compat with older projects).
 # → projects/$TOPIC/youtube/{title.txt,description.md,chapters.vtt,thumbnail-prompt.txt,shorts-hook.txt}
 
 # Thumbnail — uses mock by default; pass --provider minimax for real AI
@@ -921,7 +845,7 @@ vf shorts "$TOPIC"
 # → projects/$TOPIC/youtube/shorts.mp4
 ```
 
-`vf youtube` no longer requires the legacy `research/`, `script/`, and
+`vf youtube` no longer requires `research/`, `script/`, and
 `storyboard/storyboard.yaml` triple to exist — if `article.md` is present,
 it derives the title, hook, sections, and chapter timings from there.
 
@@ -970,26 +894,6 @@ vf shorts "$TOPIC"
 The publishable artifact is `projects/$TOPIC/output/final-mixed.mp4`
 plus the YouTube package under `projects/$TOPIC/youtube/`.
 
-### 12.8 Legacy multi-command pipeline (preserved as back-compat)
-
-The old per-stage commands (`vf research` / `vf script` / `vf storyboard`
-/ `vf audio` / `vf audio-asset` / `vf mix` / `vf review` / `vf approve`
-/ `vf reject` / `vf rollback` / `vf preview` / `vf final`) still work —
-new projects **should not use them**. The new `vf draft` + `vf
-audio-plan` + `vf make` subsume them:
-
-| Old command                                       | New replacement                                                 |
-| ------------------------------------------------- | --------------------------------------------------------------- |
-| `vf research` / `vf script` / `vf storyboard`      | `vf draft` (one output = `article.md`)                          |
-| `vf audio`                                         | subsumed by `vf make`                                           |
-| `vf audio-asset`                                   | subsumed by `vf make`                                           |
-| `vf mix`                                           | subsumed by `vf make`                                           |
-| `vf preview` + `vf final`                          | unified into `vf make`                                          |
-| `vf approve` / `vf reject` / `vf rollback`         | not needed — edit `article.md` / `audio-config.yaml` and re-run `vf make` |
-
-If your project is already on the old format (`research/`, `script/`,
-`storyboard.yaml`), it continues to work; an optional `vf migrate <project>`
-helper to consolidate them into `article.md` can ship in a follow-up.
 
 ## 13. Verifying with the acceptance audit
 

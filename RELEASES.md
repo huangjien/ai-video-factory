@@ -15,6 +15,17 @@ vf research → script → storyboard → audio (TTS) → audio-asset (BGM+SFX)
        vf review                          → Content/Visual/Technical review YAMLs
 ```
 
+## v0.3.11 — remove the "old version" traces
+
+**Branch:** `chore/v0.3.11-drop-legacy-traces`
+**Tags:** `v0.3.11`
+
+- **Doc cleanup**: deleted every user-facing "Legacy / 旧版 / 遗留" section. The minimal-API workflow is now the only path the docs lead with.
+  - README: dropped the 14-row "Legacy commands (still working)" table and the (v0.4) header label; replaced with a single one-liner noting that the fine-grained per-stage verbs are wired for back-compat with older projects.
+  - INSTALLATION_AND_USAGE (EN + zh-CN): removed §6.5 "Legacy core workflow", §7.1 "Legacy workflow commands", §9.5 "Legacy `vf audio`", §12.8 "Legacy multi-command pipeline", the "Legacy AI agents" subsection, the "Legacy `final` says review is not approved" troubleshooting entry, and the introductory "Legacy multi-stage commands" mention. Also de-"legacy"-ified the remaining project-tree annotations and the `vf youtube` fallback comment.
+- **Code cleanup**: dropped the vestigial `slugifyForProject` identity passthrough from `packages/cli/src/project-path.ts` (a leftover from before `resolveProjectDir` became the single resolution entry point) and the unused import in `research-command.ts`.
+- What was kept: RELEASES.md history, ARCHITECTURE.md, the design doc, and the legacy verb implementations themselves (`vf audio`, `vf audio-asset`, `vf mix`, `vf preview`, `vf final`, `vf approve`/`reject`/`rollback`, `vf research`, `vf script`, `vf storyboard`, `vf review`, `vf youtube`, `vf thumbnail`, `vf shorts`, `vf status`/`vf resume`, `vf validate`) still ship — they power existing projects and back-compat. The change is to remove the references from the user-facing surface, not the implementations.
+
 ## v0.3.10 — `vf draft --file <path>` seeds the article with your own idea
 
 **Branch:** `feat/v0.3.10-draft-idea-file`
@@ -140,6 +151,7 @@ vf research → script → storyboard → audio (TTS) → audio-asset (BGM+SFX)
 | `v0.3.8` | `feat/v0.3.8-project-arg-resolution`                     | combined commit tagged `v0.3.9` |
 | `v0.3.9` | `feat/v0.3.9-draft-merges-audio-plan`                    | merge commit on main |
 | `v0.3.10` | `feat/v0.3.10-draft-idea-file`                            | merge commit on main |
+| `v0.3.11` | `chore/v0.3.11-drop-legacy-traces`                        | merge commit on main |
 
 All release tags are on `origin` and pushed.
 

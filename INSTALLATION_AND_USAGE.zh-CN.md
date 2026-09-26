@@ -23,10 +23,6 @@ flowchart LR
 **`audio-config.yaml`**（voice / bgm / sfx / fades）。其它一切都是派生
 产物，编辑后 `vf make` 一键重跑。
 
-旧版的多阶段命令（`vf research` / `vf script` / `vf storyboard` /
-`vf audio` / `vf approve` / `vf reject` / `vf rollback` 等）仍可用，但
-**新项目不建议使用**；详见 §8 与 §12.8。
-
 ## 1. 环境要求
 
 必须安装：
@@ -322,14 +318,6 @@ node packages/cli/dist/index.js validate \
 
 错误信息包含文件、行号、字段和具体原因。
 
-### 6.5 旧版核心流程（保留作为遗留路径）
-
-详细说明见 §12.8。简略形式：
-
-```bash
-vf preview --cwd projects/<slug>     # 渲染 preview.mp4
-vf final   --cwd projects/<slug>     # 渲染 final.mp4（要求 review APPROVED）
-```
 
 ## 7. 编辑、迭代与恢复
 
@@ -374,17 +362,6 @@ vf make <slug>          # 只重跑 render + mix
 - 想做像素级的视觉控制 → 手工编辑 `storyboard.yaml` 后跑 `vf make`
   （**不要**再跑 `vf draft`，否则会覆盖）
 
-### 7.1 旧版 workflow 命令（仍可用，仅供旧项目回退）
-
-```bash
-vf status --cwd projects/<slug>            # 各阶段清单 + checkpoint
-vf reject wrong-pacing --cwd projects/<slug>
-vf rollback storyboard-v2 --cwd projects/<slug>   # 需交互确认
-vf resume --cwd projects/<slug>            # 查看阶段 + git commit
-```
-
-`vf rollback` 不会删除 Git 历史或已有输出文件；回滚后应再跑一次
-`vf validate` + `vf preview`（或 `vf make`）。
 
 ## 8. 可选 AI 工作流
 
@@ -447,38 +424,6 @@ projects/<slug>/audio-config.yaml     # 人类编辑：voice / bgm / sfx / fades
 
 人类编辑完两个文件后，跑 `vf make <slug>` 即出一份发布 mp4。
 
-### 旧版 AI Agents（仍可用，仅供旧项目迁移 / 调参）
-
-如果你已经在用旧的多阶段格式，下面的命令仍可工作。但**新项目建议
-改用 `vf draft` + `vf audio-plan`**，它们更短、文件更少、人工工作更少。
-
-| 旧命令                          | 产物                                                  | 新版替代               |
-| ------------------------------- | ----------------------------------------------------- | ---------------------- |
-| `vf research`                   | `research/{research.md,sources.yaml,claims.yaml}`     | `vf draft`             |
-| `vf script`                     | `script/script.<lang>.md`                             | `vf draft`             |
-| `vf storyboard`                 | `storyboard/storyboard.yaml`                          | `vf draft`（包含在内） |
-| `vf review`                     | `review/{content,visual,technical}-review.yaml`       | 删除 — 人类即审稿人   |
-
-各旧命令的常用 flag：
-
-```bash
-# Research — 联网搜索可选；模型可选；时长达 60s
-vf research "AI Agent Memory" --model glm --duration 60 --lang zh-CN --audience developers
-
-# Script — 默认结构 Hook → Problem → Explanation → Example → Comparison → Implication → Conclusion
-vf script "AI Agent Memory" \
-  --from-research projects/<slug>/research \
-  --duration 60 --lang zh-CN
-
-# Storyboard — 必须人工审核后再渲染
-vf storyboard "AI Agent Memory" \
-  --from-research projects/<slug>/research \
-  --from-script    projects/<slug>/script/script.zh-CN.md \
-  --duration 60 --style dark-tech
-
-# Review — 只读，不修改项目
-vf review <slug>
-```
 
 ### YouTube 元数据
 
@@ -573,11 +518,6 @@ Edge TTS 不收取直接 API 费，但商业再分发和长期生产使用应先
 条款。需要正式授权的生产服务时，可通过 `@vf/tts` 的 `TTSProvider`
 接口替换（例如 MiniMax TTS / ElevenLabs）。
 
-### 9.5 旧版 `vf audio` 命令（仍可用）
-
-旧项目若要单独跑 TTS，可继续用 `vf audio <slug>`，它读
-`storyboard/storyboard.yaml` 的 `narration.text` 字段。`vf make` 内部
-就是这套逻辑，只是源从 storyboard.yaml 换成了 article.md。
 
 ## 10. 项目文件和可追溯性
 
@@ -689,17 +629,6 @@ CI 场景下想让 `vf audio-plan` 保持原有的报错行为：
 vf audio-plan <project> --strict
 ```
 
-### 旧版 `final` 提示 review 未批准
-
-如果还在用旧版的 `vf final` 路径：
-
-```bash
-vf status --cwd projects/demo
-vf approve review --cwd projects/demo
-vf final --cwd projects/demo
-```
-
-新版本已不需要 — 直接改 `article.md` 后再跑一次 `vf make <slug>`。
 
 ### Remotion 无法找到端口
 
@@ -846,7 +775,7 @@ projects/$TOPIC/captions/<lang>.srt
 ```bash
 # YouTube 文本包 — 标题、描述、chapters.vtt、缩略图提示、Shorts hook
 vf youtube "$TOPIC"
-# 优先读 article.md（如果存在）；否则回退到旧的 research.md + script.md + storyboard.yaml 三件套
+# 优先读 article.md；如果不存在则回退到 research.md + script.md + storyboard.yaml
 # → projects/$TOPIC/youtube/{title.txt,description.md,chapters.vtt,thumbnail-prompt.txt,shorts-hook.txt}
 
 # 缩略图 — 默认 mock；加 --provider minimax 走真实 AI
@@ -907,25 +836,6 @@ vf shorts "$TOPIC"
 最终发布件是 `projects/$TOPIC/output/final-mixed.mp4`，加上
 `projects/$TOPIC/youtube/` 下的 YouTube 包。
 
-### 12.8 旧版多命令流水线（保留作为遗留路径）
-
-旧版保留了细粒度的多阶段命令（`vf research` / `vf script` /
-`vf storyboard` / `vf audio` / `vf audio-asset` / `vf mix` / `vf review` /
-`vf approve` / `vf reject` / `vf rollback` / `vf preview` / `vf final`），
-新项目**不建议**使用。新版的 `vf draft`（已合并 audio-plan） + `vf make`
-已经把它们内化：
-
-| 旧命令                                       | 新版替代                                                       |
-| -------------------------------------------- | -------------------------------------------------------------- |
-| `vf research` / `vf script` / `vf storyboard` / `vf audio-plan` | `vf draft`（一次产出 article.md + audio-config.yaml）          |
-| `vf audio`                                   | 由 `vf make` 内化                                              |
-| `vf audio-asset`                             | 由 `vf make` 内化                                              |
-| `vf mix`                                     | 由 `vf make` 内化                                              |
-| `vf preview` + `vf final`                    | 由 `vf make` 一次性产出                                         |
-| `vf approve` / `vf reject` / `vf rollback`   | 不再需要 — 编辑 `article.md` / `audio-config.yaml` 后重跑 `vf make` |
-
-如果你的项目已经在用旧版格式（`research/`、`script/`、`storyboard.yaml`），它们仍
-可工作；后续可以加一个 `vf migrate <project>` 把它们合并成 `article.md`。
 
 ## 13. 用验收脚本验证
 

@@ -1,4 +1,4 @@
-# AI Video Factory (v0.4)
+# AI Video Factory (v0.3.10)
 
 A small video factory that turns a topic into a finished 1080p Chinese MP4
 in two commands: `vf draft` (LLM writes article.md + audio-config.yaml),
@@ -112,29 +112,7 @@ that actually served is recorded in `runs/<id>.yaml` under
 routing per-command with `--model <provider>` or globally via the
 `LL_CONFIG` YAML file.
 
-### Legacy commands (still working)
-
-The old per-stage pipeline is preserved for back-compat. New commands are
-built on top of the same underlying packages, just consolidated.
-
-| Command                       | Purpose                                                                                                                                                   |
-| ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `vf research <topic>`         | (legacy v0.2.2) writes `research/{research.md,sources.yaml,claims.yaml}` — superseded by `vf draft`                                                       |
-| `vf script <topic>`           | (legacy v0.2.3) writes `script/script.<lang>.md`                                                                                                            |
-| `vf storyboard <topic>`       | (legacy v0.2) writes `storyboard/storyboard.yaml`                                                                                                          |
-| `vf audio <project>`          | (legacy v0.2.4) per-scene TTS via Edge TTS — now part of `vf make`                                                                                         |
-| `vf review <project>`         | (legacy v0.2.5) review YAMLs                                                                                                                              |
-| `vf youtube <project>`        | (legacy v0.2.7) YouTube metadata                                                                                                                            |
-| `vf thumbnail <project>`      | (legacy v0.2.8) thumbnail from `thumbnail-prompt.txt`                                                                                                       |
-| `vf shorts <project>`         | (legacy v0.2.8) clip Shorts MP4                                                                                                                            |
-| `vf audio-asset <project>`    | (legacy v0.3.3) BGM/SFX assets — now part of `vf make`                                                                                                     |
-| `vf mix <project>`            | (legacy v0.3.4) narration + BGM mix — now part of `vf make`                                                                                                |
-| `vf final <project> --mix`    | (legacy v0.3.5) the audio-mixed final                                                                                                                     |
-| `vf validate <file>`          | shape + asset + registry + audio/caption check                                                                                                            |
-| `vf status` / `vf resume`     | inspection (legacy state-machine commands; still wired)                                                                                                   |
-| `vf approve / reject / rollback` | legacy state-machine verbs (still working; superseded by the edit-and-re-run workflow)                                                                |
-| `vf preview`                  | (legacy) validate → compile → render preview.mp4 — invoked transitively by `vf make`                                                                     |
-| `vf final`                    | (legacy) render final.mp4                                                                                                                                |
+The fine-grained per-stage verbs (`vf research`, `vf script`, `vf storyboard`, `vf audio`, `vf audio-asset`, `vf mix`, `vf final`, `vf preview`, `vf approve`/`reject`/`rollback`, `vf review`, `vf youtube`, `vf thumbnail`, `vf shorts`, `vf status`/`vf resume`, `vf validate`) remain wired for back-compat with projects created before the minimal API but are not part of the recommended path.
 
 ## Scripts
 
@@ -325,7 +303,7 @@ script beat.
 
 ```bash
 node packages/cli/dist/index.js youtube "<topic>"
-# Prefers article.md (the new minimal artifact). Falls back to the legacy
+# Prefers article.md (the new minimal artifact). Falls back to the
 # research.md + script.md + storyboard.yaml triple if article.md is absent.
 # → projects/<slug>/youtube/title.txt
 # → projects/<slug>/youtube/description.md

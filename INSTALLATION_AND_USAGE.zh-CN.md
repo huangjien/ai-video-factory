@@ -241,10 +241,28 @@ $EDITOR projects/<slug>/audio-config.yaml
 ### 6.2 一键渲染：`vf make`
 
 ```bash
-vf make my-topic             # TTS → 音频素材 → 渲染 → 混音
-vf make my-topic --fake       # 离线（写静音 WAV 占位，不调用 Edge TTS）
-vf make my-topic --dry-run    # 看会跑哪些步骤
+vf make my-topic                            # TTS → 音频素材 → 渲染 → 混音
+vf make my-topic --fake                     # 离线：静音 WAV 占位 + 不调用 AI 生图
+vf make my-topic --image-provider mock      # 强制用 mock 图（64×36 占位）做离线测试
+vf make my-topic --image-provider minimax   # 强制用真 AI 生图（需要 MINIMAX_API_KEY）
+vf make my-topic --bgm-dir ~/audio/bgm --sfx-dir ~/audio/sfx  # 用自己的音乐库做 BGM/音效
+vf make my-topic --dry-run                  # 看会跑哪些步骤
 ```
+
+`--fake` 是标准的离线模式：既跳过 Edge TTS（写静音 WAV 占位），也
+跳过 AI 生图。场景保留 `AnimatedIllustration`（标题文字 + 动效
+SVG），整段视频可全程离线渲染可见。仅当你需要刻意跑
+`ImageBackground` 占位图路径时，才显式传 `--image-provider mock`。
+
+`--bgm-dir` / `--sfx-dir` 指向你自己的音频库。audio-config.yaml 里的
+标签（`bgm: calm`、`sfx: {scene_1: whoosh}`）会在目录里解析为
+`{tag}.wav`（先精确匹配文件名，再退化为文件名包含标签的任意
+`.wav`）。不传这两个 flag 时，audio-assets 步骤写的是 1 秒**静音
+mock 占位**——混音机制照常运行，但压的是静音。传入后真实音频落到
+`assets/audio-assets/`，`vf mix` 会把它垫在解说下方（压至约
+-18 dB）。同目录的 `{tag}.license.txt` 会记录到 make 报告里，来源
+可见。标签找不到时 `audio-assets` 步骤会可读地报错——补文件或去掉
+该 cue 即可。
 
 输出：
 
@@ -454,11 +472,23 @@ v0.4 起，TTS、BGM/SFX 素材、混音、字幕 SRT 都由 `vf make` 一次性
 
 ```bash
 vf make <slug>            # 真 Edge TTS（需要网络）
-vf make <slug> --fake     # 静音 WAV 占位（无需网络，离线 / CI 友好）
+vf make <slug> --fake     # 静音 WAV 占位 + 不调用 AI 生图（无需网络，离线 / CI 友好）
+vf make <slug> --image-provider minimax  # 强制走真 AI 生图（非 --fake 时的默认）
 ```
 
 默认使用 Edge TTS（免费、无需 API key），但依赖在线 Microsoft 服务，
 可能受限流或网络故障影响。
+
+`--fake` 同时跳过 AI 生图（无需 `MINIMAX_API_KEY`）。场景保留
+`AnimatedIllustration`（标题文字 + 动效 SVG），整段视频可全程离线
+渲染可见。需要 `--image-provider mock`（占位图）或
+`--image-provider minimax`（真 AI）时显式指定。
+
+默认情况下，audio-config.yaml 里的 BGM/SFX 标签会物化成 1 秒**静音
+mock 占位**——混音机制照常运行，但没有真实音乐。把 `vf make` 指向
+你自己的音频库即可得到真实音频（`--bgm-dir`、`--sfx-dir`，见
+§6.2），或者自行预置 `assets/audio-assets/{bgm,sfx}/{tag}.wav`
+（幂等的 make 会保留已有文件）。
 
 输出：
 
@@ -610,6 +640,26 @@ audio-config.yaml not found at .../audio-config.yaml
 vf make <project> --fake
 ```
 
+### `article.md 场景旁白为空`
+
+偶尔 LLM 会把全部正文写进 `## N. ...` 小节，而每个场景的
+`narration:` 字段留空。所有读取 article.md 的命令（`vf make`、
+`vf audio-plan`、`vf youtube`）现在会自动恢复——把小节正文按句子
+分配到空场景，并在输出里提示恢复了几个场景（`vf make` 的报告里
+对应 `recover-narrations` 步骤）。
+
+想重新生成一份干净的草稿：
+
+```bash
+vf draft <topic> --from projects/<slug>/article.md
+```
+
+CI 场景下想让 `vf audio-plan` 保持原有的报错行为：
+
+```bash
+vf audio-plan <project> --strict
+```
+
 ### 旧版 `final` 提示 review 未批准
 
 如果还在用旧版的 `vf final` 路径：
@@ -738,9 +788,14 @@ $EDITOR "projects/$TOPIC/audio-config.yaml"   # 换 BGM、加音效、调 fade
 
 ```bash
 vf make "$TOPIC"                     # TTS → 音频资产 → 渲染 → 混音（真 Edge TTS）
-vf make "$TOPIC" --fake              # 用 FakeTTSProvider（无需网络，写静音 WAV 占位）
+vf make "$TOPIC" --fake              # 用 FakeTTSProvider（无需网络，静音 WAV 占位 + 不调用 AI 生图）
+vf make "$TOPIC" --image-provider minimax  # 强制走真 AI 生图
 vf make "$TOPIC" --dry-run           # 只打印会跑哪些步骤，不真正执行
 ```
+
+`--fake` 同时跳过 Edge TTS 和 AI 生图，所以渲染完全离线 —— 场景
+保留 `AnimatedIllustration`（标题文字 + 动效 SVG）。需要刻意走
+`ImageBackground` 占位图路径时用 `--image-provider mock`。
 
 输出：
 

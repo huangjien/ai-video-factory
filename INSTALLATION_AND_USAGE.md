@@ -256,10 +256,31 @@ $EDITOR projects/<slug>/audio-config.yaml
 ### 6.2 Render with one command: `vf make`
 
 ```bash
-vf make my-topic              # TTS → audio assets → render → mix
-vf make my-topic --fake       # offline: write silent placeholder WAVs (no Edge TTS)
-vf make my-topic --dry-run    # print what would run, do not execute
+vf make my-topic                                  # TTS → audio assets → render → mix
+vf make my-topic --fake                           # offline: silent placeholder WAVs + no AI images
+vf make my-topic --image-provider mock            # force mock images (64×36 placeholders) for offline testing
+vf make my-topic --image-provider minimax         # force real AI image generation (needs MINIMAX_API_KEY)
+vf make my-topic --bgm-dir ~/audio/bgm --sfx-dir ~/audio/sfx  # real BGM/SFX from your library
+vf make my-topic --dry-run                        # print what would run, do not execute
 ```
+
+`--fake` is the canonical offline mode: it skips both Edge TTS (writing
+silent placeholder WAVs) and real image generation. Scenes stay as
+`AnimatedIllustration` (caption + animated SVG) so the rendered video is
+visible end-to-end without any network access. Pass `--image-provider
+mock` explicitly only when you want to exercise the `ImageBackground`
+path with placeholder images.
+
+`--bgm-dir` / `--sfx-dir` point at your own audio library. The tag in
+`audio-config.yaml` (`bgm: calm`, `sfx: {scene_1: whoosh}`) resolves to
+`{tag}.wav` inside the directory (exact name first, then any `.wav`
+containing the tag). Without the flags the audio-assets step writes a
+1-second **silent mock placeholder** — the mix machinery runs, but you
+are ducking silence. With the flags, real audio lands in
+`assets/audio-assets/` and `vf mix` layers it under the narration
+(ducked ~-18 dB). A sibling `{tag}.license.txt` is recorded on the make
+report so provenance is visible. A missing tag fails the
+`audio-assets` step readably — add the file or drop the cue.
 
 Outputs:
 
@@ -505,12 +526,26 @@ produced by `vf make` in one invocation — no need for separate `vf audio`,
 
 ```bash
 vf make <slug>           # real Edge TTS (requires network)
-vf make <slug> --fake    # silent placeholder WAVs (offline / CI-friendly)
+vf make <slug> --fake    # silent placeholder WAVs + no AI images (offline / CI-friendly)
+vf make <slug> --image-provider minimax  # force real AI image generation (default when not --fake)
 ```
 
 Default provider is Edge TTS (free, no API key). It depends on the
 online Microsoft Edge TTS endpoint — rate limits and network failures
 apply.
+
+`--fake` also disables AI image generation (no `MINIMAX_API_KEY`
+required). Scenes stay as `AnimatedIllustration` (caption + animated
+SVG), so the rendered video is visible end-to-end without any network
+access. Override with `--image-provider mock` (placeholders) or
+`--image-provider minimax` (real AI).
+
+By default the BGM/SFX tags in `audio-config.yaml` materialize as
+1-second **silent mock placeholders** — the mixing machinery runs, but
+there is no real music. Point `vf make` at your own library to get real
+audio (`--bgm-dir`, `--sfx-dir`; see §6.2), or pre-seed
+`assets/audio-assets/{bgm,sfx}/{tag}.wav` yourself (idempotent make
+keeps existing files).
 
 Outputs:
 
@@ -655,6 +690,27 @@ Check network access, retry later, or fall back to offline mode:
 vf make <project> --fake
 ```
 
+### `article.md has empty scene narrations`
+
+Occasionally the LLM puts all prose in the `## N. ...` section bodies and
+ships every scene's `narration:` field blank. All article-consuming verbs
+(`vf make`, `vf audio-plan`, `vf youtube`) now auto-recover by
+distributing the section bodies across the empty scenes — you'll see a
+`recover-narrations` step (in `vf make`'s report) or a warning line
+telling you how many scenes were back-filled.
+
+To regenerate a clean draft instead:
+
+```bash
+vf draft <topic> --from projects/<slug>/article.md
+```
+
+For CI, keep the old fail-loudly behaviour on `vf audio-plan`:
+
+```bash
+vf audio-plan <project> --strict
+```
+
 ### Legacy `final` says review is not approved
 
 If you still have old code paths hitting `vf final` directly:
@@ -788,9 +844,15 @@ $EDITOR "projects/$TOPIC/audio-config.yaml"   # BGM tag, SFX cues, fades
 
 ```bash
 vf make "$TOPIC"                       # TTS → audio assets → render → mix (real Edge TTS)
-vf make "$TOPIC" --fake                # FakeTTSProvider (no network; silent placeholder WAVs)
+vf make "$TOPIC" --fake                # FakeTTSProvider (no network; silent placeholder WAVs + no AI images)
+vf make "$TOPIC" --image-provider minimax  # force real AI image generation
 vf make "$TOPIC" --dry-run             # print which steps would run; do not execute
 ```
+
+`--fake` skips both Edge TTS and AI image generation, so the rendered
+video is fully offline — scenes keep their `AnimatedIllustration`
+component (caption + animated SVG). Use `--image-provider mock` to
+exercise the `ImageBackground` path with placeholders.
 
 Outputs:
 

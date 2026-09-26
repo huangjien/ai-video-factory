@@ -97,7 +97,7 @@ outputs are newer than its inputs (`--dry-run` shows what it would do).
 | `vf new <id>`                 | scaffold a project under `projects/<id>/`                                                |
 | `vf draft <topic>`            | write `article.md` from a topic via MiniMax/GLM (research + script + storyboard in one)  |
 | `vf audio-plan <project>`     | write `audio-config.yaml` for the project's article.md via GLM                            |
-| `vf make <project>`           | TTS → audio assets → render → mix (`--dry-run` to preview, `--fake` for offline TTS)      |
+| `vf make <project>`           | TTS → audio assets → render → mix (`--dry-run` to preview, `--fake` for offline TTS, `--image-provider mock\|minimax\|none`, `--bgm-dir`/`--sfx-dir <dir>` to use your own music library) |
 
 The two human-edit artifacts are `article.md` (narrative + scene data) and
 `audio-config.yaml` (BGM/SFX cues + fades + voice, plus optional

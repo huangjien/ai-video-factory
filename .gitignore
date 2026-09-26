@@ -9,3 +9,8 @@ dist/
 .omo/run-continuation/
 .github/
 coverage/
+
+# Test projects hold generated media (hundreds of MB) — only the
+# canonical benchmark fixture is tracked.
+projects/*
+!projects/benchmark-v01/

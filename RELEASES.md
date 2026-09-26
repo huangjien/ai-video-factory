@@ -15,6 +15,31 @@ vf research → script → storyboard → audio (TTS) → audio-asset (BGM+SFX)
        vf review                          → Content/Visual/Technical review YAMLs
 ```
 
+## v0.3.7 — real BGM/SFX in `vf make` via `--bgm-dir` / `--sfx-dir`
+
+**Branch:** `feat/v0.3.7-make-audio-dirs`
+**Tags:** `v0.3.7`
+
+- **`vf make <project> --bgm-dir <dir> --sfx-dir <dir>`** wires the existing `FileBasedAudioAssetProvider` into the make pipeline. The tags in `audio-config.yaml` (`bgm: calm`, `sfx: {scene_1: whoosh}`) resolve to `{tag}.wav` inside your library (exact filename first, then any `.wav` containing the tag). Without the flags the audio-assets step keeps writing 1-second silent mock placeholders — meaning the BGM ducking/fades in `vf mix` were technically running over silence.
+- Per-kind selection: `--bgm-dir` alone upgrades only BGM (SFX stays mock), and vice versa. A sibling `{tag}.license.txt` in your library is surfaced on the make report; a missing tag fails the `audio-assets` step readably (add the file or drop the cue).
+- **`runMake` no longer crashes the CLI on a failed step.** `runStep` failures are recorded as `✗` steps and later steps are skipped (they depend on the failed step's outputs), so `vf make` exits 1 with the per-step summary instead of a stack trace.
+- `runAudioAssets` is exported from `@vf/make` for direct testing.
+- Docs: corrected earlier `--imageProvider` mentions to the real kebab-case flag `--image-provider`; new `--bgm-dir`/`--sfx-dir` guidance in §6.2 and §9.1 (EN + zh-CN).
+- Tests: 349/349 pass; new `packages/make/src/audio-asset-dirs.test.ts` covers real-bytes copy + license surfacing, per-kind fallback to mock, mock default, and the missing-tag failure. Verified end-to-end on `projects/harness-engineering`: 290 s real BGM (25.5 MB) + 2 SFX cues land in `assets/audio-assets/` and `final-mixed.mp4` carries audible audio.
+
+## v0.3.6 — `--fake` keeps scenes visible + malformed-draft narration recovery
+
+**Branch:** `fix/v0.3.6-fake-image-default`
+**Tags:** `v0.3.6`
+
+- **`vf make --fake` default imageProvider changed from `"mock"` to `"none"`.** The mock provider produced 64×36 solid-colour PNGs, and `updateStoryboardForImages` rewrote every scene from `AnimatedIllustration` (caption + animated SVG) to `ImageBackground` (image-only). For long videos this left ~9 minutes of blank frames after the title card. Defaulting to `"none"` skips image generation in offline mode and scenes keep `AnimatedIllustration`. Pass `--image-provider mock` explicitly if you want to exercise the ImageBackground path with placeholders.
+- **`updateStoryboardForImages` carries the scene caption into the new ImageBackground props**, and `ImageBackground` now renders an optional bottom-overlay caption. So if image generation partially fails or mock images are in use, scenes still show their caption text.
+- **`articleToStoryboardYaml` truncates long `Title.subtext`** at the first natural punctuation near 50 characters, so old drafts with very long LLM visual descriptions no longer overflow the 36 px subtext `<p>`.
+- **LLM prompt tightened**: the `VISUAL DIRECTION` section now tells the drafter the renderer keyword-matches to a small shape vocabulary, so extra description beyond the matching keyword is dead weight that bloats on-screen captions.
+- **Empty-narration draft recovery.** Real failure mode (seen on the `harness-engineering` project): the LLM puts all prose in `## N. ...` section bodies and ships every scene's `narration:` blank — the strict zod schema then rejected `vf audio-plan` (and would have rejected `vf make`) with an opaque 19-issue JSON dump. New `parseArticleWithRecovery` in `@vf/draft`: strict parse first, and on the empty-narration failure back-fill narrations from section bodies (sentence-aware distribution across scenes; only `## N. ...` headings count, so the H1 title and hook block are never treated as a section). All four article.md consumers route through it — `vf make` (surfaces a `recover-narrations` step in the report), `vf audio-plan` (prints a warning + `vf draft --from` hint), `vf draft` storyboard-sync, and `vf youtube`. `vf audio-plan --strict` keeps the old fail-loudly behaviour for CI.
+- **LLM prompt (narration)**: §7 SCENE NARRATION now states the narration field must contain the actual spoken content and that section bodies do not replace it.
+- Tests: 345/345 pass; added `packages/make/src/fake-image-default.test.ts`, plus `schemas.test.ts` cases for lenient parse, recovery distribution, kept-verbatim scenes, `parseArticleWithRecovery` passthrough/rethrow, and subtext truncation.
+
 ## v0.3.5 — SFX cues + BGM fades + `vf final --mix`
 
 **Branch:** `feat/v0.3-sfx-cues-and-fade`
@@ -77,6 +102,8 @@ vf research → script → storyboard → audio (TTS) → audio-asset (BGM+SFX)
 | `v0.3.3` | `feat/v0.3-audio-assets`                               | merge commit on main |
 | `v0.3.4` | `feat/v0.3-audio-mix`                                  | merge commit on main |
 | `v0.3.5` | `feat/v0.3-sfx-cues-and-fade`                          | merge commit on main |
+| `v0.3.6` | `fix/v0.3.6-fake-image-default`                         | merge commit on main |
+| `v0.3.7` | `feat/v0.3.7-make-audio-dirs`                            | merge commit on main |
 
 All release tags are on `origin` and pushed.
 

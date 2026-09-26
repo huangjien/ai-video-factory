@@ -197,6 +197,22 @@ describe("buildMessages (prompt structure)", () => {
     });
     expect(m[1]?.content).toContain("old draft here");
   });
+
+  it("includes ideaSeed as the user's major idea with preserve-opinions wording", async () => {
+    const { buildMessages } = await import("./prompt.js");
+    const m = buildMessages({
+      topic: "t",
+      audience: "a",
+      language: "zh-CN",
+      duration: 40,
+      ideaSeed: "长视频测试的核心是漂移检测，不是堆指标。",
+    });
+    expect(m[1]?.content).toContain("The user's major idea");
+    expect(m[1]?.content).toContain("do NOT change");
+    expect(m[1]?.content).toContain(
+      "长视频测试的核心是漂移检测，不是堆指标。",
+    );
+  });
 });
 
 describe("articleToStoryboardYaml (VDSL sync)", () => {

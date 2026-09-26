@@ -248,6 +248,11 @@ $EDITOR projects/<slug>/audio-config.yaml
 audio-plan 的 LLM 调用失败，draft 依然成功（article.md 是主产物），
 并提示单独运行 `vf audio-plan`。
 
+想从你自己的点子出发而不是空白主题时，传 `--file <path>` 指定一个
+text 或 markdown 文件。LLM 会把它当作**主要想法 / 观点种子**——可
+以润色措辞、结构和流畅度，但绝不能改变你表达的任何观点。（与
+`--from` 互斥；`--from` 用于修订既有草稿。）
+
 ### 6.2 一键渲染：`vf make`
 
 所有接收 `<project>` 参数的子命令都按同样的宽容顺序解析：
@@ -731,7 +736,7 @@ vf final --cwd projects/demo
 
 整个流水线被压缩到 **2 个命令 + 2 个人工编辑点 + 1 个渲染输出**：
 
-1. `vf draft <topic>` → 写出 `article.md` 和 `audio-config.yaml`（一次 LLM 调用合并 research + script + storyboard + audio plan；`--no-audio-plan` 跳过 audio 步；已有的 `audio-config.yaml` 不会被覆盖，重新生成用 `vf audio-plan`）
+1. `vf draft <topic>` → 写出 `article.md` 和 `audio-config.yaml`（一次 LLM 调用合并 research + script + storyboard + audio plan；`--no-audio-plan` 跳过 audio 步；`--file <path>` 用你的原始想法作为主要观点种子（润色措辞，观点保留）；已有的 `audio-config.yaml` 不会被覆盖，重新生成用 `vf audio-plan`）
 2. `vf make <project>` → 一切自动：TTS → 音频素材 → 渲染 → 混音 → 输出 mp4
 
 ```mermaid
@@ -790,6 +795,7 @@ vf draft "$TOPIC"                  # 默认开启 MiniMax 联网搜索
 vf draft "$TOPIC" --no-web          # 关闭联网，纯模型知识
 vf draft "$TOPIC" --model glm --duration 40 --lang zh-CN --audience developers
 vf draft "$TOPIC" --from outline.md  # 把已有大纲当起点改写
+vf draft "$TOPIC" --file my-idea.md  # 用你自己的想法做种子，观点保留
 ```
 
 ```bash

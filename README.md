@@ -95,7 +95,7 @@ do).
 | Command                       | Purpose                                                                                  |
 | ----------------------------- | ---------------------------------------------------------------------------------------- |
 | `vf new <id>`                 | scaffold a project under `projects/<id>/`                                                |
-| `vf draft <topic>`            | write `article.md` + `audio-config.yaml` from a topic via MiniMax/GLM (research + script + storyboard + audio plan in one; `--no-audio-plan` to split) |
+| `vf draft <topic>`            | write `article.md` + `audio-config.yaml` from a topic via MiniMax/GLM (research + script + storyboard + audio plan in one; `--no-audio-plan` to split; `--file <path>` to seed with your raw idea, opinions preserved) |
 | `vf audio-plan <project>`     | (optional) regenerate `audio-config.yaml` after hand-editing article.md                   |
 | `vf make <project>`           | TTS → audio assets → render → mix (`--dry-run` to preview, `--fake` for offline TTS, `--image-provider mock\|minimax\|none`, `--bgm-dir`/`--sfx-dir <dir>` to use your own music library) |
 

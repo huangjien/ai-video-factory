@@ -7,6 +7,10 @@ export interface DraftInput {
   duration: number;
   /** Optional pre-existing content to revise (used by `vf draft --from <file>`). */
   fromContent?: string;
+  /** Optional raw idea / outline seed (used by `vf draft --file <path>`).
+   *  The LLM treats it as the user's own idea: polish the wording, never
+   *  change the opinions. */
+  ideaSeed?: string;
   /** Optional web search results to ground the draft. */
   webContext?: { url: string; title: string; snippet: string }[];
 }
@@ -539,6 +543,18 @@ export function buildMessages(input: DraftInput): ChatMessage[] {
     userParts.push(
       "\n## Existing content to revise (preserve intent, improve as needed)",
       input.fromContent,
+    );
+  }
+  if (input.ideaSeed) {
+    userParts.push(
+      "\n## The user's major idea (from --file)",
+      "The following is the user's own idea and opinions. You may polish the",
+      "wording, structure, flow, and completeness — but do NOT change,",
+      "contradict, soften, or replace any opinion it expresses. The finished",
+      "article must stay faithful to this idea; where you add supporting",
+      "material, it must serve this idea, not steer away from it.",
+      "",
+      input.ideaSeed,
     );
   }
   if (input.webContext && input.webContext.length > 0) {

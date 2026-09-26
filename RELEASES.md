@@ -15,6 +15,18 @@ vf research → script → storyboard → audio (TTS) → audio-asset (BGM+SFX)
        vf review                          → Content/Visual/Technical review YAMLs
 ```
 
+## v0.3.10 — `vf draft --file <path>` seeds the article with your own idea
+
+**Branch:** `feat/v0.3.10-draft-idea-file`
+**Tags:** `v0.3.10`
+
+- **New `vf draft --file <path>` flag** — accept a text or markdown file as the user's raw idea. The LLM treats it as the **major idea / opinions seed**: it polishes wording, structure, and flow, but the prompt explicitly forbids changing, contradicting, softening, or replacing any opinion expressed in the seed.
+- `--file` and `--from` are **mutually exclusive** — `--from` revises an existing draft (different semantics); passing both is rejected at the CLI with a clear message.
+- Empty / missing `--file` produces a readable error before the project lookup runs (input validation now precedes resolution so the user sees the most useful error first).
+- Prompt split: existing `fromContent` ("Existing content to revise, preserve intent, improve as needed") is now joined by a distinct `ideaSeed` ("The user's major idea — polish wording, do NOT change opinions") rendered as its own user-message section.
+- Tests: 365/365 pass; new "includes ideaSeed as the user's major idea with preserve-opinions wording" case in `schemas.test.ts`. Verified live on a fresh project: a seed file containing 3 stated opinions + a "don't go off-topic" instruction produced an article where all opinion-bearing terms survived (漂移 ×17, FVD ×5, Harness ×4, 指标 ×7) and forbidden off-topic terms (安全/自动驾驶) appeared 0 times.
+- Docs: README draft row + INSTALLATION §6.1 + §12.0 + §13 walkthrough (EN + zh-CN).
+
 ## v0.3.9 — `vf draft` merges the audio-plan step
 
 **Branch:** `feat/v0.3.9-draft-merges-audio-plan`
@@ -127,6 +139,7 @@ vf research → script → storyboard → audio (TTS) → audio-asset (BGM+SFX)
 | `v0.3.7` | `feat/v0.3.7-make-audio-dirs`                            | merge commit on main |
 | `v0.3.8` | `feat/v0.3.8-project-arg-resolution`                     | combined commit tagged `v0.3.9` |
 | `v0.3.9` | `feat/v0.3.9-draft-merges-audio-plan`                    | merge commit on main |
+| `v0.3.10` | `feat/v0.3.10-draft-idea-file`                            | merge commit on main |
 
 All release tags are on `origin` and pushed.
 

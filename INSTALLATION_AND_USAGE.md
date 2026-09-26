@@ -263,6 +263,12 @@ the command prints a note pointing at `vf audio-plan` when it kept one.
 If the audio-plan LLM call fails, the draft still succeeds (article.md
 is the primary artifact) with a hint to run `vf audio-plan` separately.
 
+To start from your own idea instead of a blank topic, pass
+`--file <path>` with a text or markdown file. The LLM uses it as the
+**major idea / opinions seed** — it polishes wording, structure, and
+flow, but must not change any opinion you expressed. (Mutually exclusive
+with `--from`, which revises an existing draft.)
+
 ### 6.2 Render with one command: `vf make`
 
 Every verb that takes a `<project>` argument resolves it the same
@@ -788,7 +794,8 @@ output**:
 
 1. `vf draft <topic>` → writes `article.md` and `audio-config.yaml`
    (LLM consolidates research + script + storyboard + audio plan in one
-   call; `--no-audio-plan` skips the audio step; an existing
+   call; `--no-audio-plan` skips the audio step; `--file <path>` seeds
+   the draft with your raw idea (opinions preserved); an existing
    `audio-config.yaml` is never overwritten — regenerate with
    `vf audio-plan`)
 2. `vf make <project>` → everything else: TTS → audio assets → render → mix → mp4
@@ -849,6 +856,7 @@ vf draft "$TOPIC"                  # default: enable MiniMax web search
 vf draft "$TOPIC" --no-web          # disable web, model knowledge only
 vf draft "$TOPIC" --model glm --duration 40 --lang zh-CN --audience developers
 vf draft "$TOPIC" --from outline.md  # revise an existing outline
+vf draft "$TOPIC" --file my-idea.md  # polish YOUR idea into an article; opinions preserved
 ```
 
 ```bash

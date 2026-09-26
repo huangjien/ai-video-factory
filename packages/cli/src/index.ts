@@ -153,6 +153,10 @@ program
     "path to a file containing pre-existing content to revise",
   )
   .option(
+    "--file <path>",
+    "path to a text/markdown file holding your raw idea — polished into the article, opinions preserved",
+  )
+  .option(
     "--no-audio-plan",
     "skip the merged audio-plan step (write article.md only)",
   )
@@ -167,6 +171,7 @@ program
         duration?: number;
         audience?: string;
         from?: string;
+        file?: string;
         audioPlan?: boolean;
       },
     ) => {
@@ -179,6 +184,7 @@ program
         ...(opts.duration !== undefined ? { duration: opts.duration } : {}),
         ...(opts.audience !== undefined ? { audience: opts.audience } : {}),
         ...(opts.from !== undefined ? { from: opts.from } : {}),
+        ...(opts.file !== undefined ? { ideaFile: opts.file } : {}),
         noAudioPlan: opts.audioPlan === false,
       });
     },

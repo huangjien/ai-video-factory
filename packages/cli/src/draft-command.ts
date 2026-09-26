@@ -27,6 +27,9 @@ export interface DraftOptions {
   audience?: string;
   /** Path to a file containing pre-existing content to revise. */
   from?: string;
+  /** Path to a text/markdown file holding the user's raw idea — the LLM
+   *  polishes it into the article but must not change its opinions. */
+  ideaFile?: string;
   noWeb?: boolean;
   /** Skip the merged audio-plan step (article.md only). */
   noAudioPlan?: boolean;
@@ -76,14 +79,15 @@ export async function writeAudioConfigIfAbsent(
 }
 
 export async function runDraft(opts: DraftOptions): Promise<number> {
-  const resolvedProject = resolveProjectDir(opts.topic, opts.cwd);
-  if (!resolvedProject.ok) {
-    console.error(resolvedProject.message);
-    console.error(`hint: scaffold it with \`vf new <topic>\` first, then re-run`);
+  // Validate input flags before project lookup so the user sees the
+  // most useful error first (no point telling them the project is
+  // missing when their flags are already wrong).
+  if (opts.ideaFile !== undefined && opts.from !== undefined) {
+    console.error(`--file and --from are mutually exclusive:`);
+    console.error(`  --file <path>  your raw idea (polished, opinions preserved)`);
+    console.error(`  --from <path>  an existing article to revise`);
     return 1;
   }
-  const projectRoot = resolvedProject.root;
-
   let fromContent: string | undefined;
   if (opts.from) {
     const fromPath = path.resolve(opts.from);
@@ -93,6 +97,27 @@ export async function runDraft(opts: DraftOptions): Promise<number> {
     }
     fromContent = await readFile(fromPath, "utf8");
   }
+  let ideaSeed: string | undefined;
+  if (opts.ideaFile) {
+    const ideaPath = path.resolve(opts.ideaFile);
+    if (!existsSync(ideaPath)) {
+      console.error(`--file not found: ${ideaPath}`);
+      return 1;
+    }
+    ideaSeed = await readFile(ideaPath, "utf8");
+    if (ideaSeed.trim().length === 0) {
+      console.error(`--file is empty: ${ideaPath}`);
+      return 1;
+    }
+  }
+
+  const resolvedProject = resolveProjectDir(opts.topic, opts.cwd);
+  if (!resolvedProject.ok) {
+    console.error(resolvedProject.message);
+    console.error(`hint: scaffold it with \`vf new <topic>\` first, then re-run`);
+    return 1;
+  }
+  const projectRoot = resolvedProject.root;
 
   const cfg = loadProviderConfig();
   const chosenName = opts.model ?? providerForRole(cfg, "research");
@@ -129,6 +154,7 @@ export async function runDraft(opts: DraftOptions): Promise<number> {
       language,
       duration,
       ...(fromContent !== undefined ? { fromContent } : {}),
+      ...(ideaSeed !== undefined ? { ideaSeed } : {}),
       ...(webContext && webContext.length > 0 ? { webContext } : {}),
     },
     provider,

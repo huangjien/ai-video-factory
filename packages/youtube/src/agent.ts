@@ -28,9 +28,14 @@ Output: ONE fenced YAML code block (\`\`\`yaml ... \`\`\`) with EXACTLY these ke
 Constraints:
 - Title must NOT exceed 100 chars (YouTube limit).
 - Chapters must be in MM:SS format and sorted by time.
-- Thumbnail prompt describes what an image generator should produce — be
-  concrete (background color, text overlay, focal element, mood).
-- Shorts hook is a self-contained 60-second script beat.
+- VISUAL STYLE — prefer people over screens in both thumbnail and shorts:
+  - Thumbnail prompt describes what an image generator should produce —
+    be concrete (lighting, framing, expression, mood). The focal subject
+    must be a real-looking person with a clear emotion; avoid text overlay,
+    avoid fake dashboards / terminals / code blocks / abstract UI.
+  - Shorts hook is a self-contained 60-second script beat. The visual beat
+    in the hook text should centre on a person speaking or acting; do not
+    describe screen recordings, terminal sessions, or text-on-screen.
 - NO prose outside the YAML block.`;
 
 export function buildYouTubeMessages(input: YouTubeInput): ChatMessage[] {

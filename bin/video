@@ -27,4 +27,4 @@ USAGE
   exit 0
 fi
 
-exec node "$(cd "$(dirname "$0")/.." && pwd)/packages/cli/dist/index.js" "$@"
+exec node "$(cd "$(dirname "$(realpath "$0")")/.." && pwd)/packages/cli/dist/index.js" "$@"

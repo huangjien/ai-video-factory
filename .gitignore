@@ -7,7 +7,6 @@ dist/
 .remotion/
 *.log
 .omo/run-continuation/
-.github/
 coverage/
 
 # Test projects hold generated media (hundreds of MB) — only the

@@ -4,7 +4,7 @@ import type {
   ChatResponse,
   Provider,
 } from "./provider.js";
-import { longTimeoutAgent } from "./timeout.js";
+import { LLM_TIMEOUT_MS } from "./timeout.js";
 
 export interface MiniMaxProviderOptions {
   apiHost?: string | undefined;
@@ -55,8 +55,11 @@ export class MiniMaxProvider implements Provider {
           ? { response_format: req.response_format }
           : {}),
       }),
-      // @ts-expect-error undici-specific; raises headersTimeout 300s → 900s
-      dispatcher: longTimeoutAgent,
+      // AbortSignal.timeout replaces the previous custom-undici-dispatcher
+      // hack. Node 22+ global fetch rejects third-party undici Agent
+      // instances with UND_ERR_INVALID_ARG; the built-in AbortSignal
+      // is portable and works on all Node versions that ship global fetch.
+      signal: AbortSignal.timeout(LLM_TIMEOUT_MS),
     });
     const body = await res.text();
     if (!res.ok) {

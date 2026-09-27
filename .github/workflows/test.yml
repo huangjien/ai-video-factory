@@ -21,8 +21,10 @@ jobs:
 
       - name: Install pnpm
         uses: pnpm/action-setup@v4
-        with:
-          version: 12.5.1
+        # version omitted on purpose — pnpm/action-setup reads `packageManager`
+        # from package.json automatically. Pinning here causes
+        # ERR_PNPM_BAD_PM_VERSION when the two drift.
+        with: {}
 
       - name: Install ffmpeg
         # Use the apt-packaged ffmpeg (Ubuntu 24.04 ships 6.1.1) rather than

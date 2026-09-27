@@ -116,7 +116,7 @@ export async function callResearch(
       web_search_used: webSearchUsed,
       web_search_failed: webSearchFailed,
       provider: actualProvider,
-      model: result.data.meta.provider,
+      model: result.data.meta.model,
     },
   };
   return { output, usage: res.usage, providerName: actualProvider };

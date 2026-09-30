@@ -22,6 +22,10 @@ Example:
   video approve review --cwd projects/demo
   video final --cwd projects/demo
 
+Combined shortcuts (run several stages in one shot):
+  video draft "AI 思维链"          # research + script + storyboard + audio-plan
+  video make  "AI 思维链"          # render the final 1080p MP4
+
 All arguments are forwarded to the `vf` CLI under the hood.
 USAGE
   exit 0

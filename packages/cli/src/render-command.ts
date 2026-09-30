@@ -5,16 +5,19 @@ import { execSync } from "node:child_process";
 import { resolveProjectDir, resolveProjectRoot } from "./project-path.js";
 import {
   formatRunId,
+  loadCheckpoint,
   readProjectState,
+  transition,
   writeProjectState,
   writeRun,
+  type Stage,
+  type WorkflowStatus,
 } from "@vf/workflow";
 import { compileStoryboard } from "@vf/vdsl";
 import { validateProject } from "@vf/vdsl";
 import { REGISTRY } from "@vf/video-components";
 import { renderPlanToVideo, faststart } from "@vf/video-renderer";
 import { runValidate } from "./validate-command.js";
-import type { Stage } from "@vf/workflow";
 
 const STORYBOARD_REL = "storyboard/storyboard.yaml";
 
@@ -26,6 +29,7 @@ async function loadStoryboard(projectRoot: string): Promise<string> {
 export async function runPreview(
   projectName?: string,
   cwd?: string,
+  force: boolean = false,
 ): Promise<number> {
   // Two ways to identify the project:
   //   1. `projectName` (slug or human name) → look under `${cwd ?? "."}/projects/<slug>`
@@ -50,6 +54,36 @@ export async function runPreview(
     console.error(`no storyboard at ${root}/${STORYBOARD_REL}`);
     return 1;
   }
+
+  // Human gate (doc §58: never auto-approve). Rendering is not allowed
+  // until the storyboard stage carries an approved checkpoint; --force is
+  // the explicit emergency bypass and is recorded as such.
+  const state = await readProjectState(root);
+  if (!state) {
+    console.error(
+      `preview: no project state at ${root}/state.yaml — run \`vf new\` first`,
+    );
+    return 1;
+  }
+  if (state.status === "FINAL_APPROVED") {
+    console.error(
+      `preview: project is FINAL_APPROVED (terminal) — run \`vf reset --force\` to rework it`,
+    );
+    return 1;
+  }
+  const storyboardCp = await loadCheckpoint(root, "storyboard");
+  if (storyboardCp?.status !== "approved" && !force) {
+    console.error(
+      `preview: storyboard is not approved yet — read ${path.join(root, "storyboard", "storyboard.yaml")} (make flow: article.md), then run:`,
+    );
+    console.error(`  vf approve storyboard --cwd ${path.dirname(root)}`);
+    console.error(`or skip the gate with: vf preview --force`);
+    return 1;
+  }
+  if (force && storyboardCp?.status !== "approved") {
+    console.warn(`[FORCE] rendering without an approved storyboard`);
+  }
+
   const text = await loadStoryboard(root);
 
   const vcode = await runValidate(path.join(root, STORYBOARD_REL), root);
@@ -77,13 +111,18 @@ export async function runPreview(
     duration_ms: Date.now() - start,
   });
 
-  const state = await readProjectState(root);
-  if (state) {
-    state.status = "WAITING_REVIEW";
-    state.current_stage = "review";
-    state.checkpoint = { id: runId, status: "WAITING_REVIEW" };
-    await writeProjectState(root, state);
-  }
+  // Route the status change through the state machine: APPROVED →
+  // WAITING_REVIEW (first render), WAITING_REVIEW → WAITING_REVIEW
+  // (re-render), or any non-terminal state → WAITING_REVIEW under --force.
+  const next = transition(
+    { status: state.status, stage: state.current_stage },
+    { kind: "preview", ...(force ? { force: true } : {}) },
+    { run_id: runId, actor: "tool" },
+  );
+  state.status = next.state.status;
+  state.current_stage = "review";
+  state.checkpoint = { id: runId, status: next.state.status };
+  await writeProjectState(root, state);
   console.log(`✓ preview rendered: ${out}`);
   return 0;
 }
@@ -143,9 +182,23 @@ export async function runFinal(
     duration_ms: Date.now() - start,
   });
 
-  state.status = "FINAL_APPROVED";
+  // APPROVED → FINAL_APPROVED via the machine (the precondition above
+  // guarantees APPROVED, so this cannot throw — kept defensive anyway).
+  let finalStatus: WorkflowStatus;
+  try {
+    const next = transition(
+      { status: state.status, stage: state.current_stage },
+      { kind: "final_approve" },
+      { run_id: runId, actor: "tool" },
+    );
+    finalStatus = next.state.status;
+  } catch (err) {
+    console.error(`final: ${(err as Error).message}`);
+    return 1;
+  }
+  state.status = finalStatus;
   state.current_stage = "final";
-  state.checkpoint = { id: runId, status: "FINAL_APPROVED" };
+  state.checkpoint = { id: runId, status: finalStatus };
   await writeProjectState(root, state);
   console.log(`✓ final rendered: ${faststartOut}`);
   if (resolved.mix) {

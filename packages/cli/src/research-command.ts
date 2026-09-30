@@ -10,6 +10,7 @@ import { stringify as yamlStringify } from "yaml";
 import { runNew } from "./new-command.js";
 import { ensureProject } from "./ensure-project.js";
 import { resolveProjectRoot, slugifyProjectName } from "./project-path.js";
+import { assertStageWritable } from "./stage-guard.js";
 
 export interface ResearchOptions {
   topic: string;
@@ -19,6 +20,7 @@ export interface ResearchOptions {
   lang?: "zh-CN" | "en-US" | undefined;
   duration?: number | undefined;
   audience?: string | undefined;
+  force?: boolean | undefined;
 }
 
 function providerInstance(name: string): Provider {
@@ -51,7 +53,9 @@ export async function runResearch(opts: ResearchOptions): Promise<number> {
 
   const code = await ensureProject(cwd, slug, projectRoot);
   if (code !== 0) return code;
-  if (code !== 0) return code;
+  if (!(await assertStageWritable(projectRoot, "research", opts.force === true))) {
+    return 1;
+  }
 
   const cfg = loadProviderConfig();
   const roleCfg = cfg["research"];

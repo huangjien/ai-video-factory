@@ -39,8 +39,9 @@ pnpm install                  # workspace deps
 # Scaffold a project
 node packages/cli/dist/index.js new demo
 
-# Edit the storyboard, then render
+# Edit the storyboard, approve it (human gate), then render
 node packages/cli/dist/index.js validate projects/demo/storyboard/storyboard.yaml --root projects/demo
+node packages/cli/dist/index.js approve storyboard --cwd projects/demo
 node packages/cli/dist/index.js preview --cwd projects/demo
 
 # Approve review, render final
@@ -77,7 +78,10 @@ vf draft "transformer architectures"  # writes article.md + audio-config.yaml (L
 #   (--no-audio-plan skips the audio step; an existing audio-config.yaml
 #    is never overwritten — regenerate explicitly with `vf audio-plan`)
 
-# One command does everything:
+# One command does everything — rendering is human-gated (doc §58):
+vf approve storyboard --cwd projects/transformer-architectures
+#   ↑ after reading article.md (mirrored into storyboard.yaml); `vf make`
+#     fails at the render step with this exact instruction until you approve
 vf make "transformer architectures"    # TTS → assets → render → mix
 #   → projects/.../output/preview.mp4
 #   → projects/.../output/final-mixed.mp4

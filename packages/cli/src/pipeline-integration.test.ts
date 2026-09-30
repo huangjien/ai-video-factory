@@ -70,6 +70,11 @@ scenes:
     path.join(projectDir, "storyboard", "storyboard.yaml"),
     storyboard,
   );
+  // The preview gate (doc §58: never auto-approve) requires an approved
+  // storyboard checkpoint before rendering — approve as the human step.
+  const { runApprove } = await import("./workflow-commands.js");
+  const approved = await runApprove(projectId, "storyboard", root);
+  if (approved !== 0) throw new Error("seed approve storyboard failed");
   // Seed tiny valid TTS wav files (silent 5s at 8kHz mono)
   for (const scene of ["scene-01", "scene-02"]) {
     writeFileSync(
@@ -167,6 +172,41 @@ describe("CLI pipeline integration — runPreview / runFinal / runStatus / workf
     const code = await runPreview(projectName, projectCwd);
     expect(code).toBe(1);
   });
+
+  it("runPreview refuses to render without an approved storyboard checkpoint", async () => {
+    rmSync(path.join(projectDir, "checkpoints"), {
+      recursive: true,
+      force: true,
+    });
+    const code = await runPreview(projectName, projectCwd);
+    expect(code).toBe(1);
+    expect(
+      existsSync(path.join(projectDir, "output", "preview-faststart.mp4")),
+    ).toBe(false);
+  }, 60_000);
+
+  it("runPreview --force renders without approval and lands in WAITING_REVIEW", async () => {
+    rmSync(path.join(projectDir, "checkpoints"), {
+      recursive: true,
+      force: true,
+    });
+    const code = await runPreview(projectName, projectCwd, true);
+    expect(code).toBe(0);
+    const state = readState(projectDir);
+    expect(state.status).toBe("WAITING_REVIEW");
+  }, 120_000);
+
+  it("runPreview refuses a FINAL_APPROVED project (terminal state)", async () => {
+    const { writeProjectState } = await import("@vf/workflow");
+    await writeProjectState(projectDir, {
+      status: "FINAL_APPROVED",
+      current_stage: "final",
+      checkpoint: { id: "seed-final", status: "FINAL_APPROVED" },
+      history_tail: [],
+    });
+    const code = await runPreview(projectName, projectCwd);
+    expect(code).toBe(1);
+  }, 60_000);
 
   // ----- runStatus -----
 

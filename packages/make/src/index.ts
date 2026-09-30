@@ -384,7 +384,9 @@ interface AudioConfigShape {
  * Regex-based line replacement rather than yaml round-trip: that
  * would lose comments and reformat the file.
  */
-async function syncStoryboardDurations(projectRoot: string): Promise<string[]> {
+export async function syncStoryboardDurations(
+  projectRoot: string,
+): Promise<string[]> {
   const audioDir = path.join(projectRoot, "assets", "audio");
   const storyboardPath = path.join(projectRoot, "storyboard", "storyboard.yaml");
   if (!existsSync(audioDir) || !existsSync(storyboardPath)) return [];
@@ -398,9 +400,10 @@ async function syncStoryboardDurations(projectRoot: string): Promise<string[]> {
   for (const w of wavs) {
     const m = w.match(/^scene[-_]?(\d+)\.wav$/);
     if (!m) continue;
-    // Storyboard IDs are zero-padded (scene-01, scene-02 …). Keep the
-    // captured string verbatim so the lookup matches the YAML id line.
-    const idKey = m[1]!;
+    // Key by the scene NUMBER (parseInt-normalized): WAV names may be
+    // zero-padded ("scene_01.wav") while the lookup below reads the YAML
+    // id ("scene-01") the same way. Verbatim keys would never meet.
+    const idKey = String(parseInt(m[1]!, 10));
     try {
       const { stdout } = await execFileAsync("ffprobe", [
         "-v",
@@ -430,8 +433,8 @@ async function syncStoryboardDurations(projectRoot: string): Promise<string[]> {
   for (let i = 0; i < lines.length; i++) {
     const idMatch = lines[i]!.match(/^\s*-\s*id:\s*scene[-_]?(\d+)\s*$/);
     if (!idMatch) continue;
-    // YAML ids are zero-padded (scene-01, scene-02 …); wav filenames
-    // are not. parseInt collapses both to the integer key the Map uses.
+    // YAML ids may be zero-padded (scene-01 …); the Map is keyed by the
+    // parseInt-normalized scene number, so "01" and "1" both hit.
     const sceneKey = String(parseInt(idMatch[1]!, 10));
     const measured = durations.get(sceneKey);
     if (measured === undefined) continue;
@@ -673,9 +676,15 @@ function slugify(s: string): string {
 
 /** Same mp3ToWav helper as @vf/cli runAudio — kept local to avoid a
  * circular import from the CLI package. */
+/** Convert mp3 bytes (from TTS) to 44.1kHz mono WAV, padding to
+ * `minDurationSec` total when the narration is shorter. Never truncates:
+ * `apad=whole_dur` only tops up to the minimum, so a narration that runs
+ * longer than the article's estimate survives intact (the LLM routinely
+ * underestimates) and syncStoryboardDurations rewrites the storyboard to
+ * the measured length. */
 async function mp3ToWav(
   mp3Bytes: Uint8Array,
-  targetDurationSec: number,
+  minDurationSec: number,
 ): Promise<Uint8Array> {
   const dir = await (await import("node:fs/promises")).mkdtemp(
     path.join(os.tmpdir(), "vf-make-tts-"),
@@ -693,7 +702,7 @@ async function mp3ToWav(
       "-ac",
       "1",
       "-af",
-      `apad,atrim=0:${targetDurationSec}`,
+      `apad=whole_dur=${minDurationSec}`,
       outPath,
     ]);
     return await readFile(outPath);

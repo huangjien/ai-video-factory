@@ -47,6 +47,13 @@ export async function runApprove(
     console.error(`approve: unknown stage "${target}"`);
     return 1;
   }
+  // Approving implies the stage's artifact was actually reviewed.
+  if (target === "storyboard" && !existsSync(path.join(root, "storyboard", "storyboard.yaml"))) {
+    console.error(
+      `approve: no storyboard at ${root}/storyboard/storyboard.yaml — nothing to approve`,
+    );
+    return 1;
+  }
   const state = await readProjectState(root);
   if (!state) return 1;
   const machineState: MachineState = {
@@ -92,7 +99,7 @@ export async function runApprove(
   await appendCheckpoint(root, {
     id: `${target}-${next.record.run_id}`,
     stage: target as (typeof V01_STAGES)[number],
-    status: target === "final" ? "approved" : "approved",
+    status: "approved",
     created_at: next.record.at,
     approved_at: next.record.at,
     human_changes: [],

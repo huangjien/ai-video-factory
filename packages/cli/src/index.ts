@@ -108,6 +108,10 @@ program
     parseInt(v, 10),
   )
   .option("--audience <text>", "target audience (default: developers)")
+  .option(
+    "--force",
+    "regenerate even when the project is FINAL_APPROVED (prints a warning)",
+  )
   .action(
     async (
       topic: string,
@@ -118,6 +122,7 @@ program
         lang?: "zh-CN" | "en-US";
         duration?: number;
         audience?: string;
+        force?: boolean;
       },
     ) => {
       process.exitCode = await runResearch({
@@ -128,6 +133,7 @@ program
         ...(opts.lang !== undefined ? { lang: opts.lang } : {}),
         ...(opts.duration !== undefined ? { duration: opts.duration } : {}),
         ...(opts.audience !== undefined ? { audience: opts.audience } : {}),
+        ...(opts.force !== undefined ? { force: opts.force } : {}),
       });
     },
   );
@@ -300,6 +306,10 @@ program
     "--direction <text>",
     "human-provided story direction; agent adapts structure but keeps 7 sections",
   )
+  .option(
+    "--force",
+    "regenerate even when the project is FINAL_APPROVED (prints a warning)",
+  )
   .action(
     async (
       topic: string,
@@ -311,6 +321,7 @@ program
         audience?: string;
         fromResearch?: string;
         direction?: string;
+        force?: boolean;
       },
     ) => {
       process.exitCode = await runScript({
@@ -324,6 +335,7 @@ program
           ? { fromResearch: opts.fromResearch }
           : {}),
         ...(opts.direction !== undefined ? { direction: opts.direction } : {}),
+        ...(opts.force !== undefined ? { force: opts.force } : {}),
       });
     },
   );
@@ -350,6 +362,10 @@ program
     "--from-script <file>",
     "consume approved script from this file (e.g. script/script.zh-CN.md)",
   )
+  .option(
+    "--force",
+    "redraft even when the storyboard checkpoint is approved or the project is FINAL_APPROVED (prints a warning)",
+  )
   .action(
     async (
       topic: string,
@@ -362,6 +378,7 @@ program
         style?: string;
         fromResearch?: string;
         fromScript?: string;
+        force?: boolean;
       },
     ) => {
       process.exitCode = await runStoryboard({
@@ -378,6 +395,7 @@ program
         ...(opts.fromScript !== undefined
           ? { fromScript: opts.fromScript }
           : {}),
+        ...(opts.force !== undefined ? { force: opts.force } : {}),
       });
     },
   );
@@ -387,13 +405,23 @@ program
   .argument("<project>", "project: topic, folder name, path, or unique prefix")
   .option("--cwd <dir>", "base directory for the project")
   .option("--fake", "use FakeTTSProvider (no network) for tests")
-  .action(async (project: string, opts: { cwd?: string; fake?: boolean }) => {
-    process.exitCode = await runAudio({
-      project,
-      ...(opts.cwd !== undefined ? { cwd: opts.cwd } : {}),
-      ...(opts.fake !== undefined ? { fake: opts.fake } : {}),
-    });
-  });
+  .option(
+    "--force",
+    "regenerate even when the project is FINAL_APPROVED (prints a warning)",
+  )
+  .action(
+    async (
+      project: string,
+      opts: { cwd?: string; fake?: boolean; force?: boolean },
+    ) => {
+      process.exitCode = await runAudio({
+        project,
+        ...(opts.cwd !== undefined ? { cwd: opts.cwd } : {}),
+        ...(opts.fake !== undefined ? { fake: opts.fake } : {}),
+        ...(opts.force !== undefined ? { force: opts.force } : {}),
+      });
+    },
+  );
 
 program
   .command("audio-asset")
@@ -649,9 +677,18 @@ program
     "--cwd <dir>",
     "project root (used as base when [project] is given, or auto-discovered from)",
   )
-  .action(async (project: string | undefined, opts: { cwd?: string }) => {
-    process.exitCode = await runPreview(project, opts.cwd);
-  });
+  .option(
+    "--force",
+    "render even when the storyboard checkpoint is not approved (prints [FORCE] warning and records it in the audit trail)",
+  )
+  .action(
+    async (
+      project: string | undefined,
+      opts: { cwd?: string; force?: boolean },
+    ) => {
+      process.exitCode = await runPreview(project, opts.cwd, opts.force);
+    },
+  );
 
 program
   .command("final")

@@ -94,7 +94,17 @@ export async function renderPlanToVideo(
   const entry = path.join(workDir, "entry.tsx");
   await writeFile(entry, renderEntryTemplate(resolvedPlan), "utf8");
   try {
-    const serveUrl = await bundle({ entryPoint: entry });
+    const serveUrl = await bundle({
+      entryPoint: entry,
+      // The entry embeds the renderPlan (with base64 image data URLs), so
+      // its content changes every render — webpack's persistent cache can
+      // never hit and instead writes a fresh 250–575MB snapshot per render
+      // (56GB observed in node_modules/.cache/webpack). Disable it.
+      webpackOverride: (config) => ({
+        ...config,
+        cache: false,
+      }),
+    });
     const composition = await selectComposition({
       serveUrl,
       id: "video-factory",

@@ -54,15 +54,60 @@ describe("transition (todo 11) — §18.1", () => {
 
   it("rejects illegal transitions", () => {
     const cur: MachineState = { status: "DRAFT", stage: "init" };
-    expect(() => transition(cur, { kind: "approve" }, makeCtx())).toThrow(
-      /illegal transition/,
-    );
+    expect(() =>
+      transition(cur, { kind: "final_approve" }, makeCtx()),
+    ).toThrow(/illegal transition/);
     const reviewing: MachineState = {
       status: "WAITING_REVIEW",
       stage: "storyboard",
     };
     expect(() =>
       transition(reviewing, { kind: "final_approve" }, makeCtx()),
+    ).toThrow(/illegal/);
+  });
+
+  it("approve from DRAFT (content gate before preview) → APPROVED", () => {
+    const cur: MachineState = { status: "DRAFT", stage: "storyboard" };
+    const out = transition(cur, { kind: "approve" }, makeCtx());
+    expect(out.state.status).toBe("APPROVED");
+    expect(out.record.reason).toBe("approve");
+  });
+
+  it("preview is gated: illegal from DRAFT, legal from APPROVED", () => {
+    const draft: MachineState = { status: "DRAFT", stage: "storyboard" };
+    expect(() => transition(draft, { kind: "preview" }, makeCtx())).toThrow(
+      /illegal/,
+    );
+    const approved: MachineState = { status: "APPROVED", stage: "storyboard" };
+    const out = transition(approved, { kind: "preview" }, makeCtx());
+    expect(out.state.status).toBe("WAITING_REVIEW");
+  });
+
+  it("preview re-renders from WAITING_REVIEW and after reject (GENERATING)", () => {
+    const reviewing: MachineState = {
+      status: "WAITING_REVIEW",
+      stage: "review",
+    };
+    expect(
+      transition(reviewing, { kind: "preview" }, makeCtx()).state.status,
+    ).toBe("WAITING_REVIEW");
+    const generating: MachineState = {
+      status: "GENERATING",
+      stage: "storyboard",
+    };
+    expect(
+      transition(generating, { kind: "preview" }, makeCtx()).state.status,
+    ).toBe("WAITING_REVIEW");
+  });
+
+  it("force-preview bypasses the gate but not FINAL_APPROVED", () => {
+    const draft: MachineState = { status: "DRAFT", stage: "storyboard" };
+    const forced = transition(draft, { kind: "preview", force: true }, makeCtx());
+    expect(forced.state.status).toBe("WAITING_REVIEW");
+    expect(forced.record.reason).toBe("preview [forced]");
+    const final: MachineState = { status: "FINAL_APPROVED", stage: "final" };
+    expect(() =>
+      transition(final, { kind: "preview", force: true }, makeCtx()),
     ).toThrow(/illegal/);
   });
 

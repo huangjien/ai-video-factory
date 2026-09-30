@@ -6,6 +6,7 @@ import { execSync } from "node:child_process";
 import { parse as parseYaml } from "yaml";
 import { FakeTTSProvider, type TTSProvider } from "@vf/tts";
 import { resolveProjectDir } from "./project-path.js";
+import { assertStageWritable } from "./stage-guard.js";
 
 const execFileAsync = promisify(execFile);
 
@@ -14,6 +15,8 @@ export interface AudioOptions {
   project: string;
   /** Force fake provider (no network). */
   fake?: boolean | undefined;
+  /** Overwrite a human-approved storyboard's audio without the guard. */
+  force?: boolean | undefined;
 }
 
 // Default: male narration voices. Female alternatives: zh-CN-XiaoxiaoNeural,
@@ -44,7 +47,9 @@ async function mp3ToWav(
       "-ac",
       "1",
       "-af",
-      `apad=pad_dur=${minDurationSec}`,
+      // whole_dur = pad UP to this total length; never truncates.
+      // (pad_dur would APPEND minDurationSec of silence unconditionally.)
+      `apad=whole_dur=${minDurationSec}`,
       outPath,
     ]);
     const { readFile } = await import("node:fs/promises");
@@ -69,6 +74,9 @@ export async function runAudio(opts: AudioOptions): Promise<number> {
     return 1;
   }
   const projectRoot = resolvedProject.root;
+  if (!(await assertStageWritable(projectRoot, "audio", opts.force === true))) {
+    return 1;
+  }
   const sbPath = path.join(projectRoot, "storyboard", "storyboard.yaml");
   const scriptPath = path.join(projectRoot, "script", "script.zh-CN.md");
   // Allow en-US too

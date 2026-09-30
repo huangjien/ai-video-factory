@@ -8,3 +8,7 @@ allowBuilds:
 
 minimumReleaseAgeExclude:
   - prettier@3.9.9
+  - "@vitest/coverage-v8@5.0.3"
+  - "@vitest/mocker@5.0.3"
+  - "@vitest/spy@5.0.3"
+  - vitest@5.0.3

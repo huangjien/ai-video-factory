@@ -9,6 +9,7 @@ import { formatRunId } from "@vf/workflow";
 import { runNew } from "./new-command.js";
 import { ensureProject } from "./ensure-project.js";
 import { slugifyProjectName } from "./project-path.js";
+import { assertStageWritable } from "./stage-guard.js";
 
 export interface ScriptOptions {
   topic: string;
@@ -19,6 +20,7 @@ export interface ScriptOptions {
   audience?: string | undefined;
   fromResearch?: string | undefined;
   direction?: string | undefined;
+  force?: boolean | undefined;
 }
 
 function providerInstance(name: string): Provider {
@@ -51,7 +53,9 @@ export async function runScript(opts: ScriptOptions): Promise<number> {
 
   const code = await ensureProject(cwd, slug, projectRoot);
   if (code !== 0) return code;
-  if (code !== 0) return code;
+  if (!(await assertStageWritable(projectRoot, "script", opts.force === true))) {
+    return 1;
+  }
 
   const cfg = loadProviderConfig();
   const roleCfg = cfg["script"];

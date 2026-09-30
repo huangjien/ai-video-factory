@@ -5,6 +5,7 @@ export type Action =
   | { kind: "regenerate" }
   | { kind: "approve"; force?: boolean }
   | { kind: "edit" }
+  | { kind: "preview"; force?: boolean }
   | { kind: "rollback"; toCheckpoint: string }
   | { kind: "retry" }
   | { kind: "block"; reason: string }
@@ -19,14 +20,29 @@ export interface MachineState {
 }
 
 const TRANSITIONS: Record<WorkflowStatus, ReadonlyArray<WorkflowStatus>> = {
-  DRAFT: ["GENERATING"],
-  GENERATING: ["VALIDATING"],
+  // APPROVED from DRAFT: a content stage (e.g. storyboard) can be approved
+  // straight after generation — the human gate that must pass before
+  // `preview` is allowed to render (README "Why no auto-approval").
+  DRAFT: ["GENERATING", "APPROVED"],
+  // GENERATING → WAITING_REVIEW: after a reject/regenerate, `vf preview`
+  // re-runs generate+validate and resubmits for review (§18.1 cycle).
+  GENERATING: ["VALIDATING", "WAITING_REVIEW"],
   VALIDATING: ["WAITING_REVIEW", "FAILED", "BLOCKED"],
   FAILED: ["GENERATING", "BLOCKED"],
   BLOCKED: ["GENERATING"],
-  WAITING_REVIEW: ["APPROVED", "EDITING", "GENERATING", "ROLLED_BACK"],
+  // WAITING_REVIEW → WAITING_REVIEW: re-render a preview while still
+  // awaiting the human decision (e.g. after an audio fix).
+  WAITING_REVIEW: [
+    "APPROVED",
+    "EDITING",
+    "GENERATING",
+    "ROLLED_BACK",
+    "WAITING_REVIEW",
+  ],
   EDITING: ["VALIDATING"],
-  APPROVED: ["DRAFT", "FINAL_APPROVED"],
+  // APPROVED → WAITING_REVIEW: preview submits the approved content for
+  // review; FINAL_APPROVED stays terminal (absent everywhere).
+  APPROVED: ["DRAFT", "FINAL_APPROVED", "WAITING_REVIEW"],
   FINAL_APPROVED: [],
   ROLLED_BACK: ["DRAFT"],
 };
@@ -88,6 +104,15 @@ function nextStatus(
       return allowed.includes("FAILED") ? "FAILED" : null;
     case "edit":
       return allowed.includes("EDITING") ? "EDITING" : null;
+    case "preview":
+      // Rendering is gated: preview is only legal once the content stage
+      // has been approved (APPROVED) or is already awaiting review
+      // (WAITING_REVIEW re-render). Force bypasses legality except for
+      // the terminal FINAL_APPROVED state, same as approve.
+      if (action.force) {
+        return status === "FINAL_APPROVED" ? null : "WAITING_REVIEW";
+      }
+      return allowed.includes("WAITING_REVIEW") ? "WAITING_REVIEW" : null;
     case "approve":
       if (action.force) {
         // Force bypasses the legality check, but FINAL_APPROVED is
@@ -112,6 +137,7 @@ function actionReason(action: Action): string {
   if (action.kind === "block") return action.reason;
   if (action.kind === "rollback") return `rollback to ${action.toCheckpoint}`;
   if (action.kind === "approve" && action.force) return "approve [forced]";
+  if (action.kind === "preview" && action.force) return "preview [forced]";
   if (action.kind === "reset" && action.force) return "reset [forced]";
   return action.kind;
 }

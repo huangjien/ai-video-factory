@@ -23,12 +23,14 @@ makes the shell call.
 4. /video storyboard "<topic>" \               — drafts storyboard/storyboard.yaml
    --from-research projects/<slug>/research \
    --from-script projects/<slug>/script/script.zh-CN.md
-5. /video audio "<slug>"                       — synth per-scene WAVs + captions/zh-CN.srt
+5. /video approve storyboard --cwd projects/<slug> — HUMAN GATE (the user reads
+   the storyboard; preview refuses to render until this passes)
+6. /video audio "<slug>"                       — synth per-scene WAVs + captions/zh-CN.srt
    (edit storyboard to reference audio paths in scenes)
-6. /video review "<slug>"                      — Content/Visual/Technical review YAMLs
-7. /video preview --cwd projects/<slug>         — renders preview.mp4
-8. /video approve review --cwd projects/<slug>  — human gate
-9. /video final --cwd projects/<slug>           — renders final.mp4
+7. /video review "<slug>"                      — Content/Visual/Technical review YAMLs
+8. /video preview --cwd projects/<slug>         — renders preview.mp4
+9. /video approve review --cwd projects/<slug>  — human gate
+10. /video final --cwd projects/<slug>           — renders final.mp4
 ```
 
 ## Verbs (one line each)
@@ -47,7 +49,7 @@ makes the shell call.
 | `reject <reason>`          | record feedback, transition to regenerate          |
 | `rollback <checkpoint-id>` | confirm + invalidate downstream stages             |
 | `resume`                   | resume from last successful stage                  |
-| `preview`                  | render preview.mp4                                 |
+| `preview`                  | render preview.mp4 (refuses until `approve storyboard` passes; `--force` bypasses and is recorded) |
 | `final`                    | render final.mp4 (requires review APPROVED)        |
 
 ## Usage
@@ -61,6 +63,9 @@ human gate (`vf approve`) unless the user explicitly says to.
 
 - **Never auto-approve** storyboard/script/research drafts — the user must
   read and `vf approve` explicitly. Agents are drafting; humans decide.
+  The CLI enforces this: `preview` refuses to render without an approved
+  storyboard checkpoint, and re-running a generator over an approved stage
+  exits non-zero unless `--force` is passed.
 - **Credentials stay in env** — never write `MINIMAX_API_KEY` / `GLM_API_KEY`
   to disk. The grep test in the test suite asserts this.
 - **Failure exit code is non-zero** — surface LLM/TTS/render errors

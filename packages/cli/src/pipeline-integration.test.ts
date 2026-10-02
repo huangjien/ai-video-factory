@@ -376,4 +376,16 @@ describe("CLI pipeline integration — runPreview / runFinal / runStatus / workf
     const code = await runResume(projectName, projectCwd);
     expect(code).toBe(0);
   }, 60_000);
+
+  it("runResume no-ops on a FINAL_APPROVED project", async () => {
+    const { writeProjectState } = await import("@vf/workflow");
+    await writeProjectState(projectDir, {
+      status: "FINAL_APPROVED",
+      current_stage: "final",
+      checkpoint: { id: "seed-final", status: "FINAL_APPROVED" },
+      history_tail: [],
+    });
+    const code = await runResume(projectName, projectCwd);
+    expect(code).toBe(0);
+  }, 60_000);
 });

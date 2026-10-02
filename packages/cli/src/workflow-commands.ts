@@ -1,9 +1,9 @@
 import path from "node:path";
-import { execSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import { resolveProjectDir, resolveProjectRoot } from "./project-path.js";
 import {
   appendCheckpoint,
+  lastSuccessfulStage,
   loadCheckpoint,
   readProjectState,
   transition,
@@ -221,11 +221,51 @@ export async function runResume(
   }
   const state = await readProjectState(root);
   if (!state) return 1;
-  const head = execSync(`git rev-parse HEAD`, {
-    cwd: root,
-    encoding: "utf8",
-  }).trim();
-  console.log(`Resume from stage ${state.current_stage} at commit ${head}.`);
+  if (state.status === "FINAL_APPROVED") {
+    console.log(
+      `resume: project is FINAL_APPROVED — nothing to resume (rework with \`vf reset --force\`)`,
+    );
+    return 0;
+  }
+  const last = await lastSuccessfulStage(root);
+
+  // Make-flow project (article.md is its source of truth): the pipeline is
+  // idempotent — steps whose outputs are newer than their inputs are
+  // skipped, so re-running it completes an interrupted run (§25 resume,
+  // not restart). Human gates still apply: the render step stops at the
+  // approve gate and prints the approve command.
+  if (existsSync(path.join(root, "article.md"))) {
+    console.log(
+      `resume: make-flow project (last successful stage: ${last ?? "none"}, status ${state.status}) — re-running the idempotent pipeline`,
+    );
+    const { runMake } = await import("@vf/make");
+    try {
+      const report = await runMake({ projectRoot: root });
+      const failed = report.steps.filter((s) => s.status === "fail");
+      if (failed.length > 0) {
+        for (const s of failed) console.error(`  failed step: ${s.name} — ${s.message ?? ""}`);
+        return 1;
+      }
+      console.log(`✓ resume complete: ${report.outputFiles.length} output(s)`);
+      return 0;
+    } catch (err) {
+      console.error(`resume: pipeline failed: ${(err as Error).message}`);
+      return 1;
+    }
+  }
+
+  // CLI-flow project: resume from the recorded state — print where we are
+  // and the exact next command (§25: resume, not restart).
+  const next: Record<string, string> = {
+    init: "vf storyboard <topic> --cwd .  (or vf script / vf research first)",
+    storyboard: "vf audio <project>  (then vf review, vf preview)",
+    review: "vf approve review --cwd .  (then vf final)",
+    final: "vf youtube <project>  (publishing metadata)",
+  };
+  console.log(
+    `Resume from stage ${state.current_stage} at status ${state.status} (last successful run stage: ${last ?? "none"}).`,
+  );
+  console.log(`  next: ${next[state.current_stage] ?? "vf status for details"}`);
   return 0;
 }
 

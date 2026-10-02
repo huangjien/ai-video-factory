@@ -65,7 +65,19 @@ async function mtimeOrZero(p: string): Promise<number> {
  * the normal case (the LLM underestimates), and validation hard-fails
  * audio longer than its scene.
  */
-async function loadOrCompileStoryboard(
+/** Compile the storyboard into a RenderPlan, honoring the documented
+ * contract that the renderer reads the COMPILED vdsl.yaml (plan §6):
+ *
+ * - vdsl.yaml missing or older than storyboard.yaml → compile from the
+ *   storyboard and persist vdsl.yaml (the write the v0.1 code never did).
+ * - vdsl.yaml fresh → compile FROM vdsl.yaml (normalized, deterministic).
+ *
+ * Before compiling, measured TTS lengths are synced into the storyboard
+ * durations (`syncSceneDurations`): narration longer than the scene is
+ * the normal case (the LLM underestimates), and validation hard-fails
+ * audio longer than its scene.
+ */
+export async function loadOrCompileStoryboard(
   root: string,
   compileOpts: CompileOptions = {},
 ): Promise<{

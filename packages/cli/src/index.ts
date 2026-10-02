@@ -30,6 +30,7 @@ import {
   runSceneRestore,
 } from "./scene-command.js";
 import { runMotion } from "./motion-command.js";
+import { runQa } from "./qa-command.js";
 
 const program = new Command();
 
@@ -771,6 +772,24 @@ program
     ) => {
       process.exitCode = await runPreview(project, opts.cwd, opts.force, {
         draft: opts.draft,
+      });
+    },
+  );
+
+program
+  .command("qa")
+  .description(
+    "QA Agent: rebuild the render report for the current preview (plan §28/T6.1); exits 1 on error-level findings",
+  )
+  .argument("[project]", "project name (slug) — optional if exactly one project exists")
+  .option("--cwd <dir>", "project root base directory")
+  .option("--no-strict", "report findings without failing the command")
+  .action(
+    async (project: string | undefined, opts: { cwd?: string; strict?: boolean }) => {
+      process.exitCode = await runQa({
+        ...(project !== undefined ? { project } : {}),
+        ...(opts.cwd !== undefined ? { cwd: opts.cwd } : {}),
+        strict: opts.strict !== false,
       });
     },
   );

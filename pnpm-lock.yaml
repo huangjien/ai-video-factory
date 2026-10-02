@@ -376,6 +376,9 @@ importers:
 
   packages/qa:
     dependencies:
+      '@vf/media':
+        specifier: workspace:*
+        version: link:../media
       '@vf/vdsl':
         specifier: workspace:*
         version: link:../vdsl

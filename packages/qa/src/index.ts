@@ -4,6 +4,11 @@ import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { promisify } from "node:util";
 import type { RenderPlan } from "@vf/vdsl";
+import {
+  checkCaptions,
+  checkSceneAudioSync,
+  checkSceneBoundaries,
+} from "./checks.js";
 
 const execFileAsync = promisify(execFile);
 
@@ -133,6 +138,8 @@ export interface QaFinding {
   level: "error" | "warn";
   check: string;
   message: string;
+  /** Concrete remediation — every T6.1 finding carries one. */
+  fix?: string;
 }
 
 export interface RenderReport {
@@ -147,6 +154,12 @@ export interface RenderReport {
     audio: { hasAudio: boolean; expectedAudio: boolean; ok: boolean };
     blackFrames: BlackSegment[];
     assets: { missing: string[]; ok: boolean };
+    sceneAudioSync: {
+      rows: import("./checks.js").SceneSyncRow[];
+      ok: boolean;
+    };
+    captions: import("./checks.js").CaptionChecks;
+    sceneBoundaries: import("./checks.js").BoundaryChecks;
   };
 }
 
@@ -178,6 +191,7 @@ export async function buildRenderReport(
       level: "error",
       check: "duration",
       message: `video is ${info.duration.toFixed(2)}s but the plan says ${expectedDuration.toFixed(2)}s (tolerance ${tolerance}s)`,
+      fix: "Re-render (`vf preview` / `vf final`) or check the storyboard for duration drift.",
     });
   }
 
@@ -187,6 +201,7 @@ export async function buildRenderReport(
       level: "error",
       check: "fps",
       message: `video is ${info.fps}fps but the plan says ${plan.project.fps}fps`,
+      fix: "Re-render without --draft, or align the plan fps with the composition.",
     });
   }
 
@@ -198,6 +213,7 @@ export async function buildRenderReport(
       level: "error",
       check: "resolution",
       message: `video is ${actualRes} but the plan says ${expectedRes}`,
+      fix: "Draft renders are 960x540@15 — this report must come from a full-resolution render.",
     });
   }
 
@@ -239,8 +255,18 @@ export async function buildRenderReport(
       level: "error",
       check: "assets",
       message: `missing files: ${missing.join(", ")}`,
+      fix: "Regenerate with `vf make` / `vf audio`, or remove the dangling reference from the storyboard.",
     });
   }
+
+  // T6.1 extended checks: per-scene narration sync, caption sync + fit,
+  // scene-boundary detection. All findings carry fix suggestions.
+  const sceneSync = await checkSceneAudioSync(plan, projectRoot);
+  findings.push(...sceneSync.findings);
+  const captions = await checkCaptions(plan, projectRoot, info.duration);
+  findings.push(...captions.findings);
+  const boundaries = await checkSceneBoundaries(plan, videoPath);
+  findings.push(...boundaries.findings);
 
   return {
     video: videoPath,
@@ -262,6 +288,9 @@ export async function buildRenderReport(
       },
       blackFrames,
       assets: { missing, ok: missing.length === 0 },
+      sceneAudioSync: { rows: sceneSync.rows, ok: sceneSync.findings.length === 0 },
+      captions: captions.checks,
+      sceneBoundaries: boundaries.checks,
     },
   };
 }
@@ -284,3 +313,18 @@ export async function writeQaArtifacts(
   await makeContactSheet(videoPath, path.join(qaDir, "contact-sheet.png"));
   return report;
 }
+
+// Re-exports from the extended-checks module (T6.1) so consumers import
+// everything QA-related from "@vf/qa".
+export {
+  checkCaptions,
+  checkSceneAudioSync,
+  checkSceneBoundaries,
+  findCaptionFile,
+  parseSrt,
+  type BoundaryChecks,
+  type CaptionChecks,
+  type QaFixableFinding,
+  type SceneSyncRow,
+  type SrtCue,
+} from "./checks.js";

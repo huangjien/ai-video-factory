@@ -486,6 +486,13 @@ describe("CLI pipeline integration — runPreview / runFinal / runStatus / workf
     expect(code).toBe(0);
   }, 60_000);
 
+  it("runQa passes on a healthy project and re-uses the rendered preview", async () => {
+    await runPreview(projectName, projectCwd);
+    const { runQa } = await import("./qa-command.js");
+    const code = await runQa({ project: projectName, cwd: projectCwd });
+    expect(code).toBe(0);
+  }, 120_000);
+
   it("runResume no-ops on a FINAL_APPROVED project", async () => {
     const { writeProjectState } = await import("@vf/workflow");
     await writeProjectState(projectDir, {

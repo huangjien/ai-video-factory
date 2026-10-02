@@ -1,9 +1,9 @@
+import { useLayoutEffect, useRef } from "react";
 import { z } from "zod";
 import { darkTechTheme } from "../theme.js";
 import {
   buildStrokePlan,
   drawDoodleFrame,
-  hashStr,
   type CtxLike,
   type DoodleShape,
   type DoodleStrokeSpec,
@@ -61,39 +61,47 @@ const DARK: DoodleStyle = {
 export const DoodleScene = (props: DoodleSceneProps) => {
   const { frame, durationInFrames, strokes, background, wobble, seed } = props;
   const fps = (props as { fps?: number }).fps ?? 30;
+  // Raw props (no zod defaults applied at this boundary) — undefined
+  // must not overwrite the style defaults (wobble=NaN poisoned strokes).
   const style: DoodleStyle = {
-    ...(background === "paper" ? PAPER : DARK),
-    wobble,
+    background: background === "paper" ? PAPER.background : DARK.background,
+    ink: background === "paper" ? PAPER.ink : DARK.ink,
+    wobble: wobble ?? PAPER.wobble,
   };
   const specs: DoodleStrokeSpec[] = strokes.map((s) => ({
     ...s,
     ...(s.shape !== undefined ? { shape: s.shape as DoodleShape } : {}),
   }));
-  const plan = buildStrokePlan(specs, durationInFrames / fps, seed, style);
+  const plan = buildStrokePlan(specs, durationInFrames / fps, seed ?? 1, style);
+
+  // Canvas is drawn in useLayoutEffect — synchronous after the DOM commit
+  // and BEFORE paint, so headless frame capture always sees the finished
+  // pixels. (A callback-ref draw does not reliably survive Remotion's
+  // frame capture: the paper fill appeared but stroke content was lost.)
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  useLayoutEffect(() => {
+    const el = canvasRef.current;
+    if (!el) return;
+    const ctx = el.getContext("2d");
+    if (!ctx) return;
+    drawDoodleFrame(
+      ctx as unknown as CtxLike,
+      plan,
+      frame,
+      fps,
+      style,
+      CANVAS_W,
+      CANVAS_H,
+    );
+    // (debug instrumentation removed)
+  });
 
   return (
     <canvas
+      ref={canvasRef}
       width={CANVAS_W}
       height={CANVAS_H}
       style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }}
-      ref={(el) => {
-        if (!el) return;
-        const ctx = el.getContext("2d");
-        if (!ctx) return;
-        drawDoodleFrame(
-          ctx as unknown as CtxLike,
-          plan,
-          frame,
-          fps,
-          style,
-          CANVAS_W,
-          CANVAS_H,
-        );
-      }}
     />
   );
 };
-
-export function doodleSeedFor(id: string): number {
-  return hashStr(id);
-}

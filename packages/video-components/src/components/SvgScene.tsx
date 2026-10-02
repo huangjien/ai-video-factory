@@ -67,7 +67,16 @@ const CANVAS_W = 1920;
 const CANVAS_H = 1080;
 
 export const SvgScene = (props: SvgSceneProps) => {
-  const { frame, durationInFrames, animations = [], title, nodes, edges } = props;
+  // Raw props (the zod defaults don't apply at this boundary) — guard
+  // everything that would crash on undefined.
+  const {
+    frame,
+    durationInFrames,
+    animations = [],
+    title,
+    nodes = [],
+    edges = [],
+  } = props;
   const fps = (props as { fps?: number }).fps ?? 30;
   const durationSec = durationInFrames / fps;
 

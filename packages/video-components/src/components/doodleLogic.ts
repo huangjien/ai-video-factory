@@ -104,11 +104,12 @@ export function wobblePoints(
   if (amount <= 0) return points;
   const rand = rng(seed);
   const offsets = Array.from({ length: 4 }, () => (rand() - 0.5) * 2 * amount);
-  return points.map(([px, py], i) => {
+  const mapped = points.map(([px, py], i) => {
     const k = i % offsets.length;
     const l = (k + 1) % offsets.length;
     return [px + offsets[k]!, py + offsets[l]!] as [number, number];
   });
+  return mapped;
 }
 
 export interface DoodleStrokeSpec {
@@ -151,9 +152,8 @@ export function buildStrokePlan(
   const each = total / Math.max(1, strokes.length);
   return strokes.map((spec, i) => {
     const strokeSeed = (seed ^ hashStr(spec.id)) >>> 0;
-    const base =
-      spec.points ??
-      shapeStrokes(spec.shape ?? "circle", spec.x ?? 0, spec.y ?? 0, spec.size ?? 100, strokeSeed);
+    const generated = shapeStrokes(spec.shape ?? "circle", spec.x ?? 0, spec.y ?? 0, spec.size ?? 100, strokeSeed);
+    const base = spec.points ?? generated;
     const passes = Math.max(1, spec.passes ?? 2);
     const passPoints: [number, number][][] = Array.from(
       { length: passes },

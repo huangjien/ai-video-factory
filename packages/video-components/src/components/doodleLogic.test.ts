@@ -74,6 +74,26 @@ describe("doodleLogic — deterministic hand-drawn strokes (T4.4)", () => {
     expect(again).toEqual(plan);
   });
 
+  it("beat-sync: stroke onsets quantize to the BPM grid (plan §35 Demo 2)", () => {
+    const strokes = [
+      { id: "a", shape: "circle" as const, x: 300, y: 300, size: 120 },
+      { id: "b", shape: "star" as const, x: 900, y: 300, size: 140 },
+      { id: "c", shape: "zigzag" as const, x: 1400, y: 300, size: 100 },
+      { id: "d", shape: "spiral" as const, x: 1600, y: 400, size: 90 },
+    ];
+    const plan = buildStrokePlan(strokes, 10, 5, { background: "#fff", ink: "#000", wobble: 2 }, { bpm: 100 });
+    const beat = 60 / 100; // 0.6s
+    for (const entry of plan) {
+      const remainder = entry.startSec % beat;
+      expect(Math.min(remainder, beat - remainder)).toBeLessThan(1e-9);
+      expect(entry.startSec + entry.durationSec).toBeLessThanOrEqual(10);
+    }
+    // without bpm the raw sequential starts are NOT on the grid
+    const raw = buildStrokePlan(strokes, 10, 5, { background: "#fff", ink: "#000", wobble: 2 });
+    const offGrid = raw.some((e) => e.startSec % beat > 1e-9);
+    expect(offGrid).toBe(true);
+  });
+
   it("drawDoodleFrame draws progressively (pure function of the frame)", () => {
     const plan = buildStrokePlan(
       [

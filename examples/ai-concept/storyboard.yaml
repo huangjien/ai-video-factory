@@ -1,0 +1,180 @@
+schema_version: "0.2"
+
+# Demo 2 — AI Concept (plan §35): 60 seconds, hand-drawn canvas scenes.
+# "How a neural network learns" — six 10s scenes, strokes land on a
+# 100 BPM beat grid (beat-sync, verified in demo-ai-concept.test.ts).
+# Deterministic: seeded wobble, no LLM, no network.
+
+project:
+  id: ai-concept
+  language: zh-CN
+  fps: 30
+  width: 1280
+  height: 720
+
+style:
+  theme: dark-tech
+
+scenes:
+  - id: scene-01
+    duration: 10
+    narration:
+      text: "神经网络从数据开始。"
+      audio: "assets/audio/scene-01.wav"
+    visual:
+      component: DoodleScene
+      renderer: canvas
+      props:
+        background: paper
+        seed: 11
+        bpm: 100
+        strokes:
+          - id: data-in
+            shape: circle
+            x: 640
+            y: 360
+            size: 140
+            color: "#1971c2"
+            width: 8
+          - id: noisy
+            shape: zigzag
+            x: 640
+            y: 380
+            size: 130
+            color: "#1F1D1A"
+            width: 6
+
+  - id: scene-02
+    duration: 10
+    narration:
+      text: "一层层神经元把信号连接起来。"
+      audio: "assets/audio/scene-02.wav"
+    visual:
+      component: DoodleScene
+      renderer: canvas
+      props:
+        background: paper
+        seed: 22
+        bpm: 100
+        strokes:
+          - id: n1
+            shape: circle
+            x: 300
+            y: 360
+            size: 90
+            width: 7
+          - id: n2
+            shape: circle
+            x: 640
+            y: 360
+            size: 90
+            width: 7
+          - id: n3
+            shape: circle
+            x: 980
+            y: 360
+            size: 90
+            width: 7
+          - id: wire-1
+            points: [[390, 360], [550, 360]]
+            width: 5
+          - id: wire-2
+            points: [[730, 360], [890, 360]]
+            width: 5
+
+  - id: scene-03
+    duration: 10
+    narration:
+      text: "网络给出一个预测。"
+      audio: "assets/audio/scene-03.wav"
+    visual:
+      component: DoodleScene
+      renderer: canvas
+      props:
+        background: paper
+        seed: 33
+        bpm: 100
+        strokes:
+          - id: guess
+            shape: star
+            x: 500
+            y: 340
+            size: 130
+            color: "#F0B429"
+            width: 8
+
+  - id: scene-04
+    duration: 10
+    narration:
+      text: "误差就是预测和真相之间的距离。"
+      audio: "assets/audio/scene-04.wav"
+    visual:
+      component: DoodleScene
+      renderer: canvas
+      props:
+        background: paper
+        seed: 44
+        bpm: 100
+        strokes:
+          - id: truth
+            shape: circle
+            x: 500
+            y: 360
+            size: 110
+            width: 8
+          - id: gap
+            shape: zigzag
+            x: 800
+            y: 360
+            size: 110
+            color: "#C92A2A"
+            width: 7
+
+  - id: scene-05
+    duration: 10
+    narration:
+      text: "训练，就是沿着误差不断回转修正。"
+      audio: "assets/audio/scene-05.wav"
+    visual:
+      component: DoodleScene
+      renderer: canvas
+      props:
+        background: paper
+        seed: 55
+        bpm: 100
+        strokes:
+          - id: loop
+            shape: spiral
+            x: 640
+            y: 360
+            size: 200
+            color: "#1971c2"
+            width: 8
+
+  - id: scene-06
+    duration: 10
+    narration:
+      text: "训练完成，预测命中。"
+      audio: "assets/audio/scene-06.wav"
+    visual:
+      component: DoodleScene
+      renderer: canvas
+      props:
+        background: paper
+        seed: 66
+        bpm: 100
+        strokes:
+          - id: hit
+            shape: star
+            x: 640
+            y: 340
+            size: 150
+            color: "#3FB68B"
+            width: 9
+          - id: done
+            shape: zigzag
+            x: 640
+            y: 480
+            size: 70
+            color: "#3FB68B"
+            width: 8

@@ -37,6 +37,8 @@ export const DoodleScenePropsSchema = z
       )
       .min(1),
     background: z.enum(["paper", "dark"]).default("paper"),
+    /** Beat grid (BPM) — stroke onsets quantize to it (beat-sync). */
+    bpm: z.number().optional(),
     /** Hand-drawn wobble in px (seeded — deterministic). */
     wobble: z.number().default(2.5),
     seed: z.number().default(1),
@@ -59,7 +61,15 @@ const DARK: DoodleStyle = {
 };
 
 export const DoodleScene = (props: DoodleSceneProps) => {
-  const { frame, durationInFrames, strokes, background, wobble, seed } = props;
+  const {
+    frame,
+    durationInFrames,
+    strokes,
+    background,
+    wobble,
+    seed,
+    bpm,
+  } = props;
   const fps = (props as { fps?: number }).fps ?? 30;
   // Raw props (no zod defaults applied at this boundary) — undefined
   // must not overwrite the style defaults (wobble=NaN poisoned strokes).
@@ -72,7 +82,13 @@ export const DoodleScene = (props: DoodleSceneProps) => {
     ...s,
     ...(s.shape !== undefined ? { shape: s.shape as DoodleShape } : {}),
   }));
-  const plan = buildStrokePlan(specs, durationInFrames / fps, seed ?? 1, style);
+  const plan = buildStrokePlan(
+    specs,
+    durationInFrames / fps,
+    seed ?? 1,
+    style,
+    bpm !== undefined ? { bpm } : {},
+  );
 
   // Canvas is drawn in useLayoutEffect — synchronous after the DOM commit
   // and BEFORE paint, so headless frame capture always sees the finished

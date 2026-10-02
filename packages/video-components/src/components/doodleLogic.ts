@@ -140,13 +140,23 @@ export interface DoodleStyle {
   wobble: number;
 }
 
+/** Quantize a time onto a musical beat grid (animation-principles skill:
+ * land key moments ON the beat; 100 BPM → 0.6s grid). */
+export function quantizeToBeat(sec: number, bpm?: number): number {
+  if (!bpm || bpm <= 0) return sec;
+  const beat = 60 / bpm;
+  return Math.round(sec / beat) * beat;
+}
+
 /** Sequential draw plan: strokes share ~70% of the scene (the tail stays
- * on screen), each stroke eased-in is handled at draw time. */
+ * on screen); with `bpm`, stroke onsets are quantized to the beat grid
+ * (beat-sync, plan §35 Demo 2). */
 export function buildStrokePlan(
   strokes: DoodleStrokeSpec[],
   durationSec: number,
   seed: number,
   style: DoodleStyle,
+  opts: { bpm?: number } = {},
 ): StrokePlanEntry[] {
   const total = Math.max(0.5, durationSec * 0.7);
   const each = total / Math.max(1, strokes.length);
@@ -164,10 +174,14 @@ export function buildStrokePlan(
           style.wobble * (p === 0 ? 1 : 0.6),
         ),
     );
+    const startSec = Math.min(
+      quantizeToBeat(i * each, opts.bpm),
+      Math.max(0, durationSec - each),
+    );
     return {
       spec,
       passes: passPoints,
-      startSec: i * each,
+      startSec,
       durationSec: each,
     };
   });

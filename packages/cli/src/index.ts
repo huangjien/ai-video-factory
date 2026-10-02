@@ -681,12 +681,18 @@ program
     "--force",
     "render even when the storyboard checkpoint is not approved (prints [FORCE] warning and records it in the audit trail)",
   )
+  .option(
+    "--draft",
+    "draft quality: 960x540@15 for fast iteration (plan §27); final still renders 1080p30",
+  )
   .action(
     async (
       project: string | undefined,
-      opts: { cwd?: string; force?: boolean },
+      opts: { cwd?: string; force?: boolean; draft?: boolean },
     ) => {
-      process.exitCode = await runPreview(project, opts.cwd, opts.force);
+      process.exitCode = await runPreview(project, opts.cwd, opts.force, {
+        draft: opts.draft,
+      });
     },
   );
 

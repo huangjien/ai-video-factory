@@ -73,6 +73,9 @@ export interface CallYouTubeResult {
   /** Name of the provider that actually served the request
    * (primary or its fallback, per `chatWithFallback`). */
   providerName: string;
+  /** The exact messages sent to the provider — lets callers hash the
+   * real prompt for run-record `prompt_hash`. */
+  messages: ChatMessage[];
 }
 
 export function extractYaml(content: string): string {
@@ -159,5 +162,6 @@ export async function callYouTube(
     youtube: result.data,
     usage: res.usage,
     providerName: actualProvider,
+    messages,
   };
 }

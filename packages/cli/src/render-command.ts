@@ -1,5 +1,5 @@
 import { existsSync } from "node:fs";
-import { readFile } from "node:fs/promises";
+import { readFile, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { execSync } from "node:child_process";
 import { resolveProjectDir, resolveProjectRoot } from "./project-path.js";
@@ -13,23 +13,110 @@ import {
   type Stage,
   type WorkflowStatus,
 } from "@vf/workflow";
-import { compileStoryboard } from "@vf/vdsl";
-import { validateProject } from "@vf/vdsl";
+import {
+  compileStoryboard,
+  validateProject,
+  type CompileOptions,
+  type RenderPlan,
+} from "@vf/vdsl";
+import { syncSceneDurations } from "@vf/media";
 import { REGISTRY } from "@vf/video-components";
-import { renderPlanToVideo, faststart } from "@vf/video-renderer";
+import {
+  concatScenes,
+  faststart,
+  renderPlanToVideo,
+  renderSceneToVideo,
+} from "@vf/video-renderer";
 import { runValidate } from "./validate-command.js";
 
 const STORYBOARD_REL = "storyboard/storyboard.yaml";
+const VDSL_REL = "vdsl/vdsl.yaml";
+
+/** Draft quality (plan §27): same composition, 960x540@15 — iteration on
+ * composition/motion does not need 1080p30 render minutes. */
+const DRAFT_COMPILE: CompileOptions = { fps: 15, width: 960, height: 540 };
 
 async function loadStoryboard(projectRoot: string): Promise<string> {
   const abs = path.join(projectRoot, STORYBOARD_REL);
   return readFile(abs, "utf8");
 }
 
+async function mtimeOrZero(p: string): Promise<number> {
+  try {
+    return (await stat(p)).mtimeMs;
+  } catch {
+    return 0;
+  }
+}
+
+/**
+ * Compile the storyboard into a RenderPlan, honoring the documented
+ * contract that the renderer reads the COMPILED vdsl.yaml (plan §6):
+ *
+ * - vdsl.yaml missing or older than storyboard.yaml → compile from the
+ *   storyboard and persist vdsl.yaml (the write the v0.1 code never did).
+ * - vdsl.yaml fresh → compile FROM vdsl.yaml (normalized, deterministic).
+ *
+ * Before compiling, measured TTS lengths are synced into the storyboard
+ * durations (`syncSceneDurations`): narration longer than the scene is
+ * the normal case (the LLM underestimates), and validation hard-fails
+ * audio longer than its scene.
+ */
+async function loadOrCompileStoryboard(
+  root: string,
+  compileOpts: CompileOptions = {},
+): Promise<{ renderPlan: RenderPlan; compiledFromVdsl: boolean }> {
+  await syncSceneDurations(root);
+  const storyboardPath = path.join(root, STORYBOARD_REL);
+  const vdslPath = path.join(root, VDSL_REL);
+  const text = await loadStoryboard(root);
+
+  let source = text;
+  let compiledFromVdsl = false;
+  if (existsSync(vdslPath)) {
+    const [vdslM, sbM] = await Promise.all([
+      mtimeOrZero(vdslPath),
+      mtimeOrZero(storyboardPath),
+    ]);
+    if (vdslM >= sbM) {
+      source = await readFile(vdslPath, "utf8");
+      compiledFromVdsl = true;
+    }
+  }
+
+  // A corrupt/stub vdsl.yaml must never block rendering: fall back to the
+  // storyboard and rewrite the compiled artifact.
+  try {
+    const { renderPlan, write } = compileStoryboard(source, root, compileOpts);
+    if (!compiledFromVdsl) await write();
+    return { renderPlan, compiledFromVdsl };
+  } catch (err) {
+    if (!compiledFromVdsl) throw err;
+    console.error(
+      `warn: ${VDSL_REL} unusable (${(err as Error).message.split("\n")[0]}) — recompiling from storyboard`,
+    );
+    const { renderPlan, write } = compileStoryboard(text, root, compileOpts);
+    await write();
+    return { renderPlan, compiledFromVdsl: false };
+  }
+}
+
+/** Per-scene cache file name: index-prefixed (stable concat order) with a
+ * filesystem-safe slug of the scene id. */
+function sceneFileName(index: number, id: string): string {
+  const slug = id.replace(/[^a-zA-Z0-9_-]+/g, "_") || "scene";
+  return `${String(index).padStart(2, "0")}-${slug}.mp4`;
+}
+
+export interface PreviewOptions {
+  draft?: boolean | undefined;
+}
+
 export async function runPreview(
   projectName?: string,
   cwd?: string,
   force: boolean = false,
+  opts: PreviewOptions = {},
 ): Promise<number> {
   // Two ways to identify the project:
   //   1. `projectName` (slug or human name) → look under `${cwd ?? "."}/projects/<slug>`
@@ -84,14 +171,38 @@ export async function runPreview(
     console.warn(`[FORCE] rendering without an approved storyboard`);
   }
 
-  const text = await loadStoryboard(root);
+  const draft = opts.draft === true;
+  const { renderPlan } = await loadOrCompileStoryboard(
+    root,
+    draft ? DRAFT_COMPILE : {},
+  );
 
   const vcode = await runValidate(path.join(root, STORYBOARD_REL), root);
   if (vcode !== 0) return vcode;
 
-  const { renderPlan } = compileStoryboard(text, root);
+  // Scene-isolated incremental render (plan Principle 1): reuse every
+  // scene mp4 that is newer than its inputs (storyboard + that scene's
+  // narration audio), re-render only the stale ones, then concat.
+  const scenesDir = path.join(root, draft ? "scenes-draft" : "scenes");
+  const storyboardM = await mtimeOrZero(path.join(root, STORYBOARD_REL));
+  const sceneFiles: string[] = [];
+  for (const scene of renderPlan.scenes) {
+    const file = path.join(scenesDir, sceneFileName(scene.index, scene.id));
+    sceneFiles.push(file);
+    const audioM = scene.audio
+      ? await mtimeOrZero(path.join(root, scene.audio))
+      : 0;
+    const freshestInput = Math.max(storyboardM, audioM);
+    if ((await mtimeOrZero(file)) >= freshestInput && freshestInput > 0) {
+      console.log(`  scene ${scene.id}: cached`);
+      continue;
+    }
+    console.log(`  scene ${scene.id}: rendering`);
+    await renderSceneToVideo(renderPlan, scene.id, file);
+  }
+
   const out = path.join(root, "output", "preview.mp4");
-  await renderPlanToVideo(renderPlan, out);
+  await concatScenes(sceneFiles, out);
   const faststartOut = path.join(root, "output", "preview-faststart.mp4");
   await faststart(out, faststartOut);
 
@@ -105,7 +216,12 @@ export async function runPreview(
     tool: "remotion",
     tool_version: "4.0.526",
     input_commit: safeGitHead(root),
-    input_files: [STORYBOARD_REL, "vdsl/vdsl.yaml"],
+    // Honest input list: vdsl.yaml is only an input when it exists (it is
+    // written by loadOrCompileStoryboard on every non-draft compile).
+    input_files: [
+      STORYBOARD_REL,
+      ...(existsSync(path.join(root, VDSL_REL)) ? [VDSL_REL] : []),
+    ],
     output_files: ["output/preview.mp4", "output/preview-faststart.mp4"],
     created_at: new Date().toISOString(),
     duration_ms: Date.now() - start,
@@ -123,7 +239,7 @@ export async function runPreview(
   state.current_stage = "review";
   state.checkpoint = { id: runId, status: next.state.status };
   await writeProjectState(root, state);
-  console.log(`✓ preview rendered: ${out}`);
+  console.log(`✓ preview rendered: ${out}${draft ? " (draft 960x540@15)" : ""}`);
   return 0;
 }
 
@@ -159,8 +275,7 @@ export async function runFinal(
     );
     return 1;
   }
-  const text = await loadStoryboard(root);
-  const { renderPlan } = compileStoryboard(text, root);
+  const { renderPlan } = await loadOrCompileStoryboard(root);
   const out = path.join(root, "output", "final.mp4");
   await renderPlanToVideo(renderPlan, out);
   const faststartOut = path.join(root, "output", "final-faststart.mp4");
@@ -176,7 +291,10 @@ export async function runFinal(
     tool: "remotion",
     tool_version: "4.0.526",
     input_commit: safeGitHead(root),
-    input_files: [STORYBOARD_REL, "vdsl/vdsl.yaml"],
+    input_files: [
+      STORYBOARD_REL,
+      ...(existsSync(path.join(root, VDSL_REL)) ? [VDSL_REL] : []),
+    ],
     output_files: ["output/final.mp4", "output/final-faststart.mp4"],
     created_at: new Date().toISOString(),
     duration_ms: Date.now() - start,

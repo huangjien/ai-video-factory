@@ -21,6 +21,7 @@ import {
   EdgeTTSProvider,
   type TTSProvider,
 } from "@vf/tts";
+import { readSceneTimings, syncSceneDurations } from "@vf/media";
 import {
   FileBasedAudioAssetProvider,
   MockAudioAssetProvider,
@@ -135,7 +136,13 @@ export async function runMake(opts: MakeOptions): Promise<MakeReport> {
 
     // 1b. Resync storyboard.yaml durations to actual TTS lengths.
     await runStep(report, "sync-durations", idempotent, dryRun, () =>
-      syncStoryboardDurations(opts.projectRoot),
+      syncSceneDurations(opts.projectRoot),
+    );
+
+    // 1c. Captions SRT from the duration-synced storyboard — cue times
+    // match the rendered video, not the LLM's duration estimates (§16).
+    await runStep(report, "captions", idempotent, dryRun, () =>
+      writeCaptionsSrt(opts.projectRoot, article.frontmatter.language),
     );
 
     // 2. Materialize declared BGM/SFX assets.
@@ -375,81 +382,31 @@ interface AudioConfigShape {
 }
 
 /**
- * Probe each scene's TTS WAV and rewrite storyboard.yaml so its
- * `duration:` field matches actual audio length. Without this, the
- * renderer's frame count comes from the LLM-estimated duration in
- * article.md — which the LLM consistently underestimates — so the
- * video freezes at the planned length while the audio continues.
- *
- * Regex-based line replacement rather than yaml round-trip: that
- * would lose comments and reformat the file.
+ * Probe each scene's TTS WAV and rewrite storyboard.yaml so `duration:`
+ * matches actual audio length. Now lives in @vf/media (shared with
+ * `vf preview`, which must sync before validating audio-vs-scene).
  */
-export async function syncStoryboardDurations(
+export { syncSceneDurations as syncStoryboardDurations } from "@vf/media";
+
+/** SRT from the duration-synced storyboard: cue boundaries accumulate the
+ * MEASURED scene durations, so captions stay aligned when TTS runs longer
+ * than the LLM estimated (the common case — that's why sync exists). */
+async function writeCaptionsSrt(
   projectRoot: string,
+  lang: string,
 ): Promise<string[]> {
-  const audioDir = path.join(projectRoot, "assets", "audio");
-  const storyboardPath = path.join(projectRoot, "storyboard", "storyboard.yaml");
-  if (!existsSync(audioDir) || !existsSync(storyboardPath)) return [];
-
-  const wavs = (await readdir(audioDir))
-    .filter((f) => /^scene[-_]?(\d+)\.wav$/.test(f))
-    .sort();
-  if (wavs.length === 0) return [];
-
-  const durations = new Map<string, number>();
-  for (const w of wavs) {
-    const m = w.match(/^scene[-_]?(\d+)\.wav$/);
-    if (!m) continue;
-    // Key by the scene NUMBER (parseInt-normalized): WAV names may be
-    // zero-padded ("scene_01.wav") while the lookup below reads the YAML
-    // id ("scene-01") the same way. Verbatim keys would never meet.
-    const idKey = String(parseInt(m[1]!, 10));
-    try {
-      const { stdout } = await execFileAsync("ffprobe", [
-        "-v",
-        "error",
-        "-select_streams",
-        "a:0",
-        "-show_entries",
-        "stream=duration",
-        "-of",
-        "csv=p=0",
-        path.join(audioDir, w),
-      ]);
-      const sec = parseFloat(stdout.trim());
-      // Skip near-zero WAVs (fake TTS placeholder, partial downloads).
-      if (Number.isFinite(sec) && sec >= 1) {
-        durations.set(idKey, sec);
-      }
-    } catch {
-      // ignore unprobeable files
-    }
-  }
-  if (durations.size === 0) return [];
-
-  const yaml = await readFile(storyboardPath, "utf8");
-  const lines = yaml.split("\n");
-  const outputs: string[] = [];
-  for (let i = 0; i < lines.length; i++) {
-    const idMatch = lines[i]!.match(/^\s*-\s*id:\s*scene[-_]?(\d+)\s*$/);
-    if (!idMatch) continue;
-    // YAML ids may be zero-padded (scene-01 …); the Map is keyed by the
-    // parseInt-normalized scene number, so "01" and "1" both hit.
-    const sceneKey = String(parseInt(idMatch[1]!, 10));
-    const measured = durations.get(sceneKey);
-    if (measured === undefined) continue;
-    for (let j = i + 1; j < Math.min(lines.length, i + 6); j++) {
-      const durMatch = lines[j]!.match(/^(\s*)duration:\s*\d+(?:\.\d+)?\s*$/);
-      if (durMatch) {
-        const newSec = measured.toFixed(2);
-        lines[j] = `${durMatch[1]}duration: ${newSec}`;
-        outputs.push(`storyboard.yaml: scene_${sceneKey} duration=${newSec}s`);
-        break;
-      }
-    }
-  }
-  await writeFile(storyboardPath, lines.join("\n"), "utf8");
-  return outputs;
+  const scenes = await readSceneTimings(projectRoot);
+  const srtPath = path.join(projectRoot, "captions", `${lang}.srt`);
+  await mkdir(path.dirname(srtPath), { recursive: true });
+  let cursor = 0;
+  const cues = scenes.map((s, i) => {
+    const start = cursor;
+    const end = start + s.duration;
+    cursor = end;
+    return `${i + 1}\n${formatSrtTime(start)} --> ${formatSrtTime(end)}\n${s.narration}\n`;
+  });
+  await writeFile(srtPath, cues.join("\n"), "utf8");
+  return [`captions/${lang}.srt`];
 }
 
 async function runTts(
@@ -496,32 +453,17 @@ async function runTts(
     outputs.push(`assets/audio/${scene.id}.wav`);
   }
 
-  // Write a minimal captions SRT.
-  const srtPath = path.join(
-    projectRoot,
-    "captions",
-    `${article.frontmatter.language}.srt`,
-  );
-  await mkdir(path.dirname(srtPath), { recursive: true });
-  const scenes = article.scenes;
-  const cues = scenes
-    .map((s, i) => {
-      const start = scenes.slice(0, i).reduce((acc, x) => acc + x.duration, 0);
-      const end = start + s.duration;
-      return `${i + 1}\n${formatSrtTime(start)} --> ${formatSrtTime(end)}\n${s.narration}\n`;
-    })
-    .join("\n");
-  await writeFile(srtPath, cues, "utf8");
-  outputs.push(`captions/${article.frontmatter.language}.srt`);
-
   return outputs;
 }
 
 function formatSrtTime(sec: number): string {
-  const h = Math.floor(sec / 3600).toString().padStart(2, "0");
-  const m = Math.floor((sec % 3600) / 60).toString().padStart(2, "0");
-  const s = Math.floor(sec % 60).toString().padStart(2, "0");
-  const ms = Math.round((sec - Math.floor(sec)) * 1000).toString().padStart(3, "0");
+  // Decompose from rounded total ms — per-field rounding can emit
+  // invalid SRT like 00:00:59,1000.
+  const totalMs = Math.round(sec * 1000);
+  const h = Math.floor(totalMs / 3_600_000).toString().padStart(2, "0");
+  const m = (Math.floor(totalMs / 60_000) % 60).toString().padStart(2, "0");
+  const s = (Math.floor(totalMs / 1000) % 60).toString().padStart(2, "0");
+  const ms = (totalMs % 1000).toString().padStart(3, "0");
   return `${h}:${m}:${s},${ms}`;
 }
 

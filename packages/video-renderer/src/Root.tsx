@@ -1,66 +1,54 @@
 import { useCurrentFrame } from "remotion";
 import type { RenderPlan, RenderPlanScene } from "@vf/vdsl";
-import { REGISTRY, Background } from "@vf/video-components";
+import { REGISTRY, Background, CaptionsOverlay } from "@vf/video-components";
 import { darkTechTheme } from "@vf/video-components";
 
 export interface RootProps {
   renderPlan: RenderPlan;
 }
 
-function findScene(
-  scenes: RenderPlanScene[],
-  frame: number,
-): RenderPlanScene | undefined {
-  let active: RenderPlanScene | undefined;
-  for (const scene of scenes) {
-    if (
-      frame >= scene.startFrame &&
-      frame < scene.startFrame + scene.durationInFrames
-    ) {
-      active = scene;
-      break;
-    }
-  }
-  return active;
+/** Transition window in seconds (plan §10 transitions). fps-aware: the
+ * frame count scales with the composition so draft (15fps) and final
+ * (30fps) renders fade for the same wall-clock time. */
+const TRANSITION_SECONDS = 0.6;
+
+export function transitionFramesFor(fps: number): number {
+  return Math.max(1, Math.round(TRANSITION_SECONDS * fps));
 }
 
 /**
- * Cross-fade between adjacent scenes. In the last `transitionFrames`
- * of the current scene and the first `transitionFrames` of the next
- * scene, both are rendered with complementary opacities so one
- * dissolves into the other.
+ * Spec-driven scene transitions. A scene fades in over its first window
+ * when its transition.in is "fade" (or unspecified — 0.1 storyboards never
+ * declared transitions and always faded) and fades out over its last
+ * window when transition.out is "fade". An explicit "cut" renders at full
+ * opacity from the first frame — a hard switch, no animation.
+ *
+ * Exactly ONE scene is rendered per frame: the fade happens through the
+ * theme background, which keeps timelines deterministic (the next scene's
+ * local frame is never consumed early) and avoids rendering a second full
+ * scene tree at opacity 0.
  */
-function crossfadeOpacity(
-  frame: number,
+export function sceneOpacityAtFrame(
   scene: RenderPlanScene,
-  next: RenderPlanScene | undefined,
-  transitionFrames: number,
+  localFrame: number,
+  fps: number,
 ): number {
-  if (!next) return 1;
-  const localFrame = frame - scene.startFrame;
-  const exitStart = scene.durationInFrames - transitionFrames;
-  if (localFrame >= exitStart) {
-    return Math.max(
-      0,
-      1 - (localFrame - exitStart) / transitionFrames,
-    );
+  const w = transitionFramesFor(fps);
+  let opacity = 1;
+  const inKind = scene.transition?.in ?? "fade";
+  if (inKind === "fade" && localFrame < w) {
+    opacity = Math.min(opacity, (localFrame + 1) / w);
   }
-  return 1;
-}
-
-function nextSceneOpacity(
-  frame: number,
-  scene: RenderPlanScene,
-  next: RenderPlanScene | undefined,
-  transitionFrames: number,
-): number {
-  if (!next) return 0;
-  const localFrame = frame - scene.startFrame;
-  const enterEnd = transitionFrames;
-  if (localFrame < scene.durationInFrames - enterEnd) return 0;
-  const startNext = frame - next.startFrame;
-  if (startNext >= transitionFrames) return 0;
-  return Math.max(0, Math.min(1, startNext / transitionFrames));
+  const outKind = scene.transition?.out ?? "fade";
+  const exitStart = scene.durationInFrames - w;
+  if (outKind === "fade" && localFrame >= exitStart) {
+    const fade = Math.max(
+      0,
+      1 - (localFrame - exitStart) / w,
+    );
+    opacity = Math.min(opacity, fade);
+  }
+  return Math.max(0, Math.min(1, opacity));
 }
 
 export const Root = ({ renderPlan }: RootProps) => {
@@ -78,11 +66,7 @@ export const Root = ({ renderPlan }: RootProps) => {
   const SceneComponent = entry.component;
   const localFrame = frame - scene.startFrame;
 
-  const next = renderPlan.scenes[sceneIdx + 1];
-  const nextEntry = next ? REGISTRY[next.component] : undefined;
-  const transitionFrames = 18;
-  const fadeOut = crossfadeOpacity(frame, scene, next, transitionFrames);
-  const fadeIn = nextSceneOpacity(frame, scene, next, transitionFrames);
+  const opacity = sceneOpacityAtFrame(scene, localFrame, renderPlan.project.fps);
 
   const wrapStyle: React.CSSProperties = {
     position: "absolute",
@@ -97,25 +81,18 @@ export const Root = ({ renderPlan }: RootProps) => {
     frame: localFrame,
   } as unknown as Record<string, unknown> & React.JSX.IntrinsicElements["div"];
 
-  const nextProps = next
-    ? ({
-        ...next.props,
-        startFrame: next.startFrame,
-        durationInFrames: next.durationInFrames,
-        frame: Math.max(0, frame - next.startFrame),
-      } as unknown as Record<string, unknown> & React.JSX.IntrinsicElements["div"])
-    : null;
-
   return (
     <div style={wrapStyle}>
       <Background frame={frame} />
-      <div style={{ position: "absolute", inset: 0, opacity: fadeOut }}>
+      <div style={{ position: "absolute", inset: 0, opacity }}>
         <SceneComponent {...baseProps} />
       </div>
-      {next && nextProps && nextEntry ? (
-        <div style={{ position: "absolute", inset: 0, opacity: fadeIn }}>
-          <nextEntry.component {...nextProps} />
-        </div>
+      {scene.captions ? (
+        <CaptionsOverlay
+          lines={scene.captions.lines}
+          width={renderPlan.project.width}
+          height={renderPlan.project.height}
+        />
       ) : null}
     </div>
   );

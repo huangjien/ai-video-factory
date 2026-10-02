@@ -2,10 +2,16 @@ export { formatErrors, type VdslError } from "./errors.js";
 export { lineOf, parseYaml } from "./parse.js";
 export {
   ANIMATION_ENTRANCES,
+  ANIMATION_TYPES,
+  ASSET_TYPES,
+  EASINGS,
   TRANSITIONS,
+  VISUAL_RENDERERS,
   storyboardSchema,
+  type Asset,
   type Scene,
   type Storyboard,
+  type TimelineAnimation,
 } from "./schema.js";
 export { validateStoryboard, type ValidationResult } from "./validate.js";
 export {
@@ -16,6 +22,8 @@ export {
 } from "./validate-project.js";
 export {
   compileStoryboard,
+  slicePlanScene,
+  type CompileOptions,
   type RenderPlan,
   type RenderPlanScene,
 } from "./compile.js";

@@ -65,15 +65,13 @@ export async function runNew(opts: NewOptions): Promise<number> {
     STORYBOARD_TEMPLATE(projectId),
     "utf8",
   );
-  await writeFile(
-    path.join(root, "vdsl", "vdsl.yaml"),
-    `schema_version: "0.1"\nproject: {id: ${projectId}, language: zh-CN, fps: 30, width: 1920, height: 1080}\nscenes: []\n`,
-    "utf8",
-  );
+  // vdsl/vdsl.yaml is NOT scaffolded: it is the compiled artifact, written
+  // by `vf preview`/`vf final` from the storyboard (plan §6). Seeding it
+  // with an empty stub would make the freshness check prefer the stub.
   await writeProjectState(root, initState(projectId));
   console.log(`✓ scaffolded ${root}`);
   console.log(
-    `  next: edit storyboard/storyboard.yaml, then run \`vf preview\``,
+    `  next: edit storyboard/storyboard.yaml, then \`vf approve storyboard\`, then \`vf preview\``,
   );
   return 0;
 }

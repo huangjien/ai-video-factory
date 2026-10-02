@@ -105,6 +105,24 @@ export async function validateProject(
       }
     }
 
+    // Timeline animations (plan §10) must fit inside the scene: they are
+    // scene-relative seconds and silently overflowing would get clipped
+    // at render time.
+    const anims = scene.animations ?? [];
+    for (let a = 0; a < anims.length; a++) {
+      const anim = anims[a];
+      if (!anim) continue;
+      if (anim.start + anim.duration > scene.duration + AUDIO_TOLERANCE_S) {
+        errors.push({
+          file,
+          field: `${base.join(".")}.animations.${a}`,
+          line: line([...base, "animations", a]),
+          message: `Animation "${anim.id}" (${anim.type}) runs ${ (anim.start + anim.duration).toFixed(2) }s but scene duration is ${scene.duration}s — it would be clipped.`,
+          fix: "Shorten the animation or increase the scene duration.",
+        });
+      }
+    }
+
     const captionText =
       scene.captions?.text ??
       (scene.captions?.source === "narration"

@@ -28,3 +28,7 @@ export { Comparison, type ComparisonProps } from "./components/Comparison.js";
 export { Timeline, type TimelineProps } from "./components/Timeline.js";
 export { Callout, type CalloutProps } from "./components/Callout.js";
 export { EndCard, type EndCardProps } from "./components/EndCard.js";
+export {
+  CaptionsOverlay,
+  type CaptionsOverlayProps,
+} from "./components/CaptionsOverlay.js";

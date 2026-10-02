@@ -5,6 +5,8 @@ import {
   mkdtempSync,
   readFileSync,
   rmSync,
+  statSync,
+  utimesSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
@@ -166,6 +168,72 @@ describe("CLI pipeline integration — runPreview / runFinal / runStatus / workf
     expect(state.status).toBe("WAITING_REVIEW");
     expect(state.current_stage).toBe("review");
   }, 120_000);
+
+  it("writes the compiled vdsl.yaml and caches per-scene renders (plan §6/Principle 1)", async () => {
+    const code = await runPreview(projectName, projectCwd);
+    expect(code).toBe(0);
+
+    // vdsl.yaml is a real artifact now, compiled from the storyboard.
+    const vdslPath = path.join(projectDir, "vdsl", "vdsl.yaml");
+    expect(existsSync(vdslPath)).toBe(true);
+    const vdsl = readFileSync(vdslPath, "utf8");
+    expect(vdsl).toContain("scene-01");
+    expect(vdsl).toContain("scene-02");
+
+    // Per-scene cache files exist; a re-render with unchanged inputs
+    // reuses them (mtime unchanged) and only re-concats the output.
+    const scenesDir = path.join(projectDir, "scenes");
+    const sceneFiles = ["00-scene-01.mp4", "01-scene-02.mp4"].map((f) =>
+      path.join(scenesDir, f),
+    );
+    for (const f of sceneFiles) expect(existsSync(f)).toBe(true);
+    const mtimesBefore = sceneFiles.map((f) => statSync(f).mtimeMs);
+    rmSync(path.join(projectDir, "output", "preview.mp4"), { force: true });
+
+    const second = await runPreview(projectName, projectCwd);
+    expect(second).toBe(0);
+    const mtimesAfter = sceneFiles.map((f) => statSync(f).mtimeMs);
+    expect(mtimesAfter).toEqual(mtimesBefore);
+    expect(existsSync(path.join(projectDir, "output", "preview.mp4"))).toBe(
+      true,
+    );
+
+    // Touching the storyboard invalidates the cache and re-renders.
+    const sbPath = path.join(projectDir, "storyboard", "storyboard.yaml");
+    const future = new Date(Date.now() + 5000);
+    utimesSync(sbPath, future, future);
+    const third = await runPreview(projectName, projectCwd);
+    expect(third).toBe(0);
+    const mtimesRerendered = sceneFiles.map((f) => statSync(f).mtimeMs);
+    expect(mtimesRerendered).not.toEqual(mtimesAfter);
+  }, 240_000);
+
+  it("runPreview --draft renders 960x540@15 (plan §27)", async () => {
+    const code = await runPreview(projectName, projectCwd, false, {
+      draft: true,
+    });
+    expect(code).toBe(0);
+    expect(existsSync(path.join(projectDir, "scenes-draft"))).toBe(true);
+    const out = execFileSync(
+      "ffprobe",
+      [
+        "-v",
+        "error",
+        "-select_streams",
+        "v:0",
+        "-show_entries",
+        "stream=width,height,r_frame_rate",
+        "-of",
+        "json",
+        path.join(projectDir, "output", "preview.mp4"),
+      ],
+      { encoding: "utf8" },
+    );
+    const s = JSON.parse(out).streams[0];
+    expect(s.width).toBe(960);
+    expect(s.height).toBe(540);
+    expect(s.r_frame_rate).toBe("15/1");
+  }, 180_000);
 
   it("runPreview exits 1 when storyboard is missing", async () => {
     rmSync(path.join(projectDir, "storyboard", "storyboard.yaml"));

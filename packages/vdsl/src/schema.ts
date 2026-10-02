@@ -249,6 +249,187 @@ function safeCoerce<T extends readonly string[]>(
   };
 }
 
+// ---------------------------------------------------------------------------
+// VDSL 0.2 additions — visual renderer abstraction (plan §9), timeline
+// animation model (plan §10), and project-level assets (plan §11). All new
+// fields are OPTIONAL so every 0.1 storyboard validates unchanged.
+// ---------------------------------------------------------------------------
+
+const VISUAL_RENDERER_CANONICAL = [
+  "remotion",
+  "svg",
+  "canvas",
+  "excalidraw",
+] as const;
+const VISUAL_RENDERER_SYNONYMS: Record<
+  string,
+  (typeof VISUAL_RENDERER_CANONICAL)[number]
+> = {
+  remotion: "remotion",
+  react: "remotion",
+  component: "remotion",
+  svg: "svg",
+  whiteboard: "svg",
+  diagram: "svg",
+  canvas: "canvas",
+  handdrawn: "canvas",
+  "hand-drawn": "canvas",
+  doodle: "canvas",
+  excalidraw: "excalidraw",
+  "excalidraw-asset": "excalidraw",
+};
+
+export function coerceVisualRenderer(
+  raw: string,
+): (typeof VISUAL_RENDERER_CANONICAL)[number] {
+  const key = raw
+    .trim()
+    .toLowerCase()
+    .replace(/[\s_-]+/g, "-");
+  const mapped = VISUAL_RENDERER_SYNONYMS[key];
+  if (mapped) return mapped;
+  if ((VISUAL_RENDERER_CANONICAL as readonly string[]).includes(key)) {
+    return key as (typeof VISUAL_RENDERER_CANONICAL)[number];
+  }
+  throw new Error(
+    `unknown visual.renderer: "${raw}" (canonical: ${VISUAL_RENDERER_CANONICAL.join(", ")})`,
+  );
+}
+
+/** Timeline animation types — first batch per plan §10. spring/path-follow/
+ * particle/mask/blur/glow/parallax are deliberately NOT accepted yet. */
+const ANIMATION_TYPE_CANONICAL = [
+  "draw",
+  "write",
+  "fade",
+  "move",
+  "scale",
+  "rotate",
+  "highlight",
+  "morph",
+  "camera",
+] as const;
+const ANIMATION_TYPE_SYNONYMS: Record<
+  string,
+  (typeof ANIMATION_TYPE_CANONICAL)[number]
+> = {
+  draw: "draw",
+  wipe: "draw",
+  stroke: "draw",
+  write: "write",
+  type: "write",
+  handwriting: "write",
+  fade: "fade",
+  "fade-in": "fade",
+  fadein: "fade",
+  appear: "fade",
+  move: "move",
+  "move-to": "move",
+  translate: "move",
+  slide: "move",
+  scale: "scale",
+  zoom: "scale",
+  pop: "scale",
+  rotate: "rotate",
+  spin: "rotate",
+  highlight: "highlight",
+  emphasize: "highlight",
+  marker: "highlight",
+  morph: "morph",
+  morphing: "morph",
+  camera: "camera",
+  pan: "camera",
+};
+
+export function coerceAnimationType(
+  raw: string,
+): (typeof ANIMATION_TYPE_CANONICAL)[number] {
+  const key = raw
+    .trim()
+    .toLowerCase()
+    .replace(/[\s_-]+/g, "-");
+  const mapped = ANIMATION_TYPE_SYNONYMS[key];
+  if (mapped) return mapped;
+  if ((ANIMATION_TYPE_CANONICAL as readonly string[]).includes(key)) {
+    return key as (typeof ANIMATION_TYPE_CANONICAL)[number];
+  }
+  throw new Error(
+    `unknown animations[].type: "${raw}" (canonical: ${ANIMATION_TYPE_CANONICAL.join(", ")})`,
+  );
+}
+
+const EASING_CANONICAL = ["linear", "easeIn", "easeOut", "easeInOut"] as const;
+const EASING_SYNONYMS: Record<string, (typeof EASING_CANONICAL)[number]> = {
+  linear: "linear",
+  none: "linear",
+  easein: "easeIn",
+  "ease-in": "easeIn",
+  easeout: "easeOut",
+  "ease-out": "easeOut",
+  easeinout: "easeInOut",
+  "ease-in-out": "easeInOut",
+  smooth: "easeInOut",
+};
+
+export function coerceEasing(
+  raw: string,
+): (typeof EASING_CANONICAL)[number] {
+  const key = raw
+    .trim()
+    .toLowerCase()
+    .replace(/[\s_-]+/g, "-");
+  const mapped = EASING_SYNONYMS[key];
+  if (mapped) return mapped;
+  if ((EASING_CANONICAL as readonly string[]).includes(key)) {
+    return key as (typeof EASING_CANONICAL)[number];
+  }
+  throw new Error(
+    `unknown easing: "${raw}" (canonical: ${EASING_CANONICAL.join(", ")})`,
+  );
+}
+
+const ASSET_TYPE_CANONICAL = [
+  "svg",
+  "png",
+  "jpg",
+  "webp",
+  "excalidraw",
+  "canvas",
+  "audio",
+  "video",
+  "font",
+] as const;
+
+const assetSchema = z
+  .object({
+    id: z.string().min(1),
+    type: z.enum(ASSET_TYPE_CANONICAL),
+    source: z.enum(["generated", "user", "external"]).default("generated"),
+    path: z.string().min(1),
+    metadata: z.record(z.unknown()).optional(),
+  })
+  .strict();
+
+const timelineAnimationSchema = z
+  .object({
+    id: z.string().min(1),
+    target: z.string().min(1),
+    type: z.preprocess(
+      safeCoerce(coerceAnimationType, ANIMATION_TYPE_CANONICAL),
+      z.enum(ANIMATION_TYPE_CANONICAL),
+    ),
+    /** Seconds relative to scene start. */
+    start: z.number().min(0),
+    duration: z.number().positive(),
+    easing: z
+      .preprocess(
+        safeCoerce(coerceEasing, EASING_CANONICAL),
+        z.enum(EASING_CANONICAL),
+      )
+      .default("easeInOut"),
+  })
+  .strict();
+
 const projectSchema = z
   .object({
     id: z.string().min(1),
@@ -276,6 +457,16 @@ const visualSchema = z
   .object({
     component: z.string().min(1),
     props: z.record(z.unknown()),
+    /** Which runtime draws this scene (plan §9). Defaults to "remotion" —
+     * REGISTRY components. svg/canvas/excalidraw renderers land in later
+     * phases; the compiler carries the value and the renderer fails loudly
+     * if asked to draw with an unwired runtime. */
+    renderer: z
+      .preprocess(
+        safeCoerce(coerceVisualRenderer, VISUAL_RENDERER_CANONICAL),
+        z.enum(VISUAL_RENDERER_CANONICAL),
+      )
+      .default("remotion"),
   })
   .strict();
 
@@ -332,6 +523,8 @@ const sceneSchema = z
     narration: narrationSchema.optional(),
     visual: visualSchema,
     animation: animationSchema.optional(),
+    /** Timeline animation model (plan §10) — scene-relative seconds. */
+    animations: z.array(timelineAnimationSchema).optional(),
     captions: captionsSchema.optional(),
     transition: transitionSchema.optional(),
   })
@@ -339,14 +532,22 @@ const sceneSchema = z
 
 export const storyboardSchema = z
   .object({
-    schema_version: z.literal("0.1"),
+    schema_version: z.enum(["0.1", "0.2"]),
     project: projectSchema,
     style: styleSchema.optional(),
+    /** Project-level asset manifest (plan §11). */
+    assets: z.array(assetSchema).optional(),
     scenes: z.array(sceneSchema).min(1),
   })
   .strict();
 
 export type Storyboard = z.infer<typeof storyboardSchema>;
 export type Scene = z.infer<typeof sceneSchema>;
+export type TimelineAnimation = z.infer<typeof timelineAnimationSchema>;
+export type Asset = z.infer<typeof assetSchema>;
 
 export const ANIMATION_ENTRANCES = ANIMATION_ENTRANCE_CANONICAL;
+export const ANIMATION_TYPES = ANIMATION_TYPE_CANONICAL;
+export const EASINGS = EASING_CANONICAL;
+export const VISUAL_RENDERERS = VISUAL_RENDERER_CANONICAL;
+export const ASSET_TYPES = ASSET_TYPE_CANONICAL;

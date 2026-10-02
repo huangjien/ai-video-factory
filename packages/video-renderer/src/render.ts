@@ -15,7 +15,7 @@ import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
 import { bundle } from "@remotion/bundler";
 import { renderMedia, selectComposition } from "@remotion/renderer";
-import type { RenderPlan } from "@vf/vdsl";
+import { slicePlanScene, type RenderPlan } from "@vf/vdsl";
 
 const execFileAsync = promisify(execFile);
 
@@ -83,10 +83,73 @@ const App = () => (
 registerRoot(App);
 `;
 
+/** Fail loudly when a scene names a visual renderer that has no wired
+ * runtime (plan §9: svg/canvas/excalidraw land in later phases). Silent
+ * fallback would render the wrong thing; the CLI should stop instead. */
+export function assertPlanRenderable(plan: RenderPlan): void {
+  const unwired = plan.scenes.filter((s) => s.renderer !== "remotion");
+  if (unwired.length > 0) {
+    throw new Error(
+      `render: visual renderer(s) not wired yet: ${unwired
+        .map((s) => `${s.id}→${s.renderer}`)
+        .join(", ")}. Only "remotion" scenes can render today.`,
+    );
+  }
+}
+
+/** Render a single scene to its own MP4 (scene isolation, plan Principle 1):
+ * the scene becomes a standalone composition starting at frame 0, so
+ * touching one scene never re-renders its siblings. */
+export async function renderSceneToVideo(
+  renderPlan: RenderPlan,
+  sceneId: string,
+  outPath: string,
+): Promise<void> {
+  const { plan } = slicePlanScene(renderPlan, sceneId);
+  await renderPlanToVideo(plan, outPath);
+}
+
+/** Concatenate per-scene MP4s (same codec/geometry) into one file via the
+ * ffmpeg concat demuxer — no re-encode. Scene order is the caller's array
+ * order. */
+export async function concatScenes(
+  sceneFiles: string[],
+  outPath: string,
+): Promise<void> {
+  if (sceneFiles.length === 0) {
+    throw new Error("concatScenes: no scene files given");
+  }
+  const workDir = await mkdtemp(path.join(tmpdir(), "vf-concat-"));
+  try {
+    const listPath = path.join(workDir, "list.txt");
+    // ffmpeg's concat demuxer quoting: escape each single quote as '\''.
+    const list = sceneFiles
+      .map((f) => `file '${f.replaceAll("'", "'\\''")}'`)
+      .join("\n");
+    await writeFile(listPath, `${list}\n`, "utf8");
+    await mkdir(path.dirname(outPath), { recursive: true });
+    await execFileAsync("ffmpeg", [
+      "-y",
+      "-f",
+      "concat",
+      "-safe",
+      "0",
+      "-i",
+      listPath,
+      "-c",
+      "copy",
+      outPath,
+    ]);
+  } finally {
+    await rm(workDir, { recursive: true, force: true }).catch(() => {});
+  }
+}
+
 export async function renderPlanToVideo(
   renderPlan: RenderPlan,
   outPath: string,
 ): Promise<void> {
+  assertPlanRenderable(renderPlan);
   void sweepRemotionTemp().catch(() => {});
   await mkdir(path.dirname(outPath), { recursive: true });
   const resolvedPlan = await resolveImageSources(renderPlan);

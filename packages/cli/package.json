@@ -36,6 +36,7 @@
     "@vf/make": "workspace:*",
     "@vf/media": "workspace:*",
     "@vf/media-generators": "workspace:*",
+    "@vf/motion": "workspace:*",
     "@vf/qa": "workspace:*",
     "@vf/research": "workspace:*",
     "@vf/review": "workspace:*",

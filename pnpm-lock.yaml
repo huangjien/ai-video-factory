@@ -262,6 +262,9 @@ importers:
       '@vf/media-generators':
         specifier: workspace:*
         version: link:../media-generators
+      '@vf/motion':
+        specifier: workspace:*
+        version: link:../motion
       '@vf/qa':
         specifier: workspace:*
         version: link:../qa
@@ -361,9 +364,15 @@ importers:
 
   packages/motion:
     dependencies:
+      '@vf/llm':
+        specifier: workspace:*
+        version: link:../llm
       '@vf/vdsl':
         specifier: workspace:*
         version: link:../vdsl
+      yaml:
+        specifier: ^2.7.0
+        version: 2.9.1
 
   packages/qa:
     dependencies:

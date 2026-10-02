@@ -3,6 +3,18 @@ export {
   type SkillGuidance,
 } from "./adapter.js";
 export {
+  MOTION_SKILLS,
+  buildMotionMessages,
+  type MotionAgentSceneInput,
+} from "./prompt.js";
+export {
+  MotionAgentError,
+  callMotionAgent,
+  extractMotionYaml,
+  parseMotionSpec,
+  type MotionAgentResult,
+} from "./agent.js";
+export {
   COMPONENT_ENTRANCE,
   EASING_RULES,
   EMPHASIS_AT_FRACTION,

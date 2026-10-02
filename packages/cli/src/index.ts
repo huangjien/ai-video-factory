@@ -29,6 +29,7 @@ import {
   runSceneList,
   runSceneRestore,
 } from "./scene-command.js";
+import { runMotion } from "./motion-command.js";
 
 const program = new Command();
 
@@ -400,6 +401,52 @@ program
         ...(opts.fromScript !== undefined
           ? { fromScript: opts.fromScript }
           : {}),
+        ...(opts.force !== undefined ? { force: opts.force } : {}),
+      });
+    },
+  );
+
+program
+  .command("motion")
+  .description(
+    "Motion Agent: plan per-scene timeline animations + transitions (plan §13/T4.2)",
+  )
+  .argument("<project>", "project: topic, folder name, path, or unique prefix")
+  .option("--cwd <dir>", "base directory for the project")
+  .option("--scene <id>", "plan motion for one scene only")
+  .option(
+    "--bpm <n>",
+    "beat grid to quantize entrance/emphasis moments to (e.g. 120)",
+    (v) => parseInt(v, 10),
+  )
+  .option(
+    "--baseline",
+    "skip the LLM — apply the deterministic motion heuristics verbatim",
+  )
+  .option("--model <provider>", "model provider: minimax|glm (default from motion role config)")
+  .option(
+    "--force",
+    "regenerate even when the storyboard checkpoint is approved or the project is FINAL_APPROVED (prints a warning)",
+  )
+  .action(
+    async (
+      project: string,
+      opts: {
+        cwd?: string;
+        scene?: string;
+        bpm?: number;
+        baseline?: boolean;
+        model?: "minimax" | "glm";
+        force?: boolean;
+      },
+    ) => {
+      process.exitCode = await runMotion({
+        project,
+        ...(opts.cwd !== undefined ? { cwd: opts.cwd } : {}),
+        ...(opts.scene !== undefined ? { scene: opts.scene } : {}),
+        ...(opts.bpm !== undefined ? { bpm: opts.bpm } : {}),
+        ...(opts.baseline !== undefined ? { baseline: opts.baseline } : {}),
+        ...(opts.model !== undefined ? { model: opts.model } : {}),
         ...(opts.force !== undefined ? { force: opts.force } : {}),
       });
     },

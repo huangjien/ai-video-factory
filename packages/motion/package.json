@@ -14,6 +14,8 @@
     "build": "tsc -p tsconfig.json"
   },
   "dependencies": {
-    "@vf/vdsl": "workspace:*"
+    "@vf/llm": "workspace:*",
+    "@vf/vdsl": "workspace:*",
+    "yaml": "^2.7.0"
   }
 }

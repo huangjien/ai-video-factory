@@ -6,7 +6,13 @@ import { parse as parseYaml } from "yaml";
  * exact example shown in §6. Override via a YAML file (e.g. `llm.config.yaml`)
  * or the `LL_CONFIG` env var pointing at one.
  */
-export type Role = "research" | "script" | "storyboard" | "visual" | "review";
+export type Role =
+  | "research"
+  | "script"
+  | "storyboard"
+  | "visual"
+  | "motion"
+  | "review";
 
 export interface ProviderRef {
   primary: string;
@@ -20,6 +26,7 @@ const DEFAULT_CONFIG: ProviderConfig = {
   script: { primary: "minimax", fallback: "glm" },
   storyboard: { primary: "minimax", fallback: "glm" },
   visual: { primary: "minimax", fallback: "glm" },
+  motion: { primary: "minimax", fallback: "glm" },
   review: { primary: "glm", fallback: "minimax" },
 };
 

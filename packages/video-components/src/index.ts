@@ -38,6 +38,12 @@ export {
   DoodleScenePropsSchema,
 } from "./components/DoodleScene.js";
 export {
+  ExcalidrawSpecSchema,
+  svgSpecToAnimatedSvg,
+  svgSpecToExcalidraw,
+  type ExcalidrawSpec,
+} from "./components/excalidraw.js";
+export {
   buildStrokePlan,
   drawDoodleFrame,
   hashStr,

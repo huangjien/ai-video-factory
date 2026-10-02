@@ -32,6 +32,7 @@ import {
 import { runMotion } from "./motion-command.js";
 import { runQa } from "./qa-command.js";
 import { runStudio } from "./studio-command.js";
+import { runExcalidraw } from "./excalidraw-command.js";
 
 const program = new Command();
 
@@ -450,6 +451,29 @@ program
         ...(opts.baseline !== undefined ? { baseline: opts.baseline } : {}),
         ...(opts.model !== undefined ? { model: opts.model } : {}),
         ...(opts.force !== undefined ? { force: opts.force } : {}),
+      });
+    },
+  );
+
+program
+  .command("excalidraw")
+  .description(
+    "Excalidraw asset generator (plan §4.2/T7.1): each svg/SvgScene becomes a hand-editable .excalidraw + a standalone animated SVG under assets/excalidraw/",
+  )
+  .argument("<project>", "project: topic, folder name, path, or unique prefix")
+  .option("--cwd <dir>", "base directory for the project")
+  .option("--duration <seconds>", "animation length for generated SVGs", (v) =>
+    parseFloat(v),
+  )
+  .action(
+    async (
+      project: string,
+      opts: { cwd?: string; duration?: number },
+    ) => {
+      process.exitCode = await runExcalidraw({
+        project,
+        ...(opts.cwd !== undefined ? { cwd: opts.cwd } : {}),
+        ...(opts.duration !== undefined ? { durationSec: opts.duration } : {}),
       });
     },
   );

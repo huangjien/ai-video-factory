@@ -1,11 +1,15 @@
 import path from "node:path";
+import { execSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import { resolveProjectDir, resolveProjectRoot } from "./project-path.js";
 import {
   appendCheckpoint,
+  invalidateCheckpoint,
   lastSuccessfulStage,
+  listCheckpoints,
   loadCheckpoint,
   readProjectState,
+  stagesInvalidatedBy,
   transition,
   V01_STAGES,
   writeProjectState,
@@ -176,27 +180,100 @@ export async function runRollback(
   }
   const state = await readProjectState(root);
   if (!state) return 1;
-  console.log(
-    `This will reset working state to checkpoint ${checkpointId}.\nCurrent changes will remain in Git.\nContinue? [y/N]`,
-  );
+
+  // Resolve the checkpoint id against the project's checkpoints and run
+  // records — an unknown id must be rejected, not "rolled back to".
+  const checkpoints = await listCheckpoints(root);
+  const target = checkpoints.find((cp) => cp.id === checkpointId);
+  if (!target) {
+    console.error(`rollback: unknown checkpoint "${checkpointId}"`);
+    const ids = checkpoints.map((cp) => `  ${cp.id}  (${cp.stage}, ${cp.status})`);
+    if (ids.length > 0) console.error(`available checkpoints:\n${ids.join("\n")}`);
+    else console.error("  (no checkpoints recorded yet)");
+    return 1;
+  }
+  const targetStage = target.stage;
+  const downstream = stagesInvalidatedBy(targetStage);
+
+  if (state.status === "FINAL_APPROVED") {
+    console.error(
+      `rollback: project is FINAL_APPROVED (terminal) — run \`vf reset --force\` to rework it`,
+    );
+    return 1;
+  }
+
+  // §18.2: show the target checkpoint, the stages that will be invalidated,
+  // and require confirmation. Rollback never overwrites artifacts — content
+  // stays; downstream stages just have to re-run.
+  console.log(`Rollback to checkpoint ${target.id}`);
+  console.log(`  stage:            ${targetStage} (created ${target.created_at})`);
+  console.log(`  invalidated:      ${downstream.join(", ") || "nothing downstream"}`);
+  console.log(`  content on disk:  untouched (§18.2) — downstream stages re-run from it`);
+  if (targetStage === "storyboard") {
+    console.log(`  scene edits:      use \`vf scene list\` / \`vf scene restore\` for per-scene content`);
+  }
+  console.log(`Continue? [y/N]`);
   const answer = await readLine();
   if (answer.toLowerCase() !== "y") {
     console.log("aborted");
     return 0;
   }
+
   const machineState: MachineState = {
     status: state.status,
     stage: state.current_stage,
   };
-  const next = transition(
-    machineState,
-    { kind: "rollback", toCheckpoint: checkpointId },
-    ctx(`rollback-${checkpointId}`),
+  let rolled;
+  try {
+    rolled = transition(machineState, { kind: "rollback", toCheckpoint: target.id }, ctx(`rollback-${target.id}`));
+  } catch (err) {
+    console.error(
+      `rollback: ${(err as Error).message} — from ${state.status}, use \`vf reset\` instead`,
+    );
+    return 1;
+  }
+  // ROLLED_BACK is transient (its only exit is DRAFT): continue through the
+  // legal reset edge so the project lands at DRAFT / target stage instead
+  // of wedging.
+  const resetDone = transition(
+    rolled.state,
+    { kind: "reset" },
+    ctx(`rollback-land-${target.id}`),
   );
-  state.status = next.state.status;
+  state.status = resetDone.state.status;
+  state.current_stage = targetStage;
+  state.checkpoint = { id: target.id, status: resetDone.state.status };
   await writeProjectState(root, state);
-  console.log(`✓ rolled back to ${checkpointId}`);
+
+  for (const stage of downstream) {
+    await invalidateCheckpoint(root, stage, `invalidated by rollback to ${target.id}`);
+  }
+  const { writeRun, formatRunId } = await import("@vf/workflow");
+  await writeRun(root, {
+    run_id: formatRunId("rollback"),
+    stage: "rollback",
+    status: "succeeded",
+    actor: "human",
+    tool: "vf-rollback",
+    input_commit: safeGitHeadCli(root),
+    input_files: [`checkpoints/${targetStage}.yaml`],
+    output_files: [],
+    created_at: new Date().toISOString(),
+    duration_ms: 0,
+  });
+  console.log(`✓ rolled back to ${target.id} — state ${state.status} / ${state.current_stage}`);
+  console.log(
+    `  next: re-run the invalidated stages (e.g. \`vf preview --force\` after edits, or \`vf make\`), then re-approve`,
+  );
   return 0;
+}
+
+function safeGitHeadCli(cwd: string): string {
+  try {
+    return execSync("git rev-parse HEAD", { cwd, encoding: "utf8" }).trim();
+  } catch {
+    return "unknown";
+  }
 }
 
 export async function runResume(
@@ -336,15 +413,13 @@ export async function runReset(
   state.current_stage = target as (typeof V01_STAGES)[number];
   state.checkpoint = { id: state.checkpoint.id, status: next.state.status };
   await writeProjectState(root, state);
-  await appendCheckpoint(root, {
-    id: `reset-${next.record.run_id}`,
-    stage: target as (typeof V01_STAGES)[number],
-    status: "approved",
-    created_at: next.record.at,
-    approved_at: next.record.at,
-    human_changes: [],
-    notes: force ? "reset via vf reset --force" : "reset via vf reset",
-  });
+  // The prior checkpoint at the target stage is stale after a rewind —
+  // mark it invalidated instead of writing a fake "approved" record over it.
+  await invalidateCheckpoint(
+    root,
+    target as (typeof V01_STAGES)[number],
+    force ? "invalidated by vf reset --force" : "invalidated by vf reset",
+  );
   console.log(`Project reset to DRAFT / ${target}.`);
   console.log(
     `next: re-run the pipeline (e.g. \`vf storyboard ...\` or \`vf audio ...\`)`,

@@ -372,10 +372,17 @@ describe("CLI pipeline integration — runPreview / runFinal / runStatus / workf
 
   // ----- runRollback -----
 
+  function readCheckpointId(stage: string): string {
+    const text = readFileSync(
+      path.join(projectDir, "checkpoints", `${stage}.yaml`),
+      "utf8",
+    );
+    return text.match(/^id:\s*(\S+)/m)?.[1] ?? "";
+  }
+
   it("runRollback declines when the confirmation answer is not 'y'", async () => {
     await runPreview(projectName, projectCwd);
-    // runRollback reads a confirmation from process.stdin via readline —
-    // swap in a PassThrough that answers "n" so the test never blocks.
+    const id = readCheckpointId("storyboard");
     const { PassThrough } = await import("node:stream");
     const fakeStdin = new PassThrough();
     const realStdin = process.stdin;
@@ -385,10 +392,75 @@ describe("CLI pipeline integration — runPreview / runFinal / runStatus / workf
     });
     fakeStdin.write("n\n");
     try {
-      const code = await runRollback(projectName, "checkpoint-x", projectCwd);
+      const code = await runRollback(projectName, id, projectCwd);
       expect(code).toBe(0);
       const state = readState(projectDir);
       expect(state.status).toBe("WAITING_REVIEW");
+    } finally {
+      Object.defineProperty(process, "stdin", {
+        value: realStdin,
+        configurable: true,
+      });
+      fakeStdin.destroy();
+    }
+  }, 120_000);
+
+  it("runRollback rejects unknown checkpoint ids", async () => {
+    await runPreview(projectName, projectCwd);
+    const { PassThrough } = await import("node:stream");
+    const fakeStdin = new PassThrough();
+    const realStdin = process.stdin;
+    Object.defineProperty(process, "stdin", {
+      value: fakeStdin,
+      configurable: true,
+    });
+    fakeStdin.write("y\n");
+    try {
+      const code = await runRollback(projectName, "checkpoint-x", projectCwd);
+      expect(code).toBe(1);
+      const state = readState(projectDir);
+      expect(state.status).toBe("WAITING_REVIEW"); // untouched
+    } finally {
+      Object.defineProperty(process, "stdin", {
+        value: realStdin,
+        configurable: true,
+      });
+      fakeStdin.destroy();
+    }
+  }, 120_000);
+
+  it("runRollback invalidates downstream checkpoints and lands at DRAFT/target", async () => {
+    await runPreview(projectName, projectCwd); // WAITING_REVIEW
+    // A downstream checkpoint to invalidate (as vf approve review would write).
+    mkdirSync(path.join(projectDir, "checkpoints"), { recursive: true });
+    writeFileSync(
+      path.join(projectDir, "checkpoints", "review.yaml"),
+      "id: review-v1\nstage: review\nstatus: approved\ncreated_at: '2026-01-01'\nhuman_changes: []\nnotes: ''\n",
+    );
+    const id = readCheckpointId("storyboard");
+    const { PassThrough } = await import("node:stream");
+    const fakeStdin = new PassThrough();
+    const realStdin = process.stdin;
+    Object.defineProperty(process, "stdin", {
+      value: fakeStdin,
+      configurable: true,
+    });
+    fakeStdin.write("y\n");
+    try {
+      // One-argument form: checkpoint id only, project auto-discovered.
+      const code = await runRollback(undefined, id, projectCwd);
+      expect(code).toBe(0);
+      const state = readState(projectDir);
+      expect(state.status).toBe("DRAFT");
+      expect(state.current_stage).toBe("storyboard");
+      const review = readFileSync(
+        path.join(projectDir, "checkpoints", "review.yaml"),
+        "utf8",
+      );
+      expect(review).toContain("invalidated");
+      expect(review).toContain("id: review-v1"); // history preserved
+      // Audit trail: a rollback run record exists.
+      expect(existsSync(path.join(projectDir, "runs"))).toBe(true);
     } finally {
       Object.defineProperty(process, "stdin", {
         value: realStdin,

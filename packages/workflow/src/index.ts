@@ -11,6 +11,8 @@ export {
   STATE_FILENAME,
   appendCheckpoint,
   initState,
+  invalidateCheckpoint,
+  listCheckpoints,
   loadCheckpoint,
   readProjectState,
   writeProjectState,

@@ -619,14 +619,25 @@ program
 program
   .command("reject")
   .argument("[project]", "project name (slug) — optional")
-  .argument("<reason>", "reason code (e.g. wrong-content, wrong-pacing)")
+  .argument("[reason]", "reason code (e.g. wrong-content, wrong-pacing)")
   .option("--cwd <dir>", "project root")
   .action(
     async (
       project: string | undefined,
-      reason: string,
+      reason: string | undefined,
       opts: { cwd?: string },
     ) => {
+      // One-argument form: `vf reject wrong-content` — the arg is the
+      // reason, the project auto-discovers (documented usage).
+      if (reason === undefined && project !== undefined) {
+        reason = project;
+        project = undefined;
+      }
+      if (reason === undefined) {
+        console.error("reject: missing reason (e.g. vf reject wrong-content)");
+        process.exitCode = 1;
+        return;
+      }
       process.exitCode = await runReject(project, reason, opts.cwd);
     },
   );
@@ -634,10 +645,26 @@ program
 program
   .command("rollback")
   .argument("[project]", "project name (slug) — optional")
-  .argument("<checkpoint-id>", "checkpoint to roll back to")
+  .argument("[checkpoint-id]", "checkpoint to roll back to")
   .option("--cwd <dir>", "project root")
   .action(
-    async (project: string | undefined, id: string, opts: { cwd?: string }) => {
+    async (
+      project: string | undefined,
+      id: string | undefined,
+      opts: { cwd?: string },
+    ) => {
+      // One-argument form: `vf rollback <checkpoint-id>` — auto-discovers
+      // the project (documented usage; optional-before-required would
+      // otherwise make this form unparsable).
+      if (id === undefined && project !== undefined) {
+        id = project;
+        project = undefined;
+      }
+      if (id === undefined) {
+        console.error("rollback: missing checkpoint-id (vf rollback <id>)");
+        process.exitCode = 1;
+        return;
+      }
       process.exitCode = await runRollback(project, id, opts.cwd);
     },
   );

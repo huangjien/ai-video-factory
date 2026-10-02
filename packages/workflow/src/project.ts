@@ -76,6 +76,51 @@ export async function loadCheckpoint(
   }
 }
 
+/** Load every stage checkpoint that exists (id/stage/created_at/status). */
+export async function listCheckpoints(
+  projectRoot: string,
+): Promise<CheckpointRecord[]> {
+  const { readdir } = await import("node:fs/promises");
+  const dir = path.join(projectRoot, "checkpoints");
+  let files: string[];
+  try {
+    files = await readdir(dir);
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === "ENOENT") return [];
+    throw err;
+  }
+  const out: CheckpointRecord[] = [];
+  for (const f of files) {
+    if (!f.endsWith(".yaml")) continue;
+    try {
+      const cp = parseYaml(
+        await readFile(path.join(dir, f), "utf8"),
+      ) as CheckpointRecord;
+      if (cp && typeof cp.id === "string") out.push(cp);
+    } catch {
+      // unreadable checkpoint — skip rather than break listings
+    }
+  }
+  return out;
+}
+
+/** Mark a stage's checkpoint `invalidated` (§18.2) without destroying its
+ * history: id/created_at/approval metadata stay, status and notes change.
+ * No-op (true) when already invalidated; false when no checkpoint exists. */
+export async function invalidateCheckpoint(
+  projectRoot: string,
+  stage: Stage,
+  note: string,
+): Promise<boolean> {
+  const cp = await loadCheckpoint(projectRoot, stage);
+  if (!cp) return false;
+  if (cp.status === "invalidated") return true;
+  cp.status = "invalidated";
+  cp.notes = cp.notes ? `${cp.notes}; ${note}` : note;
+  await appendCheckpoint(projectRoot, cp);
+  return true;
+}
+
 export function initState(projectId: string): ProjectState {
   const cp = newCheckpoint({ stage: "init", id: `${projectId}-init-v1` });
   return {

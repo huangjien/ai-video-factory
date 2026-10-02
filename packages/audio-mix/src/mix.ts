@@ -18,6 +18,13 @@ export interface MixOptions {
    */
   videoPath?: string;
   bgmAttenuationDb?: number;
+  /**
+   * Sidechain ducking gate in dBFS: narration below this level ducks the
+   * BGM. Converted to the linear amplitude that ffmpeg's sidechaincompress
+   * `threshold` option expects — earlier versions passed the raw number
+   * through unconverted, so the old 0.05 default only worked by accident
+   * (0.05 is a sane *linear* value). Default -26 dB ≡ linear 0.05.
+   */
   duckerThresholdDb?: number;
 }
 
@@ -58,8 +65,10 @@ export async function mixTracks(opts: MixOptions): Promise<MixResult> {
   }
   await mkdir(path.dirname(opts.outPath), { recursive: true });
   const bgmAttenuationDb = opts.bgmAttenuationDb ?? -18;
-  const duckerThresholdDb = opts.duckerThresholdDb ?? 0.05;
+  const duckerThresholdDb =
+    opts.duckerThresholdDb ?? DEFAULT_DUCKER_THRESHOLD_DB;
   const bgmLinear = dbToLinear(bgmAttenuationDb);
+  const duckerThresholdLinear = dbToLinear(duckerThresholdDb);
 
   const tmpDir = await mkdtemp(path.join(path.dirname(opts.outPath), ".mix-"));
   const listFile = path.join(tmpDir, "list.txt");
@@ -86,20 +95,10 @@ export async function mixTracks(opts: MixOptions): Promise<MixResult> {
     tmpNarration,
   ]);
 
-  const filter = [
-    "[0:a]aresample=44100[nar]",
-    `[1:a]aresample=44100,volume=${bgmLinear}[bgm_pre]`,
-    `[bgm_pre][nar]sidechaincompress=threshold=${duckerThresholdDb}:ratio=8:attack=5:release=400[bgm]`,
-    // Use [0:a] (original narration) for the final amix, not [nar]
-    // (the resampled narration). ffmpeg 6.x has a parser bug that rejects
-    // reusing the same label as BOTH a sidechain input AND an amix input
-    // in the same graph — the parser reports "Invalid stream specifier"
-    // and "matches no streams" for [nar] even though it's clearly defined
-    // earlier. Using [0:a] for the final mix sidesteps the bug; the audio
-    // is semantically equivalent (amix doesn't care about the 44.1kHz
-    // resample that sidechaincompress needs).
-    "[0:a][bgm]amix=inputs=2:duration=longest:dropout_transition=0[out]",
-  ].join(";");
+  const filter = buildMixFilterGraph({
+    bgmLinear,
+    duckerThreshold: duckerThresholdLinear,
+  });
   const inputArgs: string[] = ["-i", tmpNarration, "-i", opts.bgmPath];
   let videoIndex: number | null = null;
   if (opts.videoPath && existsSync(opts.videoPath)) {
@@ -124,8 +123,98 @@ export async function mixTracks(opts: MixOptions): Promise<MixResult> {
   return { outPath: opts.outPath };
 }
 
-function dbToLinear(db: number): string {
+/**
+ * Default BGM-ducking gate in dBFS. 20·log10(0.05) ≈ -26 — reproduces the
+ * pre-fix default, which sidechaincompress only accepted because 0.05 is
+ * already a sane *linear* amplitude.
+ */
+export const DEFAULT_DUCKER_THRESHOLD_DB = -26;
+
+/** Convert dBFS to the linear amplitude ffmpeg's `volume` and
+ * sidechaincompress `threshold` options expect. */
+export function dbToLinear(db: number): string {
   return String(Math.pow(10, db / 20));
+}
+
+/**
+ * Full filter graph for the basic `mixTracks`. `normalize=0` is required:
+ * ffmpeg's amix scales every input to 1/n by default, dropping the
+ * narration 6 dB in a 2-input mix — and with dropout_transition=0 the
+ * narration gain snaps back to 1.0 the moment the BGM stream ends, an
+ * audible jump mid-video.
+ */
+export function buildMixFilterGraph(opts: {
+  bgmLinear: string;
+  duckerThreshold: string;
+}): string {
+  return [
+    "[0:a]aresample=44100[nar]",
+    `[1:a]aresample=44100,volume=${opts.bgmLinear}[bgm_pre]`,
+    `[bgm_pre][nar]sidechaincompress=threshold=${opts.duckerThreshold}:ratio=8:attack=5:release=400[bgm]`,
+    // Use [0:a] (original narration) for the final amix, not [nar]
+    // (the resampled narration). ffmpeg 6.x has a parser bug that rejects
+    // reusing the same label as BOTH a sidechain input AND an amix input
+    // in the same graph — the parser reports "Invalid stream specifier"
+    // and "matches no streams" for [nar] even though it's clearly defined
+    // earlier. Using [0:a] for the final mix sidesteps the bug; the audio
+    // is semantically equivalent (amix doesn't care about the 44.1kHz
+    // resample that sidechaincompress needs).
+    "[0:a][bgm]amix=inputs=2:duration=longest:dropout_transition=0:normalize=0[out]",
+  ].join(";");
+}
+
+/**
+ * BGM-side segments for `mixTracksWithSpec`: resample, attenuate, pad to
+ * the narration length, then duck under the narration sidechain. `apad
+ * whole_dur` pads with silence up to a total length and never truncates,
+ * so a BGM shorter than the narration still spans the whole video —
+ * without it an afade timestamp computed as (narration length − fadeOut)
+ * falls past a short BGM's end and the fade silently never fires.
+ */
+export function buildBgmSegments(opts: {
+  bgmLinear: string;
+  duckerThreshold: string;
+  narrationDurationSec: number;
+}): string[] {
+  return [
+    `[1:a]aresample=44100,volume=${opts.bgmLinear},apad=whole_dur=${opts.narrationDurationSec}[bgm_pre]`,
+    `[bgm_pre][nar]sidechaincompress=threshold=${opts.duckerThreshold}:ratio=8:attack=5:release=400[bgm]`,
+  ];
+}
+
+export interface BgmFadeChain {
+  segments: string[];
+  outputLabel: string;
+}
+
+/**
+ * Optional afade envelope for the ducked BGM. Fade timestamps are computed
+ * against the narration length — safe only because `buildBgmSegments`
+ * pads the BGM to that length. Each afade gets its own output label
+ * because a filter node can't feed the same stream twice.
+ */
+export function buildBgmFadeChain(opts: {
+  narrationDurationSec: number;
+  fadeInSec: number;
+  fadeOutSec: number;
+}): BgmFadeChain {
+  const segments: string[] = [];
+  let label = "bgm";
+  if (opts.fadeInSec > 0) {
+    segments.push(`[bgm]afade=in:st=0:d=${opts.fadeInSec}[bgm_fi]`);
+    label = "bgm_fi";
+  }
+  if (opts.fadeOutSec > 0) {
+    const fadeOutStart = Math.max(
+      0,
+      opts.narrationDurationSec - opts.fadeOutSec,
+    );
+    segments.push(
+      `[${label}]afade=out:st=${fadeOutStart}:d=${opts.fadeOutSec}[bgm_fo]`,
+    );
+    label = "bgm_fo";
+  }
+  return { segments, outputLabel: label };
 }
 
 /**
@@ -154,8 +243,10 @@ export async function mixTracksWithSpec(
   }
   await mkdir(path.dirname(opts.outPath), { recursive: true });
   const bgmAttenuationDb = opts.bgmAttenuationDb ?? -18;
-  const duckerThresholdDb = opts.duckerThresholdDb ?? 0.05;
+  const duckerThresholdDb =
+    opts.duckerThresholdDb ?? DEFAULT_DUCKER_THRESHOLD_DB;
   const bgmLinear = dbToLinear(bgmAttenuationDb);
+  const duckerThresholdLinear = dbToLinear(duckerThresholdDb);
   const fadeIn = Math.max(0, opts.bgmFadeInSec ?? 0);
   const fadeOut = Math.max(0, opts.bgmFadeOutSec ?? 0);
 
@@ -207,7 +298,7 @@ export async function mixTracksWithSpec(
 
   // Step 2: build the combined filter graph.
   //   [0:a]aresample=44100[nar]
-  //   [1:a]aresample=44100,volume=<bgm>[bgm_pre]
+  //   [1:a]aresample=44100,volume=<bgm>,apad=whole_dur=<narration>[bgm_pre]
   //   [bgm_pre][nar]sidechaincompress=...[bgm]               ; duck under narration
   //   [bgm]afade=...[bgm_faded]                              ; optional fade envelope
   //   <each SFX input>[sfx_n]                                 ; one filter per cue
@@ -215,30 +306,21 @@ export async function mixTracksWithSpec(
   //
   // Label `nar` instead of `n` (cosmetic; not a workaround for any ffmpeg
   // build bug — the parser accepts both). Kept multi-char for readability.
+  const bgmFade = buildBgmFadeChain({
+    narrationDurationSec: narrationDuration,
+    fadeInSec: fadeIn,
+    fadeOutSec: fadeOut,
+  });
   const filterParts: string[] = [
     "[0:a]aresample=44100[nar]",
-    `[1:a]aresample=44100,volume=${bgmLinear}[bgm_pre]`,
-    `[bgm_pre][nar]sidechaincompress=threshold=${duckerThresholdDb}:ratio=8:attack=5:release=400[bgm]`,
+    ...buildBgmSegments({
+      bgmLinear,
+      duckerThreshold: duckerThresholdLinear,
+      narrationDurationSec: narrationDuration,
+    }),
+    ...bgmFade.segments,
   ];
-  let bgmLabel = "bgm";
-  if (fadeIn > 0 || fadeOut > 0) {
-    // Chain afade filters — fade-in first, then fade-out at
-    // (duration - fadeOut) seconds. Each filter has its own output label
-    // because afade can't be re-applied to the same node.
-    let chain = "[bgm]";
-    if (fadeIn > 0) {
-      chain += `afade=in:st=0:d=${fadeIn}[bgm_fi]`;
-      chain += `;[bgm_fi]`;
-    }
-    if (fadeOut > 0) {
-      const fadeOutStart = Math.max(0, narrationDuration - fadeOut);
-      chain += `afade=out:st=${fadeOutStart}:d=${fadeOut}[bgm_fo]`;
-      bgmLabel = "bgm_fo";
-    } else {
-      bgmLabel = fadeIn > 0 ? "bgm_fi" : "bgm";
-    }
-    filterParts.push(chain);
-  }
+  const bgmLabel = bgmFade.outputLabel;
   const inputs: string[] = [tmpNarration, opts.bgmPath];
   const sfxMergeLabels: string[] = [];
   for (let i = 0; i < (opts.sfxCues ?? []).length; i++) {
@@ -259,8 +341,8 @@ export async function mixTracksWithSpec(
   // Use [0:a] (original narration) for the final amix, not [nar]
   // (the resampled narration). ffmpeg 6.x has a parser bug that rejects
   // reusing the same label as BOTH a sidechain input AND an amix input
-  // in the same graph; using [0:a] sidesteps it. See mixTracks() for
-  // the full explanation.
+  // in the same graph; using [0:a] sidesteps it. See
+  // buildMixFilterGraph() for the full explanation.
   const mixInputs = ["[0:a]", `[${bgmLabel}]`, ...sfxMergeLabels].join("");
   const mixFilter = `${mixInputs}amix=inputs=${2 + sfxMergeLabels.length}:duration=longest:dropout_transition=0:normalize=0[out]`;
   filterParts.push(mixFilter);

@@ -100,6 +100,20 @@ describe("CLI mix integration — runMix", () => {
     expect(probeDuration(out)).toBeGreaterThanOrEqual(3.8);
   }, 60_000);
 
+  it("falls back to the directory BGM when the mix.yaml bgm names a missing file", async () => {
+    // Regression: pickBgm returned explicit paths without an existence
+    // check, so a spec bgm tag with no matching .wav handed ffmpeg a dead
+    // path instead of falling back to the default BGM.
+    writeFileSync(
+      path.join(projectDir, "audio-assets", "mix.yaml"),
+      "bgm: no-such-track\n",
+    );
+    const code = await runMix({ project: "demo", cwd });
+    expect(code).toBe(0);
+    const out = path.join(projectDir, "output", "final-mixed.mp4");
+    expect(existsSync(out)).toBe(true);
+  }, 60_000);
+
   it("exits 1 when the project has no narration wav files", async () => {
     rmSync(path.join(projectDir, "assets/audio"), { recursive: true });
     const code = await runMix({ project: "demo", cwd });

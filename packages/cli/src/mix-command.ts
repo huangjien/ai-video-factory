@@ -1,11 +1,14 @@
 import { existsSync, readdirSync } from "node:fs";
 import { mkdir } from "node:fs/promises";
 import { createHash } from "node:crypto";
-import { execSync } from "node:child_process";
+import { execFile, execSync } from "node:child_process";
+import { promisify } from "node:util";
 import path from "node:path";
 import { resolveProjectDir } from "./project-path.js";
 import { mixTracks, mixTracksWithSpec, parseMixYaml } from "@vf/audio-mix";
 import { formatRunId } from "@vf/workflow";
+
+const execFileAsync = promisify(execFile);
 
 export interface MixOptions {
   project: string;
@@ -89,21 +92,35 @@ function resolveSfxCues(
   return cues;
 }
 
-/** Probe concatenated-narration duration so we can place the fade-out and
- * SFX cues at concrete timestamps. */
-function probeTotalDuration(narrationPaths: string[]): number[] {
-  return narrationPaths.map((p) => {
-    try {
-      return parseFloat(
-        execSync(
-          `ffprobe -v error -select_streams a:0 -show_entries stream=duration -of csv=p=0 ${JSON.stringify(p)}`,
-          { encoding: "utf8" },
-        ).trim(),
+/** Probe per-narration durations so SFX cues land at concrete timestamps.
+ * Throws when ffprobe fails or returns garbage — returning 0 here would
+ * silently collapse every cue onto t=0. */
+async function probeTotalDuration(
+  narrationPaths: string[],
+): Promise<number[]> {
+  return Promise.all(
+    narrationPaths.map(async (p) => {
+      const { stdout } = await execFileAsync(
+        "ffprobe",
+        [
+          "-v",
+          "error",
+          "-select_streams",
+          "a:0",
+          "-show_entries",
+          "stream=duration",
+          "-of",
+          "csv=p=0",
+          p,
+        ],
       );
-    } catch {
-      return 0;
-    }
-  });
+      const seconds = parseFloat(stdout.trim());
+      if (!Number.isFinite(seconds)) {
+        throw new Error(`ffprobe could not parse a duration for ${p}`);
+      }
+      return seconds;
+    }),
+  );
 }
 
 export async function runMix(opts: MixOptions): Promise<number> {
@@ -139,13 +156,22 @@ export async function runMix(opts: MixOptions): Promise<number> {
       return 1;
     }
     if (!opts.bgmPath && spec.bgm) {
-      try {
-        bgmPath = pickBgm(
-          projectRoot,
-          `${projectRoot}/assets/audio-assets/bgm/${spec.bgm}.wav`,
+      // pickBgm returns explicit paths without an existence check, so a
+      // spec naming a missing track used to hand ffmpeg a dead path and
+      // the fallback below could never fire. Check here instead.
+      const specBgm = path.join(
+        projectRoot,
+        "assets",
+        "audio-assets",
+        "bgm",
+        `${spec.bgm}.wav`,
+      );
+      if (existsSync(specBgm)) {
+        bgmPath = specBgm;
+      } else {
+        console.error(
+          `  ! mix.yaml bgm "${spec.bgm}" not found at ${specBgm} — falling back to ${path.basename(bgmPath)}`,
         );
-      } catch {
-        // ignore — fall back to flag/default
       }
     }
   }
@@ -155,7 +181,11 @@ export async function runMix(opts: MixOptions): Promise<number> {
   const sfxDir = path.join(projectRoot, "assets/audio-assets/sfx");
   let sfxCues: { atSec: number; path: string }[];
   try {
-    const narrationDurationsSec = probeTotalDuration(narrationPaths);
+    // Durations are only needed to place SFX cues — probe (and fail loudly
+    // on error) only when the spec actually defines cues.
+    const narrationDurationsSec = spec?.sfx
+      ? await probeTotalDuration(narrationPaths)
+      : [];
     sfxCues = resolveSfxCues(
       spec?.sfx,
       projectRoot,

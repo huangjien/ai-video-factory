@@ -10,6 +10,7 @@ import { FlowChart } from "./components/FlowChart.js";
 import { Image } from "./components/Image.js";
 import { ImageBackground } from "./components/ImageBackground.js";
 import { Paragraph } from "./components/Paragraph.js";
+import { SvgScene, SvgScenePropsSchema } from "./components/SvgScene.js";
 import { Terminal } from "./components/Terminal.js";
 import { Timeline } from "./components/Timeline.js";
 import { Title } from "./components/Title.js";
@@ -254,6 +255,10 @@ export const REGISTRY: Record<string, RegistryEntry> = {
   ImageBackground: {
     propsSchema: imageBackgroundProps,
     component: ImageBackground as ComponentType<unknown>,
+  },
+  SvgScene: {
+    propsSchema: SvgScenePropsSchema,
+    component: SvgScene as ComponentType<unknown>,
   },
 };
 

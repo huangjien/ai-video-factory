@@ -32,3 +32,13 @@ export {
   CaptionsOverlay,
   type CaptionsOverlayProps,
 } from "./components/CaptionsOverlay.js";
+export { SvgScene, SvgScenePropsSchema } from "./components/SvgScene.js";
+export {
+  easeAtProgress,
+  resolveElementTiming,
+  elementProgress,
+  type ElementTiming,
+  type SceneElementRef,
+  type TimelineAnim,
+  type VdslEasing,
+} from "./components/svgSceneLogic.js";

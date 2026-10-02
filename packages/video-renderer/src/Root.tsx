@@ -79,6 +79,10 @@ export const Root = ({ renderPlan }: RootProps) => {
     startFrame: scene.startFrame,
     durationInFrames: scene.durationInFrames,
     frame: localFrame,
+    // T4.3: timeline animations + fps for renderer-aware components
+    // (SvgScene consumes both; passthrough props ignore them).
+    animations: scene.animations,
+    fps: renderPlan.project.fps,
   } as unknown as Record<string, unknown> & React.JSX.IntrinsicElements["div"];
 
   return (

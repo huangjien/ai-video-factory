@@ -83,16 +83,28 @@ const App = () => (
 registerRoot(App);
 `;
 
-/** Fail loudly when a scene names a visual renderer that has no wired
- * runtime (plan §9: svg/canvas/excalidraw land in later phases). Silent
- * fallback would render the wrong thing; the CLI should stop instead. */
+/** Which visual renderers are wired, and to which component families
+ * (plan §9/T4.3): remotion renders every REGISTRY component; svg scenes
+ * render via SvgScene (whiteboard/diagram). canvas/excalidraw have no
+ * wired runtime yet — fail loudly instead of silently substituting. */
+const RENDERED_COMPONENTS: Record<string, RegExp> = {
+  remotion: /.*/,
+  svg: /^(SvgScene)$/,
+};
+
+/** Fail loudly when a scene names a visual renderer/component combination
+ * that has no wired runtime (plan §9). Silent fallback would render the
+ * wrong thing; the CLI should stop instead. */
 export function assertPlanRenderable(plan: RenderPlan): void {
-  const unwired = plan.scenes.filter((s) => s.renderer !== "remotion");
+  const unwired = plan.scenes.filter((s) => {
+    const allowed = RENDERED_COMPONENTS[s.renderer];
+    return !allowed || !allowed.test(s.component);
+  });
   if (unwired.length > 0) {
     throw new Error(
-      `render: visual renderer(s) not wired yet: ${unwired
-        .map((s) => `${s.id}→${s.renderer}`)
-        .join(", ")}. Only "remotion" scenes can render today.`,
+      `render: visual renderer/component combination not wired yet: ${unwired
+        .map((s) => `${s.id}→${s.renderer}/${s.component}`)
+        .join(", ")}. Wired: remotion/*, svg/SvgScene.`,
     );
   }
 }

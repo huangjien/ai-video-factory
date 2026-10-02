@@ -168,8 +168,32 @@ const badReqErr = (provider: string): ChatError => {
   e.status = 400;
   return e;
 };
+const transientErr = (provider: string): ChatError => {
+  const e = new Error("GLM API 503: upstream unavailable") as ChatError;
+  e.provider = provider;
+  e.status = 503;
+  return e;
+};
+const missingKeyErr = (provider: string): ChatError => {
+  const e = new Error("GLM_API_KEY not set in environment") as ChatError;
+  e.provider = provider;
+  return e;
+};
 
-describe("chatWithFallback (todo 5) — quota fallback", () => {
+/** Fails the first `failFirst` attempts with an HTTP 503 ChatError,
+ * then succeeds — mimics a transient provider outage. */
+class FlakyStatusProvider implements Provider {
+  readonly name = "fake-flaky-status";
+  calls = 0;
+  constructor(private readonly failFirst: number) {}
+  async chat(_req: ChatRequest): Promise<ChatResponse> {
+    this.calls += 1;
+    if (this.calls <= this.failFirst) throw transientErr(this.name);
+    return okResponse();
+  }
+}
+
+describe("chatWithFallback (todo 5) — transient retry + fallback", () => {
   const req: ChatRequest = { messages: [{ role: "user", content: "hi" }] };
   const ok = (): ChatResponse => ({
     content: "ok",
@@ -204,11 +228,60 @@ describe("chatWithFallback (todo 5) — quota fallback", () => {
     expect(out.provider).toBe("minimax");
   });
 
-  it("does NOT fall back on a 400 — non-quota error surfaces immediately", async () => {
+  it("does NOT fall back on a 400 — not retried, not fallback-eligible, surfaces immediately", async () => {
     const p = new FakeProvider("glm", ok, badReqErr("glm"));
     const f = new FakeProvider("minimax", ok);
     await expect(chatWithFallback(p, f, req)).rejects.toThrow(/invalid schema/);
+    expect(p.calls).toBe(1); // 4xx is never retried
+    expect(f.calls).toBe(0); // 4xx is not a switch-provider signal
+  });
+
+  it("retries a transient 503 on the primary, then succeeds without the fallback", async () => {
+    const p = new FlakyStatusProvider(1); // fail once, succeed on attempt 2
+    const f = new FakeProvider("minimax", ok);
+    const out = await chatWithFallback(p, f, req, { sleeps: [1, 1, 1] });
+    expect(out.provider).toBe("fake-flaky-status");
+    expect(p.calls).toBe(2);
     expect(f.calls).toBe(0);
+  });
+
+  it("exhausts transient retries on the primary, then falls back", async () => {
+    const p = new FlakyStatusProvider(99); // always 503
+    const f = new FakeProvider("minimax", ok);
+    const out = await chatWithFallback(p, f, req, { sleeps: [1, 1, 1] });
+    expect(out.provider).toBe("minimax");
+    expect(p.calls).toBe(4); // initial + 3 retries
+    expect(f.calls).toBe(1);
+  });
+
+  it("falls back when the primary's API key is missing (no retry)", async () => {
+    const p = new FakeProvider("glm", ok, missingKeyErr("glm"));
+    const f = new FakeProvider("minimax", ok);
+    const out = await chatWithFallback(p, f, req, { sleeps: [1, 1, 1] });
+    expect(out.provider).toBe("minimax");
+    expect(p.calls).toBe(1); // missing key is not transient — no retry
+    expect(f.calls).toBe(1);
+  });
+
+  it("strips the model from the fallback request so the fallback uses its own default", async () => {
+    const p = new FakeProvider("glm", ok, quotaErr("glm"));
+    let seen: ChatRequest | undefined;
+    const f: Provider = {
+      name: "minimax",
+      async chat(r: ChatRequest): Promise<ChatResponse> {
+        seen = r;
+        return ok();
+      },
+    };
+    const out = await chatWithFallback(
+      p,
+      f,
+      { ...req, model: "MiniMax-M3" },
+      { sleeps: [1, 1, 1] },
+    );
+    expect(out.provider).toBe("minimax");
+    expect(seen?.model).toBeUndefined();
+    expect(seen?.messages).toEqual(req.messages);
   });
 
   it("if both fail, surfaces the fallback's error", async () => {

@@ -1,4 +1,4 @@
-import type { Provider } from "@vf/llm";
+import type { ChatMessage, Provider } from "@vf/llm";
 import { chatWithFallback } from "@vf/llm";
 import { validateStoryboard } from "@vf/vdsl/validate.js";
 import type { Storyboard } from "@vf/vdsl/schema.js";
@@ -10,6 +10,9 @@ export interface AgentResult {
   /** Name of the provider that actually served the request
    * (primary or its fallback, per `chatWithFallback`). */
   providerName: string;
+  /** The exact messages sent to the provider — lets callers hash the
+   * real prompt for run-record `prompt_hash`. */
+  messages: ChatMessage[];
 }
 
 export class AgentError extends Error {
@@ -65,5 +68,6 @@ export async function callAgent(
     storyboard: result.data,
     usage: res.usage,
     providerName: out.provider,
+    messages,
   };
 }

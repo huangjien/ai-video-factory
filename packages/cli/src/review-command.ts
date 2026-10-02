@@ -18,7 +18,16 @@ export interface ReviewOptions {
 
 function providerInstance(name: string): Provider {
   if (name === "glm") return new GLMProvider();
-  return new MiniMaxProvider();
+  if (name === "minimax") return new MiniMaxProvider();
+  throw new Error(`unsupported provider: ${name}`);
+}
+
+/** Model id stamped for a provider name — matches each provider's own
+ * default (GLM: glm-5.3, MiniMax: MiniMax-M3). Re-derived from the
+ * SERVING provider after failover so the run record never claims the
+ * wrong model. */
+function modelFor(name: string): string {
+  return name === "glm" ? "glm-5.3" : "MiniMax-M3";
 }
 
 function sha256OfMessages(messages: ChatMessage[]): string {
@@ -70,7 +79,6 @@ export async function runReview(opts: ReviewOptions): Promise<number> {
         ? researchCfg.primary
         : undefined;
   const fallback = fallbackName ? providerInstance(fallbackName) : null;
-  const model = chosenName === "glm" ? "glm-5.3" : "MiniMax-M3";
 
   let result;
   try {
@@ -104,18 +112,11 @@ export async function runReview(opts: ReviewOptions): Promise<number> {
     "utf8",
   );
 
-  // Run record
+  // Run record — model reflects the SERVING provider (may differ from the
+  // chosen one after failover) and prompt_hash hashes the messages the
+  // agent actually sent (result.messages), not a reconstructed placeholder.
   const runId = formatRunId("review");
-  const messages = [
-    {
-      role: "system" as const,
-      content: "Review Agent system prompt (see @vf/review/src/agent.ts)",
-    },
-    {
-      role: "user" as const,
-      content: `Reviewing project: ${opts.project}`,
-    },
-  ];
+  const servedModel = modelFor(result.providerName);
   const record = {
     run_id: runId,
     stage: "review",
@@ -136,8 +137,8 @@ export async function runReview(opts: ReviewOptions): Promise<number> {
     created_at: new Date().toISOString(),
     duration_ms: 0,
     provider: result.providerName,
-    model,
-    prompt_hash: sha256OfMessages(messages),
+    model: servedModel,
+    prompt_hash: sha256OfMessages(result.messages),
     tokens: result.usage,
     estimated_cost_usd:
       (result.usage.input / 1000) *

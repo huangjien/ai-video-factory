@@ -3,6 +3,13 @@
  * up to 3 attempts with backoff. The `isRetriable` predicate defaults to
  * "retry anything" — callers must opt OUT (e.g. 4xx). Exhaustion rethrows
  * the last error so callers see the underlying cause.
+ *
+ * `chatWithFallback` layers provider failover on top: the PRIMARY call gets
+ * the bounded transient retry; once exhausted, fallback-eligible errors
+ * (quota / rate-limit / missing API key / transient exhaustion) trigger ONE
+ * attempt on the fallback provider, which receives the request WITHOUT the
+ * `model` field so it uses its own default model. Non-eligible errors
+ * (e.g. 400) surface immediately.
  */
 export async function withRetry<T>(
   fn: () => Promise<T>,
@@ -29,9 +36,35 @@ export async function withRetry<T>(
   throw lastErr instanceof Error ? lastErr : new Error(String(lastErr));
 }
 
-/** An error that indicates the primary provider is exhausted / quotaed
- * out, so we should switch to the fallback provider rather than retry. */
-function isQuotaError(err: unknown): boolean {
+/** True for transient failures a bounded retry can fix: network errors,
+ * HTTP 5xx, and timeout/abort errors. 4xx client errors are NEVER
+ * transient (a 400 will not get better by trying again). */
+export function isTransientError(err: unknown): boolean {
+  if (!err || typeof err !== "object") return false;
+  const e = err as { status?: unknown; name?: unknown; message?: unknown };
+  if (typeof e.status === "number") return e.status >= 500;
+  const name = typeof e.name === "string" ? e.name.toLowerCase() : "";
+  if (name === "aborterror" || name === "timeouterror") return true;
+  const msg = typeof e.message === "string" ? e.message.toLowerCase() : "";
+  return (
+    msg.includes("fetch failed") ||
+    msg.includes("network") ||
+    msg.includes("econnreset") ||
+    msg.includes("econnrefused") ||
+    msg.includes("enotfound") ||
+    msg.includes("etimedout") ||
+    msg.includes("socket hang up") ||
+    msg.includes("timeout") ||
+    msg.includes("abort")
+  );
+}
+
+/** True when the primary provider cannot serve the request at all and the
+ * fallback should get a shot: quota / rate-limit / balance exhaustion,
+ * a missing API key on the primary, or transient errors after the retry
+ * budget is exhausted. 4xx client errors (e.g. 400 invalid input) are NOT
+ * fallback-eligible — they surface immediately. */
+export function isFallbackEligible(err: unknown): boolean {
   if (!err || typeof err !== "object") return false;
   const e = err as { status?: unknown; provider?: unknown; message?: unknown };
   if (typeof e.status === "number") {
@@ -57,32 +90,48 @@ function isQuotaError(err: unknown): boolean {
   if (
     msg.includes("insufficient") ||
     msg.includes("quota") ||
-    msg.includes("rate limit")
+    msg.includes("rate limit") ||
+    // Providers throw Error("<NAME>_API_KEY not set in environment")
+    // with no status when the key is missing — the fallback may have one.
+    msg.includes("api_key not set")
   ) {
     return true;
   }
-  return false;
+  return isTransientError(err);
 }
 
-/** Try `primary.chat(req)`; if it errors with a quota/rate-limit signal,
- * fall back to `fallback.chat(req)`. The returned object carries the name
- * of the provider that actually served the request so callers can log it.
+/** Try `primary.chat(req)` with a bounded transient retry (network / 5xx /
+ * timeout — never 4xx), then consult the fallback ONCE for fallback-eligible
+ * errors (quota / rate-limit / missing API key / exhausted transients).
+ * The returned object carries the name of the provider that actually served
+ * the request so callers can log it.
  *
- * Only retries on the primary. If the fallback also fails, its error
- * propagates. Non-quota errors (e.g. 400 invalid input) on the primary
- * surface immediately — they are not "use up quota, switch provider"
- * signals. */
+ * The fallback receives the request WITHOUT the `model` field so it uses
+ * its own provider default — a primary-specific model id (e.g.
+ * "MiniMax-M3") would be rejected as unknown by the fallback provider.
+ * If the fallback also fails, its error propagates. Non-eligible errors
+ * (e.g. 400 invalid input) on the primary surface immediately. */
 export async function chatWithFallback(
   primary: import("./provider.js").Provider,
   fallback: import("./provider.js").Provider | null,
   req: import("./provider.js").ChatRequest,
+  opts: { sleeps?: number[] | undefined } = {},
 ): Promise<{ provider: string; response: import("./provider.js").ChatResponse }> {
   try {
-    const response = await primary.chat(req);
+    const response = await withRetry(() => primary.chat(req), {
+      sleeps: opts.sleeps,
+      isRetriable: isTransientError,
+    });
     return { provider: primary.name, response };
   } catch (err) {
-    if (!fallback || !isQuotaError(err)) throw err;
-    const response = await fallback.chat(req);
+    if (!fallback || !isFallbackEligible(err)) throw err;
+    // Strip `model`: the fallback must use its own default model.
+    const fallbackReq: import("./provider.js").ChatRequest = {
+      messages: req.messages,
+      ...(req.temperature !== undefined ? { temperature: req.temperature } : {}),
+      ...(req.response_format ? { response_format: req.response_format } : {}),
+    };
+    const response = await fallback.chat(fallbackReq);
     return { provider: fallback.name, response };
   }
 }

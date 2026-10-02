@@ -29,7 +29,16 @@ export interface StoryboardOptions {
 
 function providerInstance(name: string): Provider {
   if (name === "glm") return new GLMProvider();
-  return new MiniMaxProvider();
+  if (name === "minimax") return new MiniMaxProvider();
+  throw new Error(`unsupported provider: ${name}`);
+}
+
+/** Model id stamped for a provider name — matches each provider's own
+ * default (GLM: glm-5.3, MiniMax: MiniMax-M3). Used for the primary
+ * request and, after failover, re-derived from the SERVING provider
+ * so the run record never claims the wrong model. */
+function modelFor(name: string): string {
+  return name === "glm" ? "glm-5.3" : "MiniMax-M3";
 }
 
 function sha256OfMessages(messages: ChatMessage[]): string {
@@ -77,7 +86,7 @@ export async function runStoryboard(opts: StoryboardOptions): Promise<number> {
         ? roleCfg.primary
         : undefined;
   const fallback = fallbackName ? providerInstance(fallbackName) : null;
-  const model = chosenName === "glm" ? "glm-5.3" : "MiniMax-M3";
+  const model = modelFor(chosenName);
 
   // Optional research + script context (v0.2 phases 2 & 3)
   let researchContext: { markdown: string; claimSummary: string } | undefined;
@@ -151,19 +160,12 @@ export async function runStoryboard(opts: StoryboardOptions): Promise<number> {
     "utf8",
   );
 
-  // Run record with extended schema (provider/model/prompt_hash/tokens/cost)
+  // Run record with extended schema (provider/model/prompt_hash/tokens/cost).
+  // model reflects the SERVING provider (may differ from the chosen one
+  // after failover) and prompt_hash hashes the messages the agent actually
+  // sent (result.messages), not a reconstructed placeholder.
   const runId = formatRunId("storyboard");
-  const messages = [
-    {
-      role: "system" as const,
-      content:
-        "Storyboard Agent system prompt (see @vf/agent-storyboard/src/prompt.ts)",
-    },
-    {
-      role: "user" as const,
-      content: `Topic: ${opts.topic} | Audience: ${audience} | Language: ${lang} | Duration: ${duration}s | Style: ${style}`,
-    },
-  ];
+  const servedModel = modelFor(result.providerName);
   const costUsd = estimateCost(result.providerName, result.usage);
   const record = {
     run_id: runId,
@@ -177,8 +179,8 @@ export async function runStoryboard(opts: StoryboardOptions): Promise<number> {
     created_at: new Date().toISOString(),
     duration_ms: 0,
     provider: result.providerName,
-    model,
-    prompt_hash: sha256OfMessages(messages),
+    model: servedModel,
+    prompt_hash: sha256OfMessages(result.messages),
     tokens: result.usage,
     estimated_cost_usd: costUsd,
   };
@@ -188,7 +190,7 @@ export async function runStoryboard(opts: StoryboardOptions): Promise<number> {
 
   console.log(`\u2713 drafted ${slug}/storyboard/storyboard.yaml`);
   console.log(
-    `  provider=${result.providerName}  model=${model}  scenes=${result.storyboard.scenes.length}  tokens=${result.usage.input}+${result.usage.output}  cost=$${costUsd.toFixed(4)}`,
+    `  provider=${result.providerName}  model=${servedModel}  scenes=${result.storyboard.scenes.length}  tokens=${result.usage.input}+${result.usage.output}  cost=$${costUsd.toFixed(4)}`,
   );
   console.log(
     `  next: edit storyboard, then \`vf approve storyboard\` then \`vf preview --cwd ${path.relative(cwd, projectRoot) || "."}\``,

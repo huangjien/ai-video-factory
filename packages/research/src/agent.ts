@@ -1,4 +1,4 @@
-import type { Provider } from "@vf/llm";
+import type { ChatMessage, Provider } from "@vf/llm";
 import { chatWithFallback } from "@vf/llm";
 import { parse as parseYaml } from "yaml";
 import { buildMessages, type ResearchInput } from "./prompt.js";
@@ -37,6 +37,9 @@ export interface CallResearchResult {
   /** Name of the provider that actually served the request
    * (primary or its fallback, per `chatWithFallback`). */
   providerName: string;
+  /** The exact messages sent to the provider — lets callers hash the
+   * real prompt for run-record `prompt_hash`. */
+  messages: ChatMessage[];
 }
 
 /** Extract the first YAML code block from the LLM response and parse it. */
@@ -119,5 +122,10 @@ export async function callResearch(
       model: result.data.meta.model,
     },
   };
-  return { output, usage: res.usage, providerName: actualProvider };
+  return {
+    output,
+    usage: res.usage,
+    providerName: actualProvider,
+    messages,
+  };
 }

@@ -106,6 +106,55 @@ describe("vf storyboard end-to-end (todo 6) — mock MiniMax", () => {
     expect(record).toMatch(/output: 90/);
   });
 
+  it("prompt_hash is sha256 of the messages actually sent (changes when messages change)", async () => {
+    const { createHash } = await import("node:crypto");
+    const sha256Of = (
+      messages: { role: string; content: string }[],
+    ): string =>
+      "sha256:" +
+      createHash("sha256")
+        .update(
+          JSON.stringify(
+            messages.map((m) => ({ role: m.role, content: m.content })),
+          ),
+        )
+        .digest("hex");
+    const extractHash = (record: string): string | undefined =>
+      record.match(/prompt_hash: (sha256:[0-9a-f]{64})/)?.[1];
+    process.env["MINIMAX_API_KEY"] = "test-key-do-not-leak";
+    process.env["MINIMAX_API_HOST"] = baseUrl;
+
+    const cwdA = mkdtempSync(path.join(tmpdir(), "vf-sb-ha-"));
+    const codeA = await runStoryboard({ topic: "hash-topic-A", cwd: cwdA });
+    expect(codeA).toBe(0);
+    // The mock server captured the exact request body — hash the messages
+    // the provider actually received, the same way the command must.
+    const sent = JSON.parse(lastBody ?? "{}") as {
+      messages: { role: string; content: string }[];
+    };
+    const runsA = path.join(cwdA, "projects", "hash-topic-a", "runs");
+    const filesA = execFileSync("ls", [runsA], { encoding: "utf8" })
+      .trim()
+      .split("\n");
+    const recordA = readFileSync(path.join(runsA, filesA[0] ?? ""), "utf8");
+    expect(extractHash(recordA)).toBe(sha256Of(sent.messages));
+
+    const cwdB = mkdtempSync(path.join(tmpdir(), "vf-sb-hb-"));
+    const codeB = await runStoryboard({ topic: "hash-topic-B", cwd: cwdB });
+    expect(codeB).toBe(0);
+    const sentB = JSON.parse(lastBody ?? "{}") as {
+      messages: { role: string; content: string }[];
+    };
+    const runsB = path.join(cwdB, "projects", "hash-topic-b", "runs");
+    const filesB = execFileSync("ls", [runsB], { encoding: "utf8" })
+      .trim()
+      .split("\n");
+    const recordB = readFileSync(path.join(runsB, filesB[0] ?? ""), "utf8");
+    expect(extractHash(recordB)).toBe(sha256Of(sentB.messages));
+    // Different topic → different prompt → different hash
+    expect(extractHash(recordB)).not.toBe(extractHash(recordA));
+  });
+
   it("never writes the API key into projects/ or runs/", async () => {
     const cwd = mkdtempSync(path.join(tmpdir(), "vf-sb-"));
     process.env["MINIMAX_API_KEY"] = "test-key-do-not-leak";

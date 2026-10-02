@@ -25,7 +25,16 @@ export interface ScriptOptions {
 
 function providerInstance(name: string): Provider {
   if (name === "glm") return new GLMProvider();
-  return new MiniMaxProvider();
+  if (name === "minimax") return new MiniMaxProvider();
+  throw new Error(`unsupported provider: ${name}`);
+}
+
+/** Model id stamped for a provider name — matches each provider's own
+ * default (GLM: glm-5.3, MiniMax: MiniMax-M3). Re-derived from the
+ * SERVING provider after failover so the run record never claims the
+ * wrong model. */
+function modelFor(name: string): string {
+  return name === "glm" ? "glm-5.3" : "MiniMax-M3";
 }
 
 function sha256OfMessages(messages: ChatMessage[]): string {
@@ -68,7 +77,6 @@ export async function runScript(opts: ScriptOptions): Promise<number> {
         ? roleCfg.primary
         : undefined;
   const fallback = fallbackName ? providerInstance(fallbackName) : null;
-  const model = chosenName === "glm" ? "glm-5.3" : "MiniMax-M3";
 
   let researchContext: { markdown: string } | undefined;
   if (opts.fromResearch) {
@@ -122,16 +130,10 @@ export async function runScript(opts: ScriptOptions): Promise<number> {
   await writeFile(path.join(projectRoot, "script", filename), md, "utf8");
 
   const runId = formatRunId("script");
-  const messages = [
-    {
-      role: "system" as const,
-      content: "Script Agent system prompt (see @vf/script/src/prompt.ts)",
-    },
-    {
-      role: "user" as const,
-      content: `Topic: ${opts.topic} | Audience: ${audience} | Language: ${lang} | Duration: ${duration}s`,
-    },
-  ];
+  // model reflects the SERVING provider (may differ from the chosen one
+  // after failover) and prompt_hash hashes the messages the agent actually
+  // sent (result.messages), not a reconstructed placeholder.
+  const servedModel = modelFor(result.providerName);
   const record = {
     run_id: runId,
     stage: "script",
@@ -144,8 +146,8 @@ export async function runScript(opts: ScriptOptions): Promise<number> {
     created_at: new Date().toISOString(),
     duration_ms: 0,
     provider: result.providerName,
-    model,
-    prompt_hash: sha256OfMessages(messages),
+    model: servedModel,
+    prompt_hash: sha256OfMessages(result.messages),
     tokens: result.usage,
     estimated_cost_usd:
       (result.usage.input / 1000) *

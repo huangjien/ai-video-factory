@@ -1,4 +1,4 @@
-import type { Provider } from "@vf/llm";
+import type { ChatMessage, Provider } from "@vf/llm";
 import { chatWithFallback } from "@vf/llm";
 import { parse as parseYaml } from "yaml";
 import { buildScriptMessages, type ScriptInput } from "./prompt.js";
@@ -23,6 +23,9 @@ export interface CallScriptResult {
   /** Name of the provider that actually served the request
    * (primary or its fallback, per `chatWithFallback`). */
   providerName: string;
+  /** The exact messages sent to the provider — lets callers hash the
+   * real prompt for run-record `prompt_hash`. */
+  messages: ChatMessage[];
 }
 
 export function extractYaml(content: string): string {
@@ -63,5 +66,10 @@ export async function callScript(
       result.error,
     );
   }
-  return { script: result.data, usage: res.usage, providerName: actualProvider };
+  return {
+    script: result.data,
+    usage: res.usage,
+    providerName: actualProvider,
+    messages,
+  };
 }

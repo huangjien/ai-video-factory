@@ -26,4 +26,5 @@ export {
   type CompileOptions,
   type RenderPlan,
   type RenderPlanScene,
+  type TransitionKind,
 } from "./compile.js";

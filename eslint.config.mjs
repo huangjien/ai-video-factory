@@ -18,6 +18,9 @@ export default [
       "**/*.tsbuildinfo",
       ".omo/**",
       "projects/**",
+      // Third-party agent skills ship their own code style (T0.2).
+      ".agents/**",
+      ".claude/**",
     ],
   },
   eslint.configs.recommended,

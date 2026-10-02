@@ -359,6 +359,12 @@ importers:
         specifier: workspace:*
         version: link:../llm
 
+  packages/motion:
+    dependencies:
+      '@vf/vdsl':
+        specifier: workspace:*
+        version: link:../vdsl
+
   packages/qa:
     dependencies:
       '@vf/vdsl':

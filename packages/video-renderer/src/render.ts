@@ -90,6 +90,7 @@ registerRoot(App);
 const RENDERED_COMPONENTS: Record<string, RegExp> = {
   remotion: /.*/,
   svg: /^(SvgScene)$/,
+  canvas: /^(DoodleScene)$/,
 };
 
 /** Fail loudly when a scene names a visual renderer/component combination
@@ -104,7 +105,7 @@ export function assertPlanRenderable(plan: RenderPlan): void {
     throw new Error(
       `render: visual renderer/component combination not wired yet: ${unwired
         .map((s) => `${s.id}→${s.renderer}/${s.component}`)
-        .join(", ")}. Wired: remotion/*, svg/SvgScene.`,
+        .join(", ")}. Wired: remotion/*, svg/SvgScene, canvas/DoodleScene.`,
     );
   }
 }

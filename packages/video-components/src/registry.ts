@@ -5,6 +5,7 @@ import { Callout } from "./components/Callout.js";
 import { Character } from "./components/Character.js";
 import { CodeBlock } from "./components/CodeBlock.js";
 import { Comparison } from "./components/Comparison.js";
+import { DoodleScene, DoodleScenePropsSchema } from "./components/DoodleScene.js";
 import { EndCard } from "./components/EndCard.js";
 import { FlowChart } from "./components/FlowChart.js";
 import { Image } from "./components/Image.js";
@@ -259,6 +260,10 @@ export const REGISTRY: Record<string, RegistryEntry> = {
   SvgScene: {
     propsSchema: SvgScenePropsSchema,
     component: SvgScene as ComponentType<unknown>,
+  },
+  DoodleScene: {
+    propsSchema: DoodleScenePropsSchema,
+    component: DoodleScene as ComponentType<unknown>,
   },
 };
 

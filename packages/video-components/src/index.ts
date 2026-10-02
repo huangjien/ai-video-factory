@@ -34,6 +34,23 @@ export {
 } from "./components/CaptionsOverlay.js";
 export { SvgScene, SvgScenePropsSchema } from "./components/SvgScene.js";
 export {
+  DoodleScene,
+  DoodleScenePropsSchema,
+} from "./components/DoodleScene.js";
+export {
+  buildStrokePlan,
+  drawDoodleFrame,
+  hashStr,
+  rng,
+  shapeStrokes,
+  wobblePoints,
+  type CtxLike,
+  type DoodleShape,
+  type DoodleStrokeSpec,
+  type DoodleStyle,
+  type StrokePlanEntry,
+} from "./components/doodleLogic.js";
+export {
   easeAtProgress,
   resolveElementTiming,
   elementProgress,

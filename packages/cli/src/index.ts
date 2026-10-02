@@ -873,15 +873,20 @@ program
     "--mix",
     "after rendering, run vf mix to produce final-mixed.mp4 with narration + BGM + SFX cues",
   )
+  .option(
+    "--force",
+    "render even when the QA gate reports error-level findings (prints [FORCE] warning; the failed gate stays in the run history)",
+  )
   .action(
     async (
       project: string | undefined,
-      opts: { cwd?: string; mix?: boolean },
+      opts: { cwd?: string; mix?: boolean; force?: boolean },
     ) => {
       process.exitCode = await runFinal({
         ...(project ? { projectName: project } : {}),
         ...(opts.cwd !== undefined ? { cwd: opts.cwd } : {}),
         ...(opts.mix === true ? { mix: true } : {}),
+        ...(opts.force === true ? { force: true } : {}),
       });
     },
   );

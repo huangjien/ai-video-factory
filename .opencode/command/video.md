@@ -50,7 +50,7 @@ makes the shell call.
 | `rollback <checkpoint-id>` | confirm + invalidate downstream stages             |
 | `resume`                   | resume from last successful stage                  |
 | `preview`                  | render preview.mp4 (refuses until `approve storyboard` passes; `--force` bypasses and is recorded) |
-| `final`                    | render final.mp4 (requires review APPROVED)        |
+| `final`                    | render final.mp4 (requires review APPROVED; QA-gated — error-level findings block it, `--force` bypasses) |
 
 ## Usage
 

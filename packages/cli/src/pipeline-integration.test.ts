@@ -3,6 +3,7 @@ import {
   existsSync,
   mkdirSync,
   mkdtempSync,
+  readdirSync,
   readFileSync,
   rmSync,
   statSync,
@@ -377,6 +378,37 @@ describe("CLI pipeline integration — runPreview / runFinal / runStatus / workf
     expect(state.status).toBe("FINAL_APPROVED");
     expect(state.current_stage).toBe("final");
   }, 120_000);
+
+  it("T6.2 — the QA gate blocks final on error-level findings; --force overrides", async () => {
+    await runPreview(projectName, projectCwd);
+    await runApprove(projectName, "review", projectCwd);
+    // Inject a defect the QA checks catch: non-monotonic captions.
+    mkdirSync(path.join(projectDir, "captions"), { recursive: true });
+    writeFileSync(
+      path.join(projectDir, "captions", "zh-CN.srt"),
+      "1\n00:00:02,000 --> 00:00:02,500\nlater\n\n2\n00:00:00,500 --> 00:00:01,000\nearlier\n",
+    );
+    const blocked = await runFinal({ projectName, cwd: projectCwd });
+    expect(blocked).toBe(1);
+    expect(
+      existsSync(path.join(projectDir, "output", "final-faststart.mp4")),
+    ).toBe(false);
+    // The failed gate is in the audit trail.
+    const runs = readdirSync(path.join(projectDir, "runs")).join("\n");
+    expect(runs).toContain("final-");
+
+    const forced = await runFinal({
+      projectName,
+      cwd: projectCwd,
+      force: true,
+    });
+    expect(forced).toBe(0);
+    expect(
+      existsSync(path.join(projectDir, "output", "final-faststart.mp4")),
+    ).toBe(true);
+    const state = readState(projectDir);
+    expect(state.status).toBe("FINAL_APPROVED");
+  }, 240_000);
 
   // ----- runRollback -----
 

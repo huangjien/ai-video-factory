@@ -342,6 +342,10 @@ export interface FinalOptions {
    * `output/final-mixed.mp4` as the published artifact (narrration + BGM + SFX
    * cues per audio-assets/mix.yaml). */
   mix?: boolean;
+  /** Bypass the QA gate (T6.2): render even when error-level QA findings
+   * are present. Printed as [FORCE] and the failed gate stays in the run
+   * history. */
+  force?: boolean;
 }
 
 export async function runFinal(
@@ -365,10 +369,69 @@ export async function runFinal(
     return 1;
   }
   const { renderPlan } = await loadOrCompileStoryboard(root);
+
+  // QA gate (T6.2, §24/Principle 7): the final render IS the export path.
+  // Error-level findings against the preview artifact block it; --force is
+  // the explicit bypass. Warn-level findings surface but don't block.
+  const force = resolved.force === true;
+  const qaVideo = [
+    path.join(root, "output", "preview-faststart.mp4"),
+    path.join(root, "output", "preview.mp4"),
+  ].find((p) => existsSync(p));
+  if (!qaVideo && !force) {
+    console.error(
+      `final: no preview artifact to QA — run \`vf preview\` first (or --force to render un-QA'd)`,
+    );
+    return 1;
+  }
+  if (qaVideo) {
+    const { writeQaArtifacts } = await import("@vf/qa");
+    const report = await writeQaArtifacts(root, renderPlan, qaVideo);
+    const errors = report.findings.filter((f) => f.level === "error");
+    if (!report.ok) {
+      for (const f of report.findings) {
+        console.error(`  [${f.level}] ${f.check}: ${f.message}`);
+        if (f.fix) console.error(`         fix: ${f.fix}`);
+      }
+    }
+    if (errors.length > 0 && !force) {
+      const runId = formatRunId("final");
+      await writeRun(root, {
+        run_id: runId,
+        stage: "final" as Stage,
+        status: "failed",
+        actor: "tool",
+        tool: "qa-gate",
+        input_commit: safeGitHead(root),
+        input_files: [STORYBOARD_REL],
+        output_files: [],
+        created_at: new Date().toISOString(),
+        duration_ms: 0,
+        error: `qa-gate: ${errors.length} error-level finding(s) — see qa/render-report.json`,
+      });
+      console.error(
+        `final: blocked by the QA gate (${errors.length} error(s)) — fix and re-run, or \`vf final --force\` to override`,
+      );
+      return 1;
+    }
+    if (errors.length > 0 && force) {
+      console.warn(`[FORCE] rendering final despite ${errors.length} QA error(s)`);
+    }
+  }
+
   const out = path.join(root, "output", "final.mp4");
   await renderPlanToVideo(renderPlan, out);
   const faststartOut = path.join(root, "output", "final-faststart.mp4");
   await faststart(out, faststartOut);
+
+  // Refresh QA artifacts against the shipped final (non-blocking — the
+  // gate already ran pre-render).
+  try {
+    const { writeQaArtifacts: writeFinalQa } = await import("@vf/qa");
+    await writeFinalQa(root, renderPlan, out);
+  } catch (err) {
+    console.error(`  QA refresh failed (final is still valid): ${(err as Error).message}`);
+  }
 
   const runId = formatRunId("final");
   const start = Date.now();

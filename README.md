@@ -7,7 +7,7 @@ AI chain-of-thought explainer ships as proof.
 
 ## Principles
 
-> AI generates · Human decides · Code renders · Git remembers — `AI_Video_Factory_Design_and_Plan_v1.1.md` §65.
+> AI generates · Human decides · Code renders · Git remembers — `docs/AI_Video_Factory_Design_and_Plan_v1.1.md` §65.
 
 Two human-edit checkpoints (`article.md`, `audio-config.yaml`) are the
 only place humans engage with the pipeline. Everything else is derived
@@ -15,7 +15,7 @@ from those two files.
 
 ## Principles
 
-> AI generates · Human decides · Code renders · Git remembers — `AI_Video_Factory_Design_and_Plan_v1.1.md` §65.
+> AI generates · Human decides · Code renders · Git remembers — `docs/AI_Video_Factory_Design_and_Plan_v1.1.md` §65.
 
 No AI writing/research agents, no text-to-speech in the pipeline, no English
 variant, no YouTube publishing, no cloud or AI-generated imagery — those are
@@ -131,7 +131,7 @@ The fine-grained per-stage verbs (`vf research`, `vf script`, `vf storyboard`, `
 
 ## Architecture map
 
-See `ARCHITECTURE.md` — maps each design-doc section to the package and
+See `docs/ARCHITECTURE.md` — maps each design-doc section to the package and
 file that implements it, plus the v0.2+ roadmap.
 
 ## Advanced Media (v0.2.8 — final phase)

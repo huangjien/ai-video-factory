@@ -1,0 +1,216 @@
+schema_version: "0.2"
+
+# Demo 1 — MCP Explainer (plan §17/§35): 45 seconds, 5 scenes,
+# diagram + whiteboard. Rendered deterministically by
+# packages/cli/src/demo-mcp-integration.test.ts — no LLM, no network.
+#
+# Narration WAVs (assets/audio/scene-0N.wav) are 9s each; the pipeline's
+# sync-durations step keeps the storyboard durations aligned to them.
+
+project:
+  id: mcp-explainer
+  language: zh-CN
+  fps: 30
+  width: 1280
+  height: 720
+
+style:
+  theme: dark-tech
+
+scenes:
+  - id: scene-01
+    duration: 9
+    narration:
+      text: "MCP，全称 Model Context Protocol，模型上下文协议。"
+      audio: "assets/audio/scene-01.wav"
+    visual:
+      component: Title
+      renderer: remotion
+      props:
+        text: "MCP"
+        subtext: "Model Context Protocol"
+
+  - id: scene-02
+    duration: 9
+    narration:
+      text: "AI Agent 通过 MCP Client 连接到外部世界。"
+      audio: "assets/audio/scene-02.wav"
+    visual:
+      component: SvgScene
+      renderer: svg
+      props:
+        title: "AI Agent"
+        nodes:
+          - id: agent
+            kind: rect
+            x: 140
+            y: 260
+            w: 420
+            h: 180
+            text: "AI Agent"
+          - id: client
+            kind: rect
+            x: 1060
+            y: 260
+            w: 480
+            h: 180
+            text: "MCP Client"
+        edges:
+          - id: link-1
+            from: agent
+            to: client
+            label: "connects via"
+    animation:
+      entrance: fade
+
+  - id: scene-03
+    duration: 9
+    narration:
+      text: "MCP Client 使用标准协议与 MCP Server 通信。"
+      audio: "assets/audio/scene-03.wav"
+    visual:
+      component: SvgScene
+      renderer: svg
+      props:
+        title: "标准协议"
+        nodes:
+          - id: client
+            kind: rect
+            x: 120
+            y: 260
+            w: 460
+            h: 180
+            text: "MCP Client"
+          - id: server
+            kind: rect
+            x: 1040
+            y: 260
+            w: 500
+            h: 180
+            text: "MCP Server"
+        edges:
+          - id: proto
+            from: client
+            to: server
+            label: "JSON-RPC"
+    animations:
+      - id: draw-proto
+        target: proto
+        type: draw
+        start: 1
+        duration: 1.6
+        easing: easeInOut
+      - id: focus-server
+        target: server
+        type: highlight
+        start: 4
+        duration: 1.2
+        easing: easeInOut
+
+  - id: scene-04
+    duration: 9
+    narration:
+      text: "MCP Server 一端连接 GitHub、Jenkins、数据库等各种工具。"
+      audio: "assets/audio/scene-04.wav"
+    visual:
+      component: SvgScene
+      renderer: svg
+      props:
+        title: "一个 Server，多种工具"
+        nodes:
+          - id: server
+            kind: rect
+            x: 760
+            y: 280
+            w: 440
+            h: 170
+            text: "MCP Server"
+          - id: github
+            kind: rect
+            x: 120
+            y: 100
+            w: 400
+            h: 140
+            text: "GitHub"
+          - id: jenkins
+            kind: rect
+            x: 120
+            y: 300
+            w: 400
+            h: 140
+            text: "Jenkins"
+          - id: database
+            kind: rect
+            x: 120
+            y: 500
+            w: 400
+            h: 140
+            text: "Database"
+        edges:
+          - id: e-gh
+            from: server
+            to: github
+          - id: e-jk
+            from: server
+            to: jenkins
+          - id: e-db
+            from: server
+            to: database
+    animations:
+      - id: draw-gh
+        target: e-gh
+        type: draw
+        start: 1
+        duration: 1
+        easing: easeInOut
+      - id: draw-jk
+        target: e-jk
+        type: draw
+        start: 3
+        duration: 1
+        easing: easeInOut
+      - id: draw-db
+        target: e-db
+        type: draw
+        start: 5
+        duration: 1
+        easing: easeInOut
+      - id: focus-server
+        target: server
+        type: highlight
+        start: 0.5
+        duration: 1.5
+        easing: easeInOut
+
+  - id: scene-05
+    duration: 9
+    narration:
+      text: "最终，Agent 收到结构化的结果，任务完成。"
+      audio: "assets/audio/scene-05.wav"
+    visual:
+      component: DoodleScene
+      renderer: canvas
+      props:
+        background: paper
+        seed: 42
+        strokes:
+          - id: result-ring
+            shape: circle
+            x: 960
+            y: 380
+            size: 180
+            color: "#3FB68B"
+            width: 8
+          - id: check-1
+            shape: zigzag
+            x: 900
+            y: 380
+            size: 40
+            color: "#3FB68B"
+            width: 8
+          - id: spark
+            shape: star
+            x: 520
+            y: 260
+            size: 90
+            color: "#F0B429"

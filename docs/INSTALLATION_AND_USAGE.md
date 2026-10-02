@@ -4,25 +4,33 @@ Installation and usage manual for the current repository.
 
 ## Overview
 
-As of v0.3.9, AI Video Factory exposes only **two commands** — one LLM
-call writes both human-edit files in one go, and one command that
-renders the video:
+AI Video Factory's core interface is **two AI commands + one human
+approval** — one LLM call writes both human-edit files in one go, a human
+reads and approves the storyboard, and one command renders the video:
 
 ```mermaid
 flowchart LR
     topic[topic] --> vfDraft["vf draft (LLM)"]
     vfDraft --> articleMD["article.md ⭐ human-edit"]
     vfDraft --> audioConfig["audio-config.yaml ⭐ human-edit"]
-    articleMD --> vfMake["vf make"]
-    audioConfig --> vfMake
+    articleMD --> vfApprove["vf approve storyboard 🚪 human gate"]
+    audioConfig --> vfApprove
+    vfApprove --> vfMake["vf make"]
     vfMake --> previewMp4[preview.mp4]
-    vfMake --> finalMixedMp4[final-mixed.mp4]
+    vfMake --> finalMixedMp4["final-mixed.mp4"]
 ```
 
 The two human-edit files are **`article.md`** (narrative + a Scenes YAML
 block) and **`audio-config.yaml`** (voice / bgm / sfx / fades). Everything
 else is derived; `vf make` is idempotent — it skips a step when its
 output is newer than its inputs (`--dry-run` shows what it would do).
+
+Rendering sits behind a **mandatory human gate**: until the storyboard is
+approved, `vf make` fails at the render step and prints the exact approve
+command (calling `vf preview --force` directly bypasses it, recorded in
+the audit trail). The three gates and invariants live in
+`docs/workflow.md`; the VDSL format in `docs/schema.md`; the system
+architecture in `docs/architecture.md`.
 
 ## 1. Requirements
 
@@ -64,7 +72,7 @@ From the repository root:
 
 ```bash
 pnpm install
-ppnpm run build
+pnpm run build
 ```
 
 The build compiles all workspace packages into `packages/*/dist`.
@@ -140,7 +148,7 @@ Other project checks:
 
 ```bash
 pnpm run lint
-ppnpm run format:check
+pnpm run format:check
 npm run benchmark:verify
 pnpm run acceptance
 ```
@@ -183,17 +191,21 @@ projects/demo/storyboard/storyboard.yaml
 The project starts in `DRAFT` state. The workflow state is stored in
 `state.yaml`; run records are stored in `runs/`.
 
-## 5. Minimal storyboard format
+## 5. Storyboard / VDSL format
 
-The current VDSL schema is `0.1`. Durations are seconds; the renderer converts
-them to frames using the project FPS.
+The schema accepts `0.1` and `0.2` (all 0.2 fields are optional; both
+validate). The authoritative reference is `docs/schema.md` (implemented
+in `packages/vdsl/src/schema.ts`, zod strict mode — unknown keys are
+rejected everywhere; validation errors carry YAML line numbers).
+Durations are SECONDS; the compiler converts to frames with
+`Math.round(duration × fps)`.
 
 ```yaml
-schema_version: "0.1"
+schema_version: "0.1"   # or "0.2"
 
 project:
   id: demo
-  language: zh-CN
+  language: zh-CN        # zh-CN | en-US
   fps: 30
   width: 1920
   height: 1080
@@ -201,40 +213,74 @@ project:
 style:
   theme: dark-tech
 
+assets:                  # 0.2: optional project-level manifest
+  - id: asset-logo
+    type: svg            # svg|png|jpg|webp|excalidraw|canvas|audio|video|font
+    source: generated    # generated|user|external
+    path: assets/svg/logo.svg
+
 scenes:
   - id: scene-01
     duration: 8
     narration:
       text: "AI Agent 为什么需要 Memory？"
+      audio: assets/audio/scene-01.wav   # optional; mounted by vf audio flows
     visual:
-      component: Title
-      props:
-        text: "AI Agent 为什么需要 Memory？"
-    animation:
+      component: SvgScene
+      renderer: svg      # remotion (default) | svg | canvas | excalidraw
+      props: { … }       # validated against the component's REGISTRY props schema
+    animation:           # v0.1 entrance model (still honored)
       entrance: fade
       emphasis: none
       exit: none
+    animations:          # 0.2 timeline model (scene-relative)
+      - id: draw-arrow
+        target: arrow-1
+        type: draw       # draw|write|fade|move|scale|rotate|highlight|morph|camera
+        start: 1.2
+        duration: 0.8
+        easing: easeInOut   # linear|easeIn|easeOut|easeInOut (+synonyms)
     captions:
       source: narration
     transition:
-      in: fade
-      out: cut
+      in: fade           # fade|cut (+synonyms); default fade
+      out: fade
 ```
 
 Important rules:
 
-- `schema_version` must be `"0.1"`.
-- Scene IDs must be unique.
-- Each scene needs a positive `duration` and a registered visual component.
-- Unknown fields are rejected.
-- Referenced assets must exist under the project root.
-- Supported languages are `zh-CN` and `en-US`.
+- `schema_version` must be `"0.1"` or `"0.2"`.
+- Scene IDs must be unique; each scene needs a positive `duration` and a
+  registered visual component.
+- Components must be registered in `REGISTRY`; props must pass the
+  component's schema.
+- The narration audio file must exist and not exceed the scene duration
+  (0.05 s tolerance) — run `vf preview` / `vf make` first: they sync
+  durations to the measured audio before validating.
+- Captions must wrap to ≤ 3 lines of 24 CJK units (bottom safe area).
+- Timeline animations must fit inside the scene (`start + duration ≤
+  duration`).
+- LLM synonyms are coerced BEFORE validation (`wipe` → `draw`,
+  `hand-drawn` → `canvas`, `dissolve` → `fade`); truly unknown values
+  fail loudly.
 
-The current component registry includes `Title`, `Paragraph`, `Image`,
-`CodeBlock`, `Terminal`, `Callout`, `FlowChart`, `Timeline`, `Comparison`,
-and `EndCard`.
+### Renderer families (visual.renderer)
 
-## 6. Core local workflow (v0.4 recommended)
+| renderer | Component | Notes |
+| --- | --- | --- |
+| `remotion` | any classic REGISTRY component | default |
+| `svg` | `SvgScene` | whiteboard/diagram, draw-on + target-driven camera |
+| `canvas` | `DoodleScene` | hand-drawn ink, seeded wobble, `bpm` beat-sync |
+| `excalidraw` | — | asset generator only (`vf excalidraw`); not a render path |
+
+Unwired renderer/component combinations fail loudly at render time.
+
+The 15 registered components: `Title`, `Paragraph`, `AnimatedIllustration`,
+`CodeBlock`, `Terminal`, `Image`, `ImageBackground`, `FlowChart`,
+`Comparison`, `Timeline`, `Callout`, `EndCard`, `Character`, `SvgScene`,
+`DoodleScene`.
+
+## 6. Core local workflow (recommended)
 
 The new local flow is collapsed to a single `vf make` command.
 
@@ -250,6 +296,17 @@ vf draft "my-topic"           # → projects/<slug>/article.md + audio-config.ya
 # Then human edits:
 $EDITOR projects/<slug>/article.md
 $EDITOR projects/<slug>/audio-config.yaml
+
+# 🚪 Human gate: read article.md (mirrored into storyboard.yaml), then approve
+vf approve storyboard --cwd projects/<slug>
+```
+
+**Running `vf make` without the approval fails at the render step** and
+prints the exact instruction:
+
+```bash
+preview: storyboard is not approved yet — read .../storyboard/storyboard.yaml (make flow: article.md), then run:
+  vf approve storyboard --cwd <project parent dir>
 ```
 
 `vf draft` runs the audio-plan step on the fresh article automatically.
@@ -316,7 +373,19 @@ projects/<slug>/output/final-mixed.mp4       # narration + BGM + SFX — the pub
 projects/<slug>/assets/audio/scene_*.wav
 projects/<slug>/assets/audio-assets/{bgm,sfx}/*.wav
 projects/<slug>/captions/<lang>.srt
+projects/<slug>/qa/render-report.json        # QA report, written on every render
+projects/<slug>/qa/contact-sheet.png         # per-scene contact sheet for quick human review
+projects/<slug>/scenes/                      # per-scene MP4 cache (content-hash keyed)
 ```
+
+Rendering is **scene-isolated**: each scene renders to its own MP4
+fragment first (`scenes/`, keyed by fragment content hash + narration
+audio state), then the fragments are concatenated. Editing scene-007
+re-renders only scene-007. `vf preview --draft` renders the low-quality
+tier (960×540@15) into `scenes-draft/`; the final output stays 1080p30.
+Every render concludes with a QA report summary (duration / fps /
+resolution / audio / black frames / assets / scene audio-sync / captions
+/ boundaries); error-level findings fail the step.
 
 ### 6.3 Re-run after editing
 
@@ -343,12 +412,23 @@ Reports file / line / field / reason on errors.
 
 ## 7. Editing, iteration, and recovery
 
-The new flow no longer needs `approve` / `reject` / `rollback` — **edit
-the file, re-run `vf make`**:
+### 7.1 The three human gates (workflow state, not a chat "please confirm")
+
+| Gate | Command | Blocks |
+| --- | --- | --- |
+| Storyboard | `vf approve storyboard` | `vf preview` / `vf make`'s render step refuses without it (`--force` bypasses, recorded) |
+| Review | `vf approve review` | `vf final` refuses without it |
+| Final | `vf final` (QA gate) | error-level QA findings block the export (`--force` bypasses, recorded) |
+
+Before re-running after edits, note the **stage guard**: generator verbs
+(`research` / `script` / `storyboard` / `audio` / `motion`) refuse to
+overwrite a human-approved stage or a FINAL_APPROVED project without
+`--force` (printed as a warning). The typical loop:
 
 ```bash
 # Tweaked a narrative section in article.md
 $EDITOR projects/<slug>/article.md
+vf approve storyboard --cwd projects/<slug>   # re-read, re-approve
 vf make <slug>          # only TTS + render + mix re-execute (rest is skipped)
 
 # Tweaked audio-config.yaml
@@ -357,13 +437,45 @@ vf make <slug>          # only audio-assets + mix re-execute
 
 # Want a specific scene to use a different component (e.g. Image instead of Paragraph)
 $EDITOR projects/<slug>/storyboard.yaml
-vf make <slug>          # only render + mix re-execute
+vf make <slug>          # only render + mix re-execute (scene-isolated cache: other scenes are reused)
 ```
 
-`vf make` does not produce a review checkpoint — its output,
-`final-mixed.mp4`, is the publishable artifact.
+`vf make`'s publishable artifact is `final-mixed.mp4`; projects on the
+full agent pipeline end with `vf final` behind the QA + review gates.
 
-### About hand-editing `storyboard.yaml`
+### 7.2 The scene-level loop (the point of the whole system)
+
+The scene is the minimal editable unit, and every scene carries version
+history:
+
+```bash
+vf scene list <slug>              # versions per scene (+ approved marker)
+# … edit storyboard.yaml (or let an agent regenerate a scene) …
+vf preview <slug>                 # re-renders ONLY the changed scenes
+vf scene approve <slug> scene-05  # persist which version you approved
+vf scene restore <slug> scene-05 1
+```
+
+### 7.3 Remotion Studio live preview
+
+```bash
+vf studio <slug> [--port 3000]    # open the project in Remotion Studio
+```
+
+The Studio workspace is regenerated from the storyboard on each launch —
+use it to iterate on visuals before rendering any mp4.
+
+### 7.4 Recovery
+
+- `vf resume` — make-flow projects re-run the idempotent pipeline;
+  CLI-flow projects print state + the exact next command.
+- `vf rollback <checkpoint-id>` — validates the id, marks downstream
+  checkpoints invalidated, lands at DRAFT/<target stage>; never
+  overwrites artifacts (content restores go through `vf scene restore`).
+- `vf reset [stage] [--force]` — rewind; marks the target checkpoint
+  invalidated instead of faking an approval.
+
+### 7.5 About hand-editing `storyboard.yaml`
 
 `storyboard.yaml` is derived from `article.md` and gets refreshed on
 every `vf draft` run. Additionally, `vf make` rewrites each scene's
@@ -415,6 +527,12 @@ script:
 storyboard:
   primary: minimax
   fallback: glm
+visual:
+  primary: minimax
+  fallback: glm
+motion:
+  primary: minimax
+  fallback: glm
 review:
   primary: glm
   fallback: minimax
@@ -447,20 +565,28 @@ A non-quota error from the primary (e.g. HTTP 400 invalid payload) is
 **not** retried with the fallback — it surfaces immediately, because
 the fallback provider would return the same error on the same input.
 
-### v0.4 recommended: `vf draft` + `vf audio-plan`
+### Recommended: `vf draft` (merged audio-plan) + approve + `vf make`
 
-The new AI workflow collapses to two commands producing the two human-edit
+The AI workflow collapses to a few steps producing the two human-edit
 files:
 
 ```bash
-# 1. Write article.md (consolidated narrative + Scenes YAML block)
+# 1. One command writes both files: article.md (an editable long-form
+#    markdown + Scenes YAML block) and audio-config.yaml (voice / bgm /
+#    sfx / fades). --no-audio-plan skips the audio step; an existing
+#    audio-config.yaml is never overwritten.
 vf draft "AI Agent Memory"
 vf draft "AI Agent Memory" --no-web
 vf draft "AI Agent Memory" --model glm --lang zh-CN --duration 60 --audience developers
 vf draft "AI Agent Memory" --from outline.md   # revise an existing outline
+vf draft "AI Agent Memory" --file my-idea.md   # polish YOUR idea; opinions preserved
+vf draft "AI Agent Memory" --no-audio-plan     # article.md only
 
-# 2. Write audio-config.yaml from the parsed article
-vf audio-plan ai-agent-memory
+# 2. 🚪 Human gate: read article.md, then approve the storyboard
+vf approve storyboard --cwd projects/ai-agent-memory
+
+# 3. Render — TTS → audio assets → render → mix (QA report on every render)
+vf make ai-agent-memory
 ```
 
 Outputs:
@@ -470,8 +596,61 @@ projects/<slug>/article.md           # human edits: narrative + Scenes YAML
 projects/<slug>/audio-config.yaml    # human edits: voice / bgm / sfx / fades
 ```
 
-After human edits to these two files, `vf make <slug>` produces the
-publishable mp4 in a single command.
+After human edits to these two files (and re-approval when article.md
+changed), `vf make <slug>` produces the publishable mp4 in a single
+command.
+
+### The full agent pipeline (fine-grained, incl. the v0.2 verbs)
+
+For per-stage control — or to reach capabilities `vf make` doesn't cover
+(motion planning, diagram assets, QA re-checks) — the canonical order is:
+
+```bash
+vf new "<slug>"
+vf research "<topic>"          # optional, feeds script/storyboard
+vf script "<topic>" --from-research …
+vf storyboard "<topic>" --from-research … --from-script …
+vf approve storyboard --cwd projects/<slug>     # 🚪 HUMAN GATE 1
+vf motion <slug> [--bpm 100]                    # Motion Agent (LLM + deterministic fallback)
+vf audio <slug>                                 # TTS → per-scene WAVs + captions
+vf excalidraw <slug>                            # diagram scenes → .excalidraw + animated SVG assets
+vf review <slug>                                # read-only Content/Visual/Technical review
+vf preview --cwd projects/<slug>                # QA report + contact sheet (WAITING_REVIEW)
+vf qa <slug>                                    # rebuild the report; exits 1 on errors
+vf approve review --cwd projects/<slug>         # 🚪 HUMAN GATE 2
+vf final --cwd projects/<slug> [--mix]          # 🚪 HUMAN GATE 3 (QA-gated) → FINAL_APPROVED
+vf youtube <slug>                               # publishing metadata
+```
+
+### `vf motion` — the Motion Agent
+
+Plans per-scene timeline animations and transitions (written into the
+storyboard's `animations:` / `transition:`):
+
+```bash
+vf motion my-topic                  # LLM planning (provider routed per the motion role)
+vf motion my-topic --bpm 120        # quantize entrance/emphasis moments to a beat grid
+vf motion my-topic --scene scene-03 # plan one scene only
+vf motion my-topic --baseline       # skip the LLM — apply deterministic heuristics verbatim
+```
+
+### `vf excalidraw` — diagram asset generator
+
+Converts every `svg`/`SvgScene` scene in the storyboard into a
+**hand-editable** `.excalidraw` file plus a standalone animated SVG
+(under `assets/excalidraw/`): `vf excalidraw my-topic [--duration 8]`.
+Exits with a hint when the storyboard has no diagram scenes.
+
+### `vf qa` — QA re-check
+
+Rebuilds the QA report for the current preview at any time
+(`qa/render-report.json`); strict mode (default) exits 1 on error-level
+findings, `--no-strict` reports without failing:
+
+```bash
+vf qa my-topic
+vf qa my-topic --no-strict
+```
 
 
 ### YouTube package
@@ -487,11 +666,11 @@ prompt, and Shorts hook under `youtube/`. Does **not** upload to YouTube
 nor generate the thumbnail / Shorts MP4 (those come from `vf thumbnail`
 and `vf shorts` — see §12.5).
 
-## 9. Voice, subtitles, and audio (v0.4)
+## 9. Voice, subtitles, and audio
 
 ### 9.1 Recommended: subsumed into `vf make`
 
-As of v0.4, TTS, BGM/SFX assets, mixing, and SRT subtitles are all
+Today, TTS, BGM/SFX assets, mixing, and SRT subtitles are all
 produced by `vf make` in one invocation — no need for separate `vf audio`,
 `vf audio-asset`, or `vf mix` calls:
 
@@ -581,7 +760,7 @@ etc.), implement the `TTSProvider` interface in `@vf/tts` and pass it to
 
 ## 10. Project artifacts and provenance
 
-### v0.4 recommended layout
+### Recommended layout
 
 ```text
 projects/<slug>/
@@ -589,13 +768,21 @@ projects/<slug>/
 ├── article.md                       ⭐ human edits: narrative + Scenes YAML (vf draft writes)
 ├── audio-config.yaml                ⭐ human edits: voice / bgm / sfx / fades (vf audio-plan writes)
 ├── storyboard/storyboard.yaml       derived by vf draft from article.md; per-scene duration is re-measured after TTS by vf make (hand edits to other fields survive; durations get overwritten on the next make)
-├── vdsl/vdsl.yaml                   normalized compiled VDSL
-├── state.yaml                       state machine state (unused by `vf make`; retained for back-compat)
+├── vdsl/vdsl.yaml                   normalized compiled VDSL (deterministic; falls back to the storyboard loudly when corrupt)
+├── state.yaml                       workflow state machine (10 states; drives the gates and guards)
+├── checkpoints/<stage>.yaml         human-gate audit trail (approved/rejected/invalidated)
 ├── runs/<run-id>.yaml               per-LLM/tool-call run records
+├── scenes/                          per-scene MP4 cache (content-hash keyed; final 1080p30)
+├── scenes-draft/                    low-quality draft cache (--draft: 960×540@15)
+├── qa/
+│   ├── render-report.json           QA report, written on every render (rebuild with vf qa)
+│   └── contact-sheet.png            per-scene contact sheet
 ├── assets/
 │   ├── audio/scene_*.wav           per-scene TTS (vf make writes)
-│   └── audio-assets/{bgm,sfx}/     BGM/SFX assets (vf make writes)
+│   ├── audio-assets/{bgm,sfx}/     BGM/SFX assets (vf make writes)
+│   └── excalidraw/                 vf excalidraw writes: .excalidraw + animated SVG
 ├── captions/<lang>.srt              subtitles (vf make writes)
+├── youtube/                         publishing package from vf youtube / thumbnail / shorts
 └── output/
     ├── preview.mp4                  vf make writes
     ├── preview-faststart.mp4        vf make writes
@@ -621,6 +808,8 @@ matter, run `vf make` directly without re-drafting.
 **Never** commit API keys, `.env`, private source material, tokens, or
 cookies.
 
+## 11. Troubleshooting
+
 ### Validation reports a missing asset
 
 Paths such as `assets/audio/scene_01.wav` are relative to the project
@@ -645,6 +834,29 @@ audio-config.yaml not found at .../audio-config.yaml
 
 Run `vf draft <topic>` and `vf audio-plan <topic>` first, then re-run
 `vf make`.
+
+### `preview: storyboard is not approved yet`
+
+The pre-render human gate: the storyboard hasn't been approved. Read
+`projects/<slug>/storyboard.yaml` (the make flow's mirror of
+`article.md`), then run the command from the error message:
+
+```bash
+vf approve storyboard --cwd <project parent dir>
+```
+
+To skip it deliberately, `vf preview --force` (prints a `[FORCE]`
+warning and records it in the audit trail). Note the stage guard also
+stops generators from overwriting an approved stage — regenerate with
+`--force`, or `vf rollback` / `vf reset` first.
+
+### `vf final` is blocked by the QA gate (`qa-gate: N error-level finding(s)`)
+
+The pre-export QA re-check found error-level issues (duration / black
+frames / audio-sync / missing assets, …). Open `qa/render-report.json`,
+fix the findings (each carries a fix suggestion), re-run `vf preview`,
+then `vf final` again. To export anyway, `vf final --force` (the failed
+gate stays in the run history).
 
 ### Edge TTS fails
 
@@ -711,10 +923,10 @@ Two temp directories accumulate during heavy use:
 
 ## 12. Step-by-step: create a video from a topic
 
-### 12.0 Recommended: 2-command minimal API (v0.3.9+)
+### 12.0 Recommended: minimal API (2 AI commands + 1 human approval)
 
-The entire pipeline is **2 commands + 2 human-edit files + 1 rendered
-output**:
+The entire pipeline is **2 commands + 1 human approval + 2 human-edit
+files + 1 rendered output**:
 
 1. `vf draft <topic>` → writes `article.md` and `audio-config.yaml`
    (LLM consolidates research + script + storyboard + audio plan in one
@@ -722,17 +934,22 @@ output**:
    the draft with your raw idea (opinions preserved); an existing
    `audio-config.yaml` is never overwritten — regenerate with
    `vf audio-plan`)
-2. `vf make <project>` → everything else: TTS → audio assets → render → mix → mp4
+2. `vf approve storyboard` → 🚪 human gate: read article.md, then
+   approve (without it `vf make` fails at the render step with this
+   exact instruction)
+3. `vf make <project>` → everything else: TTS → audio assets → render
+   (scene-isolated, QA report) → mix → mp4
 
 ```mermaid
 flowchart LR
     topic[topic] --> vfDraft["vf draft (LLM)"]
     vfDraft --> articleMD["article.md ⭐ human-edit"]
     vfDraft --> audioConfig["audio-config.yaml ⭐ human-edit"]
-    articleMD --> vfMake["vf make"]
-    audioConfig --> vfMake
+    articleMD --> vfApprove["vf approve storyboard 🚪"]
+    audioConfig --> vfApprove
+    vfApprove --> vfMake["vf make"]
     vfMake --> previewMp4[preview.mp4]
-    vfMake --> finalMixedMp4[final-mixed.mp4]
+    vfMake --> finalMixedMp4["final-mixed.mp4"]
 ```
 
 `vf make` is **idempotent** — outputs newer than inputs are skipped. Use
@@ -762,7 +979,7 @@ vf new "$TOPIC"
 #   runs/, checkpoints/, output/, assets/, etc.
 ```
 
-### 12.3 Two LLM commands (the recommended path)
+### 12.3 LLM drafting (the recommended path)
 
 Requires `GLM_API_KEY` (default) or `MINIMAX_API_KEY` in the environment.
 
@@ -784,7 +1001,8 @@ vf draft "$TOPIC" --file my-idea.md  # polish YOUR idea into an article; opinion
 ```
 
 ```bash
-# 2. Audio-plan — reads article.md's scenes, writes audio-config.yaml
+# 2. Audio-plan — OPTIONAL: `vf draft` already ran this. Re-run it only to
+#    REGENERATE audio-config.yaml after hand-editing article.md.
 #    One file holds all audio knobs (voice / bgm tag / sfx cues / fades)
 vf audio-plan "$TOPIC"
 ```
@@ -796,9 +1014,14 @@ $EDITOR "projects/$TOPIC/article.md"          # narrative, scene tweaks, duratio
 $EDITOR "projects/$TOPIC/audio-config.yaml"   # BGM tag, SFX cues, fades
 ```
 
-### 12.4 Render with one command
+### 12.4 Render (approve first, then one command)
 
 ```bash
+# 🚪 Human gate: read projects/$TOPIC/article.md, then approve the storyboard
+# (--cwd may point straight at the project dir; `--cwd projects` also works
+#  when exactly one project exists under projects/)
+vf approve storyboard --cwd "projects/$TOPIC"
+
 vf make "$TOPIC"                       # TTS → audio assets → render → mix (real Edge TTS)
 vf make "$TOPIC" --fake                # FakeTTSProvider (no network; silent placeholder WAVs + no AI images)
 vf make "$TOPIC" --image-provider minimax  # force real AI image generation
@@ -820,6 +1043,8 @@ projects/$TOPIC/assets/audio/scene_*.wav
 projects/$TOPIC/assets/audio-assets/bgm/*.wav
 projects/$TOPIC/assets/audio-assets/sfx/*.wav
 projects/$TOPIC/captions/<lang>.srt
+projects/$TOPIC/qa/render-report.json        # QA report (black frames / audio-sync / captions / …)
+projects/$TOPIC/qa/contact-sheet.png         # per-scene contact sheet
 ```
 
 Not happy? Edit either human-edit file and re-run `vf make` — only the
@@ -883,9 +1108,12 @@ $EDITOR "projects/$TOPIC/audio-config.yaml"
 # Want a 1-second pause between every sentence? Add it to audio-config.yaml:
 #   echo 'pause_between_sentences_sec: 1' >> "projects/$TOPIC/audio-config.yaml"
 
-vf make "$TOPIC"                  # → preview.mp4 + final-mixed.mp4
+vf approve storyboard --cwd "projects/$TOPIC" # 🚪 human gate: approve after reading article.md
+vf make "$TOPIC"                  # → preview.mp4 + final-mixed.mp4 (+ QA report & contact sheet)
 
 # Optional
+vf scene list "$TOPIC"            # per-scene versions; vf scene approve/restore for scene-level rollback
+vf studio "$TOPIC"                # iterate visuals in Remotion Studio
 vf youtube "$TOPIC"               # works directly off article.md
 vf thumbnail "$TOPIC"
 vf shorts "$TOPIC"
@@ -906,3 +1134,40 @@ without an AI in the loop.
 npm run acceptance
 # Expect: "ALL 11 §62.4 acceptance checks passed"
 ```
+
+## 14. End-to-end example projects (no LLM, deterministic)
+
+Three complete examples live under `examples/`, exercising every v0.2
+capability with no API keys required — copy them and render:
+
+| Example | Length | Exercises |
+| --- | --- | --- |
+| `examples/mcp-explainer` | 45 s | full pipeline: SvgScene diagram draw-on, explicit `animations[]`, DoodleScene hand-drawn ink, duration sync, scene versioning, the QA report/gate, Excalidraw asset generation |
+| `examples/ai-concept` | 60 s | hand-drawn canvas + beat-sync (100 BPM grid) |
+| `examples/devops-architecture` | 90 s | diagrams, target-driven camera, cut/fade transitions, timeline choreography, Excalidraw |
+
+Running the MCP Explainer for real (full sequence in its `README.md`):
+
+```bash
+pnpm run build
+node packages/cli/dist/index.js new mcp-explainer
+cp examples/mcp-explainer/storyboard.yaml projects/mcp-explainer/storyboard/
+cp examples/mcp-explainer/captions/zh-CN.srt projects/mcp-explainer/captions/
+# 9 s silent narration placeholder per scene (or generate real TTS with `vf audio`)
+for i in 01 02 03 04 05; do
+  ffmpeg -y -f lavfi -i anullsrc=r=44100:cl=mono -t 9 projects/mcp-explainer/assets/audio/scene-$i.wav
+done
+node packages/cli/dist/index.js approve storyboard --cwd projects/mcp-explainer   # 🚪 gate 1
+node packages/cli/dist/index.js preview --cwd projects/mcp-explainer              # QA report + contact sheet
+node packages/cli/dist/index.js excalidraw mcp-explainer
+node packages/cli/dist/index.js qa mcp-explainer
+node packages/cli/dist/index.js approve review --cwd projects/mcp-explainer       # 🚪 gate 2
+node packages/cli/dist/index.js final --cwd projects/mcp-explainer                # 🚪 gate 3 (QA gate)
+```
+
+Each example's `README.md` documents the scenes (component family ×
+pipeline feature), and the committed integration tests
+(`packages/cli/src/demo-*.test.ts`) run this exact sequence against a
+temp project. To see how the new components (`SvgScene` / `DoodleScene`),
+timeline animations, and camera moves are written, start from these
+three storyboards.

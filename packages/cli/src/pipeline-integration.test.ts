@@ -169,7 +169,7 @@ describe("CLI pipeline integration — runPreview / runFinal / runStatus / workf
     expect(state.current_stage).toBe("review");
   }, 120_000);
 
-  it("writes the compiled vdsl.yaml and caches per-scene renders (plan §6/Principle 1)", async () => {
+  it("writes vdsl.yaml, caches per-scene renders, versions scenes, restores (§6/§26/Principle 1)", async () => {
     const code = await runPreview(projectName, projectCwd);
     expect(code).toBe(0);
 
@@ -180,33 +180,62 @@ describe("CLI pipeline integration — runPreview / runFinal / runStatus / workf
     expect(vdsl).toContain("scene-01");
     expect(vdsl).toContain("scene-02");
 
-    // Per-scene cache files exist; a re-render with unchanged inputs
-    // reuses them (mtime unchanged) and only re-concats the output.
-    const scenesDir = path.join(projectDir, "scenes");
-    const sceneFiles = ["00-scene-01.mp4", "01-scene-02.mp4"].map((f) =>
-      path.join(scenesDir, f),
-    );
-    for (const f of sceneFiles) expect(existsSync(f)).toBe(true);
-    const mtimesBefore = sceneFiles.map((f) => statSync(f).mtimeMs);
-    rmSync(path.join(projectDir, "output", "preview.mp4"), { force: true });
+    // First preview records v1 for every scene (plan §26).
+    const { listSceneVersions } = await import("@vf/workflow");
+    expect(
+      (await listSceneVersions(projectDir, "scene-01")).map((v) => v.version),
+    ).toEqual([1]);
 
-    const second = await runPreview(projectName, projectCwd);
-    expect(second).toBe(0);
-    const mtimesAfter = sceneFiles.map((f) => statSync(f).mtimeMs);
-    expect(mtimesAfter).toEqual(mtimesBefore);
+    // Per-scene cache files exist; an unchanged re-render reuses them.
+    const scenesDir = path.join(projectDir, "scenes");
+    const f1 = path.join(scenesDir, "00-scene-01.mp4");
+    const f2 = path.join(scenesDir, "01-scene-02.mp4");
+    expect(existsSync(f1)).toBe(true);
+    expect(existsSync(f2)).toBe(true);
+    const m1 = statSync(f1).mtimeMs;
+    const m2 = statSync(f2).mtimeMs;
+    rmSync(path.join(projectDir, "output", "preview.mp4"), { force: true });
+    expect(await runPreview(projectName, projectCwd)).toBe(0);
+    expect(statSync(f1).mtimeMs).toBe(m1);
+    expect(statSync(f2).mtimeMs).toBe(m2);
     expect(existsSync(path.join(projectDir, "output", "preview.mp4"))).toBe(
       true,
     );
 
-    // Touching the storyboard invalidates the cache and re-renders.
+    // A pure mtime touch must NOT invalidate — content is what matters.
     const sbPath = path.join(projectDir, "storyboard", "storyboard.yaml");
     const future = new Date(Date.now() + 5000);
     utimesSync(sbPath, future, future);
-    const third = await runPreview(projectName, projectCwd);
-    expect(third).toBe(0);
-    const mtimesRerendered = sceneFiles.map((f) => statSync(f).mtimeMs);
-    expect(mtimesRerendered).not.toEqual(mtimesAfter);
-  }, 240_000);
+    expect(await runPreview(projectName, projectCwd)).toBe(0);
+    expect(statSync(f1).mtimeMs).toBe(m1);
+
+    // Editing ONE scene re-renders only that scene and records v2.
+    const edited = readFileSync(sbPath, "utf8").replace(
+      'text: "world"',
+      'text: "world v2"',
+    );
+    writeFileSync(sbPath, edited);
+    expect(await runPreview(projectName, projectCwd)).toBe(0);
+    expect(statSync(f1).mtimeMs).toBe(m1); // sibling cached
+    const m2b = statSync(f2).mtimeMs;
+    expect(m2b).not.toBe(m2); // edited scene re-rendered
+    expect(
+      (await listSceneVersions(projectDir, "scene-02")).map((v) => v.version),
+    ).toEqual([1, 2]);
+
+    // Restore v1: splices the old fragment back; only scene-02 re-renders.
+    const { runSceneRestore } = await import("./scene-command.js");
+    expect(await runSceneRestore(projectName, "scene-02", 1, projectCwd)).toBe(
+      0,
+    );
+    const m1c = statSync(f1).mtimeMs;
+    expect(await runPreview(projectName, projectCwd)).toBe(0);
+    expect(statSync(f1).mtimeMs).toBe(m1c);
+    expect(statSync(f2).mtimeMs).not.toBe(m2b);
+    const restored = readFileSync(sbPath, "utf8");
+    expect(restored).toContain('text: "world"');
+    expect(restored).not.toContain("world v2");
+  }, 300_000);
 
   it("runPreview --draft renders 960x540@15 (plan §27)", async () => {
     const code = await runPreview(projectName, projectCwd, false, {

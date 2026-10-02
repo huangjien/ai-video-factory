@@ -24,6 +24,11 @@ import {
   runRollback,
 } from "./workflow-commands.js";
 import { runFinal, runPreview } from "./render-command.js";
+import {
+  runSceneApprove,
+  runSceneList,
+  runSceneRestore,
+} from "./scene-command.js";
 
 const program = new Command();
 
@@ -693,6 +698,77 @@ program
       process.exitCode = await runPreview(project, opts.cwd, opts.force, {
         draft: opts.draft,
       });
+    },
+  );
+
+const scene = program
+  .command("scene")
+  .description("per-scene version history (plan §26): list, restore, approve");
+
+scene
+  .command("list")
+  .argument("[project]", "project name (slug)")
+  .argument("[sceneId]", "scene id — omit to list all scenes")
+  .option("--cwd <dir>", "project root base directory")
+  .action(
+    async (
+      project: string | undefined,
+      sceneId: string | undefined,
+      opts: { cwd?: string },
+    ) => {
+      process.exitCode = await runSceneList(project, sceneId, opts.cwd);
+    },
+  );
+
+scene
+  .command("restore")
+  .argument("<project>", "project name (slug)")
+  .argument("<sceneId>", "scene id to restore")
+  .argument("<version>", "version number to restore (see scene list)", (v) =>
+    parseInt(v, 10),
+  )
+  .option("--cwd <dir>", "project root base directory")
+  .action(
+    async (
+      project: string,
+      sceneId: string,
+      version: number,
+      opts: { cwd?: string },
+    ) => {
+      process.exitCode = await runSceneRestore(
+        project,
+        sceneId,
+        version,
+        opts.cwd,
+      );
+    },
+  );
+
+scene
+  .command("approve")
+  .argument("<project>", "project name (slug)")
+  .argument("<sceneId>", "scene id to approve")
+  .argument(
+    "[version]",
+    "version number — defaults to the version matching the current storyboard",
+    (v) => parseInt(v, 10),
+  )
+  .option("--note <text>", "review note stored with the approval")
+  .option("--cwd <dir>", "project root base directory")
+  .action(
+    async (
+      project: string,
+      sceneId: string,
+      version: number | undefined,
+      opts: { note?: string; cwd?: string },
+    ) => {
+      process.exitCode = await runSceneApprove(
+        project,
+        sceneId,
+        version,
+        opts.note,
+        opts.cwd,
+      );
     },
   );
 

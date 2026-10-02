@@ -5,8 +5,11 @@ import { execSync } from "node:child_process";
 import { resolveProjectDir, resolveProjectRoot } from "./project-path.js";
 import {
   formatRunId,
+  extractSceneFragment,
+  hashSceneFragment,
   loadCheckpoint,
   readProjectState,
+  recordSceneVersion,
   transition,
   writeProjectState,
   writeRun,
@@ -65,7 +68,11 @@ async function mtimeOrZero(p: string): Promise<number> {
 async function loadOrCompileStoryboard(
   root: string,
   compileOpts: CompileOptions = {},
-): Promise<{ renderPlan: RenderPlan; compiledFromVdsl: boolean }> {
+): Promise<{
+  renderPlan: RenderPlan;
+  storyboardText: string;
+  compiledFromVdsl: boolean;
+}> {
   await syncSceneDurations(root);
   const storyboardPath = path.join(root, STORYBOARD_REL);
   const vdslPath = path.join(root, VDSL_REL);
@@ -89,7 +96,7 @@ async function loadOrCompileStoryboard(
   try {
     const { renderPlan, write } = compileStoryboard(source, root, compileOpts);
     if (!compiledFromVdsl) await write();
-    return { renderPlan, compiledFromVdsl };
+    return { renderPlan, storyboardText: text, compiledFromVdsl };
   } catch (err) {
     if (!compiledFromVdsl) throw err;
     console.error(
@@ -97,7 +104,7 @@ async function loadOrCompileStoryboard(
     );
     const { renderPlan, write } = compileStoryboard(text, root, compileOpts);
     await write();
-    return { renderPlan, compiledFromVdsl: false };
+    return { renderPlan, storyboardText: text, compiledFromVdsl: false };
   }
 }
 
@@ -106,6 +113,30 @@ async function loadOrCompileStoryboard(
 function sceneFileName(index: number, id: string): string {
   const slug = id.replace(/[^a-zA-Z0-9_-]+/g, "_") || "scene";
   return `${String(index).padStart(2, "0")}-${slug}.mp4`;
+}
+
+interface SceneCacheMeta {
+  sceneHash: string;
+  audioPath?: string;
+  audioMtimeMs?: number;
+  renderedAt: string;
+}
+
+async function readSceneCacheMeta(
+  file: string,
+): Promise<SceneCacheMeta | null> {
+  try {
+    return JSON.parse(await readFile(`${file}.json`, "utf8")) as SceneCacheMeta;
+  } catch {
+    return null;
+  }
+}
+
+async function writeSceneCacheMeta(
+  file: string,
+  meta: SceneCacheMeta,
+): Promise<void> {
+  await writeFile(`${file}.json`, JSON.stringify(meta, null, 2), "utf8");
 }
 
 export interface PreviewOptions {
@@ -172,7 +203,7 @@ export async function runPreview(
   }
 
   const draft = opts.draft === true;
-  const { renderPlan } = await loadOrCompileStoryboard(
+  const { renderPlan, storyboardText } = await loadOrCompileStoryboard(
     root,
     draft ? DRAFT_COMPILE : {},
   );
@@ -180,25 +211,49 @@ export async function runPreview(
   const vcode = await runValidate(path.join(root, STORYBOARD_REL), root);
   if (vcode !== 0) return vcode;
 
-  // Scene-isolated incremental render (plan Principle 1): reuse every
-  // scene mp4 that is newer than its inputs (storyboard + that scene's
-  // narration audio), re-render only the stale ones, then concat.
+  // Version recording (plan §26): every scene whose fragment differs from
+  // its latest stored version gets a new one — human edits included, with
+  // no extra command to remember.
+  for (const scene of renderPlan.scenes) {
+    const frag = extractSceneFragment(storyboardText, scene.id);
+    if (frag === null) continue;
+    const version = await recordSceneVersion(root, scene.id, frag);
+    if (version !== null) {
+      console.log(`  scene ${scene.id}: recorded version v${version}`);
+    }
+  }
+
+  // Scene-isolated incremental render (plan Principle 1): reuse any scene
+  // mp4 whose CONTENT hash matches the current storyboard fragment and
+  // whose narration audio is unchanged — editing scene-007 re-renders only
+  // scene-007, regardless of mtimes elsewhere in the file.
   const scenesDir = path.join(root, draft ? "scenes-draft" : "scenes");
-  const storyboardM = await mtimeOrZero(path.join(root, STORYBOARD_REL));
   const sceneFiles: string[] = [];
   for (const scene of renderPlan.scenes) {
     const file = path.join(scenesDir, sceneFileName(scene.index, scene.id));
     sceneFiles.push(file);
-    const audioM = scene.audio
-      ? await mtimeOrZero(path.join(root, scene.audio))
-      : 0;
-    const freshestInput = Math.max(storyboardM, audioM);
-    if ((await mtimeOrZero(file)) >= freshestInput && freshestInput > 0) {
+    const frag = extractSceneFragment(storyboardText, scene.id);
+    const sceneHash = frag === null ? null : hashSceneFragment(frag);
+    const audioPath = scene.audio ? path.join(root, scene.audio) : null;
+    const audioM = audioPath ? await mtimeOrZero(audioPath) : 0;
+    const sidecar = await readSceneCacheMeta(file);
+    const fresh =
+      sidecar !== null &&
+      sceneHash !== null &&
+      sidecar.sceneHash === sceneHash &&
+      (sidecar.audioPath ?? null) === (audioPath ?? null) &&
+      Math.abs((sidecar.audioMtimeMs ?? 0) - audioM) < 1;
+    if (fresh) {
       console.log(`  scene ${scene.id}: cached`);
       continue;
     }
     console.log(`  scene ${scene.id}: rendering`);
     await renderSceneToVideo(renderPlan, scene.id, file);
+    await writeSceneCacheMeta(file, {
+      sceneHash: sceneHash ?? "",
+      ...(audioPath !== null ? { audioPath, audioMtimeMs: audioM } : {}),
+      renderedAt: new Date().toISOString(),
+    });
   }
 
   const out = path.join(root, "output", "preview.mp4");

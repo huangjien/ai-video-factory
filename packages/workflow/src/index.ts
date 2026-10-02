@@ -24,3 +24,15 @@ export {
   writeRun,
   type RunRecord,
 } from "./runs.js";
+export {
+  approveSceneVersion,
+  extractSceneFragment,
+  hashSceneFragment,
+  listSceneVersions,
+  readSceneApproval,
+  readSceneVersion,
+  recordSceneVersion,
+  replaceSceneFragment,
+  type SceneApproval,
+  type SceneVersionMeta,
+} from "./versions.js";

@@ -1,7 +1,11 @@
-# Architecture map
+# Architecture map — v0.1 codebase (historical)
 
 How each design-doc section maps to the v0.1 codebase. The design doc is
 `AI_Video_Factory_Design_and_Plan_v1.1.md`, alongside this file in `docs/`.
+
+> **Current architecture:** see [`docs/architecture.md`](./architecture.md).
+> This file is kept as the v0.1 snapshot; sections below describe the
+> pre-agent-era pipeline only.
 
 ## Principles (doc §2, §65)
 

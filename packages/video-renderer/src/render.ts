@@ -193,7 +193,7 @@ export async function renderPlanToVideo(
  * bypass that entirely. Non-existent files leave the src unchanged
  * (the dark background renders instead of crashing).
  */
-async function resolveImageSources(
+export async function resolveImageSources(
   plan: RenderPlan,
 ): Promise<RenderPlan> {
   const scenes = await Promise.all(

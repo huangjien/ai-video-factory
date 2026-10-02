@@ -53,6 +53,21 @@ The `preview` output lands at `output/preview-faststart.mp4` and `final`
 produces `output/final-faststart.mp4`, each 1920x1080@30fps. Every step
 writes a YAML record to `runs/<run-id>.yaml` and updates `state.yaml`.
 
+### Remotion Studio — `vf studio <project>`
+
+Opens the project's current composition in [Remotion Studio](https://www.remotion.dev/docs/studio) — a live, browser-based preview with a timeline and input-props editing:
+
+```bash
+node packages/cli/dist/index.js studio demo
+# → regenerates packages/video-renderer/.studio/<slug>/ from the storyboard
+#   and starts the Studio web server; Ctrl-C stops it
+```
+
+Re-run `vf studio` after editing the storyboard to refresh the composition.
+The generated workspace is a real Remotion project — anything Studio can do
+(props editing, frame scrubbing) works against the pipeline's exact render
+implementation.
+
 ### Global CLI installation
 
 Once the `@vf/*` workspace packages are published:

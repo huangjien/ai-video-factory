@@ -8,3 +8,7 @@ export {
   renderSceneToVideo,
   sweepRemotionTemp,
 } from "./render.js";
+export {
+  prepareStudioWorkspace,
+  type StudioWorkspace,
+} from "./studio.js";

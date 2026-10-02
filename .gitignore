@@ -5,6 +5,8 @@ dist/
 .omo/evidence/
 .omo/tmp/
 .remotion/
+# Generated Remotion Studio workspaces (vf studio)
+.studio/
 *.log
 .omo/run-continuation/
 coverage/

@@ -1,7 +1,7 @@
 # Architecture map
 
 How each design-doc section maps to the v0.1 codebase. The design doc is
-`AI_Video_Factory_Design_and_Plan_v1.1.md` at the repo root.
+`AI_Video_Factory_Design_and_Plan_v1.1.md`, alongside this file in `docs/`.
 
 ## Principles (doc §2, §65)
 

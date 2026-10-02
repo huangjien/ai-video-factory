@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   easeAtProgress,
   elementProgress,
+  resolveCameraTransform,
   resolveElementTiming,
   type SceneElementRef,
 } from "./svgSceneLogic.js";
@@ -102,3 +103,67 @@ describe("resolveElementTiming — whiteboard draw-on defaults (T4.3)", () => {
     expect(elementProgress(timing.get("n1")!, 120, 30)).toBe(1);
   });
 });
+
+describe("resolveCameraTransform — target-driven camera (T7.4)", () => {
+  const nodes = [
+    { id: "server", x: 760, y: 280, w: 440, h: 170 },
+    { id: "db", x: 120, y: 500, w: 400, h: 140 },
+  ];
+  const cameras = [
+    {
+      id: "cam-1",
+      target: "server",
+      type: "camera",
+      start: 2,
+      duration: 1.5,
+      easing: "easeInOut",
+    },
+    {
+      id: "cam-2",
+      target: "db",
+      type: "camera",
+      start: 6,
+      duration: 1.5,
+      easing: "easeInOut",
+    },
+  ];
+
+  it("is identity before the first camera", () => {
+    expect(resolveCameraTransform(cameras, nodes, 0, 30)).toEqual({
+      scale: 1,
+      tx: 0,
+      ty: 0,
+    });
+  });
+
+  it("zooms in mid-window and holds the focus afterwards", () => {
+    const mid = resolveCameraTransform(cameras, nodes, 2.75 * 30, 30);
+    expect(mid.scale).toBeGreaterThan(1);
+    const held = resolveCameraTransform(cameras, nodes, 5 * 30, 30);
+    expect(held.scale).toBeGreaterThan(1);
+    expect(held).toEqual(resolveCameraTransform(cameras, nodes, 5.9 * 30, 30));
+    // the focused node's center is pulled toward the canvas center
+    const focusedX = 760 + 220; // server center x
+    const mappedX = focusedX * held.scale + held.tx;
+    expect(Math.abs(mappedX - 960)).toBeLessThan(1);
+  });
+
+  it("cuts to the next focus at the next camera", () => {
+    const after = resolveCameraTransform(cameras, nodes, 7.6 * 30, 30);
+    // focused on db (center 320, 570)
+    const mappedX = (120 + 200) * after.scale + after.tx;
+    expect(Math.abs(mappedX - 960)).toBeLessThan(1);
+  });
+
+  it("unknown targets keep the identity", () => {
+    expect(
+      resolveCameraTransform(
+        [{ id: "c", target: "ghost", type: "camera", start: 1, duration: 1, easing: "easeInOut" }],
+        nodes,
+        5 * 30,
+        30,
+      ),
+    ).toEqual({ scale: 1, tx: 0, ty: 0 });
+  });
+});
+

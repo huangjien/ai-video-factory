@@ -2,6 +2,7 @@ import { z } from "zod";
 import { darkTechTheme } from "../theme.js";
 import {
   elementProgress,
+  resolveCameraTransform,
   resolveElementTiming,
   type SceneElementRef,
 } from "./svgSceneLogic.js";
@@ -93,11 +94,26 @@ export const SvgScene = (props: SvgSceneProps) => {
     return elementProgress(t, frame, fps);
   };
 
+  // Target-driven camera (T7.4): type "camera" animations focus a node.
+  const camera = resolveCameraTransform(
+    animations,
+    nodes.map((n) => ({ id: n.id, x: n.x, y: n.y, w: n.w, h: n.h })),
+    frame,
+    fps,
+    CANVAS_W,
+    CANVAS_H,
+  );
+  const cameraTransform =
+    camera.scale !== 1
+      ? `translate(${camera.tx.toFixed(2)} ${camera.ty.toFixed(2)}) scale(${camera.scale.toFixed(4)})`
+      : undefined;
+
   return (
     <svg
       viewBox={`0 0 ${CANVAS_W} ${CANVAS_H}`}
       style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }}
     >
+      <g transform={cameraTransform}>
       {title ? (
         <text
           x={80}
@@ -223,6 +239,7 @@ export const SvgScene = (props: SvgSceneProps) => {
           </g>
         );
       })}
+      </g>
     </svg>
   );
 };

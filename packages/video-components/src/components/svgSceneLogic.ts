@@ -64,6 +64,9 @@ export function resolveElementTiming(
   const out = new Map<string, ElementTiming>();
   const explicit = new Map<string, TimelineAnim>();
   for (const anim of animations) {
+    // Camera animations drive the VIEW, not element appearance — they
+    // must not hijack the element's draw timing.
+    if (anim.type === "camera") continue;
     // First animation per target wins (deterministic).
     if (!explicit.has(anim.target)) explicit.set(anim.target, anim);
   }
@@ -109,6 +112,86 @@ function normalizeType(t: string): ElementTiming["type"] {
     return t;
   }
   return "other";
+}
+
+export interface CameraTransform {
+  scale: number;
+  tx: number;
+  ty: number;
+}
+
+interface CameraRect {
+  id: string;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
+/** Target-driven camera (plan T7.4/§35 "Camera"): a `type: "camera"`
+ * animation targeting a node pans/zooms the view so that node fills the
+ * frame (~60% of the shorter axis). The transform eases in over the
+ * animation window and holds until the next camera. No schema change —
+ * the node rect IS the camera parameter. */
+export function resolveCameraTransform(
+  animations: TimelineAnim[],
+  nodes: CameraRect[],
+  frame: number,
+  fps: number,
+  canvasW = 1920,
+  canvasH = 1080,
+): CameraTransform {
+  const identity: CameraTransform = { scale: 1, tx: 0, ty: 0 };
+  const cameras = animations
+    .filter((a) => a.type === "camera")
+    .sort((a, b) => a.start - b.start);
+  const sec = frame / fps;
+  const active = [...cameras].reverse().find((c) => sec >= c.start);
+  if (!active) return identity;
+  const focus = nodes.find((n) => n.id === active.target);
+  if (!focus || focus.w <= 0 || focus.h <= 0) return identity;
+
+  const targetScale = Math.min(
+    2.5,
+    Math.min(canvasW / (focus.w * 1.6), canvasH / (focus.h * 1.6)),
+  );
+  const cx = focus.x + focus.w / 2;
+  const cy = focus.y + focus.h / 2;
+  const target: CameraTransform = {
+    scale: targetScale,
+    tx: canvasW / 2 - cx * targetScale,
+    ty: canvasH / 2 - cy * targetScale,
+  };
+
+  const easing = (EASINGS as readonly string[]).includes(active.easing)
+    ? (active.easing as VdslEasing)
+    : "easeInOut";
+  const p = easeAtProgress(easing, (sec - active.start) / active.duration);
+  const eased = Math.min(1, Math.max(0, p));
+  // Ease from the PREVIOUS camera's end state (or identity) to this one,
+  // then hold — deterministic and cut-safe.
+  const prevCam = [...cameras]
+    .reverse()
+    .find((c) => c.start < active.start && nodes.some((n) => n.id === c.target));
+  const from = prevCam
+    ? cameraTransformAt(cameras, nodes, Math.max(0, (active.start - 0.001) * fps), fps, canvasW, canvasH)
+    : identity;
+  return {
+    scale: from.scale + (target.scale - from.scale) * eased,
+    tx: from.tx + (target.tx - from.tx) * eased,
+    ty: from.ty + (target.ty - from.ty) * eased,
+  };
+}
+
+function cameraTransformAt(
+  animations: TimelineAnim[],
+  nodes: CameraRect[],
+  frame: number,
+  fps: number,
+  canvasW: number,
+  canvasH: number,
+): CameraTransform {
+  return resolveCameraTransform(animations, nodes, frame, fps, canvasW, canvasH);
 }
 
 /** Progress (0..1, eased) of an element at a given frame. */

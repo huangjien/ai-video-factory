@@ -5,6 +5,9 @@
       "path": "packages/vdsl"
     },
     {
+      "path": "packages/qa"
+    },
+    {
       "path": "packages/video-components"
     },
     {

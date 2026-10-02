@@ -18,6 +18,7 @@ export default defineConfig({
       "@vf/media-generators": path.resolve("packages/media-generators/src"),
       "@vf/audio-assets": path.resolve("packages/audio-assets/src"),
       "@vf/audio-mix": path.resolve("packages/audio-mix/src"),
+      "@vf/qa": path.resolve("packages/qa/src"),
     },
   },
   test: {

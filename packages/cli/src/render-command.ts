@@ -261,6 +261,28 @@ export async function runPreview(
   const faststartOut = path.join(root, "output", "preview-faststart.mp4");
   await faststart(out, faststartOut);
 
+  // QA groundwork (plan §28/T3.3): render report + contact sheet after
+  // every preview. Findings are surfaced, not fatal — the export gate
+  // that hard-fails on QA errors lands in T6.2.
+  try {
+    const { writeQaArtifacts } = await import("@vf/qa");
+    const report = await writeQaArtifacts(root, renderPlan, out);
+    const errors = report.findings.filter((f) => f.level === "error");
+    const warns = report.findings.filter((f) => f.level === "warn");
+    if (report.findings.length > 0) {
+      console.log(
+        `  QA: ${report.ok ? "ok" : "FAILED"} — ${errors.length} error(s), ${warns.length} warning(s) → qa/render-report.json`,
+      );
+      for (const f of report.findings) {
+        console.log(`    [${f.level}] ${f.message}`);
+      }
+    } else {
+      console.log(`  QA: all checks passed → qa/render-report.json`);
+    }
+  } catch (err) {
+    console.error(`  QA: tooling failed (video is still valid): ${(err as Error).message}`);
+  }
+
   const runId = formatRunId("render");
   const start = Date.now();
   await writeRun(root, {

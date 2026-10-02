@@ -262,6 +262,9 @@ importers:
       '@vf/media-generators':
         specifier: workspace:*
         version: link:../media-generators
+      '@vf/qa':
+        specifier: workspace:*
+        version: link:../qa
       '@vf/research':
         specifier: workspace:*
         version: link:../research
@@ -355,6 +358,12 @@ importers:
       '@vf/llm':
         specifier: workspace:*
         version: link:../llm
+
+  packages/qa:
+    dependencies:
+      '@vf/vdsl':
+        specifier: workspace:*
+        version: link:../vdsl
 
   packages/research:
     dependencies:

@@ -164,6 +164,14 @@ describe("CLI pipeline integration — runPreview / runFinal / runStatus / workf
     expect(
       existsSync(path.join(projectDir, "output", "preview-faststart.mp4")),
     ).toBe(true);
+    // QA groundwork (plan §28/T3.3): report + contact sheet after render.
+    const qaDir = path.join(projectDir, "qa");
+    expect(existsSync(path.join(qaDir, "render-report.json"))).toBe(true);
+    expect(existsSync(path.join(qaDir, "contact-sheet.png"))).toBe(true);
+    const report = JSON.parse(
+      readFileSync(path.join(qaDir, "render-report.json"), "utf8"),
+    ) as { ok: boolean; checks: { duration: { actualSec: number } } };
+    expect(report.checks.duration.actualSec).toBeGreaterThan(9);
     const state = readState(projectDir);
     expect(state.status).toBe("WAITING_REVIEW");
     expect(state.current_stage).toBe("review");

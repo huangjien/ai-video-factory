@@ -70,11 +70,12 @@ export interface BlackSegment {
 }
 
 /**
- * Detect fully-black segments via ffmpeg blackdetect. pic_th stays at the
- * 0.98 default on purpose: the dark-tech theme background is ~7% luma, but
- * any frame with visible content is far from 98% black pixels, so real
- * black gaps (injected black, dead scenes) are caught without flagging
- * the theme.
+ * Detect fully-black segments via ffmpeg blackdetect. pix_th=0.05 keeps
+ * the pixel-black threshold BELOW the dark-tech theme background
+ * (~7% luma / #0a0e14): at the previous 0.10, background pixels counted
+ * as black, so sparse diagram scenes (thin strokes on the dark theme)
+ * tripped the ≥98%-black-pixels frame rule. True black (luma ~0 —
+ * injected gaps, dead renders) still detects; the theme never does.
  */
 export async function detectBlackFrames(
   file: string,
@@ -87,7 +88,7 @@ export async function detectBlackFrames(
       "-i",
       file,
       "-vf",
-      `blackdetect=d=${d}:pix_th=0.10`,
+      `blackdetect=d=${d}:pix_th=0.05`,
       "-f",
       "null",
       "-",
@@ -117,7 +118,10 @@ export async function makeContactSheet(
   opts: { frames?: number; thumbWidth?: number } = {},
 ): Promise<void> {
   const info = await probeVideo(file);
-  const frames = Math.min(opts.frames ?? 12, Math.max(1, Math.floor(info.duration)));
+  const frames = Math.min(
+    opts.frames ?? 12,
+    Math.max(1, Math.floor(info.duration)),
+  );
   const cols = Math.ceil(Math.sqrt(frames));
   const rows = Math.ceil(frames / cols);
   const thumbWidth = opts.thumbWidth ?? 320;
@@ -178,14 +182,12 @@ export async function buildRenderReport(
   opts: RenderReportOptions = {},
 ): Promise<RenderReport> {
   const tolerance = opts.durationToleranceSec ?? 0.5;
-  const projectRoot =
-    opts.projectRoot ?? path.dirname(path.dirname(videoPath));
+  const projectRoot = opts.projectRoot ?? path.dirname(path.dirname(videoPath));
   const findings: QaFinding[] = [];
   const info = await probeVideo(videoPath);
 
   const expectedDuration = plan.totalFrames / plan.project.fps;
-  const durationOk =
-    Math.abs(info.duration - expectedDuration) <= tolerance;
+  const durationOk = Math.abs(info.duration - expectedDuration) <= tolerance;
   if (!durationOk) {
     findings.push({
       level: "error",
@@ -288,7 +290,10 @@ export async function buildRenderReport(
       },
       blackFrames,
       assets: { missing, ok: missing.length === 0 },
-      sceneAudioSync: { rows: sceneSync.rows, ok: sceneSync.findings.length === 0 },
+      sceneAudioSync: {
+        rows: sceneSync.rows,
+        ok: sceneSync.findings.length === 0,
+      },
       captions: captions.checks,
       sceneBoundaries: boundaries.checks,
     },

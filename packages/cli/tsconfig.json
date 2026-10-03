@@ -7,6 +7,8 @@
   "include": ["src"],
   "references": [
     { "path": "../../packages/vdsl" },
+    { "path": "../../packages/motion" },
+    { "path": "../../packages/qa" },
     { "path": "../../packages/video-components" },
     { "path": "../../packages/video-renderer" },
     { "path": "../../packages/media" },

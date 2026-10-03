@@ -57,7 +57,7 @@ describe("CLI mix integration — runMix", () => {
   let projectDir: string;
 
   beforeEach(() => {
-    cwd = mkdtempSync(path.join(tmpdir(), "vf-mixcmd-"));
+    cwd = mkdtempSync(path.join(tmpdir(), "video-mixcmd-"));
     projectDir = path.join(cwd, "projects", "demo");
     for (const sub of [
       "assets/audio",

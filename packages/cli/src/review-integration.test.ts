@@ -66,7 +66,7 @@ technical:
   render_errors: []
   overall: pass`;
 
-describe("vf review end-to-end (todo 2) — mock MiniMax", () => {
+describe("video review end-to-end (todo 2) — mock MiniMax", () => {
   let server: Server;
   let baseUrl: string;
 
@@ -95,7 +95,7 @@ describe("vf review end-to-end (todo 2) — mock MiniMax", () => {
   afterAll(async () => new Promise<void>((r) => server.close(() => r())));
 
   it("writes 3 review YAMLs + a run record with provider/model/prompt_hash/tokens", async () => {
-    const cwd = mkdtempSync(path.join(tmpdir(), "vf-rv-"));
+    const cwd = mkdtempSync(path.join(tmpdir(), "video-rv-"));
     const project = "demo";
     const root = path.join(cwd, "projects", project);
     mkdirSync(path.join(root, "storyboard"), { recursive: true });
@@ -140,7 +140,7 @@ describe("vf review end-to-end (todo 2) — mock MiniMax", () => {
   });
 
   it("exits 1 with helpful error when storyboard missing", async () => {
-    const cwd = mkdtempSync(path.join(tmpdir(), "vf-rv-"));
+    const cwd = mkdtempSync(path.join(tmpdir(), "video-rv-"));
     mkdirSync(path.join(cwd, "projects", "missing", "script"), {
       recursive: true,
     });
@@ -161,7 +161,7 @@ describe("vf review end-to-end (todo 2) — mock MiniMax", () => {
   });
 
   it("never writes the API key into projects/ or runs/", async () => {
-    const cwd = mkdtempSync(path.join(tmpdir(), "vf-rv-"));
+    const cwd = mkdtempSync(path.join(tmpdir(), "video-rv-"));
     const project = "leak-check";
     const root = path.join(cwd, "projects", project);
     mkdirSync(path.join(root, "storyboard"), { recursive: true });

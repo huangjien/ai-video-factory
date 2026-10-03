@@ -14,7 +14,7 @@ import {
  *
  * The post-processing pause-insertion path (ffmpeg concat) is exercised
  * via mock helpers and via `splitSentences` tests; the full ffmpeg round-
- * trip is covered by an end-to-end smoke in @vf/make.
+ * trip is covered by an end-to-end smoke in @video/make.
  */
 
 type SynthesizeResult = {
@@ -200,7 +200,7 @@ describe("EdgeTTSProvider.synthesize (mocked edge-tts-universal)", () => {
   });
 
   it("with pauseBetweenSentencesSec > 0, drives the multi-part path", async () => {
-    // Full ffmpeg concat path is exercised by @vf/make end-to-end (mocked
+    // Full ffmpeg concat path is exercised by @video/make end-to-end (mocked
     // bytes here can't be decoded by ffmpeg). This only verifies that the
     // pause knob reaches the per-sentence code path.
     synthesizeMock.mockRejectedValue(new Error("synthesize mocked-out"));

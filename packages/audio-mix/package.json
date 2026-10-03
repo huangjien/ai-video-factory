@@ -1,5 +1,5 @@
 {
-  "name": "@vf/audio-mix",
+  "name": "@video/audio-mix",
   "version": "0.1.0",
   "type": "module",
   "main": "dist/index.js",

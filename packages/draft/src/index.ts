@@ -23,6 +23,19 @@ export {
   type CallDraftResult,
 } from "./agent.js";
 export {
+  ARTICLE_SCORE_AXES,
+  ArticleScoreSchema,
+  scoreArticle,
+  scoreTotal,
+  runScoredDraft,
+  renderArticleReviewYaml,
+  ArticleReviewError,
+  type ArticleScore,
+  type ScoredAttempt,
+  type ScoredDraftResult,
+  type ScoredDraftOptions,
+} from "./article-review.js";
+export {
   pickVisualComponent,
   type ComponentChoice,
   type ComponentName,

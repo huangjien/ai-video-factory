@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { ChatResponse, Provider, Usage } from "@vf/llm";
+import type { ChatResponse, Provider, Usage } from "@video/llm";
 import { callAgent } from "./agent.js";
 import { validStoryboardYaml } from "./test-fixtures.js";
 

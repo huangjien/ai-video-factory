@@ -1,5 +1,5 @@
 {
-  "name": "@vf/qa",
+  "name": "@video/qa",
   "version": "0.1.0",
   "type": "module",
   "main": "dist/index.js",
@@ -14,7 +14,7 @@
     "build": "tsc -p tsconfig.json"
   },
   "dependencies": {
-    "@vf/media": "workspace:*",
-    "@vf/vdsl": "workspace:*"
+    "@video/media": "workspace:*",
+    "@video/vdsl": "workspace:*"
   }
 }

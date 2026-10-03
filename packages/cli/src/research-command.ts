@@ -2,10 +2,10 @@ import { mkdir, writeFile } from "node:fs/promises";
 import { createHash } from "node:crypto";
 import { execSync } from "node:child_process";
 import path from "node:path";
-import { GLMProvider, loadProviderConfig, MiniMaxProvider } from "@vf/llm";
-import { callResearch, MiniMaxWebSearch } from "@vf/research";
-import type { ChatMessage, Provider } from "@vf/llm";
-import { formatRunId } from "@vf/workflow";
+import { GLMProvider, loadProviderConfig, MiniMaxProvider } from "@video/llm";
+import { callResearch, MiniMaxWebSearch } from "@video/research";
+import type { ChatMessage, Provider } from "@video/llm";
+import { formatRunId } from "@video/workflow";
 import { stringify as yamlStringify } from "yaml";
 import { runNew } from "./new-command.js";
 import { ensureProject } from "./ensure-project.js";
@@ -124,7 +124,7 @@ export async function runResearch(opts: ResearchOptions): Promise<number> {
     stage: "research",
     status: "succeeded" as const,
     actor: "agent" as const,
-    tool: "vf-research",
+    tool: "video-research",
     input_commit: safeGitHead(projectRoot),
     input_files: [],
     output_files: [
@@ -144,7 +144,7 @@ export async function runResearch(opts: ResearchOptions): Promise<number> {
       (result.usage.output / 1000) *
         (result.providerName === "glm" ? 0.0008 : 0.001),
   };
-  const { writeRun } = await import("@vf/workflow");
+  const { writeRun } = await import("@video/workflow");
   await writeRun(projectRoot, record);
 
   console.log(`\u2713 drafted ${slug}/research/`);
@@ -152,7 +152,7 @@ export async function runResearch(opts: ResearchOptions): Promise<number> {
     `  provider=${result.providerName}  sources=${result.output.sources.length}  claims=${result.output.claims.length}  needs_human=${result.output.claims.filter((c) => c.status === "needs_human" || c.status === "uncertain").length}`,
   );
   console.log(
-    `  next: edit research.md / claims.yaml, then \`vf storyboard --from-research projects/${slug}/research\``,
+    `  next: edit research.md / claims.yaml, then \`video storyboard --from-research projects/${slug}/research\``,
   );
   return 0;
 }

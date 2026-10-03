@@ -45,7 +45,7 @@ describe("scene versions (plan §26)", () => {
   let root: string;
 
   beforeEach(() => {
-    root = mkdtempSync(path.join(tmpdir(), "vf-versions-"));
+    root = mkdtempSync(path.join(tmpdir(), "video-versions-"));
   });
 
   afterEach(() => {

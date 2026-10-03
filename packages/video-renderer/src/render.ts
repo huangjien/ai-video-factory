@@ -15,7 +15,7 @@ import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
 import { bundle } from "@remotion/bundler";
 import { renderMedia, selectComposition } from "@remotion/renderer";
-import { slicePlanScene, type RenderPlan } from "@vf/vdsl";
+import { slicePlanScene, type RenderPlan } from "@video/vdsl";
 
 const execFileAsync = promisify(execFile);
 
@@ -132,7 +132,7 @@ export async function concatScenes(
   if (sceneFiles.length === 0) {
     throw new Error("concatScenes: no scene files given");
   }
-  const workDir = await mkdtemp(path.join(tmpdir(), "vf-concat-"));
+  const workDir = await mkdtemp(path.join(tmpdir(), "video-concat-"));
   try {
     const listPath = path.join(workDir, "list.txt");
     // ffmpeg's concat demuxer quoting: escape each single quote as '\''.
@@ -166,7 +166,7 @@ export async function renderPlanToVideo(
   void sweepRemotionTemp().catch(() => {});
   await mkdir(path.dirname(outPath), { recursive: true });
   const resolvedPlan = await resolveImageSources(renderPlan);
-  const workDir = await mkdtemp(path.join(tmpdir(), "vf-render-"));
+  const workDir = await mkdtemp(path.join(tmpdir(), "video-render-"));
   const entry = path.join(workDir, "entry.tsx");
   await writeFile(entry, renderEntryTemplate(resolvedPlan), "utf8");
   try {

@@ -44,7 +44,7 @@ describe("Demo 2 — AI Concept end to end (T7.3, plan §35)", () => {
   });
 
   it("renders the committed 60s hand-drawn example through the pipeline", async () => {
-    cwd = mkdtempSync(path.join(tmpdir(), "vf-demo-ai-"));
+    cwd = mkdtempSync(path.join(tmpdir(), "video-demo-ai-"));
     await runNew({ projectId: "ai-concept", cwd });
     projectDir = path.join(cwd, "projects", "ai-concept");
     copyFileSync(

@@ -1,9 +1,9 @@
 import {
   storyboardSchema,
   type TimelineAnimation,
-} from "@vf/vdsl";
-import type { ChatMessage, ChatResponse, Provider } from "@vf/llm";
-import { chatWithFallback } from "@vf/llm";
+} from "@video/vdsl";
+import type { ChatMessage, ChatResponse, Provider } from "@video/llm";
+import { chatWithFallback } from "@video/llm";
 import { parse as parseYaml } from "yaml";
 import { validateMotionSpec, type MotionSpec } from "./plan.js";
 import { buildMotionMessages, type MotionAgentSceneInput } from "./prompt.js";

@@ -6,13 +6,13 @@ from `skills-lock.json`).
 
 ## How skills participate (AD-5, plan Principle 4)
 
-1. **As knowledge for LLM agents.** The Motion Agent (`@vf/motion`
+1. **As knowledge for LLM agents.** The Motion Agent (`@video/motion`
    `callMotionAgent`) loads `animation-principles` guidance through
    `IartSkillAdapter` and puts it in the prompt. `IartSkillAdapter` is the
    ONLY module that reads `.agents/skills/` — nothing else knows the
    layout.
 2. **As machine tables.** The `animation-principles` skill's numbers are
-   transcribed into `@vf/motion/src/heuristics.ts` (entrance 0.3–0.8 s
+   transcribed into `@video/motion/src/heuristics.ts` (entrance 0.3–0.8 s
    ease-out, stagger 40–80 ms capped 0.7 s, beat quantization) and
    `svgSceneLogic.ts`/`doodleLogic.ts` defaults — so the pipeline behaves
    identically when the skills directory is absent (contract-tested).

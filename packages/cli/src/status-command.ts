@@ -1,7 +1,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { parse as parseYaml } from "yaml";
-import { loadCheckpoint, readProjectState, V01_STAGES } from "@vf/workflow";
+import { loadCheckpoint, readProjectState, V01_STAGES } from "@video/workflow";
 import { resolveProjectDir, resolveProjectRoot } from "./project-path.js";
 
 const MARK: Record<string, string> = {
@@ -57,9 +57,9 @@ export async function runStatus(
   console.log(`Status: ${state.status}`);
 
   // v0.4 (T7): surface the latest QA finding count so users see what's
-  // blocking `vf final` without manually running `vf qa`. We read
-  // qa/render-report.json (the on-disk artifact written by `vf final` /
-  // `vf preview`); fall back to the latest qa run record when the JSON
+  // blocking `video final` without manually running `video qa`. We read
+  // qa/render-report.json (the on-disk artifact written by `video final` /
+  // `video preview`); fall back to the latest qa run record when the JSON
   // file is missing.
   const reportPath = path.join(root, "qa", "render-report.json");
   if (existsSync(reportPath)) {
@@ -78,10 +78,10 @@ export async function runStatus(
         `QA: ${errMark} ${errors} error${errors === 1 ? "" : "s"}, ${warnMark} ${warnings} warning${warnings === 1 ? "" : "s"}`,
       );
       if (errors > 0) {
-        console.log(`  run \`vf qa <project>\` to inspect, or \`vf final --force\` to override`);
+        console.log(`  run \`video qa <project>\` to inspect, or \`video final --force\` to override`);
       }
     } catch {
-      // Corrupt report — leave it; the user can re-run vf qa.
+      // Corrupt report — leave it; the user can re-run video qa.
     }
   }
   return 0;

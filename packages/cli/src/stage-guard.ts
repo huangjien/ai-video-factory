@@ -2,13 +2,13 @@ import {
   loadCheckpoint,
   readProjectState,
   V01_STAGES,
-} from "@vf/workflow";
+} from "@video/workflow";
 
 /** Human-approval guard for the content-generating verbs (doc §58: agents
  * draft, humans decide). A generator refuses to run when doing so would
  * overwrite human-approved work:
  *   - the project reached FINAL_APPROVED (terminal — shipped), or
- *   - the stage carries an `approved` checkpoint (e.g. `vf approve storyboard`).
+ *   - the stage carries an `approved` checkpoint (e.g. `video approve storyboard`).
  * `--force` is the explicit bypass; the caller decides whether to offer it. */
 export async function assertStageWritable(
   projectRoot: string,
@@ -19,7 +19,7 @@ export async function assertStageWritable(
   const state = await readProjectState(projectRoot);
   if (state?.status === "FINAL_APPROVED") {
     console.error(
-      `✗ project is FINAL_APPROVED — regenerating ${stage} would overwrite shipped work. Run \`vf reset --force\` first, or pass --force to override`,
+      `✗ project is FINAL_APPROVED — regenerating ${stage} would overwrite shipped work. Run \`video reset --force\` first, or pass --force to override`,
     );
     return false;
   }

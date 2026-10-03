@@ -24,7 +24,7 @@ pnpm build
 node packages/cli/dist/index.js new mcp-explainer
 cp examples/mcp-explainer/storyboard.yaml projects/mcp-explainer/storyboard/
 cp examples/mcp-explainer/captions/zh-CN.srt projects/mcp-explainer/captions/
-# 9s silent narration per scene (or generate real TTS with `vf audio`)
+# 9s silent narration per scene (or generate real TTS with `video audio`)
 for i in 01 02 03 04 05; do
   ffmpeg -y -f lavfi -i anullsrc=r=44100:cl=mono -t 9 projects/mcp-explainer/assets/audio/scene-$i.wav
 done
@@ -33,7 +33,7 @@ node packages/cli/dist/index.js preview --cwd projects/mcp-explainer
 node packages/cli/dist/index.js excalidraw mcp-explainer
 node packages/cli/dist/index.js qa mcp-explainer
 node packages/cli/dist/index.js approve review --cwd projects/mcp-explainer
-node packages/cli/dist/index.js final --cwd projects/mcp-explainer --mix   # --mix needs BGM, see vf audio-asset
+node packages/cli/dist/index.js final --cwd projects/mcp-explainer --mix   # --mix needs BGM, see video audio-asset
 ```
 
 The committed integration test (`packages/cli/src/demo-mcp.test.ts`) runs

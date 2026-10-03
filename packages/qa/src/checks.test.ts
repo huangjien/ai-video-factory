@@ -11,7 +11,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
 import { beforeAll, describe, expect, it } from "vitest";
-import type { RenderPlan } from "@vf/vdsl";
+import type { RenderPlan } from "@video/vdsl";
 import {
   buildRenderReport,
   checkCaptions,
@@ -81,7 +81,7 @@ describe("T6.1 extended QA checks — injected defects are caught with fixes", (
   let video: string;
 
   beforeAll(async () => {
-    dir = mkdtempSync(path.join(tmpdir(), "vf-qa-checks-"));
+    dir = mkdtempSync(path.join(tmpdir(), "video-qa-checks-"));
     video = path.join(dir, "fixture.mp4");
     await makeFixtureVideo(video);
   }, 60_000);
@@ -108,7 +108,7 @@ describe("T6.1 extended QA checks — injected defects are caught with fixes", (
     const { findings } = await checkSceneAudioSync(p, dir);
     const hit = findings.find((f) => f.check === "sceneAudioSync");
     expect(hit?.level).toBe("error");
-    expect(hit?.fix).toMatch(/vf make/);
+    expect(hit?.fix).toMatch(/video make/);
   });
 
   it("DEFECT 2 — non-monotonic captions are an error with a fix", async () => {
@@ -121,7 +121,7 @@ describe("T6.1 extended QA checks — injected defects are caught with fixes", (
     const { findings } = await checkCaptions(p, dir, 3);
     const hit = findings.find((f) => f.message.includes("non-monotonic"));
     expect(hit?.level).toBe("error");
-    expect(hit?.fix).toContain("vf make");
+    expect(hit?.fix).toContain("video make");
   });
 
   it("DEFECT 3 — captions ending past the video are a warn with a fix", async () => {
@@ -133,7 +133,7 @@ describe("T6.1 extended QA checks — injected defects are caught with fixes", (
     const { findings } = await checkCaptions(p, dir, 3);
     const hit = findings.find((f) => f.message.includes("past the video") || f.message.includes("ends at"));
     expect(hit?.level).toBe("warn");
-    expect(hit?.fix).toContain("vf make");
+    expect(hit?.fix).toContain("video make");
   });
 
   it("DEFECT 4 — captions overflowing the safe area are an error", async () => {
@@ -151,7 +151,7 @@ describe("T6.1 extended QA checks — injected defects are caught with fixes", (
     const report = await buildRenderReport(p, video);
     const hit = report.findings.find((f) => f.check === "assets");
     expect(hit?.level).toBe("error");
-    expect(hit?.fix).toContain("vf make");
+    expect(hit?.fix).toContain("video make");
     // black segment from the fixture is a warn with contact-sheet pointer
     const black = report.findings.find((f) => f.check === "blackFrames");
     expect(black).toBeDefined();

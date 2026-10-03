@@ -14,7 +14,7 @@ import {
   V01_STAGES,
   writeProjectState,
   type MachineState,
-} from "@vf/workflow";
+} from "@video/workflow";
 
 export async function runApprove(
   projectName: string | undefined,
@@ -107,7 +107,7 @@ export async function runApprove(
     created_at: next.record.at,
     approved_at: next.record.at,
     human_changes: [],
-    notes: force ? "force-approved via vf approve --force" : "approved via vf approve",
+    notes: force ? "force-approved via video approve --force" : "approved via video approve",
   });
   console.log(`Checkpoint ${target} approved.`);
   return 0;
@@ -197,7 +197,7 @@ export async function runRollback(
 
   if (state.status === "FINAL_APPROVED") {
     console.error(
-      `rollback: project is FINAL_APPROVED (terminal) — run \`vf reset --force\` to rework it`,
+      `rollback: project is FINAL_APPROVED (terminal) — run \`video reset --force\` to rework it`,
     );
     return 1;
   }
@@ -210,7 +210,7 @@ export async function runRollback(
   console.log(`  invalidated:      ${downstream.join(", ") || "nothing downstream"}`);
   console.log(`  content on disk:  untouched (§18.2) — downstream stages re-run from it`);
   if (targetStage === "storyboard") {
-    console.log(`  scene edits:      use \`vf scene list\` / \`vf scene restore\` for per-scene content`);
+    console.log(`  scene edits:      use \`video scene list\` / \`video scene restore\` for per-scene content`);
   }
   console.log(`Continue? [y/N]`);
   const answer = await readLine();
@@ -228,7 +228,7 @@ export async function runRollback(
     rolled = transition(machineState, { kind: "rollback", toCheckpoint: target.id }, ctx(`rollback-${target.id}`));
   } catch (err) {
     console.error(
-      `rollback: ${(err as Error).message} — from ${state.status}, use \`vf reset\` instead`,
+      `rollback: ${(err as Error).message} — from ${state.status}, use \`video reset\` instead`,
     );
     return 1;
   }
@@ -248,13 +248,13 @@ export async function runRollback(
   for (const stage of downstream) {
     await invalidateCheckpoint(root, stage, `invalidated by rollback to ${target.id}`);
   }
-  const { writeRun, formatRunId } = await import("@vf/workflow");
+  const { writeRun, formatRunId } = await import("@video/workflow");
   await writeRun(root, {
     run_id: formatRunId("rollback"),
     stage: "rollback",
     status: "succeeded",
     actor: "human",
-    tool: "vf-rollback",
+    tool: "video-rollback",
     input_commit: safeGitHeadCli(root),
     input_files: [`checkpoints/${targetStage}.yaml`],
     output_files: [],
@@ -263,7 +263,7 @@ export async function runRollback(
   });
   console.log(`✓ rolled back to ${target.id} — state ${state.status} / ${state.current_stage}`);
   console.log(
-    `  next: re-run the invalidated stages (e.g. \`vf preview --force\` after edits, or \`vf make\`), then re-approve`,
+    `  next: re-run the invalidated stages (e.g. \`video preview --force\` after edits, or \`video make\`), then re-approve`,
   );
   return 0;
 }
@@ -300,7 +300,7 @@ export async function runResume(
   if (!state) return 1;
   if (state.status === "FINAL_APPROVED") {
     console.log(
-      `resume: project is FINAL_APPROVED — nothing to resume (rework with \`vf reset --force\`)`,
+      `resume: project is FINAL_APPROVED — nothing to resume (rework with \`video reset --force\`)`,
     );
     return 0;
   }
@@ -315,7 +315,7 @@ export async function runResume(
     console.log(
       `resume: make-flow project (last successful stage: ${last ?? "none"}, status ${state.status}) — re-running the idempotent pipeline`,
     );
-    const { runMake } = await import("@vf/make");
+    const { runMake } = await import("@video/make");
     try {
       const report = await runMake({ projectRoot: root });
       const failed = report.steps.filter((s) => s.status === "fail");
@@ -334,15 +334,15 @@ export async function runResume(
   // CLI-flow project: resume from the recorded state — print where we are
   // and the exact next command (§25: resume, not restart).
   const next: Record<string, string> = {
-    init: "vf storyboard <topic> --cwd .  (or vf script / vf research first)",
-    storyboard: "vf audio <project>  (then vf review, vf preview)",
-    review: "vf approve review --cwd .  (then vf final)",
-    final: "vf youtube <project>  (publishing metadata)",
+    init: "video storyboard <topic> --cwd .  (or video script / video research first)",
+    storyboard: "video audio <project>  (then video review, video preview)",
+    review: "video approve review --cwd .  (then video final)",
+    final: "video youtube <project>  (publishing metadata)",
   };
   console.log(
     `Resume from stage ${state.current_stage} at status ${state.status} (last successful run stage: ${last ?? "none"}).`,
   );
-  console.log(`  next: ${next[state.current_stage] ?? "vf status for details"}`);
+  console.log(`  next: ${next[state.current_stage] ?? "video status for details"}`);
   return 0;
 }
 
@@ -418,11 +418,11 @@ export async function runReset(
   await invalidateCheckpoint(
     root,
     target as (typeof V01_STAGES)[number],
-    force ? "invalidated by vf reset --force" : "invalidated by vf reset",
+    force ? "invalidated by video reset --force" : "invalidated by video reset",
   );
   console.log(`Project reset to DRAFT / ${target}.`);
   console.log(
-    `next: re-run the pipeline (e.g. \`vf storyboard ...\` or \`vf audio ...\`)`,
+    `next: re-run the pipeline (e.g. \`video storyboard ...\` or \`video audio ...\`)`,
   );
   return 0;
 }

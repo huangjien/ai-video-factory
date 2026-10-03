@@ -45,7 +45,7 @@ describe("Demo 3 — DevOps Architecture end to end (T7.4, plan §35)", () => {
   });
 
   it("renders the committed 90s diagram example through the pipeline", async () => {
-    cwd = mkdtempSync(path.join(tmpdir(), "vf-demo-devops-"));
+    cwd = mkdtempSync(path.join(tmpdir(), "video-demo-devops-"));
     await runNew({ projectId: "devops-architecture", cwd });
     projectDir = path.join(cwd, "projects", "devops-architecture");
     copyFileSync(

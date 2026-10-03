@@ -253,7 +253,7 @@ describe("buildIllustration / buildAnimatedIllustration", () => {
 });
 describe("buildSvgScene — rich-family diagram synthesis", () => {
   it("lays out extracted nodes as a left-to-right chain with edges, schema-valid", async () => {
-    const { SvgScenePropsSchema } = await import("@vf/video-components");
+    const { SvgScenePropsSchema } = await import("@video/video-components");
     const props = VISUAL_BUILDERS.SvgScene!(
       scene({
         id: "scene_2",
@@ -279,7 +279,7 @@ describe("buildSvgScene — rich-family diagram synthesis", () => {
   });
 
   it("never emits zero nodes when little can be extracted", async () => {
-    const { SvgScenePropsSchema } = await import("@vf/video-components");
+    const { SvgScenePropsSchema } = await import("@video/video-components");
     const props = VISUAL_BUILDERS.SvgScene!(
       scene({ id: "scene_2", duration: 8, caption: "唯一要点" }),
       { section: null },
@@ -295,7 +295,7 @@ describe("buildSvgScene — rich-family diagram synthesis", () => {
 
 describe("buildDoodleScene — seeded hand-drawn strokes", () => {
   it("produces 4 schema-valid strokes, deterministic for the same scene", async () => {
-    const { DoodleScenePropsSchema } = await import("@vf/video-components");
+    const { DoodleScenePropsSchema } = await import("@video/video-components");
     const s = scene({
       id: "scene_3",
       duration: 8,

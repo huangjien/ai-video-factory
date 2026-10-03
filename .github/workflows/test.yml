@@ -38,13 +38,13 @@ jobs:
         run: sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg && ffmpeg -version | head -1
 
       # No pnpm-store cache: a stale global store can hide workspace
-      # symlinks and break `@vf/*` imports across the package graph.
+      # symlinks and break `@video/*` imports across the package graph.
       # Install from the committed lockfile (still reproducible) and let
       # pnpm wire workspace symlinks fresh on every CI run.
       - name: Install dependencies
         # Force a clean install on every CI run. pnpm can incorrectly
         # report "already up to date" in some fresh-checkout scenarios and
-        # skip re-wiring workspace symlinks, which breaks @vf/* imports
+        # skip re-wiring workspace symlinks, which breaks @video/* imports
         # across the package graph. The lockfile still drives reproducible
         # resolution; the wipe just forces link re-wiring.
         run: rm -rf node_modules && pnpm install
@@ -61,9 +61,9 @@ jobs:
       - name: §62.4 acceptance audit
         run: |
           node packages/cli/dist/index.js preview --cwd projects/benchmark-v01
-          # `vf approve` takes `[project] [stage]` — omit the stage so it
+          # `video approve` takes `[project] [stage]` — omit the stage so it
           # auto-resolves from state.yaml.current_stage (set to `review` by
-          # `vf preview`). The previous invocation `approve review --cwd`
+          # `video preview`). The previous invocation `approve review --cwd`
           # was parsed as `project="review"`, which silently created a
           # non-existent projects/benchmark-v01/projects/review/ root and
           # then failed with "could not determine stage".

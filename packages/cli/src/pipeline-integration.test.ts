@@ -146,7 +146,7 @@ describe("CLI pipeline integration — runPreview / runFinal / runStatus / workf
   let projectCwd: string;
 
   beforeEach(async () => {
-    cwd = mkdtempSync(path.join(tmpdir(), "vf-cli-pipeline-"));
+    cwd = mkdtempSync(path.join(tmpdir(), "video-cli-pipeline-"));
     projectDir = await seedProject(cwd);
     projectName = path.basename(projectDir);
     projectCwd = cwd;
@@ -190,7 +190,7 @@ describe("CLI pipeline integration — runPreview / runFinal / runStatus / workf
     expect(vdsl).toContain("scene-02");
 
     // First preview records v1 for every scene (plan §26).
-    const { listSceneVersions } = await import("@vf/workflow");
+    const { listSceneVersions } = await import("@video/workflow");
     expect(
       (await listSceneVersions(projectDir, "scene-01")).map((v) => v.version),
     ).toEqual([1]);
@@ -303,7 +303,7 @@ describe("CLI pipeline integration — runPreview / runFinal / runStatus / workf
   }, 120_000);
 
   it("runPreview refuses a FINAL_APPROVED project (terminal state)", async () => {
-    const { writeProjectState } = await import("@vf/workflow");
+    const { writeProjectState } = await import("@video/workflow");
     await writeProjectState(projectDir, {
       status: "FINAL_APPROVED",
       current_stage: "final",
@@ -471,7 +471,7 @@ describe("CLI pipeline integration — runPreview / runFinal / runStatus / workf
 
   it("runRollback invalidates downstream checkpoints and lands at DRAFT/target", async () => {
     await runPreview(projectName, projectCwd); // WAITING_REVIEW
-    // A downstream checkpoint to invalidate (as vf approve review would write).
+    // A downstream checkpoint to invalidate (as video approve review would write).
     mkdirSync(path.join(projectDir, "checkpoints"), { recursive: true });
     writeFileSync(
       path.join(projectDir, "checkpoints", "review.yaml"),
@@ -526,7 +526,7 @@ describe("CLI pipeline integration — runPreview / runFinal / runStatus / workf
   }, 120_000);
 
   it("runResume no-ops on a FINAL_APPROVED project", async () => {
-    const { writeProjectState } = await import("@vf/workflow");
+    const { writeProjectState } = await import("@video/workflow");
     await writeProjectState(projectDir, {
       status: "FINAL_APPROVED",
       current_stage: "final",

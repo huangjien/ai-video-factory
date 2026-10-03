@@ -1,5 +1,5 @@
 {
-  "name": "@vf/motion",
+  "name": "@video/motion",
   "version": "0.1.0",
   "type": "module",
   "main": "dist/index.js",
@@ -14,8 +14,8 @@
     "build": "tsc -p tsconfig.json"
   },
   "dependencies": {
-    "@vf/llm": "workspace:*",
-    "@vf/vdsl": "workspace:*",
+    "@video/llm": "workspace:*",
+    "@video/vdsl": "workspace:*",
     "yaml": "^2.7.0"
   }
 }

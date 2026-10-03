@@ -25,7 +25,7 @@ scenes:
 `;
 
 function makeProject(audioFile: string): string {
-  const root = mkdtempSync(path.join(tmpdir(), "vf-cli-"));
+  const root = mkdtempSync(path.join(tmpdir(), "video-cli-"));
   mkdirSync(path.join(root, "storyboard"), { recursive: true });
   mkdirSync(path.join(root, "assets", "audio"), { recursive: true });
   execFileSync(
@@ -49,7 +49,7 @@ function makeProject(audioFile: string): string {
   return root;
 }
 
-describe("vf validate (end command)", () => {
+describe("video validate (end command)", () => {
   it("exits 0 on a valid project", async () => {
     const root = makeProject("scene-01.wav");
     const code = await runValidate(

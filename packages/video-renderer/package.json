@@ -1,5 +1,5 @@
 {
-  "name": "@vf/video-renderer",
+  "name": "@video/video-renderer",
   "version": "0.1.0",
   "files": [
     "dist"
@@ -27,9 +27,9 @@
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "remotion": "^4.0.0",
-    "@vf/vdsl": "workspace:*",
-    "@vf/video-components": "workspace:*",
-    "@vf/media": "workspace:*"
+    "@video/vdsl": "workspace:*",
+    "@video/video-components": "workspace:*",
+    "@video/media": "workspace:*"
   },
   "devDependencies": {
     "@types/react": "^19.0.0"

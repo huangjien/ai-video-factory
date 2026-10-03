@@ -8,25 +8,25 @@ import {
   loadProviderConfig,
   MiniMaxProvider,
   type Provider,
-} from "@vf/llm";
-import { validateStoryboard } from "@vf/vdsl";
+} from "@video/llm";
+import { validateStoryboard } from "@video/vdsl";
 import { parse as parseYaml, stringify as yamlStringify } from "yaml";
 import {
   syncSceneDurations,
-} from "@vf/media";
+} from "@video/media";
 import {
   callMotionAgent,
   planSceneMotion,
   IartSkillAdapter,
   type MotionSpec,
-} from "@vf/motion";
+} from "@video/motion";
 import {
   formatRunId,
   extractSceneFragment,
   recordSceneVersion,
   replaceSceneFragment,
   writeRun,
-} from "@vf/workflow";
+} from "@video/workflow";
 import { assertStageWritable } from "./stage-guard.js";
 import { resolveProjectDir } from "./project-path.js";
 
@@ -129,7 +129,7 @@ export async function runMotion(opts: MotionOptions): Promise<number> {
   const shape = validateStoryboard(text, STORYBOARD_REL);
   if (!shape.ok) {
     console.error(
-      `motion: storyboard invalid — run \`vf validate\`:\n${shape.errors.map((e) => `  ${e.file}:${e.line} ${e.field} ${e.message}`).join("\n")}`,
+      `motion: storyboard invalid — run \`video validate\`:\n${shape.errors.map((e) => `  ${e.file}:${e.line} ${e.field} ${e.message}`).join("\n")}`,
     );
     return 1;
   }
@@ -254,7 +254,7 @@ export async function runMotion(opts: MotionOptions): Promise<number> {
     stage: "motion",
     status: "succeeded",
     actor: "agent",
-    tool: "vf-motion",
+    tool: "video-motion",
     input_commit: safeGitHead(root),
     input_files: [STORYBOARD_REL],
     output_files: [STORYBOARD_REL],
@@ -275,7 +275,7 @@ export async function runMotion(opts: MotionOptions): Promise<number> {
   });
 
   console.log(
-    `✓ motion planned for ${changed}/${targets.length} scene(s)${changed > 0 ? ` — next: \`vf preview\`, then \`vf scene list\` to review versions` : ""}`,
+    `✓ motion planned for ${changed}/${targets.length} scene(s)${changed > 0 ? ` — next: \`video preview\`, then \`video scene list\` to review versions` : ""}`,
   );
   return 0;
 }

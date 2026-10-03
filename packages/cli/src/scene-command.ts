@@ -10,7 +10,7 @@ import {
   readSceneVersion,
   recordSceneVersion,
   replaceSceneFragment,
-} from "@vf/workflow";
+} from "@video/workflow";
 import { resolveProjectDir, resolveProjectRoot } from "./project-path.js";
 
 const STORYBOARD_REL = path.join("storyboard", "storyboard.yaml");
@@ -46,7 +46,7 @@ export async function runSceneList(
     const versions = await listSceneVersions(root, sceneId);
     const approval = await readSceneApproval(root, sceneId);
     if (versions.length === 0) {
-      console.log(`${sceneId}: no versions recorded yet (run vf preview)`);
+      console.log(`${sceneId}: no versions recorded yet (run video preview)`);
       return 0;
     }
     for (const v of versions) {
@@ -96,7 +96,7 @@ export async function runSceneRestore(
     fragment = await readSceneVersion(root, sceneId, version);
   } catch {
     console.error(
-      `scene restore: ${sceneId} v${version} not found — see \`vf scene list ${path.basename(root)} ${sceneId}\``,
+      `scene restore: ${sceneId} v${version} not found — see \`video scene list ${path.basename(root)} ${sceneId}\``,
     );
     return 1;
   }

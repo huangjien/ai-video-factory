@@ -1,11 +1,11 @@
 import { useCurrentFrame } from "remotion";
-import type { RenderPlan, RenderPlanScene } from "@vf/vdsl";
+import type { RenderPlan, RenderPlanScene } from "@video/vdsl";
 import {
   REGISTRY,
   Background,
   CaptionsOverlay,
   resolveTheme,
-} from "@vf/video-components";
+} from "@video/video-components";
 
 export interface RootProps {
   renderPlan: RenderPlan;

@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { execFileSync } from "node:child_process";
 import { describe, expect, it } from "vitest";
-import type { RenderPlan } from "@vf/vdsl";
+import type { RenderPlan } from "@video/vdsl";
 import { renderPlanToVideo } from "./render.js";
 
 const samplePlan: RenderPlan = {
@@ -50,7 +50,7 @@ const samplePlan: RenderPlan = {
 
 describe("renderPlanToVideo (todo 10)", () => {
   it("produces a 1920x1080 30fps MP4 with duration ~7s", async () => {
-    const outDir = mkdtempSync(path.join(tmpdir(), "vf-render-"));
+    const outDir = mkdtempSync(path.join(tmpdir(), "video-render-"));
     const mp4Path = path.join(outDir, "out.mp4");
     await renderPlanToVideo(samplePlan, mp4Path);
     const out = execFileSync(

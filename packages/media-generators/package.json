@@ -1,5 +1,5 @@
 {
-  "name": "@vf/media-generators",
+  "name": "@video/media-generators",
   "version": "0.1.0",
   "type": "module",
   "main": "dist/index.js",
@@ -14,6 +14,6 @@
     "build": "tsc -p tsconfig.json"
   },
   "dependencies": {
-    "@vf/llm": "workspace:*"
+    "@video/llm": "workspace:*"
   }
 }

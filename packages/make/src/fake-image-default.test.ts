@@ -11,7 +11,7 @@ import path from "node:path";
 import { parse as parseYaml } from "yaml";
 
 /**
- * Regression test for the bug: `vf make --fake` rewrote every scene's
+ * Regression test for the bug: `video make --fake` rewrote every scene's
  * `visual.component` from `AnimatedIllustration` to `ImageBackground`,
  * because the make pipeline defaulted `--fake` to imageProvider="mock"
  * and `updateStoryboardForImages` switched every scene to use the mock
@@ -69,7 +69,7 @@ describe("--fake default imageProvider keeps scenes as AnimatedIllustration", ()
   let projectRoot: string;
 
   beforeEach(() => {
-    dir = mkdtempSync(path.join(tmpdir(), "vf-fake-image-"));
+    dir = mkdtempSync(path.join(tmpdir(), "video-fake-image-"));
     projectRoot = path.join(dir, "projects", "fixture");
     mkdirSync(path.join(projectRoot, "storyboard"), { recursive: true });
     mkdirSync(path.join(projectRoot, "assets", "audio"), { recursive: true });
@@ -95,7 +95,7 @@ describe("--fake default imageProvider keeps scenes as AnimatedIllustration", ()
     //   syncStoryboardFromArticle + generateSceneVisuals + updateStoryboardForImages
     // for the bug surface, using the public API.
     const { parseArticle, articleToStoryboardYaml } = await import(
-      "@vf/draft"
+      "@video/draft"
     );
     const article = parseArticle(
       readFileSync(path.join(projectRoot, "article.md"), "utf8"),

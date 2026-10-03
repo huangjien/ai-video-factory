@@ -1,8 +1,8 @@
 # AI Video Factory (v0.4)
 
 A small video factory that turns a topic into a finished 1080p Chinese MP4
-in two commands: `vf draft` (LLM writes article.md + audio-config.yaml),
-`vf make` (renders the video). Two human-edit files, one output. 39-second
+in two commands: `video draft` (LLM writes article.md + audio-config.yaml),
+`video make` (renders the video). Two human-edit files, one output. 39-second
 AI chain-of-thought explainer ships as proof.
 
 ## Principles
@@ -53,7 +53,7 @@ The `preview` output lands at `output/preview-faststart.mp4` and `final`
 produces `output/final-faststart.mp4`, each 1920x1080@30fps. Every step
 writes a YAML record to `runs/<run-id>.yaml` and updates `state.yaml`.
 
-### Remotion Studio — `vf studio <project>`
+### Remotion Studio — `video studio <project>`
 
 Opens the project's current composition in [Remotion Studio](https://www.remotion.dev/docs/studio) — a live, browser-based preview with a timeline and input-props editing:
 
@@ -63,47 +63,47 @@ node packages/cli/dist/index.js studio demo
 #   and starts the Studio web server; Ctrl-C stops it
 ```
 
-Re-run `vf studio` after editing the storyboard to refresh the composition.
+Re-run `video studio` after editing the storyboard to refresh the composition.
 The generated workspace is a real Remotion project — anything Studio can do
 (props editing, frame scrubbing) works against the pipeline's exact render
 implementation.
 
 ### Global CLI installation
 
-Once the `@vf/*` workspace packages are published:
+Once the `@video/*` workspace packages are published:
 
 ```bash
-npm install --global @vf/cli
-vf new demo
+npm install --global @video/cli
+video new demo
 ```
 
 The global install keeps source and build files out of the user's project
-folders. `vf new <id>` creates `projects/<id>` below the current directory;
+folders. `video new <id>` creates `projects/<id>` below the current directory;
 use `--cwd <dir>` to choose another project root.
 
 ## Quickstart (minimal API — recommended)
 
 ```bash
-vf new "transformer architectures"   # scaffold project/<slug>/
+video new "transformer architectures"   # scaffold project/<slug>/
 
 # Two human-edit checkpoints, one command:
-vf draft "transformer architectures"  # writes article.md + audio-config.yaml (LLM)
+video draft "transformer architectures"  # writes article.md + audio-config.yaml (LLM)
 #   also derives storyboard.yaml (VDSL) so video length matches audio
 #   → edit projects/.../article.md and projects/.../audio-config.yaml
 #   (--no-audio-plan skips the audio step; an existing audio-config.yaml
-#    is never overwritten — regenerate explicitly with `vf audio-plan`)
+#    is never overwritten — regenerate explicitly with `video audio-plan`)
 
 # One command does everything — rendering is human-gated (doc §58):
-vf approve storyboard --cwd projects/transformer-architectures
-#   ↑ after reading article.md (mirrored into storyboard.yaml); `vf make`
+video approve storyboard --cwd projects/transformer-architectures
+#   ↑ after reading article.md (mirrored into storyboard.yaml); `video make`
 #     fails at the render step with this exact instruction until you approve
-vf make "transformer architectures"    # TTS → assets → render → mix
+video make "transformer architectures"    # TTS → assets → render → mix
 #   → projects/.../output/preview.mp4
 #   → projects/.../output/final-mixed.mp4
 ```
 
 That is the entire workflow. Two commands after scaffolding, two human-edit
-checkpoints, one output. Re-run `vf make` after editing either file — it skips
+checkpoints, one output. Re-run `video make` after editing either file — it skips
 work whose outputs are newer than its inputs (`--dry-run` shows what it would
 do).
 
@@ -113,12 +113,12 @@ do).
 
 | Command                       | Purpose                                                                                  |
 | ----------------------------- | ---------------------------------------------------------------------------------------- |
-| `vf new <id>`                 | scaffold a project under `projects/<id>/`                                                |
-| `vf draft <topic>`            | write `article.md` + `audio-config.yaml` from a topic via MiniMax/GLM (research + script + storyboard + audio plan in one; `--no-audio-plan` to split; `--file <path>` to seed with your raw idea, opinions preserved; **v0.4** `--style <theme>` writes storyboard theme; **v0.4** `--no-captions` skips the caption overlay) |
-| `vf audio-plan <project>`     | (optional) regenerate `audio-config.yaml` after hand-editing article.md                   |
-| `vf make <project>`           | TTS → audio assets → render → mix (`--dry-run` to preview, `--fake` for offline TTS, `--image-provider mock\|minimax\|none`, `--bgm-dir`/`--sfx-dir <dir>` to use your own music library) |
-| `vf retrospect <project>`     | **v0.4** ask the LLM for 3 concrete edits to `article.md` based on the latest runs + QA report (writes `projects/<slug>/retrospect.md`); `--dry-run` shows the input without calling the LLM |
-| `vf status <project>`         | shows current workflow checkpoint + **v0.4** the latest QA finding count next to the gate |
+| `video new <id>`                 | scaffold a project under `projects/<id>/`                                                |
+| `video draft <topic>`            | write `article.md` + `audio-config.yaml` from a topic via MiniMax/GLM (research + script + storyboard + audio plan in one; `--no-audio-plan` to split; `--file <path>` to seed with your raw idea, opinions preserved; **v0.4** `--style <theme>` writes storyboard theme; **v0.4** `--no-captions` skips the caption overlay) |
+| `video audio-plan <project>`     | (optional) regenerate `audio-config.yaml` after hand-editing article.md                   |
+| `video make <project>`           | TTS → audio assets → render → mix (`--dry-run` to preview, `--fake` for offline TTS, `--image-provider mock\|minimax\|none`, `--bgm-dir`/`--sfx-dir <dir>` to use your own music library) |
+| `video retrospect <project>`     | **v0.4** ask the LLM for 3 concrete edits to `article.md` based on the latest runs + QA report (writes `projects/<slug>/retrospect.md`); `--dry-run` shows the input without calling the LLM |
+| `video status <project>`         | shows current workflow checkpoint + **v0.4** the latest QA finding count next to the gate |
 
 The two human-edit artifacts are `article.md` (narrative + scene data) and
 `audio-config.yaml` (BGM/SFX cues + fades + voice, plus optional
@@ -133,7 +133,7 @@ that actually served is recorded in `runs/<id>.yaml` under
 routing per-command with `--model <provider>` or globally via the
 `LL_CONFIG` YAML file.
 
-The fine-grained per-stage verbs (`vf research`, `vf script`, `vf storyboard`, `vf audio`, `vf audio-asset`, `vf mix`, `vf final`, `vf preview`, `vf approve`/`reject`/`rollback`, `vf review`, `vf youtube`, `vf thumbnail`, `vf shorts`, `vf status`/`vf resume`, `vf validate`) remain wired for back-compat with projects created before the minimal API but are not part of the recommended path.
+The fine-grained per-stage verbs (`video research`, `video script`, `video storyboard`, `video audio`, `video audio-asset`, `video mix`, `video final`, `video preview`, `video approve`/`reject`/`rollback`, `video review`, `video youtube`, `video thumbnail`, `video shorts`, `video status`/`video resume`, `video validate`) remain wired for back-compat with projects created before the minimal API but are not part of the recommended path.
 
 ## Scripts
 
@@ -153,11 +153,11 @@ file that implements it, plus the v0.2+ roadmap.
 
 ## Advanced Media (v0.2.8 — final phase)
 
-`vf thumbnail` and `vf shorts` complete the YouTube publishing package by
+`video thumbnail` and `video shorts` complete the YouTube publishing package by
 generating the thumbnail image and a Shorts MP4 clip. Per doc §60 this is
 the last phase of v0.2.
 
-### Thumbnail — `vf thumbnail <project>`
+### Thumbnail — `video thumbnail <project>`
 
 ```bash
 node packages/cli/dist/index.js youtube "AI 思维链"   # produces thumbnail-prompt.txt
@@ -174,7 +174,7 @@ failures are surfaced readably (envelope status 2056 etc.). Output is
 The **MockImageProvider** stays the default — deterministic, offline,
 hash-derived solid color.
 
-### Shorts clip — `vf shorts <project>`
+### Shorts clip — `video shorts <project>`
 
 ```bash
 node packages/cli/dist/index.js final    # produces output/final-faststart.mp4
@@ -217,9 +217,9 @@ every generator boundary. AI never auto-publishes; humans decide.
 
 ## SFX Cues + BGM Fades (v0.3.5)
 
-`vf mix` now reads `audio-assets/mix.yaml` (alongside `--mix-yaml <path>`
+`video mix` now reads `audio-assets/mix.yaml` (alongside `--mix-yaml <path>`
 override) for SFX cues and BGM fade durations. Plus a new `--mix` flag on
-`vf final` that chains `runMix` into the final pipeline.
+`video final` that chains `runMix` into the final pipeline.
 
 ### `audio-assets/mix.yaml` convention
 
@@ -235,32 +235,32 @@ bgm_fade_out_sec: 2 # optional: fade BGM out over last N seconds
 - SFX cue keys MUST match `scene_N` where N is 1-based.
 - CLI flags (`--bgm`, `--bgm-fade-in`, `--bgm-fade-out`) override the spec.
 - Files referenced in `sfx` MUST exist in `assets/audio-assets/sfx/<tag>.wav`
-  (from `vf audio-asset --sfx <tag>`); the CLI gives a readable error
+  (from `video audio-asset --sfx <tag>`); the CLI gives a readable error
   with the next-step hint if a cue is missing.
 
-### `vf final --mix`
+### `video final --mix`
 
-After the normal final render, `vf final --mix` calls `vf mix` so the
+After the normal final render, `video final --mix` calls `video mix` so the
 published artifact is `output/final-mixed.mp4` (narration + ducked BGM +
 SFX cues) instead of the bare narration-only mp4.
 
 ```bash
-vf audio "demo"               # assets/audio/scene-N.wav
-vf audio-asset "demo" --bgm calm --sfx whoosh
+video audio "demo"               # assets/audio/scene-N.wav
+video audio-asset "demo" --bgm calm --sfx whoosh
 # write audio-assets/mix.yaml (sfx cues + fades)
-vf final --mix --cwd projects/demo    # produces output/final-mixed.mp4
+video final --mix --cwd projects/demo    # produces output/final-mixed.mp4
 ```
 
 ## ## Audio Mixing (v0.3.4)
 
-`vf mix` combines per-scene narration TTS (`assets/audio/scene-N.wav` from
-`vf audio`) with a background music track (`assets/audio-assets/bgm/*.wav`
-from `vf audio-asset`) into one final-mixed mp4.
+`video mix` combines per-scene narration TTS (`assets/audio/scene-N.wav` from
+`video audio`) with a background music track (`assets/audio-assets/bgm/*.wav`
+from `video audio-asset`) into one final-mixed mp4.
 
 ```bash
-vf audio "demo"           # produces assets/audio/scene-N.wav (narration)
-vf audio-asset "demo" --bgm calm   # produces assets/audio-assets/bgm/calm.wav
-vf mix "demo"
+video audio "demo"           # produces assets/audio/scene-N.wav (narration)
+video audio-asset "demo" --bgm calm   # produces assets/audio-assets/bgm/calm.wav
+video mix "demo"
 # → projects/demo/output/final-mixed.mp4  (narration + ducked BGM, AAC 192k)
 ```
 
@@ -288,7 +288,7 @@ speaking and floats back up between lines. Volume automation is the simple
 
 ## ## Audio Assets (v0.3.3)
 
-`vf audio-asset` adds **background music** and **sound effects** to a
+`video audio-asset` adds **background music** and **sound effects** to a
 project. Per doc §60 (Advanced Audio), this is the BGM/SFX asset layer —
 actual mixing into the final mp4 is a separate concern (v0.3.4+).
 
@@ -318,7 +318,7 @@ responsible for verifying licensing.
 
 ## ## YouTube Automation
 
-`vf youtube` produces the text-only publishing package for the video:
+`video youtube` produces the text-only publishing package for the video:
 title, description, chapter timestamps, a thumbnail prompt, and a Shorts
 script beat.
 
@@ -336,25 +336,25 @@ node packages/cli/dist/index.js youtube "<topic>"
 
 ### Workflow
 
-1. Run `vf youtube` after `vf make` has produced `output/final-mixed.mp4`.
+1. Run `video youtube` after `video make` has produced `output/final-mixed.mp4`.
 2. Copy `title.txt` and `description.md` into YouTube Studio's upload form.
 3. Paste `chapters.vtt` into the description box (YouTube parses it for
    the chapter markers on the timeline).
 4. Use `thumbnail-prompt.txt` to design the thumbnail manually
-   (or run `vf thumbnail` to generate one).
+   (or run `video thumbnail` to generate one).
 5. Record a separate Short from `shorts-hook.txt`.
 
 ### What's NOT here yet
 
-Thumbnail generation (`vf thumbnail` is mock-only by default) and Shorts
-clipping (`vf shorts`) are part of v0.2 phase 8 (Advanced Media §60) and
+Thumbnail generation (`video thumbnail` is mock-only by default) and Shorts
+clipping (`video shorts`) are part of v0.2 phase 8 (Advanced Media §60) and
 ship separately.
 
 ## Harness adapters (v0.4.1)
 
-The `vf` CLI is the **stable harness-agnostic surface**. The repo ships
+The `video` CLI is the **stable harness-agnostic surface**. The repo ships
 adapter files for the harnesses we officially support; every adapter
-forwards to `vf` (or to `bin/video`, a thin shell wrapper).
+forwards to `video` (or to `bin/video`, a thin shell wrapper).
 
 ### Shell wrapper — `bin/video`
 
@@ -365,7 +365,7 @@ bin/video storyboard "AI 思维链" --from-research projects/.../research
 bin/video preview --cwd projects/demo
 ```
 
-Forwards every verb to `vf` so any shell, Makefile, or CI script can
+Forwards every verb to `video` so any shell, Makefile, or CI script can
 drive the pipeline with one binary.
 
 ### OpenCode — `.opencode/command/video.md`
@@ -411,7 +411,7 @@ The skill bodies are unchanged — only the directory layout differs.
 Per doc §58 and §65, the workflow enforces a human gate between every
 generator step and the next. The agent (whether OpenCode, OMP, or a
 human at a terminal) calls the drafting verbs and surfaces the
-artifacts; the human reads and `vf approve`s before `vf preview` ever
+artifacts; the human reads and `video approve`s before `video preview` ever
 touches the render path.
 
 ### Adding a new harness
@@ -427,7 +427,7 @@ touches the render path.
 
 ## Review Agent (v0.2.5)
 
-`vf review` produces three review YAMLs — Content / Visual / Technical —
+`video review` produces three review YAMLs — Content / Visual / Technical —
 before you publish. Per doc §31 each section has a per-field verdict
 (`ok` / `warn` / `fail`) plus an `overall` verdict (`pass` / `warn` /
 `fail`); the agent lists concrete observations in array fields (e.g.
@@ -441,18 +441,18 @@ node packages/cli/dist/index.js review "AI 思维链"
 
 The Review Agent is read-only — it never overwrites a human edit. Read the
 three YAMLs, decide whether to fix the script/storyboard, or run
-`vf preview` and proceed. **No automated gate is applied** (doc §32: agents
+`video preview` and proceed. **No automated gate is applied** (doc §32: agents
 never have the final decision; only the human does).
 
 ### When to run
 
-Run `vf review` after `vf script` + `vf audio` and before `vf preview`. If
+Run `video review` after `video script` + `video audio` and before `video preview`. If
 any section's overall is `warn` or `fail`, fix the underlying issue (the
 observations tell you what), then re-run.
 
 ## Voice + Subtitle (v0.2.4)
 
-`vf audio` synthesizes real voiceover for the video using the Edge TTS
+`video audio` synthesizes real voiceover for the video using the Edge TTS
 service (no API key needed) and writes per-scene WAVs + a captions file.
 
 ```bash
@@ -467,14 +467,14 @@ node packages/cli/dist/index.js audio "AI 思维链"   # synth + srt
 - **`EdgeTTSProvider`** (default) — Microsoft Edge online TTS via
   `edge-tts-universal`. No API key. May fail offline; gracefully errors out
   with the provider name + status.
-- **`FakeTTSProvider`** — silent WAV for tests + CI. Pass `--fake` to `vf
+- **`FakeTTSProvider`** — silent WAV for tests + CI. Pass `--fake` to `video
 audio` to use it (no network).
 
 ### Wiring audio into the preview
 
-Once `vf audio` has produced per-scene WAVs, add `audio: assets/audio/scene-NN.wav`
+Once `video audio` has produced per-scene WAVs, add `audio: assets/audio/scene-NN.wav`
 to the corresponding scene's `narration:` block in `storyboard.yaml`. The
-existing `vf preview` picks up real audio automatically (Remotion mounts
+existing `video preview` picks up real audio automatically (Remotion mounts
 the `<Audio>` component for any scene with `audio` set).
 
 ### Cost
@@ -483,7 +483,7 @@ Edge TTS is free. There is no per-character or per-request cost.
 
 ## Script Agent (v0.2.3)
 
-`vf script` drafts a Chinese-language script for the video. Per doc §28,
+`video script` drafts a Chinese-language script for the video. Per doc §28,
 the script follows the 7-section narrative spine:
 
 > Hook → Problem → Explanation → Example → Comparison → Implication → Conclusion
@@ -517,13 +517,13 @@ the script's flow, but structurally free).
 ### Full v0.2 chain
 
 ```bash
-vf research "<topic>"        → research/{research.md, sources.yaml, claims.yaml}
-vf script "<topic>" \         → script/script.zh-CN.md (or en-US)
+video research "<topic>"        → research/{research.md, sources.yaml, claims.yaml}
+video script "<topic>" \         → script/script.zh-CN.md (or en-US)
   --from-research ...
-vf storyboard "<topic>" \     → storyboard/storyboard.yaml
+video storyboard "<topic>" \     → storyboard/storyboard.yaml
   --from-research ... \
   --from-script ...
-vf preview / vf final        → MP4
+video preview / video final        → MP4
 ```
 
 Each step is independently editable; the agents never overwrite a human
@@ -531,7 +531,7 @@ edit without explicit re-invocation.
 
 ## Research Agent (v0.2.2)
 
-`vf research` gathers facts and source links about any topic before you draft
+`video research` gathers facts and source links about any topic before you draft
 the storyboard. It produces three human-reviewable files in
 `projects/<slug>/research/`:
 
@@ -548,7 +548,7 @@ export MINIMAX_API_KEY=...   # required for the default GLM provider + MiniMax w
 node packages/cli/dist/index.js research "AI 思维链" --duration 40
 # → projects/ai-思维链/research/{research.md, sources.yaml, claims.yaml}
 # → runs/<id>.yaml with provider/model/prompt_hash/tokens/cost
-# → next: edit, then `vf storyboard --from-research projects/ai-思维链/research`
+# → next: edit, then `video storyboard --from-research projects/ai-思维链/research`
 ```
 
 ### Web search
@@ -572,10 +572,10 @@ work — it cites and weighs it).
 
 ## Storyboard Agent (v0.2)
 
-`vf storyboard` drafts a VDSL storyboard from a topic by calling an LLM
+`video storyboard` drafts a VDSL storyboard from a topic by calling an LLM
 (MiniMax by default, GLM as fallback). The draft lands at
 `projects/<slug>/storyboard/storyboard.yaml` for human review before
-`vf preview` ever touches it.
+`video preview` ever touches it.
 
 ```bash
 export MINIMAX_API_KEY=...   # required for the default MiniMax provider
@@ -583,7 +583,7 @@ export GLM_API_KEY=...        # enables fallback to GLM if MiniMax fails
 
 node packages/cli/dist/index.js storyboard "AI 思维链" --duration 40
 # → scaffolds projects/ai-思维链/, drafts storyboard.yaml, writes runs/<id>.yaml
-# → next: edit, then `vf approve storyboard`, then `vf preview`
+# → next: edit, then `video approve storyboard`, then `video preview`
 ```
 
 The CLI never logs the key, never writes it to disk, and never includes
@@ -613,7 +613,7 @@ verify it meets all §62.4 acceptance criteria.
 
 Seven quality wins shipped under the same human-gate principle:
 
-- **Auto-captions from article** (`vf draft`): every auto-generated
+- **Auto-captions from article** (`video draft`): every auto-generated
   storyboard now has `captions: { source: narration }`; opt out with
   `--no-captions`. Captions follow narration timing via the existing
   `writeCaptionsSrt` step.
@@ -621,24 +621,24 @@ Seven quality wins shipped under the same human-gate principle:
   article's `visual:` field is now classified into the right VDSL
   component (FlowChart / Comparison / Terminal / Timeline / Callout /
   Illustration) instead of every scene being `AnimatedIllustration`.
-- **Image prompt expansion** (`vf make --image-provider minimax`):
+- **Image prompt expansion** (`video make --image-provider minimax`):
   the article's 80-char `visual:` is rewritten into a 2-3 sentence
   prompt (subject · environment · lighting · composition · style)
   before `image-01`. Cached on content hash so re-runs are free;
   auditable via `assets/images/scene_N.prompt.txt`.
-- **`--style <theme>` flag** (`vf draft`): `style.theme: warm-sunset`
+- **`--style <theme>` flag** (`video draft`): `style.theme: warm-sunset`
   instead of the hardcoded `dark-tech`.
-- **Hook ↔ YouTube coherence** (`vf youtube`): the article's hook is
+- **Hook ↔ YouTube coherence** (`video youtube`): the article's hook is
   now part of the agent's input. The thumbnail prompt is checked
   against a banned-token list (`text` / `字幕` / `字体` / `logo文字` /
   `海报` / `界面` / `仪表盘` / …) and re-prompted once on a hit.
-- **QA gate in `vf final`** + **QA surfacing in `vf status`**: error-
+- **QA gate in `video final`** + **QA surfacing in `video status`**: error-
   level findings exit 1 (existing behaviour, preserved); the latest
-  count is printed under `vf status` so users see the gate without
-  running `vf qa`.
-- **`vf retrospect <project>`**: cheap LLM call that reads the last
+  count is printed under `video status` so users see the gate without
+  running `video qa`.
+- **`video retrospect <project>`**: cheap LLM call that reads the last
   few `runs/*.yaml` + `qa/render-report.json` and writes
   `projects/<slug>/retrospect.md` with 3 specific edits to
   `article.md` for the next render.
-- **CLI banner** (`vf` / `vf --help`): minimal-API quickstart appears
+- **CLI banner** (`video` / `video --help`): minimal-API quickstart appears
   above the verb list.

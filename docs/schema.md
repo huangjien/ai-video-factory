@@ -31,7 +31,7 @@ scenes:
     duration: 8
     narration:
       text: "……"
-      audio: assets/audio/scene-01.wav   # optional; mounted by vf audio flows
+      audio: assets/audio/scene-01.wav   # optional; mounted by video audio flows
     visual:
       component: SvgScene
       renderer: svg     # remotion (default) | svg | canvas | excalidraw
@@ -88,7 +88,7 @@ it). Current pairings:
 | `remotion` | Title, Paragraph, CodeBlock, Terminal, FlowChart, Comparison, Timeline, Callout, EndCard, Character, Image, ImageBackground, AnimatedIllustration + v0.4.2: QuoteBlock, StatGrid (count-up), BarChart, Leaderboard, Checklist, BigIdea, PyramidDiagram, VennDiagram, CycleDiagram | classic motion graphics on the theme background |
 | `svg` | `SvgScene` | whiteboard/diagram: `nodes` + labeled `edges` that DRAW ON (stroke draw-on), a target-driven camera, automatic stagger |
 | `canvas` | `DoodleScene` | hand-drawn ink: procedural strokes (circle / star / zigzag / spiral) with seeded wobble, sequential pen-draw, optional `bpm` beat-sync, `background: paper \| dark` |
-| `excalidraw` | — | asset generation only (`vf excalidraw` → `.excalidraw` + animated `.svg`); not a render path |
+| `excalidraw` | — | asset generation only (`video excalidraw` → `.excalidraw` + animated `.svg`); not a render path |
 
 `props` are validated against the component's own registry schema, so each
 component documents its own shape — `SvgScene` wants `nodes[]` (id, kind
@@ -129,7 +129,7 @@ default, so choreography is additive: declare only the beats you care
 about (e.g. one arrow draw + one highlight) and let the rest flow.
 
 Timing guidance (from the `animation-principles` skill, encoded in
-`@vf/motion/src/heuristics.ts`): entrances 0.3–0.8 s ease-out, group
+`@video/motion/src/heuristics.ts`): entrances 0.3–0.8 s ease-out, group
 stagger 40–80 ms capped at ~0.7 s total, entrances ≤ ⅓ of the scene, one
 highlight beat for scenes ≥ 6 s, key moments on the beat grid when a BPM
 is given.
@@ -138,7 +138,7 @@ is given.
 
 - Component must be registered (`REGISTRY`), props must pass its schema.
 - Narration audio file must exist and not exceed scene duration
-  (tolerance 0.05 s) — run `vf preview`/`vf make` first: they sync
+  (tolerance 0.05 s) — run `video preview`/`video make` first: they sync
   durations to measured audio before validating.
 - Captions must wrap to ≤ 3 lines of 24 CJK units (bottom safe area).
 - Timeline animations must fit inside the scene (`start + duration ≤
@@ -158,7 +158,7 @@ design: an inherited renderer that doesn't fit a scene's component
 (e.g. `canvas` + `Title`) still fails loudly at render time
 (`assertPlanRenderable`); there is no silent family-aware fallback.
 
-In the article-driven (`vf make`) flow, the default is set from
+In the article-driven (`video make`) flow, the default is set from
 `article.md` frontmatter:
 
 ```yaml
@@ -188,7 +188,7 @@ animations do not affect element draw timing.
 | `remotion` | any REGISTRY component | default |
 | `svg` | `SvgScene` | draw-on diagrams; target-driven camera |
 | `canvas` | `DoodleScene` | hand-drawn ink; `bpm` quantizes stroke onsets |
-| `excalidraw` | — | generator only (`vf excalidraw`); renders are not wired |
+| `excalidraw` | — | generator only (`video excalidraw`); renders are not wired |
 
 ## Compiler contract
 
@@ -197,5 +197,5 @@ animations do not affect element draw timing.
 - deterministic (byte-identical re-compilation of emitted vdsl.yaml),
 - `write()` persists `vdsl/vdsl.yaml` — preview/final compile FROM it when
   fresh and fall back to the storyboard loudly when it is corrupt,
-- draft mode (`vf preview --draft`) overrides fps/width/height (960×540@15)
+- draft mode (`video preview --draft`) overrides fps/width/height (960×540@15)
   without touching the storyboard.

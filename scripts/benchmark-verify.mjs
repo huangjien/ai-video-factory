@@ -35,7 +35,7 @@ const renderInto = async (sub) => {
     "--cwd",
     projectRoot,
   ]);
-  if (r.status !== 0) throw new Error(`vf preview failed: ${r.stderr}`);
+  if (r.status !== 0) throw new Error(`video preview failed: ${r.stderr}`);
   await fs.cp(
     path.join(projectRoot, "output", "preview-faststart.mp4"),
     path.join(target, "preview.mp4"),

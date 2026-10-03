@@ -115,7 +115,7 @@ describe("loadProviderConfig (todo 1) — §6 per-role primary/fallback", () => 
     const { promises: fs } = await import("node:fs");
     const path = await import("node:path");
     const os = await import("node:os");
-    const tmp = path.join(os.tmpdir(), `vf-cfg-${Date.now()}.yaml`);
+    const tmp = path.join(os.tmpdir(), `video-cfg-${Date.now()}.yaml`);
     await fs.writeFile(
       tmp,
       "storyboard:\n  primary: glm\n  fallback: minimax\n",

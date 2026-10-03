@@ -1,13 +1,13 @@
 ---
 name: video
-description: AI Video Factory — drive the full pipeline from research to rendered MP4 via the `vf` CLI
-argument-hint: "[vf-verb] [vf-args...]"
+description: AI Video Factory — drive the full pipeline from research to rendered MP4 via the `video` CLI
+argument-hint: "[video-verb] [video-args...]"
 ---
 
 # /video — drive the AI Video Factory pipeline
 
-This command runs the `vf` CLI. Every `/video <verb> [args...]` is
-forwarded to `vf <verb> [args...]` — the `bin/video` shell script in the
+This command runs the `video` CLI. Every `/video <verb> [args...]` is
+forwarded to `video <verb> [args...]` — the `bin/video` shell script in the
 repo root makes the shell call. Use the slash form to invoke a
 verb; pass `$ARGUMENTS` as the verbatim CLI args.
 
@@ -76,7 +76,7 @@ verb; pass `$ARGUMENTS` as the verbatim CLI args.
 ## Critical invariants
 
 - **Never auto-approve** storyboard/script/research drafts — the user must
-  read and `vf approve` explicitly. Agents are drafting; humans decide.
+  read and `video approve` explicitly. Agents are drafting; humans decide.
   The CLI enforces this: `preview` refuses to render without an approved
   storyboard checkpoint, and re-running a generator over an approved stage
   exits non-zero unless `--force` is passed.

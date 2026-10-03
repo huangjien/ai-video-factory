@@ -66,7 +66,7 @@ meta:
   model: MiniMax-M3
 `;
 
-describe("vf research end-to-end (todo 4) — mock MiniMax", () => {
+describe("video research end-to-end (todo 4) — mock MiniMax", () => {
   let server: Server;
   let baseUrl: string;
   let responseYaml = goodYaml;
@@ -107,7 +107,7 @@ describe("vf research end-to-end (todo 4) — mock MiniMax", () => {
   afterAll(async () => new Promise<void>((r) => server.close(() => r())));
 
   it("writes research.md, sources.yaml, claims.yaml + runs/<id>.yaml", async () => {
-    const cwd = mkdtempSync(path.join(tmpdir(), "vf-rb-"));
+    const cwd = mkdtempSync(path.join(tmpdir(), "video-rb-"));
     process.env["GLM_API_KEY"] = "test-key-do-not-leak";
     process.env["MINIMAX_API_KEY"] = "test-key-do-not-leak";
     // Override GLM base URL to point at the mock (since research default is GLM per doc §6)
@@ -146,7 +146,7 @@ describe("vf research end-to-end (todo 4) — mock MiniMax", () => {
 
   it("surfaces Needs human review section for uncertain claims", async () => {
     responseYaml = uncertainYaml;
-    const cwd = mkdtempSync(path.join(tmpdir(), "vf-rb-"));
+    const cwd = mkdtempSync(path.join(tmpdir(), "video-rb-"));
     process.env["GLM_API_KEY"] = "test-key-do-not-leak";
     process.env["GLM_BASE_URL"] = baseUrl;
     const code = await runResearch({ topic: "Uncertain Topic", cwd });
@@ -161,7 +161,7 @@ describe("vf research end-to-end (todo 4) — mock MiniMax", () => {
   });
 
   it("never writes the API key into projects/ or runs/", async () => {
-    const cwd = mkdtempSync(path.join(tmpdir(), "vf-rb-"));
+    const cwd = mkdtempSync(path.join(tmpdir(), "video-rb-"));
     process.env["GLM_API_KEY"] = "test-key-do-not-leak";
     process.env["GLM_BASE_URL"] = baseUrl;
     await runResearch({ topic: "leak-check", cwd });

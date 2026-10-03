@@ -7,7 +7,7 @@ import {
   type ServerResponse,
 } from "node:http";
 import type { AddressInfo } from "node:net";
-import { GLMProvider } from "@vf/llm";
+import { GLMProvider } from "@video/llm";
 import { callDraft, DraftError } from "./agent.js";
 
 function listen(server: Server): Promise<{ url: string; port: number }> {

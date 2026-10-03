@@ -16,7 +16,7 @@ describe("syncStoryboardDurations — measured lengths rewrite the storyboard", 
   let dir: string;
 
   beforeAll(async () => {
-    dir = await mkdtemp(path.join(tmpdir(), "vf-sync-durations-"));
+    dir = await mkdtemp(path.join(tmpdir(), "video-sync-durations-"));
     await mkdir(path.join(dir, "assets", "audio"), { recursive: true });
     await mkdir(path.join(dir, "storyboard"), { recursive: true });
 
@@ -75,7 +75,7 @@ describe("syncStoryboardDurations — clamps animations to the measured scene", 
   let dir: string;
 
   beforeAll(async () => {
-    dir = await mkdtemp(path.join(tmpdir(), "vf-sync-clamp-"));
+    dir = await mkdtemp(path.join(tmpdir(), "video-sync-clamp-"));
     await mkdir(path.join(dir, "assets", "audio"), { recursive: true });
     await mkdir(path.join(dir, "storyboard"), { recursive: true });
 

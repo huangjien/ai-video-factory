@@ -24,7 +24,7 @@ const TRANSITIONS: Record<WorkflowStatus, ReadonlyArray<WorkflowStatus>> = {
   // straight after generation — the human gate that must pass before
   // `preview` is allowed to render (README "Why no auto-approval").
   DRAFT: ["GENERATING", "APPROVED"],
-  // GENERATING → WAITING_REVIEW: after a reject/regenerate, `vf preview`
+  // GENERATING → WAITING_REVIEW: after a reject/regenerate, `video preview`
   // re-runs generate+validate and resubmits for review (§18.1 cycle).
   GENERATING: ["VALIDATING", "WAITING_REVIEW"],
   VALIDATING: ["WAITING_REVIEW", "FAILED", "BLOCKED"],

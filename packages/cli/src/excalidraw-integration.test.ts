@@ -46,12 +46,12 @@ scenes:
             label: "deploy"
 `;
 
-describe("vf excalidraw (T7.1) — end to end on a project", () => {
+describe("video excalidraw (T7.1) — end to end on a project", () => {
   let cwd: string;
   let projectDir: string;
 
   beforeEach(async () => {
-    cwd = mkdtempSync(path.join(tmpdir(), "vf-excalidraw-cli-"));
+    cwd = mkdtempSync(path.join(tmpdir(), "video-excalidraw-cli-"));
     await runNew({ projectId: "excalidraw-demo", cwd });
     projectDir = path.join(cwd, "projects", "excalidraw-demo");
     writeFileSync(
@@ -75,7 +75,7 @@ describe("vf excalidraw (T7.1) — end to end on a project", () => {
     expect(scene.type).toBe("excalidraw");
     expect(scene.elements.length).toBeGreaterThanOrEqual(4);
     const svgText = readFileSync(svg, "utf8");
-    expect(svgText).toContain("vf-draw");
+    expect(svgText).toContain("video-draw");
   });
 
   it("exits 1 when the storyboard has no svg scenes", async () => {

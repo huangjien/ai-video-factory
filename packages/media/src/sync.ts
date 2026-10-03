@@ -18,7 +18,7 @@ const execFileAsync = promisify(execFile);
  * Regex-based line replacement rather than a yaml round-trip: that would
  * lose comments and reformat the file.
  *
- * Home: @vf/media so both `vf make` and `vf preview` can sync before
+ * Home: @video/media so both `video make` and `video preview` can sync before
  * validating (validation hard-fails audio longer than the scene).
  */
 export async function syncSceneDurations(

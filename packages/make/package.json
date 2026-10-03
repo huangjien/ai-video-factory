@@ -1,5 +1,5 @@
 {
-  "name": "@vf/make",
+  "name": "@video/make",
   "version": "0.1.0",
   "files": [
     "dist"
@@ -20,14 +20,14 @@
     "build": "tsc -p tsconfig.json"
   },
   "dependencies": {
-    "@vf/audio-assets": "workspace:*",
-    "@vf/audio-mix": "workspace:*",
-    "@vf/audio-plan": "workspace:*",
-    "@vf/draft": "workspace:*",
-    "@vf/llm": "workspace:*",
-    "@vf/media": "workspace:*",
-    "@vf/media-generators": "workspace:*",
-    "@vf/tts": "workspace:*",
+    "@video/audio-assets": "workspace:*",
+    "@video/audio-mix": "workspace:*",
+    "@video/audio-plan": "workspace:*",
+    "@video/draft": "workspace:*",
+    "@video/llm": "workspace:*",
+    "@video/media": "workspace:*",
+    "@video/media-generators": "workspace:*",
+    "@video/tts": "workspace:*",
     "yaml": "^2.7.0"
   }
 }

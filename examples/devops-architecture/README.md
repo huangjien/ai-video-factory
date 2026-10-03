@@ -11,7 +11,7 @@ scenes, exercising §35's acceptance list end to end:
   `packages/cli/src/demo-devops.test.ts`
 - **Transitions** — `cut` between stages, `fade` in/out at the ends
 - **Timeline** — absolute-start choreography (`draw` at 1s/2.5s/4s…)
-- **Excalidraw** — `vf excalidraw` emits hand-editable `.excalidraw` +
+- **Excalidraw** — `video excalidraw` emits hand-editable `.excalidraw` +
   animated `.svg` for every diagram scene (T7.1)
 
 ## Run it for real

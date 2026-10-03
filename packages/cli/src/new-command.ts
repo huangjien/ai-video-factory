@@ -1,7 +1,7 @@
 import { existsSync } from "node:fs";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { initState, writeProjectState } from "@vf/workflow";
+import { initState, writeProjectState } from "@video/workflow";
 import { slugifyProjectName } from "./project-path.js";
 
 const STORYBOARD_TEMPLATE = (
@@ -66,12 +66,12 @@ export async function runNew(opts: NewOptions): Promise<number> {
     "utf8",
   );
   // vdsl/vdsl.yaml is NOT scaffolded: it is the compiled artifact, written
-  // by `vf preview`/`vf final` from the storyboard (plan §6). Seeding it
+  // by `video preview`/`video final` from the storyboard (plan §6). Seeding it
   // with an empty stub would make the freshness check prefer the stub.
   await writeProjectState(root, initState(projectId));
   console.log(`✓ scaffolded ${root}`);
   console.log(
-    `  next: edit storyboard/storyboard.yaml, then \`vf approve storyboard\`, then \`vf preview\``,
+    `  next: edit storyboard/storyboard.yaml, then \`video approve storyboard\`, then \`video preview\``,
   );
   return 0;
 }

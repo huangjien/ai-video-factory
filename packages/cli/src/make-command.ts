@@ -1,5 +1,5 @@
 import path from "node:path";
-import { runMake } from "@vf/make";
+import { runMake } from "@video/make";
 import { resolveProjectDir } from "./project-path.js";
 
 export interface MakeOptions {
@@ -44,7 +44,7 @@ export async function runMakeCli(opts: MakeOptions): Promise<number> {
   const failed = report.steps.filter((s) => s.status === "fail");
   if (failed.length > 0) {
     console.error(
-      `\nmake: ${failed.length} step(s) failed — fix and re-run \`vf make ${opts.project}\``,
+      `\nmake: ${failed.length} step(s) failed — fix and re-run \`video make ${opts.project}\``,
     );
     return 1;
   }

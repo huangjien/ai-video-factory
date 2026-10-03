@@ -3,7 +3,7 @@ import { existsSync } from "node:fs";
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { promisify } from "node:util";
-import type { RenderPlan } from "@vf/vdsl";
+import type { RenderPlan } from "@video/vdsl";
 import {
   checkCaptions,
   checkSceneAudioSync,
@@ -193,7 +193,7 @@ export async function buildRenderReport(
       level: "error",
       check: "duration",
       message: `video is ${info.duration.toFixed(2)}s but the plan says ${expectedDuration.toFixed(2)}s (tolerance ${tolerance}s)`,
-      fix: "Re-render (`vf preview` / `vf final`) or check the storyboard for duration drift.",
+      fix: "Re-render (`video preview` / `video final`) or check the storyboard for duration drift.",
     });
   }
 
@@ -257,7 +257,7 @@ export async function buildRenderReport(
       level: "error",
       check: "assets",
       message: `missing files: ${missing.join(", ")}`,
-      fix: "Regenerate with `vf make` / `vf audio`, or remove the dangling reference from the storyboard.",
+      fix: "Regenerate with `video make` / `video audio`, or remove the dangling reference from the storyboard.",
     });
   }
 
@@ -320,7 +320,7 @@ export async function writeQaArtifacts(
 }
 
 // Re-exports from the extended-checks module (T6.1) so consumers import
-// everything QA-related from "@vf/qa".
+// everything QA-related from "@video/qa".
 export {
   checkCaptions,
   checkSceneAudioSync,

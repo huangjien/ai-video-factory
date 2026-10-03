@@ -394,19 +394,19 @@ scenes:
 `;
 
   it("strict parseArticle rejects empty narrations", () => {
-    const { parseArticle } = require("@vf/draft");
+    const { parseArticle } = require("@video/draft");
     expect(() => parseArticle(MALFORMED_ARTICLE)).toThrow(/too_small/);
   });
 
   it("parseArticleLenient accepts the malformed draft", () => {
-    const { parseArticleLenient } = require("@vf/draft");
+    const { parseArticleLenient } = require("@video/draft");
     const parsed = parseArticleLenient(MALFORMED_ARTICLE);
     expect(parsed.scenes).toHaveLength(4);
     expect(parsed.scenes[0]?.narration).toBe("");
   });
 
   it("recoverEmptyNarrations back-fills each scene from the matching section body", () => {
-    const { parseArticleLenient, recoverEmptyNarrations } = require("@vf/draft");
+    const { parseArticleLenient, recoverEmptyNarrations } = require("@video/draft");
     const parsed = parseArticleLenient(MALFORMED_ARTICLE);
     const { article, recoveredCount } = recoverEmptyNarrations(parsed);
     expect(recoveredCount).toBe(4);
@@ -417,7 +417,7 @@ scenes:
   });
 
   it("does not touch scenes that already have narration", () => {
-    const { parseArticleLenient, recoverEmptyNarrations } = require("@vf/draft");
+    const { parseArticleLenient, recoverEmptyNarrations } = require("@video/draft");
     const md = MALFORMED_ARTICLE.replace(
       'caption: D\n    visual: ""\n    narration: ""',
       'caption: D\n    visual: ""\n    narration: "kept verbatim"',
@@ -429,7 +429,7 @@ scenes:
   });
 
   it("parseArticleWithRecovery accepts good drafts unchanged and recovers malformed ones", () => {
-    const { parseArticleWithRecovery } = require("@vf/draft");
+    const { parseArticleWithRecovery } = require("@video/draft");
     const good = parseArticleWithRecovery(SAMPLE_MD);
     expect(good.recoveredCount).toBe(0);
     expect(good.article.scenes).toHaveLength(2);
@@ -440,7 +440,7 @@ scenes:
   });
 
   it("parseArticleWithRecovery rethrows non-narration parse errors", () => {
-    const { parseArticleWithRecovery } = require("@vf/draft");
+    const { parseArticleWithRecovery } = require("@video/draft");
     expect(() => parseArticleWithRecovery("# title\n\nfoo\n")).toThrow(
       /frontmatter/,
     );

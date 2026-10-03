@@ -1,7 +1,7 @@
 import { existsSync } from "node:fs";
 import path from "node:path";
 import type { z } from "zod";
-import { wrapText } from "@vf/media";
+import { wrapText } from "@video/media";
 import type { VdslError } from "./errors.js";
 import { lineOf, parseYaml } from "./parse.js";
 import type { Storyboard } from "./schema.js";

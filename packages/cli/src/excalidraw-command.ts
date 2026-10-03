@@ -1,13 +1,13 @@
 import { execSync } from "node:child_process";
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { formatRunId, writeRun } from "@vf/workflow";
+import { formatRunId, writeRun } from "@video/workflow";
 import {
   ExcalidrawSpecSchema,
   svgSpecToAnimatedSvg,
   svgSpecToExcalidraw,
   type ExcalidrawSpec,
-} from "@vf/video-components";
+} from "@video/video-components";
 import { loadOrCompileStoryboard } from "./render-command.js";
 import { resolveProjectDir, resolveProjectRoot } from "./project-path.js";
 
@@ -61,7 +61,7 @@ export async function runExcalidraw(opts: ExcalidrawOptions): Promise<number> {
       nodes: (scene.props.nodes ?? []) as ExcalidrawSpec["nodes"],
       edges: (scene.props.edges ?? []) as ExcalidrawSpec["edges"],
     };
-    const parsed = (await import("@vf/video-components")).ExcalidrawSpecSchema.safeParse(spec);
+    const parsed = (await import("@video/video-components")).ExcalidrawSpecSchema.safeParse(spec);
     if (!parsed.success) {
       console.error(
         `  scene ${scene.id}: props not a valid diagram spec — ${parsed.error.issues[0]?.path.join(".")} ${parsed.error.issues[0]?.message}`,
@@ -86,7 +86,7 @@ export async function runExcalidraw(opts: ExcalidrawOptions): Promise<number> {
     stage: "excalidraw",
     status: "succeeded",
     actor: "tool",
-    tool: "vf-excalidraw",
+    tool: "video-excalidraw",
     input_commit: safeGitHead(root),
     input_files: ["storyboard/storyboard.yaml"],
     output_files: outputs,

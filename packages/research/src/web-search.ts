@@ -1,4 +1,4 @@
-import { withRetry } from "@vf/llm";
+import { withRetry } from "@video/llm";
 import type { WebSearchResult } from "./schemas.js";
 
 export interface MiniMaxWebSearchOptions {

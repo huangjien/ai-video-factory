@@ -42,7 +42,7 @@ scenes:
   });
 
   it("round-trips the normalized vdsl.yaml through validateStoryboard", async () => {
-    const root = mkdtempSync(path.join(tmpdir(), "vf-compile-"));
+    const root = mkdtempSync(path.join(tmpdir(), "video-compile-"));
     const { write } = compileStoryboard(validStoryboardYaml, root);
     await write();
     const vdslPath = path.join(root, "vdsl", "vdsl.yaml");
@@ -59,7 +59,7 @@ scenes:
   });
 
   it("is deterministic: re-compiling identical input yields byte-identical vdsl.yaml", async () => {
-    const root = mkdtempSync(path.join(tmpdir(), "vf-compile-"));
+    const root = mkdtempSync(path.join(tmpdir(), "video-compile-"));
     const { write } = compileStoryboard(validStoryboardYaml, root);
     await write();
     const first = readFileSync(path.join(root, "vdsl", "vdsl.yaml"), "utf8");
@@ -83,7 +83,7 @@ scenes:
     duration: 4
     visual: {component: Title, props: {text: b}, renderer: remotion}
 `;
-    const root = mkdtempSync(path.join(tmpdir(), "vf-compile-defaults-"));
+    const root = mkdtempSync(path.join(tmpdir(), "video-compile-defaults-"));
     const { renderPlan, yaml, write } = compileStoryboard(inherited, root);
     await write();
     const emitted = readFileSync(path.join(root, "vdsl", "vdsl.yaml"), "utf8");

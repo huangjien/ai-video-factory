@@ -466,7 +466,7 @@ const visualSchema = z
      * | remotion   | Title, Paragraph, CodeBlock, Terminal, FlowChart, Comparison, Timeline, Callout, EndCard, Character, Image, ImageBackground, AnimatedIllustration | classic motion graphics on the theme background |
      * | svg        | SvgScene       | whiteboard/diagram: nodes + labeled arrows that DRAW ON, target-driven camera, automatic stagger |
      * | canvas     | DoodleScene    | hand-drawn ink: procedural strokes (circle/star/zigzag/spiral) with seeded wobble, sequential pen-draw, optional BPM beat-sync |
-     * | excalidraw | —              | asset generation only (`vf excalidraw`); not a render path |
+     * | excalidraw | —              | asset generation only (`video excalidraw`); not a render path |
      *
      * `props` are validated against the component's own registry schema,
      * so each component documents its own shape (SvgScene wants `nodes[]`

@@ -22,9 +22,13 @@
  *   timeline / 年表 / 历史 / 年代 / chronology     → Timeline
  *   formula / 公式 / equation / math               → Callout
  *   process / step / 步骤                            → SvgScene
- *   list / 列表 / bullet / 要点 / list of           → DoodleScene (hand-drawn)
+ *   list / 列表 / bullet / 要点 / list of           → Checklist
  *   first scene                                    → Title
  *   fall-through                                   → AnimatedIllustration
+ *
+ * DoodleScene is never auto-selected (user request 2026-10-03: the canvas
+ * family looked useless in output) but stays registered — explicit
+ * `component: DoodleScene` in a hand-edited storyboard still renders.
  *
  * Every returned component name MUST be in the video-components REGISTRY —
  * the Callout `kind` prop only accepts info|warning|success and is derived
@@ -105,7 +109,9 @@ const RULES: ClusterRule[] = [
     component: "Checklist",
     patterns: [
       /\b(checklist|check ?list|to-?dos?|dos and don'?ts|best practices|pitfalls)\b/i,
+      /\b(list|listing|bullet|bullets|points|tips|examples|kinds|items|agenda)\b/i,
       /(清单|核对|检查表|待办|注意事项|避坑|防坑|秘籍)/,
+      /(列表|要点|条目|示例|提纲)/,
     ],
   },
   {
@@ -169,13 +175,6 @@ const RULES: ClusterRule[] = [
     patterns: [
       /\b(database|databases|sql|query|queries|schema|table|tables|columnstore|attribute)/i,
       /(数据库|表格|字段|列存|列式|sql|查询)/,
-    ],
-  },
-  {
-    component: "DoodleScene",
-    patterns: [
-      /\b(list|listing|bullet|bullets|points|tips|examples|kinds|items|agenda)/i,
-      /(列表|清单|要点|条目|示例|提纲)/,
     ],
   },
 ];

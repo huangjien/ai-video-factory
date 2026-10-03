@@ -36,7 +36,7 @@ scenes:
       source: narration
 `;
 
-describe("vf storyboard end-to-end (todo 6) — mock MiniMax", () => {
+describe("video storyboard end-to-end (todo 6) — mock MiniMax", () => {
   let server: Server;
   let baseUrl: string;
   let lastAuth: string | undefined;
@@ -73,7 +73,7 @@ describe("vf storyboard end-to-end (todo 6) — mock MiniMax", () => {
   afterAll(async () => new Promise<void>((r) => server.close(() => r())));
 
   it("writes a draft storyboard that validateStoryboard accepts", async () => {
-    const cwd = mkdtempSync(path.join(tmpdir(), "vf-sb-"));
+    const cwd = mkdtempSync(path.join(tmpdir(), "video-sb-"));
     process.env["MINIMAX_API_KEY"] = "test-key-do-not-leak";
     process.env["MINIMAX_API_HOST"] = baseUrl;
     const code = await runStoryboard({ topic: "AI 思维链", cwd });
@@ -88,7 +88,7 @@ describe("vf storyboard end-to-end (todo 6) — mock MiniMax", () => {
   });
 
   it("records provider/model/prompt_hash/tokens in runs/<id>.yaml", async () => {
-    const cwd = mkdtempSync(path.join(tmpdir(), "vf-sb-"));
+    const cwd = mkdtempSync(path.join(tmpdir(), "video-sb-"));
     process.env["MINIMAX_API_KEY"] = "test-key-do-not-leak";
     process.env["MINIMAX_API_HOST"] = baseUrl;
     const code = await runStoryboard({ topic: "测试", cwd });
@@ -124,7 +124,7 @@ describe("vf storyboard end-to-end (todo 6) — mock MiniMax", () => {
     process.env["MINIMAX_API_KEY"] = "test-key-do-not-leak";
     process.env["MINIMAX_API_HOST"] = baseUrl;
 
-    const cwdA = mkdtempSync(path.join(tmpdir(), "vf-sb-ha-"));
+    const cwdA = mkdtempSync(path.join(tmpdir(), "video-sb-ha-"));
     const codeA = await runStoryboard({ topic: "hash-topic-A", cwd: cwdA });
     expect(codeA).toBe(0);
     // The mock server captured the exact request body — hash the messages
@@ -139,7 +139,7 @@ describe("vf storyboard end-to-end (todo 6) — mock MiniMax", () => {
     const recordA = readFileSync(path.join(runsA, filesA[0] ?? ""), "utf8");
     expect(extractHash(recordA)).toBe(sha256Of(sent.messages));
 
-    const cwdB = mkdtempSync(path.join(tmpdir(), "vf-sb-hb-"));
+    const cwdB = mkdtempSync(path.join(tmpdir(), "video-sb-hb-"));
     const codeB = await runStoryboard({ topic: "hash-topic-B", cwd: cwdB });
     expect(codeB).toBe(0);
     const sentB = JSON.parse(lastBody ?? "{}") as {
@@ -156,7 +156,7 @@ describe("vf storyboard end-to-end (todo 6) — mock MiniMax", () => {
   });
 
   it("never writes the API key into projects/ or runs/", async () => {
-    const cwd = mkdtempSync(path.join(tmpdir(), "vf-sb-"));
+    const cwd = mkdtempSync(path.join(tmpdir(), "video-sb-"));
     process.env["MINIMAX_API_KEY"] = "test-key-do-not-leak";
     process.env["MINIMAX_API_HOST"] = baseUrl;
     await runStoryboard({ topic: "leak-check", cwd });
@@ -170,7 +170,7 @@ describe("vf storyboard end-to-end (todo 6) — mock MiniMax", () => {
   });
 
   it("injects research context when --from-research points at a real research dir", async () => {
-    const cwd = mkdtempSync(path.join(tmpdir(), "vf-sb-"));
+    const cwd = mkdtempSync(path.join(tmpdir(), "video-sb-"));
     process.env["MINIMAX_API_KEY"] = "test-key-do-not-leak";
     process.env["MINIMAX_API_HOST"] = baseUrl;
     // Set up a fake research/ dir at the project root

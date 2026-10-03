@@ -12,7 +12,7 @@ import {
 } from "./runs.js";
 
 function tmpRoot(): string {
-  return mkdtempSync(path.join(tmpdir(), "vf-runs-"));
+  return mkdtempSync(path.join(tmpdir(), "video-runs-"));
 }
 
 const baseRecord = (overrides: Partial<RunRecord> = {}): RunRecord => ({

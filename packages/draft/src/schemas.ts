@@ -9,7 +9,7 @@ import { emitSceneAnimations } from "./animation-emitter.js";
  * Draft output schema — markdown-first by design. The LLM produces the
  * article.md verbatim; we only validate that the structural pieces parse
  * (frontmatter + Scenes YAML block). Heavy shape validation belongs in
- * `vf make`, where it matters; here, the LLM is creative with markdown
+ * `video make`, where it matters; here, the LLM is creative with markdown
  * and the human editor refines it.
  */
 
@@ -58,9 +58,9 @@ export interface ParsedArticle {
 }
 
 /** Convert a parsed article into the renderer's VDSL storyboard YAML.
- * Keeps `vf make`'s video length in sync with `article.md` scenes —
- * without this, the default `storyboard.yaml` from `vf new` (1 scene)
- * would render only 8s of video while `vf make` synthesizes all N scenes.
+ * Keeps `video make`'s video length in sync with `article.md` scenes —
+ * without this, the default `storyboard.yaml` from `video new` (1 scene)
+ * would render only 8s of video while `video make` synthesizes all N scenes.
  *
  * v0.4 changes:
  *  - `style.theme` honours `frontmatter.theme` (T8 --style flag).

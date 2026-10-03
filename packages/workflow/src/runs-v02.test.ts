@@ -15,7 +15,7 @@ const baseRecord = (overrides: Partial<RunRecord> = {}): RunRecord => ({
   stage: "storyboard",
   status: "succeeded",
   actor: "agent",
-  tool: "vf-storyboard",
+  tool: "video-storyboard",
   input_commit: "abc123",
   input_files: [],
   output_files: ["storyboard/storyboard.yaml"],
@@ -24,7 +24,7 @@ const baseRecord = (overrides: Partial<RunRecord> = {}): RunRecord => ({
 });
 
 function tmpRoot(): string {
-  return mkdtempSync(path.join(tmpdir(), "vf-runs-v02-"));
+  return mkdtempSync(path.join(tmpdir(), "video-runs-v02-"));
 }
 
 describe("run records — v0.2 schema (todo 7) — §62.2 lines 2247-2258", () => {

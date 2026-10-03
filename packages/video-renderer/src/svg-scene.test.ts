@@ -3,7 +3,7 @@ import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import type { RenderPlan } from "@vf/vdsl";
+import type { RenderPlan } from "@video/vdsl";
 import { renderSceneToVideo } from "./render.js";
 
 /** T4.3 acceptance: a whiteboard/diagram scene — arrow draws on — renders
@@ -54,7 +54,7 @@ const svgScenePlan: RenderPlan = {
 
 describe("svg renderer family (T4.3)", () => {
   it("renders an svg/SvgScene standalone: 3s MP4, geometry correct", async () => {
-    const outDir = mkdtempSync(path.join(tmpdir(), "vf-svg-"));
+    const outDir = mkdtempSync(path.join(tmpdir(), "video-svg-"));
     const mp4Path = path.join(outDir, "scene.mp4");
     await renderSceneToVideo(svgScenePlan, "scene-01", mp4Path);
     const out = execFileSync(
@@ -81,7 +81,7 @@ describe("svg renderer family (T4.3)", () => {
       ],
     };
     await expect(
-      renderSceneToVideo(plan, "scene-01", "/tmp/vf-svg-unwired.mp4"),
+      renderSceneToVideo(plan, "scene-01", "/tmp/video-svg-unwired.mp4"),
     ).rejects.toThrow(/not wired yet/);
   });
 });

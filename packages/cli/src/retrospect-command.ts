@@ -1,5 +1,5 @@
 /**
- * v0.4 (T10) — `vf retrospect` learning loop.
+ * v0.4 (T10) — `video retrospect` learning loop.
  *
  * Reads the last few run records + the latest QA report from a project,
  * hands them to the LLM with a "suggest 3 concrete edits to article.md"
@@ -17,9 +17,9 @@ import {
   loadProviderConfig,
   type Provider,
   type ChatMessage,
-} from "@vf/llm";
-import { chatWithFallback } from "@vf/llm";
-import { listRuns, formatRunId, type RunRecord } from "@vf/workflow";
+} from "@video/llm";
+import { chatWithFallback } from "@video/llm";
+import { listRuns, formatRunId, type RunRecord } from "@video/workflow";
 import { resolveProjectDir } from "./project-path.js";
 
 export interface RetrospectOptions {
@@ -219,12 +219,12 @@ export async function runRetrospect(
     tokens: usage,
     estimated_cost_usd: ((usage.input + usage.output) / 1000) * 0.001,
   };
-  const { writeRun } = await import("@vf/workflow");
+  const { writeRun } = await import("@video/workflow");
   await writeRun(projectRoot, record);
 
   console.log(`\u2713 wrote projects/${opts.project}/retrospect.md`);
   console.log(
-    `  provider=${providerName}  tokens=${usage.input}+${usage.output}  next: edit article.md per the suggestions, then \`vf draft <topic> --from article.md\``,
+    `  provider=${providerName}  tokens=${usage.input}+${usage.output}  next: edit article.md per the suggestions, then \`video draft <topic> --from article.md\``,
   );
   return 0;
 }

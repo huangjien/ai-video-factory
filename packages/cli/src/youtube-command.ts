@@ -4,12 +4,12 @@ import { execSync } from "node:child_process";
 import path from "node:path";
 import { resolveProjectDir } from "./project-path.js";
 import { existsSync } from "node:fs";
-import { GLMProvider, loadProviderConfig, MiniMaxProvider } from "@vf/llm";
-import { callYouTube, chaptersToVtt, type YouTubeInput } from "@vf/youtube";
-import { parseArticleWithRecovery, type Scene } from "@vf/draft";
+import { GLMProvider, loadProviderConfig, MiniMaxProvider } from "@video/llm";
+import { callYouTube, chaptersToVtt, type YouTubeInput } from "@video/youtube";
+import { parseArticleWithRecovery, type Scene } from "@video/draft";
 import { stringify as yamlStringify } from "yaml";
-import type { ChatMessage, Provider } from "@vf/llm";
-import { formatRunId } from "@vf/workflow";
+import type { ChatMessage, Provider } from "@video/llm";
+import { formatRunId } from "@video/workflow";
 
 export interface YouTubeOptions {
   project: string;
@@ -74,10 +74,10 @@ export async function runYouTube(opts: YouTubeOptions): Promise<number> {
       if (!existsSync(f)) {
         console.error(`missing input: ${f}`);
         console.error(
-          `  run \`vf draft <topic>\` to generate article.md (preferred),`,
+          `  run \`video draft <topic>\` to generate article.md (preferred),`,
         );
         console.error(
-          `  or run the legacy pipeline: vf research / vf script / vf storyboard`,
+          `  or run the legacy pipeline: video research / video script / video storyboard`,
         );
         return 1;
       }
@@ -181,7 +181,7 @@ export async function runYouTube(opts: YouTubeOptions): Promise<number> {
     stage: "youtube",
     status: "succeeded" as const,
     actor: "agent" as const,
-    tool: "vf-youtube",
+    tool: "video-youtube",
     input_commit: safeGitHead(projectRoot),
     input_files: inputFiles,
     output_files: [
@@ -204,7 +204,7 @@ export async function runYouTube(opts: YouTubeOptions): Promise<number> {
       (result.usage.output / 1000) *
         (result.providerName === "glm" ? 0.0008 : 0.001),
   };
-  const { writeRun } = await import("@vf/workflow");
+  const { writeRun } = await import("@video/workflow");
   await writeRun(projectRoot, record);
 
   console.log(`\u2713 packaged ${opts.project}/youtube/`);

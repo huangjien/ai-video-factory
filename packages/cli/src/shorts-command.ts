@@ -5,14 +5,14 @@ import { execSync } from "node:child_process";
 import path from "node:path";
 import { resolveProjectDir } from "./project-path.js";
 import { existsSync, readFileSync } from "node:fs";
-import { formatRunId } from "@vf/workflow";
-import { readSceneTimings } from "@vf/media";
+import { formatRunId } from "@video/workflow";
+import { readSceneTimings } from "@video/media";
 import {
   MiniMaxVideoProvider,
   MockVideoProvider,
   type VideoProvider,
   type VideoResult,
-} from "@vf/media-generators";
+} from "@video/media-generators";
 
 const execFileAsync = promisify(execFile);
 
@@ -97,8 +97,8 @@ export async function runShorts(opts: ShortsOptions): Promise<number> {
   // Provider selection: mock (default, mechanical ffmpeg) or minimax (real AI
   // video from thumbnail + shorts-hook). The minimax path requires:
   //   - MINIMAX_API_KEY env var
-  //   - youtube/thumbnail.{png|jpg} produced by `vf thumbnail`
-  //   - youtube/shorts-hook.txt produced by `vf youtube`
+  //   - youtube/thumbnail.{png|jpg} produced by `video thumbnail`
+  //   - youtube/shorts-hook.txt produced by `video youtube`
   const provider: VideoProvider =
     opts.providerName === "minimax"
       ? new MiniMaxVideoProvider()
@@ -118,13 +118,13 @@ export async function runShorts(opts: ShortsOptions): Promise<number> {
       console.error(
         `\u2717 missing thumbnail for minimax provider: youtube/thumbnail.{png,jpg}`,
       );
-      console.error(`  run \`vf thumbnail <project>\` first`);
+      console.error(`  run \`video thumbnail <project>\` first`);
       return 1;
     }
     const hookPath = path.join(projectRoot, "youtube", "shorts-hook.txt");
     if (!existsSync(hookPath)) {
       console.error(`\u2717 missing shorts hook: ${hookPath}`);
-      console.error(`  run \`vf youtube <project>\` first`);
+      console.error(`  run \`video youtube <project>\` first`);
       return 1;
     }
     const hookText = readFileSync(hookPath, "utf8").trim();
@@ -171,7 +171,7 @@ export async function runShorts(opts: ShortsOptions): Promise<number> {
     const src = path.join(projectRoot, "output", "final-faststart.mp4");
     if (!existsSync(src)) {
       console.error(`missing final mp4: ${src}`);
-      console.error(`  run vf final first`);
+      console.error(`  run video final first`);
       return 1;
     }
     const duration = opts.durationSec ?? 60;
@@ -220,7 +220,7 @@ export async function runShorts(opts: ShortsOptions): Promise<number> {
     tokens: { input: 0, output: 0 },
     estimated_cost_usd: 0,
   };
-  const { writeRun } = await import("@vf/workflow");
+  const { writeRun } = await import("@video/workflow");
   await writeRun(projectRoot, record);
 
   console.log(`\u2713 extracted ${opts.project}/youtube/shorts.mp4`);

@@ -14,7 +14,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "test": "vitest run --coverage",
-    "render:hello": "pnpm --filter @vf/video-renderer run render:hello",
+    "render:hello": "pnpm --filter @video/video-renderer run render:hello",
     "publish:packages:dry-run": "pnpm run build && pnpm publish --filter \"./packages/*\" --access public --dry-run",
     "publish:packages": "pnpm run build && pnpm publish --filter \"./packages/*\" --access public",
     "benchmark:verify": "node scripts/benchmark-verify.mjs",

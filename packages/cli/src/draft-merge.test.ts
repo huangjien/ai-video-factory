@@ -2,8 +2,8 @@ import { describe, expect, it, beforeAll, afterAll } from "vitest";
 import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import type { ChatRequest, ChatResponse, Provider } from "@vf/llm";
-import { parseArticle } from "@vf/draft";
+import type { ChatRequest, ChatResponse, Provider } from "@video/llm";
+import { parseArticle } from "@video/draft";
 import { writeAudioConfigIfAbsent } from "./draft-command.js";
 
 const ARTICLE_MD = `---
@@ -60,11 +60,11 @@ function fakeProvider(behavior: "ok" | "fail"): Provider {
   };
 }
 
-describe("writeAudioConfigIfAbsent (merged vf draft audio-plan step)", () => {
+describe("writeAudioConfigIfAbsent (merged video draft audio-plan step)", () => {
   let dir: string;
 
   beforeAll(() => {
-    dir = mkdtempSync(path.join(tmpdir(), "vf-draft-merge-"));
+    dir = mkdtempSync(path.join(tmpdir(), "video-draft-merge-"));
   });
   afterAll(() => {
     rmSync(dir, { recursive: true, force: true });

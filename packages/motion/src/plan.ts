@@ -1,4 +1,4 @@
-import { ANIMATION_TYPES, EASINGS, type TimelineAnimation } from "@vf/vdsl";
+import { ANIMATION_TYPES, EASINGS, type TimelineAnimation } from "@video/vdsl";
 import {
   clampDuration,
   EMPHASIS_AT_FRACTION,

@@ -3,7 +3,7 @@ import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import type { RenderPlan } from "@vf/vdsl";
+import type { RenderPlan } from "@video/vdsl";
 import { renderSceneToVideo } from "./render.js";
 
 /** T4.4 acceptance (§18 "hand-drawn"): a canvas/DoodleScene renders a 5s
@@ -46,7 +46,7 @@ const doodlePlan: RenderPlan = {
 
 describe("canvas renderer family (T4.4)", () => {
   it("renders a 5s hand-drawn DoodleScene standalone", async () => {
-    const outDir = mkdtempSync(path.join(tmpdir(), "vf-doodle-"));
+    const outDir = mkdtempSync(path.join(tmpdir(), "video-doodle-"));
     const mp4Path = path.join(outDir, "doodle.mp4");
     await renderSceneToVideo(doodlePlan, "scene-01", mp4Path);
     const out = execFileSync(

@@ -1,5 +1,5 @@
 {
-  "name": "@vf/agent-storyboard",
+  "name": "@video/agent-storyboard",
   "version": "0.1.0",
   "files": [
     "dist"
@@ -20,8 +20,8 @@
     "build": "tsc -p tsconfig.json"
   },
   "dependencies": {
-    "@vf/llm": "workspace:*",
-    "@vf/vdsl": "workspace:*",
+    "@video/llm": "workspace:*",
+    "@video/vdsl": "workspace:*",
     "yaml": "^2.7.0"
   }
 }

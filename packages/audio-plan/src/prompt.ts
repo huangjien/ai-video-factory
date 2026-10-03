@@ -1,5 +1,5 @@
-import type { ChatMessage } from "@vf/llm";
-import type { ParsedArticle } from "@vf/draft";
+import type { ChatMessage } from "@video/llm";
+import type { ParsedArticle } from "@video/draft";
 
 export interface AudioPlanInput {
   article: ParsedArticle;

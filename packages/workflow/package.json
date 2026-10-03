@@ -1,5 +1,5 @@
 {
-  "name": "@vf/workflow",
+  "name": "@video/workflow",
   "version": "0.1.0",
   "files": [
     "dist"

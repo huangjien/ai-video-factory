@@ -1,18 +1,21 @@
-import type { ChatMessage } from "@vf/llm";
+import type { ChatMessage } from "@video/llm";
 
 export interface DraftInput {
   topic: string;
   audience: string;
   language: "zh-CN" | "en-US";
   duration: number;
-  /** Optional pre-existing content to revise (used by `vf draft --from <file>`). */
+  /** Optional pre-existing content to revise (used by `video draft --from <file>`). */
   fromContent?: string;
-  /** Optional raw idea / outline seed (used by `vf draft --file <path>`).
+  /** Optional raw idea / outline seed (used by `video draft --file <path>`).
    *  The LLM treats it as the user's own idea: polish the wording, never
    *  change the opinions. */
   ideaSeed?: string;
   /** Optional web search results to ground the draft. */
   webContext?: { url: string; title: string; snippet: string }[];
+  /** Judge feedback from a rejected previous draft (scored below the
+   *  acceptance bar). The drafter must fix these findings in the rewrite. */
+  feedback?: string;
 }
 
 export const SYSTEM_PROMPT = `You are the Article Drafter for an AI Video Factory.
@@ -561,6 +564,12 @@ export function buildMessages(input: DraftInput): ChatMessage[] {
         (w, i) =>
           `[w${i + 1}] ${w.title} — ${w.url}\n    ${w.snippet.slice(0, 200)}`,
       ),
+    );
+  }
+  if (input.feedback) {
+    userParts.push(
+      "\n## Revision feedback — the previous draft was rejected by the quality judge",
+      input.feedback,
     );
   }
   return [

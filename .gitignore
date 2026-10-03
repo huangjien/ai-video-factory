@@ -5,7 +5,7 @@ dist/
 .omo/evidence/
 .omo/tmp/
 .remotion/
-# Generated Remotion Studio workspaces (vf studio)
+# Generated Remotion Studio workspaces (video studio)
 .studio/
 *.log
 .omo/run-continuation/

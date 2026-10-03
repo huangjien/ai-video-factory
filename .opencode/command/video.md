@@ -9,8 +9,8 @@ tools:
 
 # /video — drive the AI Video Factory pipeline
 
-This command runs the `vf` CLI under the hood. Every `/video <verb> [args...]`
-is forwarded to `vf <verb> [args...]` — the `bin/video` wrapper in this repo
+This command runs the `video` CLI under the hood. Every `/video <verb> [args...]`
+is forwarded to `video <verb> [args...]` — the `bin/video` wrapper in this repo
 makes the shell call.
 
 ## Pipeline (call in this order)
@@ -54,15 +54,15 @@ makes the shell call.
 
 ## Usage
 
-The `bin/video` wrapper (also available as `vf` directly) takes any of the
+The `bin/video` wrapper (also available as `video` directly) takes any of the
 above verbs and forwards to the underlying CLI. Each step produces files
 inside `projects/<slug>/` that the next step picks up — never bypass the
-human gate (`vf approve`) unless the user explicitly says to.
+human gate (`video approve`) unless the user explicitly says to.
 
 ## Critical invariants
 
 - **Never auto-approve** storyboard/script/research drafts — the user must
-  read and `vf approve` explicitly. Agents are drafting; humans decide.
+  read and `video approve` explicitly. Agents are drafting; humans decide.
   The CLI enforces this: `preview` refuses to render without an approved
   storyboard checkpoint, and re-running a generator over an approved stage
   exits non-zero unless `--force` is passed.

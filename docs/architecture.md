@@ -10,7 +10,7 @@ document describes the system AS BUILT (v0.2-D1 implementation complete).
 1. **Scene is the minimal editable unit** — scenes render to their own MP4
    cache (`scenes/`, `scenes-draft/`), keyed by fragment content hash;
    editing scene-007 re-renders only scene-007.
-2. **Third-party skills never reach the core data model** — `@vf/motion`'s
+2. **Third-party skills never reach the core data model** — `@video/motion`'s
    `IartSkillAdapter` is the only reader of `.agents/skills/`; skill
    formats never leak into VDSL.
 3. **Remotion is the renderer, not the planner** — agents produce
@@ -22,13 +22,13 @@ document describes the system AS BUILT (v0.2-D1 implementation complete).
 ## The pipeline
 
 ```text
-vf new → (research → script →) storyboard → approve storyboard (GATE)
+video new → (research → script →) storyboard → approve storyboard (GATE)
       → motion → audio → excalidraw (assets) → review
       → preview (QA report + contact sheet) → approve review (GATE)
       → final (QA gate) → FINAL_APPROVED → youtube / thumbnail / shorts
 ```
 
-`vf make` runs the compressed article.md-driven version of the same
+`video make` runs the compressed article.md-driven version of the same
 pipeline (draft → tts → assets → preview → mix) and stops at the same
 storyboard gate. Every render writes `qa/render-report.json` +
 `qa/contact-sheet.png`.
@@ -37,16 +37,16 @@ storyboard gate. Every render writes `qa/render-report.json` +
 
 | Package | §32 alias | Role |
 |---|---|---|
-| `@vf/vdsl` | schema | VDSL 0.1/0.2 zod schema, validator (line-numbered errors), deterministic compiler → `vdsl/vdsl.yaml` + `RenderPlan` |
-| `@vf/motion` | motion | IartSkillAdapter, motion heuristics, deterministic `planSceneMotion`, Motion Agent (`callMotionAgent`) |
-| `@vf/agent-storyboard`, `@vf/research`, `@vf/script`, `@vf/review`, `@vf/youtube` | agent | LLM agents (per-role provider routing incl. `motion`, transient retry, quota fallback) |
-| `@vf/video-components` | renderer | 15 registered components incl. `SvgScene` (whiteboard/diagram + camera) and `DoodleScene` (canvas hand-drawn + beat-sync), `CaptionsOverlay`, easing/doodle/excalidraw logic |
-| `@vf/video-renderer` | remotion | scene-isolated Remotion rendering (`renderSceneToVideo`, `concatScenes`), draft mode, studio workspace generator |
-| `@vf/media` | assets | CJK caption wrap, ffprobe, duration sync (`syncSceneDurations`), scene-timing reader |
-| `@vf/tts`, `@vf/audio-assets`, `@vf/audio-mix` | audio | Edge TTS (+word timestamps), BGM/SFX providers, ducking/fades mix engine |
-| `@vf/qa` | qa | render report (duration/fps/resolution/audio/black-frames/assets/scene-audio-sync/captions/boundaries), contact sheet, export gate |
-| `@vf/workflow` | (agent state) | 10-state machine, checkpoints + invalidation, scene version store, run records |
-| `@vf/cli` | cli | all verbs (`vf`), stage guards, state-machine wiring |
+| `@video/vdsl` | schema | VDSL 0.1/0.2 zod schema, validator (line-numbered errors), deterministic compiler → `vdsl/vdsl.yaml` + `RenderPlan` |
+| `@video/motion` | motion | IartSkillAdapter, motion heuristics, deterministic `planSceneMotion`, Motion Agent (`callMotionAgent`) |
+| `@video/agent-storyboard`, `@video/research`, `@video/script`, `@video/review`, `@video/youtube` | agent | LLM agents (per-role provider routing incl. `motion`, transient retry, quota fallback) |
+| `@video/video-components` | renderer | 15 registered components incl. `SvgScene` (whiteboard/diagram + camera) and `DoodleScene` (canvas hand-drawn + beat-sync), `CaptionsOverlay`, easing/doodle/excalidraw logic |
+| `@video/video-renderer` | remotion | scene-isolated Remotion rendering (`renderSceneToVideo`, `concatScenes`), draft mode, studio workspace generator |
+| `@video/media` | assets | CJK caption wrap, ffprobe, duration sync (`syncSceneDurations`), scene-timing reader |
+| `@video/tts`, `@video/audio-assets`, `@video/audio-mix` | audio | Edge TTS (+word timestamps), BGM/SFX providers, ducking/fades mix engine |
+| `@video/qa` | qa | render report (duration/fps/resolution/audio/black-frames/assets/scene-audio-sync/captions/boundaries), contact sheet, export gate |
+| `@video/workflow` | (agent state) | 10-state machine, checkpoints + invalidation, scene version store, run records |
+| `@video/cli` | cli | all verbs (`video`), stage guards, state-machine wiring |
 | `skills/`, `.agents/skills/` | skills | first-party + installed skill packs (`skills/INVENTORY.md`) |
 
 ## Visual renderer families (plan §9)
@@ -56,7 +56,7 @@ storyboard gate. Every render writes `qa/render-report.json` +
 | `remotion` | all classic REGISTRY components | wired |
 | `svg` | `SvgScene` (diagram spec: nodes/edges, draw-on, target-driven camera) | wired (T4.3) |
 | `canvas` | `DoodleScene` (ink strokes, seeded wobble, beat-sync) | wired (T4.4) |
-| `excalidraw` | — | asset generator only (`vf excalidraw` → `.excalidraw` + animated `.svg`, T7.1); not a render path |
+| `excalidraw` | — | asset generator only (`video excalidraw` → `.excalidraw` + animated `.svg`, T7.1); not a render path |
 
 Unwired renderer/component combinations fail loudly at render time.
 

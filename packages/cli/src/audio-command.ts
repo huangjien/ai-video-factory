@@ -4,7 +4,7 @@ import { promisify } from "node:util";
 import path from "node:path";
 import { execSync } from "node:child_process";
 import { parse as parseYaml } from "yaml";
-import { FakeTTSProvider, type TTSProvider } from "@vf/tts";
+import { FakeTTSProvider, type TTSProvider } from "@video/tts";
 import { resolveProjectDir } from "./project-path.js";
 import { assertStageWritable } from "./stage-guard.js";
 
@@ -33,7 +33,7 @@ async function mp3ToWav(
 ): Promise<Uint8Array> {
   const { mkdtemp, rm } = await import("node:fs/promises");
   const { tmpdir } = await import("node:os");
-  const dir = await mkdtemp(path.join(tmpdir(), "vf-tts-"));
+  const dir = await mkdtemp(path.join(tmpdir(), "video-tts-"));
   try {
     const inPath = path.join(dir, "in.mp3");
     const outPath = path.join(dir, "out.wav");
@@ -92,7 +92,7 @@ export async function runAudio(opts: AudioOptions): Promise<number> {
   }
   if (!existsSync(activeScript)) {
     console.error(
-      `script not found: ${activeScript} — run "vf script <topic>" first`,
+      `script not found: ${activeScript} — run "video script <topic>" first`,
     );
     return 1;
   }
@@ -123,7 +123,7 @@ export async function runAudio(opts: AudioOptions): Promise<number> {
 
   const provider: TTSProvider = opts.fake
     ? new FakeTTSProvider({ sampleBytes: 256 })
-    : new (await import("@vf/tts")).EdgeTTSProvider();
+    : new (await import("@video/tts")).EdgeTTSProvider();
   const voice = language === "en-US" ? EN_VOICE : ZH_VOICE;
 
   await mkdir(path.join(projectRoot, "assets", "audio"), { recursive: true });
@@ -213,7 +213,7 @@ export async function runAudio(opts: AudioOptions): Promise<number> {
     tokens: { input: 0, output: 0 },
     estimated_cost_usd: 0,
   };
-  const { writeRun } = await import("@vf/workflow");
+  const { writeRun } = await import("@video/workflow");
   await writeRun(projectRoot, record);
 
   console.log(
@@ -223,7 +223,7 @@ export async function runAudio(opts: AudioOptions): Promise<number> {
     `  provider=${provider.name}  voice=${voice}  srt=captions/${language}.srt`,
   );
   console.log(
-    `  next: \`vf preview\` will pick up the real audio automatically`,
+    `  next: \`video preview\` will pick up the real audio automatically`,
   );
   return 0;
 }

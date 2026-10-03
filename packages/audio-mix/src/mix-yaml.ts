@@ -10,7 +10,7 @@ import { parse as parseYaml } from "yaml";
  *   bgm_fade_in_sec: <number>      # optional, fade BGM in over N seconds
  *   bgm_fade_out_sec: <number>     # optional, fade BGM out over last N seconds
  *
- * Used by `vf mix` and `vf final --mix`. Human-authored per project.
+ * Used by `video mix` and `video final --mix`. Human-authored per project.
  */
 export const SfxCueKeySchema = z
   .string()

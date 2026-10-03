@@ -104,7 +104,7 @@ check("checkpoints/ contains records", cps.length >= 1, `${cps.length} files`);
 
 // 7. status command exit OK
 check(
-  "vf status exits 0",
+  "video status exits 0",
   run("node", ["packages/cli/dist/index.js", "status", "--cwd", root])
     .status === 0,
 );

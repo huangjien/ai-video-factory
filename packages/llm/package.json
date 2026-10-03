@@ -1,5 +1,5 @@
 {
-  "name": "@vf/llm",
+  "name": "@video/llm",
   "version": "0.1.0",
   "files": [
     "dist"

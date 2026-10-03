@@ -3,11 +3,11 @@ import { writeFile } from "node:fs/promises";
 import { createHash } from "node:crypto";
 import path from "node:path";
 import { execSync } from "node:child_process";
-import type { ChatMessage, Provider } from "@vf/llm";
-import { GLMProvider, loadProviderConfig, MiniMaxProvider } from "@vf/llm";
-import { callAgent } from "@vf/agent-storyboard";
-import { formatRunId } from "@vf/workflow";
-import type { Storyboard } from "@vf/vdsl/schema.js";
+import type { ChatMessage, Provider } from "@video/llm";
+import { GLMProvider, loadProviderConfig, MiniMaxProvider } from "@video/llm";
+import { callAgent } from "@video/agent-storyboard";
+import { formatRunId } from "@video/workflow";
+import type { Storyboard } from "@video/vdsl/schema.js";
 import { stringify as yamlStringify } from "yaml";
 import { runNew } from "./new-command.js";
 import { slugifyProjectName } from "./project-path.js";
@@ -65,7 +65,7 @@ export async function runStoryboard(opts: StoryboardOptions): Promise<number> {
   const audience = opts.audience ?? "developers";
   const style = opts.style ?? "paper-light";
 
-  // Scaffold the project (vf new writes state.yaml + dirs)
+  // Scaffold the project (video new writes state.yaml + dirs)
   const code = await ensureProject(cwd, slug, projectRoot);
   if (code !== 0) return code;
 
@@ -110,7 +110,7 @@ export async function runStoryboard(opts: StoryboardOptions): Promise<number> {
         `\u2717 --from-research dir missing research.md or claims.yaml: ${opts.fromResearch}`,
       );
       console.error(
-        `  run \`vf research <topic>\` first to produce these files`,
+        `  run \`video research <topic>\` first to produce these files`,
       );
       return 1;
     }
@@ -172,7 +172,7 @@ export async function runStoryboard(opts: StoryboardOptions): Promise<number> {
     stage: "storyboard" as const,
     status: "succeeded" as const,
     actor: "agent" as const,
-    tool: "vf-storyboard",
+    tool: "video-storyboard",
     input_commit: safeGitHead(projectRoot),
     input_files: [],
     output_files: ["storyboard/storyboard.yaml"],
@@ -185,7 +185,7 @@ export async function runStoryboard(opts: StoryboardOptions): Promise<number> {
     estimated_cost_usd: costUsd,
   };
 
-  const { writeRun } = await import("@vf/workflow");
+  const { writeRun } = await import("@video/workflow");
   await writeRun(projectRoot, record);
 
   console.log(`\u2713 drafted ${slug}/storyboard/storyboard.yaml`);
@@ -193,7 +193,7 @@ export async function runStoryboard(opts: StoryboardOptions): Promise<number> {
     `  provider=${result.providerName}  model=${servedModel}  scenes=${result.storyboard.scenes.length}  tokens=${result.usage.input}+${result.usage.output}  cost=$${costUsd.toFixed(4)}`,
   );
   console.log(
-    `  next: edit storyboard, then \`vf approve storyboard\` then \`vf preview --cwd ${path.relative(cwd, projectRoot) || "."}\``,
+    `  next: edit storyboard, then \`video approve storyboard\` then \`video preview --cwd ${path.relative(cwd, projectRoot) || "."}\``,
   );
   return 0;
 }

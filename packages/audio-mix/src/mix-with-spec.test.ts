@@ -6,7 +6,7 @@ import path from "node:path";
 import { mixTracksWithSpec } from "./index.js";
 
 function wavTone(seconds: number, freq: number): Uint8Array {
-  const dir = mkdtempSync(path.join(tmpdir(), "vf-mix-spec-"));
+  const dir = mkdtempSync(path.join(tmpdir(), "video-mix-spec-"));
   const file = path.join(dir, `tone-${freq}.wav`);
   execFileSync(
     "ffmpeg",
@@ -37,7 +37,7 @@ describe("mixTracksWithSpec (todo 2) — SFX cues + BGM fades", () => {
   let sfx2: string;
 
   beforeAll(() => {
-    dir = mkdtempSync(path.join(tmpdir(), "vf-mix-spec-test-"));
+    dir = mkdtempSync(path.join(tmpdir(), "video-mix-spec-test-"));
     narration1 = path.join(dir, "scene-01.wav");
     narration2 = path.join(dir, "scene-02.wav");
     bgm = path.join(dir, "bgm.wav");

@@ -7,15 +7,17 @@ import {
   loadProviderConfig,
   providerForRole,
   type Provider,
-} from "@vf/llm";
-import { MiniMaxWebSearch } from "@vf/research";
+} from "@video/llm";
+import { MiniMaxWebSearch } from "@video/research";
 import {
   articleToStoryboardYaml,
   callDraft,
   parseArticleWithRecovery,
+  renderArticleReviewYaml,
+  runScoredDraft,
   type ParsedArticle,
-} from "@vf/draft";
-import { callAudioPlan, type AudioConfig } from "@vf/audio-plan";
+} from "@video/draft";
+import { callAudioPlan, type AudioConfig } from "@video/audio-plan";
 import { resolveProjectDir } from "./project-path.js";
 
 export interface DraftOptions {
@@ -41,6 +43,16 @@ export interface DraftOptions {
    *  `captions: { source: narration }` block (render-time caption
    *  overlay is skipped). */
   noCaptions?: boolean;
+  /** Quality gate (2026-10-03): after each draft, an LLM judge rates the
+   *  article attractive/interesting/useful (0-10 each). Below `minScore`
+   *  the draft is regenerated with the judge's feedback, up to
+   *  `maxAttempts` drafts total; the best-scoring candidate wins.
+   *  Disable with --no-review. */
+  noReview?: boolean;
+  /** Acceptance bar of the article review loop, of 30. Default 25. */
+  minScore?: number;
+  /** Total draft attempts in the review loop (not extra retries). Default 3. */
+  maxAttempts?: number;
 }
 
 function providerInstance(name: string): Provider {
@@ -54,10 +66,10 @@ export type AudioPlanStep =
   | { status: "skipped"; reason: string }
   | { status: "failed"; error: string };
 
-/** Merged audio-plan step of `vf draft`: write audio-config.yaml from
+/** Merged audio-plan step of `video draft`: write audio-config.yaml from
  *  the freshly drafted article. Keeps an existing audio-config.yaml
  *  (hand edits are a human checkpoint — regenerate explicitly via
- *  `vf audio-plan`); an LLM failure degrades to a hint instead of
+ *  `video audio-plan`); an LLM failure degrades to a hint instead of
  *  failing the draft, whose primary artifact is article.md. */
 export async function writeAudioConfigIfAbsent(
   projectRoot: string,
@@ -122,7 +134,7 @@ export async function runDraft(opts: DraftOptions): Promise<number> {
   const resolvedProject = resolveProjectDir(opts.topic, opts.cwd);
   if (!resolvedProject.ok) {
     console.error(resolvedProject.message);
-    console.error(`hint: scaffold it with \`vf new <topic>\` first, then re-run`);
+    console.error(`hint: scaffold it with \`video new <topic>\` first, then re-run`);
     return 1;
   }
   const projectRoot = resolvedProject.root;
@@ -155,19 +167,75 @@ export async function runDraft(opts: DraftOptions): Promise<number> {
     }
   }
 
-  const { markdown, usage } = await callDraft(
-    {
-      topic: opts.topic,
-      audience,
-      language,
-      duration,
-      ...(fromContent !== undefined ? { fromContent } : {}),
-      ...(ideaSeed !== undefined ? { ideaSeed } : {}),
-      ...(webContext && webContext.length > 0 ? { webContext } : {}),
-    },
-    provider,
-    fallback,
-  );
+  const draftInput = {
+    topic: opts.topic,
+    audience,
+    language,
+    duration,
+    ...(fromContent !== undefined ? { fromContent } : {}),
+    ...(ideaSeed !== undefined ? { ideaSeed } : {}),
+    ...(webContext && webContext.length > 0 ? { webContext } : {}),
+  };
+
+  let markdown: string;
+  let usage: { input: number; output: number };
+  let servedBy: string;
+  if (opts.noReview === true) {
+    ({ markdown, usage, providerName: servedBy } = await callDraft(
+      draftInput,
+      provider,
+      fallback,
+    ));
+  } else {
+    const minScore = opts.minScore ?? 25;
+    const maxAttempts = opts.maxAttempts ?? 3;
+    const result = await runScoredDraft(draftInput, provider, fallback, {
+      minScore,
+      maxAttempts,
+      onAttempt: (a, total) => {
+        if (a.score) {
+          const s = a.score;
+          const verdict = a.passing
+            ? "✓ above bar"
+            : a.attempt < total
+              ? `→ below ${minScore}, regenerating with judge feedback`
+              : `→ still below ${minScore} after ${total} attempts`;
+          console.log(
+            `  review ${a.attempt}/${total}: attractive=${s.attractive} interesting=${s.interesting} useful=${s.useful} → ${s.total}/30  ${verdict}`,
+          );
+        } else {
+          console.error(
+            `  ! article judge failed (attempt ${a.attempt}): ${(a.scoreError ?? "").slice(0, 140)}`,
+          );
+          console.error("  (keeping this draft unreviewed)");
+        }
+      },
+    });
+    markdown = result.markdown;
+    usage = result.usage;
+    servedBy = result.providerName;
+    if (result.regenerated && result.score) {
+      console.log(
+        `  kept attempt ${result.attempts.findIndex((a) => a.markdown === result.markdown) + 1} — best of ${result.attempts.length}`,
+      );
+    }
+    if (!result.passing && result.score) {
+      console.error(
+        `  ! best draft scored ${result.score.total}/30 (bar: ${minScore}) — edit article.md or raise --max-attempts / lower --min-score`,
+      );
+    }
+    const reviewPath = path.join(projectRoot, "article-review.yaml");
+    await writeFile(
+      reviewPath,
+      renderArticleReviewYaml(result, {
+        project: path.basename(projectRoot),
+        threshold: minScore,
+        language,
+      }),
+      "utf8",
+    );
+    console.log(`✓ article review → ${reviewPath}`);
+  }
 
   const articlePath = path.join(projectRoot, "article.md");
   await mkdir(path.dirname(articlePath), { recursive: true });
@@ -209,13 +277,11 @@ export async function runDraft(opts: DraftOptions): Promise<number> {
   }
 
   console.log(`✓ drafted ${articlePath}`);
-  console.log(
-    `  model=${opts.model ?? "glm"}  tokens=${usage.input}+${usage.output}`,
-  );
+  console.log(`  model=${servedBy}  tokens=${usage.input}+${usage.output}`);
 
   let audioPlanHint: string;
   if (parsedArticle === null) {
-    audioPlanHint = `edit article.md to refine the narrative, then \`vf audio-plan <topic>\``;
+    audioPlanHint = `edit article.md to refine the narrative, then \`video audio-plan <topic>\``;
   } else {
     const step = await writeAudioConfigIfAbsent(
       projectRoot,
@@ -230,18 +296,18 @@ export async function runDraft(opts: DraftOptions): Promise<number> {
       console.log(
         `  voice=${step.config.voice ?? "(default)"}  bgm=${step.config.bgm ?? "(none)"}  sfx=${sfxCount}  tokens=${step.tokens.input}+${step.tokens.output}`,
       );
-      audioPlanHint = `edit article.md / audio-config.yaml, then \`vf make ${opts.topic}\``;
+      audioPlanHint = `edit article.md / audio-config.yaml, then \`video make ${opts.topic}\``;
     } else if (step.status === "skipped" && step.reason === "exists") {
       console.log(
-        `  audio-config.yaml exists — kept (hand edits win); re-run \`vf audio-plan\` to regenerate`,
+        `  audio-config.yaml exists — kept (hand edits win); re-run \`video audio-plan\` to regenerate`,
       );
-      audioPlanHint = `edit article.md / audio-config.yaml, then \`vf make ${opts.topic}\``;
+      audioPlanHint = `edit article.md / audio-config.yaml, then \`video make ${opts.topic}\``;
     } else if (step.status === "skipped") {
-      audioPlanHint = `edit article.md to refine the narrative, then \`vf audio-plan <topic>\``;
+      audioPlanHint = `edit article.md to refine the narrative, then \`video audio-plan <topic>\``;
     } else {
       console.error(`  ! audio-plan step failed: ${step.error.slice(0, 120)}`);
-      console.error(`  (article.md was written; run \`vf audio-plan\` separately)`);
-      audioPlanHint = `edit article.md to refine the narrative, then \`vf audio-plan <topic>\``;
+      console.error(`  (article.md was written; run \`video audio-plan\` separately)`);
+      audioPlanHint = `edit article.md to refine the narrative, then \`video audio-plan <topic>\``;
     }
   }
   console.log(`  next: ${audioPlanHint}`);

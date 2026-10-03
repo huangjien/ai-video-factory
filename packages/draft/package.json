@@ -1,5 +1,5 @@
 {
-  "name": "@vf/draft",
+  "name": "@video/draft",
   "version": "0.1.0",
   "files": [
     "dist"
@@ -20,11 +20,11 @@
     "build": "tsc -p tsconfig.json"
   },
   "dependencies": {
-    "@vf/llm": "workspace:*",
+    "@video/llm": "workspace:*",
     "yaml": "^2.7.0",
     "zod": "^3.25.0"
   },
   "devDependencies": {
-    "@vf/video-components": "workspace:*"
+    "@video/video-components": "workspace:*"
   }
 }

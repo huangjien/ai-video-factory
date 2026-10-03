@@ -17,7 +17,7 @@ describe("syncStoryboardDurations threshold guard (fix for 0.03s bug)", () => {
   let dir: string;
 
   beforeAll(async () => {
-    dir = await mkdtemp(path.join(tmpdir(), "vf-sync-guard-"));
+    dir = await mkdtemp(path.join(tmpdir(), "video-sync-guard-"));
     await mkdir(path.join(dir, "assets", "audio"), { recursive: true });
     await mkdir(path.join(dir, "storyboard"), { recursive: true });
 

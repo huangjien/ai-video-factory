@@ -1,6 +1,6 @@
 import { spawn } from "node:child_process";
 import { resolveProjectDir, resolveProjectRoot } from "./project-path.js";
-import { prepareStudioWorkspace } from "@vf/video-renderer";
+import { prepareStudioWorkspace } from "@video/video-renderer";
 
 export interface StudioOptions {
   project?: string | undefined;
@@ -11,7 +11,7 @@ export interface StudioOptions {
 /** Launch Remotion Studio against the project's current composition
  * (plan T0.3). The generated workspace lives under
  * `packages/video-renderer/.studio/<slug>/` and is regenerated on every
- * launch — edit storyboard.yaml (or article.md) and re-run `vf studio`
+ * launch — edit storyboard.yaml (or article.md) and re-run `video studio`
  * to refresh, or edit input props live in the Studio UI. */
 export async function runStudio(opts: StudioOptions): Promise<number> {
   let root: string;

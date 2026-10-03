@@ -9,7 +9,7 @@ function wavSilence(seconds: number, freq = 440): Uint8Array {
   // Generate a real WAV with a sine tone using ffmpeg so the mixer has
   // valid PCM to combine (zero-filled bytes would be silent anyway, but
   // a real waveform makes the test observable).
-  const dir = mkdtempSync(path.join(tmpdir(), "vf-mix-"));
+  const dir = mkdtempSync(path.join(tmpdir(), "video-mix-"));
   const file = path.join(dir, `tone-${freq}.wav`);
   execFileSync(
     "ffmpeg",
@@ -38,7 +38,7 @@ describe("mixTracks (todo 1) — ffmpeg amix + sidechain ducking", () => {
   let narration2Path: string;
 
   beforeAll(() => {
-    dir = mkdtempSync(path.join(tmpdir(), "vf-mix-test-"));
+    dir = mkdtempSync(path.join(tmpdir(), "video-mix-test-"));
     narrationPath = path.join(dir, "narration.wav");
     bgmPath = path.join(dir, "bgm.wav");
     narration2Path = path.join(dir, "narration2.wav");

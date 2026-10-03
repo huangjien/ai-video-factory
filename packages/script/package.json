@@ -1,5 +1,5 @@
 {
-  "name": "@vf/script",
+  "name": "@video/script",
   "version": "0.1.0",
   "files": [
     "dist"
@@ -20,8 +20,8 @@
     "build": "tsc -p tsconfig.json"
   },
   "dependencies": {
-    "@vf/llm": "workspace:*",
-    "@vf/research": "workspace:*",
+    "@video/llm": "workspace:*",
+    "@video/research": "workspace:*",
     "yaml": "^2.7.0",
     "zod": "^3.25.0"
   }

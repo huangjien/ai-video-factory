@@ -102,7 +102,7 @@ async function concatenateWithSilence(
   parts: TTSResult[],
   pauseSec: number,
 ): Promise<TTSResult> {
-  const tmpRoot = await mkdtemp(path.join(tmpdir(), "vf-tts-pause-"));
+  const tmpRoot = await mkdtemp(path.join(tmpdir(), "video-tts-pause-"));
   try {
     const wavPaths: string[] = [];
     for (let i = 0; i < parts.length; i++) {

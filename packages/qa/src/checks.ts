@@ -3,8 +3,8 @@ import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
-import { probeAudioDuration } from "@vf/media";
-import type { RenderPlan } from "@vf/vdsl";
+import { probeAudioDuration } from "@video/media";
+import type { RenderPlan } from "@video/vdsl";
 
 const execFileAsync = promisify(execFile);
 
@@ -113,7 +113,7 @@ export async function checkSceneAudioSync(
         level: "warn",
         check: "sceneAudioSync",
         message: `scene ${scene.id}: narration audio unreadable (${scene.audio})`,
-        fix: "Re-run `vf audio` / `vf make` to regenerate it.",
+        fix: "Re-run `video audio` / `video make` to regenerate it.",
       });
       continue;
     }
@@ -130,7 +130,7 @@ export async function checkSceneAudioSync(
         level: "error",
         check: "sceneAudioSync",
         message: `scene ${scene.id}: narration is ${audioSec.toFixed(2)}s but the scene is ${sceneSec.toFixed(2)}s`,
-        fix: "Re-run `vf make` (its sync-durations step rewrites the storyboard to measured audio) or `vf audio` to regenerate.",
+        fix: "Re-run `video make` (its sync-durations step rewrites the storyboard to measured audio) or `video audio` to regenerate.",
       });
     }
   }
@@ -179,7 +179,7 @@ export async function checkCaptions(
       level: "warn",
       check: "captions",
       message: "scenes declare captions but no captions/*.srt exists",
-      fix: "Run `vf make` or `vf audio` to write captions from the synced storyboard.",
+      fix: "Run `video make` or `video audio` to write captions from the synced storyboard.",
     });
     return {
       checks: { file: null, cues: 0, ok: !findings.some((f) => f.level === "error") },
@@ -197,7 +197,7 @@ export async function checkCaptions(
       level: "warn",
       check: "captions",
       message: `${path.basename(file)} parsed to zero cues`,
-      fix: "Regenerate captions (`vf make` rewrites them from the storyboard).",
+      fix: "Regenerate captions (`video make` rewrites them from the storyboard).",
     });
     return { checks: { file, cues: 0, ok: false }, findings };
   }
@@ -208,7 +208,7 @@ export async function checkCaptions(
         level: "error",
         check: "captions",
         message: `cue ${i + 1} starts before cue ${i} (non-monotonic captions)`,
-        fix: "Regenerate captions — `vf make` rewrites them from the synced storyboard.",
+        fix: "Regenerate captions — `video make` rewrites them from the synced storyboard.",
       });
       break;
     }
@@ -220,7 +220,7 @@ export async function checkCaptions(
       level: "warn",
       check: "captions",
       message: `last caption ends at ${last.endSec.toFixed(2)}s but the video is ${videoDurationSec.toFixed(2)}s — cue times likely came from LLM estimates, not measured audio`,
-      fix: "Re-run `vf make` — its captions step times cues from the synced storyboard durations.",
+      fix: "Re-run `video make` — its captions step times cues from the synced storyboard durations.",
     });
   }
 

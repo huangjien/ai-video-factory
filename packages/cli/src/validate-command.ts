@@ -1,8 +1,8 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
-import { probeAudioDuration } from "@vf/media";
-import { formatErrors, validateProject } from "@vf/vdsl";
-import { REGISTRY } from "@vf/video-components";
+import { probeAudioDuration } from "@video/media";
+import { formatErrors, validateProject } from "@video/vdsl";
+import { REGISTRY } from "@video/video-components";
 
 export async function runValidate(
   filePath: string,

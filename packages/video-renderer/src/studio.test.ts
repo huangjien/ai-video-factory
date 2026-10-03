@@ -2,7 +2,7 @@ import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import type { RenderPlan } from "@vf/vdsl";
+import type { RenderPlan } from "@video/vdsl";
 import { prepareStudioWorkspace } from "./studio.js";
 
 const samplePlan: RenderPlan = {
@@ -44,7 +44,7 @@ describe("prepareStudioWorkspace (T0.3)", () => {
   });
 
   it("writes a self-contained studio workspace with the compiled plan", async () => {
-    workspaceParent = mkdtempSync(path.join(tmpdir(), "vf-studio-"));
+    workspaceParent = mkdtempSync(path.join(tmpdir(), "video-studio-"));
     const workspaceDir = path.join(workspaceParent, "studio", "fixture");
     const projectRoot = path.join(workspaceParent, "projects", "fixture");
     const ws = await prepareStudioWorkspace(projectRoot, samplePlan, workspaceDir);

@@ -1,5 +1,5 @@
 /**
- * Long-duration LLM requests (e.g. `vf draft --duration 600` produces
+ * Long-duration LLM requests (e.g. `video draft --duration 600` produces
  * ~19k output tokens) can take over 5 minutes before the server sends
  * response headers. Node's global fetch defaults to a 300-second
  * headersTimeout, which aborts those requests with

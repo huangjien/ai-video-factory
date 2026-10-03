@@ -7,8 +7,8 @@ import { resolveProjectDir } from "./project-path.js";
 import {
   FileBasedAudioAssetProvider,
   type AudioAssetProvider,
-} from "@vf/audio-assets";
-import { formatRunId } from "@vf/workflow";
+} from "@video/audio-assets";
+import { formatRunId } from "@video/workflow";
 
 export interface AudioAssetOptions {
   project: string;
@@ -41,11 +41,11 @@ function pickProvider(opts: AudioAssetOptions): AudioAssetProvider {
   return {
     name: "mock",
     async pickBackgroundMusic(opts) {
-      const { MockAudioAssetProvider } = await import("@vf/audio-assets");
+      const { MockAudioAssetProvider } = await import("@video/audio-assets");
       return new MockAudioAssetProvider().pickBackgroundMusic(opts);
     },
     async pickSoundEffect(opts) {
-      const { MockAudioAssetProvider } = await import("@vf/audio-assets");
+      const { MockAudioAssetProvider } = await import("@video/audio-assets");
       return new MockAudioAssetProvider().pickSoundEffect(opts);
     },
   };
@@ -129,7 +129,7 @@ export async function runAudioAsset(opts: AudioAssetOptions): Promise<number> {
     tokens: { input: 0, output: 0 },
     estimated_cost_usd: 0,
   };
-  const { writeRun } = await import("@vf/workflow");
+  const { writeRun } = await import("@video/workflow");
   await writeRun(projectRoot, record);
 
   console.log(`\u2713 added audio assets for ${opts.project}`);

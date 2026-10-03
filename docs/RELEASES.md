@@ -3,16 +3,16 @@
 Each tagged release of the AI Video Factory. The full pipeline goes:
 
 ```
-vf research → script → storyboard → audio (TTS) → audio-asset (BGM+SFX)
+video research → script → storyboard → audio (TTS) → audio-asset (BGM+SFX)
             ↓
        (write audio-assets/mix.yaml: bgm, sfx per scene_N, fades)
             ↓
-       vf preview → vf approve review → vf final --mix → final-mixed.mp4
+       video preview → video approve review → video final --mix → final-mixed.mp4
             ↓
-       vf thumbnail --provider minimax → real AI thumbnail
-       vf shorts --provider minimax    → real AI Shorts clip
-       vf youtube                         → YouTube publishing package
-       vf review                          → Content/Visual/Technical review YAMLs
+       video thumbnail --provider minimax → real AI thumbnail
+       video shorts --provider minimax    → real AI Shorts clip
+       video youtube                         → YouTube publishing package
+       video review                          → Content/Visual/Technical review YAMLs
 ```
 
 ## v0.4 — Visual & Publishing Quality
@@ -25,9 +25,9 @@ two-file edit model (`article.md` + `audio-config.yaml`).
 
 ### What changed
 
-- **Auto-captions from article** (`vf draft` → T1): every auto-generated
+- **Auto-captions from article** (`video draft` → T1): every auto-generated
   storyboard now carries `captions: { source: narration }`. Opt out with
-  `--no-captions`. The existing `writeCaptionsSrt` step in `@vf/make`
+  `--no-captions`. The existing `writeCaptionsSrt` step in `@video/make`
   produces `captions/<lang>.srt`; the new flag stops the overlay from
   loading it.
 - **Visual-variety classifier** (T2, `packages/draft/src/visual-classifier.ts`):
@@ -42,7 +42,7 @@ two-file edit model (`article.md` + `audio-config.yaml`).
   cheap LLM call (≤400 chars, temperature 0.4). Cached on
   `sha256(visual|caption|narration[:200])` so re-runs are free.
   Audit sidecar: `assets/images/scene_N.prompt.txt`.
-- **`--style <theme>` flag** (T8, `vf draft`): `style.theme: warm-sunset`
+- **`--style <theme>` flag** (T8, `video draft`): `style.theme: warm-sunset`
   instead of the hardcoded `dark-tech`. Plumbed through CLI → article
   frontmatter → storyboard.
 - **Hook ↔ YouTube coherence** (T4): the YouTube agent now receives the
@@ -50,18 +50,18 @@ two-file edit model (`article.md` + `audio-config.yaml`).
   against a banned-token list (`text` / `字幕` / `字体` / `logo文字` /
   `海报` / `界面` / `仪表盘` / `截图` / …) and re-prompted once on a
   hit. The CLI never silently accepts a poster-style prompt.
-- **QA gate in `vf final`** + **QA surfacing in `vf status`** (T6, T7):
-  `vf final` already ran QA + gated on errors; `vf status` now prints
+- **QA gate in `video final`** + **QA surfacing in `video status`** (T6, T7):
+  `video final` already ran QA + gated on errors; `video status` now prints
   `QA: ✗ N errors, ✓ M warnings` (or `✓ …`) so users know without
-  running `vf qa` manually.
-- **`vf retrospect <project>`** (T10): cheap LLM call that reads the
+  running `video qa` manually.
+- **`video retrospect <project>`** (T10): cheap LLM call that reads the
   last 5 `runs/*.yaml` + the latest QA report and writes
   `projects/<slug>/retrospect.md` with 3 concrete edits to
   `article.md`. `--dry-run` shows the prompt without calling the LLM.
   Records a run.
-- **CLI banner** (T9): `vf` and `vf --help` print the minimal-API
+- **CLI banner** (T9): `video` and `video --help` print the minimal-API
   quickstart above the verb list.
-- **Scene-aware mock Shorts** (T5): `vf shorts` (mock) now snaps to
+- **Scene-aware mock Shorts** (T5): `video shorts` (mock) now snaps to
   the second scene boundary by default, skipping the `Title` card.
   Override with `--start <sec>`.
 
@@ -105,7 +105,7 @@ The repo now ships first-class integration with `pi / oh-my-pi`
 - **`.omp/settings.json`** — enables native project commands, custom
   skill directories, and `/skill:<name>` interactive commands.
 
-No new packages, no changes to the `vf` CLI. The CLI stays the
+No new packages, no changes to the `video` CLI. The CLI stays the
 harness-agnostic surface; every adapter forwards to it (OpenCode,
 OMP, Claude Code, Codex, Gemini, or plain shell via `bin/video`).
 
@@ -127,7 +127,7 @@ picker UI:
 All four pass the existing luma-contrast smoke test
 (`primary`/`background` spread > 120). Unknown / misspelled names
 still fall back to `dark-tech` — renders never crash on a typo. The
-`--style <name>` flag on `vf draft` is unchanged; the article
+`--style <name>` flag on `video draft` is unchanged; the article
 frontmatter `theme: <name>` field carries through unchanged. New docs:
 
 - `docs/INSTALLATION_AND_USAGE.md` §"Available themes (v0.4.2)" —
@@ -142,7 +142,7 @@ them, and `terminal-vintage` uses JetBrains Mono everywhere.
 ## v0.4.3 — default `style.theme` flipped to `paper-light`
 
 The default theme for any storyboard that doesn't declare one (and for
-any `vf draft` that doesn't pass `--style`) is now **`paper-light`**
+any `video draft` that doesn't pass `--style`) is now **`paper-light`**
 instead of `dark-tech`. Unknown / misspelled theme names also fall back
 to `paper-light`. The `dark-tech` palette and every other theme name
 are unchanged — set `theme: dark-tech` explicitly in `article.md`
@@ -166,8 +166,8 @@ to their article frontmatter.
 - `packages/draft/src/schemas.ts` — `articleToStoryboardYaml` reads
   `f.theme ?? "paper-light"`.
 - `packages/cli/src/storyboard-command.ts` — `opts.style ?? "paper-light"`.
-- `packages/cli/src/index.ts` — `--help` text for both `vf draft` and
-  `vf storyboard` reflects the new default.
+- `packages/cli/src/index.ts` — `--help` text for both `video draft` and
+  `video storyboard` reflects the new default.
 
 **Tests:**
 - `theme-registry.test.ts` — `resolveTheme(undefined)`, `null`, `""`,
@@ -195,32 +195,32 @@ to their article frontmatter.
 
 - **Doc cleanup**: deleted every user-facing "Legacy / 旧版 / 遗留" section. The minimal-API workflow is now the only path the docs lead with.
   - README: dropped the 14-row "Legacy commands (still working)" table and the (v0.4) header label; replaced with a single one-liner noting that the fine-grained per-stage verbs are wired for back-compat with older projects.
-  - INSTALLATION_AND_USAGE (EN + zh-CN): removed §6.5 "Legacy core workflow", §7.1 "Legacy workflow commands", §9.5 "Legacy `vf audio`", §12.8 "Legacy multi-command pipeline", the "Legacy AI agents" subsection, the "Legacy `final` says review is not approved" troubleshooting entry, and the introductory "Legacy multi-stage commands" mention. Also de-"legacy"-ified the remaining project-tree annotations and the `vf youtube` fallback comment.
+  - INSTALLATION_AND_USAGE (EN + zh-CN): removed §6.5 "Legacy core workflow", §7.1 "Legacy workflow commands", §9.5 "Legacy `video audio`", §12.8 "Legacy multi-command pipeline", the "Legacy AI agents" subsection, the "Legacy `final` says review is not approved" troubleshooting entry, and the introductory "Legacy multi-stage commands" mention. Also de-"legacy"-ified the remaining project-tree annotations and the `video youtube` fallback comment.
 - **Code cleanup**: dropped the vestigial `slugifyForProject` identity passthrough from `packages/cli/src/project-path.ts` (a leftover from before `resolveProjectDir` became the single resolution entry point) and the unused import in `research-command.ts`.
-- What was kept: RELEASES.md history, ARCHITECTURE.md, the design doc, and the legacy verb implementations themselves (`vf audio`, `vf audio-asset`, `vf mix`, `vf preview`, `vf final`, `vf approve`/`reject`/`rollback`, `vf research`, `vf script`, `vf storyboard`, `vf review`, `vf youtube`, `vf thumbnail`, `vf shorts`, `vf status`/`vf resume`, `vf validate`) still ship — they power existing projects and back-compat. The change is to remove the references from the user-facing surface, not the implementations.
+- What was kept: RELEASES.md history, ARCHITECTURE.md, the design doc, and the legacy verb implementations themselves (`video audio`, `video audio-asset`, `video mix`, `video preview`, `video final`, `video approve`/`reject`/`rollback`, `video research`, `video script`, `video storyboard`, `video review`, `video youtube`, `video thumbnail`, `video shorts`, `video status`/`video resume`, `video validate`) still ship — they power existing projects and back-compat. The change is to remove the references from the user-facing surface, not the implementations.
 
-## v0.3.10 — `vf draft --file <path>` seeds the article with your own idea
+## v0.3.10 — `video draft --file <path>` seeds the article with your own idea
 
 **Branch:** `feat/v0.3.10-draft-idea-file`
 **Tags:** `v0.3.10`
 
-- **New `vf draft --file <path>` flag** — accept a text or markdown file as the user's raw idea. The LLM treats it as the **major idea / opinions seed**: it polishes wording, structure, and flow, but the prompt explicitly forbids changing, contradicting, softening, or replacing any opinion expressed in the seed.
+- **New `video draft --file <path>` flag** — accept a text or markdown file as the user's raw idea. The LLM treats it as the **major idea / opinions seed**: it polishes wording, structure, and flow, but the prompt explicitly forbids changing, contradicting, softening, or replacing any opinion expressed in the seed.
 - `--file` and `--from` are **mutually exclusive** — `--from` revises an existing draft (different semantics); passing both is rejected at the CLI with a clear message.
 - Empty / missing `--file` produces a readable error before the project lookup runs (input validation now precedes resolution so the user sees the most useful error first).
 - Prompt split: existing `fromContent` ("Existing content to revise, preserve intent, improve as needed") is now joined by a distinct `ideaSeed` ("The user's major idea — polish wording, do NOT change opinions") rendered as its own user-message section.
 - Tests: 365/365 pass; new "includes ideaSeed as the user's major idea with preserve-opinions wording" case in `schemas.test.ts`. Verified live on a fresh project: a seed file containing 3 stated opinions + a "don't go off-topic" instruction produced an article where all opinion-bearing terms survived (漂移 ×17, FVD ×5, Harness ×4, 指标 ×7) and forbidden off-topic terms (安全/自动驾驶) appeared 0 times.
 - Docs: README draft row + INSTALLATION §6.1 + §12.0 + §13 walkthrough (EN + zh-CN).
 
-## v0.3.9 — `vf draft` merges the audio-plan step
+## v0.3.9 — `video draft` merges the audio-plan step
 
 **Branch:** `feat/v0.3.9-draft-merges-audio-plan`
 **Tags:** `v0.3.9`
 
-- **`vf draft <topic>` now writes `article.md` AND `audio-config.yaml` in one invocation** (the audio-plan agent runs on the freshly drafted article, reusing the same provider + fallback routing). The minimal workflow drops from three commands to two: `vf new` → `vf draft` → `vf make`.
-- **Human-checkpoint guardrails**: an existing `audio-config.yaml` is never overwritten (hand edits win — the command prints a note pointing at `vf audio-plan` to regenerate); `--no-audio-plan` skips the step for article-only drafts. If the audio-plan LLM call fails, the draft still succeeds with a hint to run `vf audio-plan` separately.
-- `vf audio-plan` remains a first-class verb for regenerating the config after hand-editing article.md (incl. `--strict`).
+- **`video draft <topic>` now writes `article.md` AND `audio-config.yaml` in one invocation** (the audio-plan agent runs on the freshly drafted article, reusing the same provider + fallback routing). The minimal workflow drops from three commands to two: `video new` → `video draft` → `video make`.
+- **Human-checkpoint guardrails**: an existing `audio-config.yaml` is never overwritten (hand edits win — the command prints a note pointing at `video audio-plan` to regenerate); `--no-audio-plan` skips the step for article-only drafts. If the audio-plan LLM call fails, the draft still succeeds with a hint to run `video audio-plan` separately.
+- `video audio-plan` remains a first-class verb for regenerating the config after hand-editing article.md (incl. `--strict`).
 - New exported helper `writeAudioConfigIfAbsent` in `draft-command.ts` (unit-tested merge policy: written / kept / failed / skipped).
-- Tests: 364/364 pass; new `packages/cli/src/draft-merge.test.ts` (4 cases with a fake provider). Verified live end-to-end on a fresh project: one `vf draft` produced article.md + storyboard.yaml + audio-config.yaml (voice/bgm/2 SFX cues); re-run kept the existing audio-config.yaml.
+- Tests: 364/364 pass; new `packages/cli/src/draft-merge.test.ts` (4 cases with a fake provider). Verified live end-to-end on a fresh project: one `video draft` produced article.md + storyboard.yaml + audio-config.yaml (voice/bgm/2 SFX cues); re-run kept the existing audio-config.yaml.
 
 ## v0.3.8 — every `<project>` argument accepts the topic, not just the folder name
 
@@ -232,15 +232,15 @@ to their article frontmatter.
 - CLI `--help` argument descriptions updated to say "topic, folder name, path, or unique prefix".
 - Tests: 360/360 pass; new `packages/cli/src/project-path.test.ts` (11 cases: exact / slug / underscore / CJK / unique prefix / ambiguous / zero-match listing / direct path / empty / non-project dir / missing projects dir).
 
-## v0.3.7 — real BGM/SFX in `vf make` via `--bgm-dir` / `--sfx-dir`
+## v0.3.7 — real BGM/SFX in `video make` via `--bgm-dir` / `--sfx-dir`
 
 **Branch:** `feat/v0.3.7-make-audio-dirs`
 **Tags:** `v0.3.7`
 
-- **`vf make <project> --bgm-dir <dir> --sfx-dir <dir>`** wires the existing `FileBasedAudioAssetProvider` into the make pipeline. The tags in `audio-config.yaml` (`bgm: calm`, `sfx: {scene_1: whoosh}`) resolve to `{tag}.wav` inside your library (exact filename first, then any `.wav` containing the tag). Without the flags the audio-assets step keeps writing 1-second silent mock placeholders — meaning the BGM ducking/fades in `vf mix` were technically running over silence.
+- **`video make <project> --bgm-dir <dir> --sfx-dir <dir>`** wires the existing `FileBasedAudioAssetProvider` into the make pipeline. The tags in `audio-config.yaml` (`bgm: calm`, `sfx: {scene_1: whoosh}`) resolve to `{tag}.wav` inside your library (exact filename first, then any `.wav` containing the tag). Without the flags the audio-assets step keeps writing 1-second silent mock placeholders — meaning the BGM ducking/fades in `video mix` were technically running over silence.
 - Per-kind selection: `--bgm-dir` alone upgrades only BGM (SFX stays mock), and vice versa. A sibling `{tag}.license.txt` in your library is surfaced on the make report; a missing tag fails the `audio-assets` step readably (add the file or drop the cue).
-- **`runMake` no longer crashes the CLI on a failed step.** `runStep` failures are recorded as `✗` steps and later steps are skipped (they depend on the failed step's outputs), so `vf make` exits 1 with the per-step summary instead of a stack trace.
-- `runAudioAssets` is exported from `@vf/make` for direct testing.
+- **`runMake` no longer crashes the CLI on a failed step.** `runStep` failures are recorded as `✗` steps and later steps are skipped (they depend on the failed step's outputs), so `video make` exits 1 with the per-step summary instead of a stack trace.
+- `runAudioAssets` is exported from `@video/make` for direct testing.
 - Docs: corrected earlier `--imageProvider` mentions to the real kebab-case flag `--image-provider`; new `--bgm-dir`/`--sfx-dir` guidance in §6.2 and §9.1 (EN + zh-CN).
 - Tests: 349/349 pass; new `packages/make/src/audio-asset-dirs.test.ts` covers real-bytes copy + license surfacing, per-kind fallback to mock, mock default, and the missing-tag failure. Verified end-to-end on `projects/harness-engineering`: 290 s real BGM (25.5 MB) + 2 SFX cues land in `assets/audio-assets/` and `final-mixed.mp4` carries audible audio.
 
@@ -249,32 +249,32 @@ to their article frontmatter.
 **Branch:** `fix/v0.3.6-fake-image-default`
 **Tags:** `v0.3.6`
 
-- **`vf make --fake` default imageProvider changed from `"mock"` to `"none"`.** The mock provider produced 64×36 solid-colour PNGs, and `updateStoryboardForImages` rewrote every scene from `AnimatedIllustration` (caption + animated SVG) to `ImageBackground` (image-only). For long videos this left ~9 minutes of blank frames after the title card. Defaulting to `"none"` skips image generation in offline mode and scenes keep `AnimatedIllustration`. Pass `--image-provider mock` explicitly if you want to exercise the ImageBackground path with placeholders.
+- **`video make --fake` default imageProvider changed from `"mock"` to `"none"`.** The mock provider produced 64×36 solid-colour PNGs, and `updateStoryboardForImages` rewrote every scene from `AnimatedIllustration` (caption + animated SVG) to `ImageBackground` (image-only). For long videos this left ~9 minutes of blank frames after the title card. Defaulting to `"none"` skips image generation in offline mode and scenes keep `AnimatedIllustration`. Pass `--image-provider mock` explicitly if you want to exercise the ImageBackground path with placeholders.
 - **`updateStoryboardForImages` carries the scene caption into the new ImageBackground props**, and `ImageBackground` now renders an optional bottom-overlay caption. So if image generation partially fails or mock images are in use, scenes still show their caption text.
 - **`articleToStoryboardYaml` truncates long `Title.subtext`** at the first natural punctuation near 50 characters, so old drafts with very long LLM visual descriptions no longer overflow the 36 px subtext `<p>`.
 - **LLM prompt tightened**: the `VISUAL DIRECTION` section now tells the drafter the renderer keyword-matches to a small shape vocabulary, so extra description beyond the matching keyword is dead weight that bloats on-screen captions.
-- **Empty-narration draft recovery.** Real failure mode (seen on the `harness-engineering` project): the LLM puts all prose in `## N. ...` section bodies and ships every scene's `narration:` blank — the strict zod schema then rejected `vf audio-plan` (and would have rejected `vf make`) with an opaque 19-issue JSON dump. New `parseArticleWithRecovery` in `@vf/draft`: strict parse first, and on the empty-narration failure back-fill narrations from section bodies (sentence-aware distribution across scenes; only `## N. ...` headings count, so the H1 title and hook block are never treated as a section). All four article.md consumers route through it — `vf make` (surfaces a `recover-narrations` step in the report), `vf audio-plan` (prints a warning + `vf draft --from` hint), `vf draft` storyboard-sync, and `vf youtube`. `vf audio-plan --strict` keeps the old fail-loudly behaviour for CI.
+- **Empty-narration draft recovery.** Real failure mode (seen on the `harness-engineering` project): the LLM puts all prose in `## N. ...` section bodies and ships every scene's `narration:` blank — the strict zod schema then rejected `video audio-plan` (and would have rejected `video make`) with an opaque 19-issue JSON dump. New `parseArticleWithRecovery` in `@video/draft`: strict parse first, and on the empty-narration failure back-fill narrations from section bodies (sentence-aware distribution across scenes; only `## N. ...` headings count, so the H1 title and hook block are never treated as a section). All four article.md consumers route through it — `video make` (surfaces a `recover-narrations` step in the report), `video audio-plan` (prints a warning + `video draft --from` hint), `video draft` storyboard-sync, and `video youtube`. `video audio-plan --strict` keeps the old fail-loudly behaviour for CI.
 - **LLM prompt (narration)**: §7 SCENE NARRATION now states the narration field must contain the actual spoken content and that section bodies do not replace it.
 - Tests: 345/345 pass; added `packages/make/src/fake-image-default.test.ts`, plus `schemas.test.ts` cases for lenient parse, recovery distribution, kept-verbatim scenes, `parseArticleWithRecovery` passthrough/rethrow, and subtext truncation.
 
-## v0.3.5 — SFX cues + BGM fades + `vf final --mix`
+## v0.3.5 — SFX cues + BGM fades + `video final --mix`
 
 **Branch:** `feat/v0.3-sfx-cues-and-fade`
 **Tags:** `v0.3.5`
 
 - `audio-assets/mix.yaml` convention: `bgm`, `sfx: {scene_N: tag}`, `bgm_fade_in_sec`, `bgm_fade_out_sec`. CLI flags override the spec.
 - New engine `mixTracksWithSpec` places SFX cues via `adelay` + applies `afade=in/out` to the BGM track.
-- `vf mix` reads `mix.yaml` (or `--mix-yaml <path>`) + supports `--bgm-fade-in/--bgm-fade-out` flags.
-- `vf final --mix` chains `runMix` after the final render so the published artifact is `output/final-mixed.mp4`.
+- `video mix` reads `mix.yaml` (or `--mix-yaml <path>`) + supports `--bgm-fade-in/--bgm-fade-out` flags.
+- `video final --mix` chains `runMix` after the final render so the published artifact is `output/final-mixed.mp4`.
 - Docs: refreshed stale "What's NOT here yet" sections; consolidated ARCHITECTURE roadmap duplication.
 
-## v0.3.4 — Audio mixing engine + `vf mix` CLI
+## v0.3.4 — Audio mixing engine + `video mix` CLI
 
 **Branch:** `feat/v0.3-audio-mix`
 **Tags:** `v0.3.4`
 
-- `@vf/audio-mix` package with `mixTracks(opts)` using ffmpeg `concat` demuxer (list-file driven) + `amix` + `sidechaincompress` (BGM ducks ~-18 dB under narration).
-- `vf mix <project> --bgm <path> --bgm-attenuation <db>` verb.
+- `@video/audio-mix` package with `mixTracks(opts)` using ffmpeg `concat` demuxer (list-file driven) + `amix` + `sidechaincompress` (BGM ducks ~-18 dB under narration).
+- `video mix <project> --bgm <path> --bgm-attenuation <db>` verb.
 - Pure mechanical ffmpeg pipeline — no AI, no network.
 
 ## v0.3.3 — Audio assets (BGM + SFX provider layer)
@@ -282,17 +282,17 @@ to their article frontmatter.
 **Branch:** `feat/v0.3-audio-assets`
 **Tags:** `v0.3.3`
 
-- `@vf/audio-assets` package with `AudioAssetProvider` interface.
+- `@video/audio-assets` package with `AudioAssetProvider` interface.
 - Two implementations: `MockAudioAssetProvider` (deterministic silent WAV placeholder, offline default) + `FileBasedAudioAssetProvider` (looks up `{tag}.wav` from `--bgm-dir`/`--sfx-dir`, reads optional `{tag}.license.txt`).
-- `vf audio-asset <project> --bgm <tag> --sfx <tag>` verb writes to `assets/audio-assets/{bgm,sfx}/{tag}.wav` + run record.
+- `video audio-asset <project> --bgm <tag> --sfx <tag>` verb writes to `assets/audio-assets/{bgm,sfx}/{tag}.wav` + run record.
 
 ## v0.3 — Real AI providers (MiniMax image + video)
 
 **Branch:** `feat/v0.3-advanced-media` + `feat/v0.3-minimax-video`
 **Tags:** `v0.3`
 
-- `MiniMaxImageProvider` (`image-01`): powers `vf thumbnail --provider minimax` for real AI thumbnails. Surfaces MiniMax envelope errors readably (e.g. 2056 quota, 1004 auth).
-- `MiniMaxVideoProvider` (`MiniMax-Hailuo-2.3`, image-to-video): powers `vf shorts --provider minimax`. Implements the full async flow: create task → poll until Success → download. Honest envelope-error handling.
+- `MiniMaxImageProvider` (`image-01`): powers `video thumbnail --provider minimax` for real AI thumbnails. Surfaces MiniMax envelope errors readably (e.g. 2056 quota, 1004 auth).
+- `MiniMaxVideoProvider` (`MiniMax-Hailuo-2.3`, image-to-video): powers `video shorts --provider minimax`. Implements the full async flow: create task → poll until Success → download. Honest envelope-error handling.
 - Both providers use `MINIMAX_API_KEY` env var (no API key for the MiniMax Coding Plan path — already set in this dev env).
 - `ImageResult.contentType` widened to `"image/png" | "image/jpeg"`; `VideoRequest` extended with `firstFrameImageUrl`.
 
@@ -304,8 +304,8 @@ to their article frontmatter.
 - VDSL → Remotion → MP4 pipeline
 - 10 motion components (Title, Paragraph, CodeBlock, Terminal, Image, FlowChart, Comparison, Timeline, Callout, EndCard)
 - Checkpoint state machine + 10 CLI workflow verbs (`new`, `validate`, `status`, `approve`, `reject`, `rollback`, `resume`, `preview`, `final`, etc.)
-- 5 LLM-driven agents (Storyboard, Research, Script, Review, YouTube) — all reuse `@vf/llm` (MiniMax + GLM providers)
-- Edge TTS voiceover (`@vf/tts`)
+- 5 LLM-driven agents (Storyboard, Research, Script, Review, YouTube) — all reuse `@video/llm` (MiniMax + GLM providers)
+- Edge TTS voiceover (`@video/tts`)
 - Benchmark video (`projects/benchmark-v01/`): 6 scenes, 39 seconds, zh-CN explainer about AI chain-of-thought
 - §62.4 acceptance automation: 11/11 checks passing
 - `bin/video` + `.opencode/command/video.md` for Pi Extension / OpenCode harness integration

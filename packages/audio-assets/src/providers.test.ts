@@ -28,7 +28,7 @@ describe("FileBasedAudioAssetProvider (todo 2)", () => {
   let sfxDir: string;
 
   beforeAll(() => {
-    dir = mkdtempSync(path.join(tmpdir(), "vf-audio-"));
+    dir = mkdtempSync(path.join(tmpdir(), "video-audio-"));
     bgmDir = path.join(dir, "bgm");
     sfxDir = path.join(dir, "sfx");
     mkdirSync(bgmDir, { recursive: true });

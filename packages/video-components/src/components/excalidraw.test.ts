@@ -54,7 +54,7 @@ describe("Excalidraw asset generator (T7.1, plan §4.2)", () => {
     const svg1 = svgSpecToAnimatedSvg(ExcalidrawSpecSchema.parse(SPEC), { durationSec: 3 });
     const svg2 = svgSpecToAnimatedSvg(ExcalidrawSpecSchema.parse(SPEC), { durationSec: 3 });
     expect(svg1).toBe(svg2);
-    expect(svg1).toContain("@keyframes vf-draw");
+    expect(svg1).toContain("@keyframes video-draw");
     expect(svg1).toContain("stroke-dashoffset");
     expect(svg1).toContain("deploy");
     expect(svg1.endsWith("</svg>")).toBe(true);

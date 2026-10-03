@@ -6,7 +6,7 @@ import { describe, expect, it } from "vitest";
 import { probeAudioDuration } from "./probe.js";
 
 function makeWav(seconds: number): string {
-  const dir = mkdtempSync(path.join(tmpdir(), "vf-probe-"));
+  const dir = mkdtempSync(path.join(tmpdir(), "video-probe-"));
   const file = path.join(dir, "a.wav");
   execFileSync(
     "ffmpeg",

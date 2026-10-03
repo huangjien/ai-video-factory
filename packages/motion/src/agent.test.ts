@@ -1,4 +1,4 @@
-import type { ChatRequest, ChatResponse, Provider } from "@vf/llm";
+import type { ChatRequest, ChatResponse, Provider } from "@video/llm";
 import { describe, expect, it } from "vitest";
 import {
   MotionAgentError,

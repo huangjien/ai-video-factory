@@ -15,7 +15,7 @@ describe("resolveProjectDir", () => {
   let projectsDir: string;
 
   beforeAll(() => {
-    base = mkdtempSync(path.join(tmpdir(), "vf-resolve-"));
+    base = mkdtempSync(path.join(tmpdir(), "video-resolve-"));
     projectsDir = path.join(base, "projects");
     mkdirSync(projectsDir, { recursive: true });
     seedProject(projectsDir, "harness-engineering");
@@ -93,11 +93,11 @@ describe("resolveProjectDir", () => {
   });
 
   it("defaults cwd to process cwd and fails readably when projects/ is absent", () => {
-    const empty = mkdtempSync(path.join(tmpdir(), "vf-resolve-empty-"));
+    const empty = mkdtempSync(path.join(tmpdir(), "video-resolve-empty-"));
     try {
       const r = resolveProjectDir("anything", empty);
       expect(r.ok).toBe(false);
-      if (!r.ok) expect(r.message).toMatch(/vf new/);
+      if (!r.ok) expect(r.message).toMatch(/video new/);
     } finally {
       rmSync(empty, { recursive: true, force: true });
     }

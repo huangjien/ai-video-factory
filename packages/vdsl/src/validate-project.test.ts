@@ -21,7 +21,7 @@ const registry: ComponentRegistry = {
 };
 
 function fixtureProject(): string {
-  const root = mkdtempSync(path.join(tmpdir(), "vf-proj-"));
+  const root = mkdtempSync(path.join(tmpdir(), "video-proj-"));
   mkdirSync(path.join(root, "assets", "audio"), { recursive: true });
   mkdirSync(path.join(root, "assets", "images"), { recursive: true });
   execFileSync(

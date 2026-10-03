@@ -12,7 +12,7 @@ import { describe, expect, it } from "vitest";
 import { runAudio } from "./audio-command.js";
 
 function tmpRoot(): string {
-  return mkdtempSync(path.join(tmpdir(), "vf-audio-"));
+  return mkdtempSync(path.join(tmpdir(), "video-audio-"));
 }
 
 function writeProject(
@@ -64,7 +64,7 @@ const SCRIPT = `# Script
 这是解释
 `;
 
-describe("vf audio (todo 2) — FakeTTSProvider integration", () => {
+describe("video audio (todo 2) — FakeTTSProvider integration", () => {
   it("writes assets/audio/scene-01.wav + captions/zh-CN.srt + a run record", async () => {
     const cwd = tmpRoot();
     const root = writeProject(cwd, "demo", STORYBOARD, SCRIPT);

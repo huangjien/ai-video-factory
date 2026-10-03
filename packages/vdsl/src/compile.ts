@@ -1,4 +1,4 @@
-import { wrapText } from "@vf/media";
+import { wrapText } from "@video/media";
 import { stringify as yamlStringify } from "yaml";
 import type {
   Asset,

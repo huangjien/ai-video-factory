@@ -11,7 +11,7 @@ import { AudioAssetError } from "./schemas.js";
 /** Deterministic local-only provider — returns a short synthetic WAV
  * (RIFF header + 1-second silence at 8kHz mono 8-bit) so downstream mixers
  * have valid audio bytes. Use this when no real assets are available —
- * the default `vf audio-asset` path. */
+ * the default `video audio-asset` path. */
 export class MockAudioAssetProvider implements AudioAssetProvider {
   readonly name = "mock";
 

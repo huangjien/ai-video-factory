@@ -7,7 +7,7 @@ import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-// @remotion/* is a dependency of @vf/video-renderer, not the root — resolve
+// @remotion/* is a dependency of @video/video-renderer, not the root — resolve
 // through that package so the script can live anywhere.
 const rendererRequire = createRequire(
   path.join(repoRoot, "packages/video-renderer/package.json"),
@@ -104,7 +104,7 @@ const renderPlan = {
   scenes,
 };
 
-const workDir = await mkdtemp(path.join(tmpdir(), "vf-smoke-"));
+const workDir = await mkdtemp(path.join(tmpdir(), "video-smoke-"));
 const entry = path.join(workDir, "entry.tsx");
 await writeFile(
   entry,

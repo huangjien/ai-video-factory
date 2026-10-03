@@ -1,7 +1,7 @@
-import type { ChatMessage, Provider } from "@vf/llm";
-import { chatWithFallback } from "@vf/llm";
-import { validateStoryboard } from "@vf/vdsl/validate.js";
-import type { Storyboard } from "@vf/vdsl/schema.js";
+import type { ChatMessage, Provider } from "@video/llm";
+import { chatWithFallback } from "@video/llm";
+import { validateStoryboard } from "@video/vdsl/validate.js";
+import type { Storyboard } from "@video/vdsl/schema.js";
 import { buildMessages, type AgentInput } from "./prompt.js";
 
 export interface AgentResult {

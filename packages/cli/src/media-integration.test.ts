@@ -41,7 +41,7 @@ describe("CLI media integration — runAudioAsset / runThumbnail / runShorts", (
   let projectDir: string;
 
   beforeEach(() => {
-    cwd = mkdtempSync(path.join(tmpdir(), "vf-media-"));
+    cwd = mkdtempSync(path.join(tmpdir(), "video-media-"));
     const projectId = "demo";
     mkdirSync(path.join(cwd, projectId), { recursive: true });
     projectDir = path.join(cwd, "projects", projectId);

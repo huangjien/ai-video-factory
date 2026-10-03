@@ -10,7 +10,7 @@ import { runPreview, runFinal } from "./render-command.js";
 import { runQa } from "./qa-command.js";
 import { runExcalidraw } from "./excalidraw-command.js";
 import { runMotion } from "./motion-command.js";
-import { listSceneVersions } from "@vf/workflow";
+import { listSceneVersions } from "@video/workflow";
 
 /**
  * Demo 1 — MCP Explainer (plan §35/T7.2): renders the committed example
@@ -52,7 +52,7 @@ describe("Demo 1 — MCP Explainer end to end (T7.2, plan §35)", () => {
     const storyboard = readFileSync(path.join(EXAMPLE_DIR, "storyboard.yaml"), "utf8");
     expect(storyboard).toContain("SvgScene");
 
-    cwd = mkdtempSync(path.join(tmpdir(), "vf-demo-mcp-"));
+    cwd = mkdtempSync(path.join(tmpdir(), "video-demo-mcp-"));
     await runNew({ projectId: "mcp-explainer", cwd });
     projectDir = path.join(cwd, "projects", "mcp-explainer");
     copyFileSync(

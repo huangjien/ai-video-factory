@@ -1,5 +1,5 @@
 {
-  "name": "@vf/vdsl",
+  "name": "@video/vdsl",
   "version": "0.1.0",
   "files": [
     "dist"
@@ -46,6 +46,6 @@
   "dependencies": {
     "yaml": "^2.7.0",
     "zod": "^3.25.0",
-    "@vf/media": "workspace:*"
+    "@video/media": "workspace:*"
   }
 }

@@ -10,8 +10,8 @@ import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
  * Scenes live inside storyboard.yaml, so a version is the scene's FRAGMENT
  * (its exact YAML block, textually extracted — same philosophy as the
  * duration sync: never round-trip the whole file, never lose comments).
- * Versions are recorded by `vf preview` whenever a scene's content changed;
- * `vf scene restore` splices an old fragment back into the storyboard.
+ * Versions are recorded by `video preview` whenever a scene's content changed;
+ * `video scene restore` splices an old fragment back into the storyboard.
  */
 
 const VERSIONS_DIRNAME = "versions";

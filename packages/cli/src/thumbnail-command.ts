@@ -8,8 +8,8 @@ import {
   MiniMaxImageProvider,
   MockImageProvider,
   type ImageProvider,
-} from "@vf/media-generators";
-import { formatRunId } from "@vf/workflow";
+} from "@video/media-generators";
+import { formatRunId } from "@video/workflow";
 
 export interface ThumbnailOptions {
   project: string;
@@ -38,7 +38,7 @@ export async function runThumbnail(opts: ThumbnailOptions): Promise<number> {
   const promptPath = path.join(projectRoot, "youtube", "thumbnail-prompt.txt");
   if (!existsSync(promptPath)) {
     console.error(`missing thumbnail prompt: ${promptPath}`);
-    console.error(`  run vf youtube first`);
+    console.error(`  run video youtube first`);
     return 1;
   }
   const { readFile } = await import("node:fs/promises");
@@ -102,7 +102,7 @@ export async function runThumbnail(opts: ThumbnailOptions): Promise<number> {
     tokens: { input: 0, output: 0 },
     estimated_cost_usd: 0,
   };
-  const { writeRun } = await import("@vf/workflow");
+  const { writeRun } = await import("@video/workflow");
   await writeRun(projectRoot, record);
 
   console.log(

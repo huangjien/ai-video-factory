@@ -4,11 +4,11 @@ import { execSync } from "node:child_process";
 import path from "node:path";
 import { resolveProjectDir } from "./project-path.js";
 import { existsSync } from "node:fs";
-import { GLMProvider, loadProviderConfig, MiniMaxProvider } from "@vf/llm";
-import { callReview, ReviewPackageSchema } from "@vf/review";
+import { GLMProvider, loadProviderConfig, MiniMaxProvider } from "@video/llm";
+import { callReview, ReviewPackageSchema } from "@video/review";
 import { parse as parseYaml, stringify as yamlStringify } from "yaml";
-import type { ChatMessage, Provider } from "@vf/llm";
-import { formatRunId } from "@vf/workflow";
+import type { ChatMessage, Provider } from "@video/llm";
+import { formatRunId } from "@video/workflow";
 
 export interface ReviewOptions {
   project: string;
@@ -60,7 +60,7 @@ export async function runReview(opts: ReviewOptions): Promise<number> {
   for (const f of [sbPath, scriptPath, claimsPath]) {
     if (!existsSync(f)) {
       console.error(`missing input: ${f}`);
-      console.error(`  run vf storyboard / vf script / vf research first`);
+      console.error(`  run video storyboard / video script / video research first`);
       return 1;
     }
   }
@@ -122,7 +122,7 @@ export async function runReview(opts: ReviewOptions): Promise<number> {
     stage: "review",
     status: "succeeded" as const,
     actor: "agent" as const,
-    tool: "vf-review",
+    tool: "video-review",
     input_commit: safeGitHead(projectRoot),
     input_files: [
       "storyboard/storyboard.yaml",
@@ -146,7 +146,7 @@ export async function runReview(opts: ReviewOptions): Promise<number> {
       (result.usage.output / 1000) *
         (result.providerName === "glm" ? 0.0008 : 0.001),
   };
-  const { writeRun } = await import("@vf/workflow");
+  const { writeRun } = await import("@video/workflow");
   await writeRun(projectRoot, record);
 
   // Summary

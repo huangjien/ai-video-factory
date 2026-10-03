@@ -18,11 +18,11 @@
 
 ## Skill → pipeline mapping
 
-**Remotion runtime (Render Agent, `@vf/video-renderer`):**
+**Remotion runtime (Render Agent, `@video/video-renderer`):**
 - `remotion-best-practices` — router for all Remotion skills; start here
 - `remotion-create`, `remotion-markup` (content/animation/effects), `remotion-multimedia` (Mediabunny media I/O)
 - `remotion-render` — export path knowledge (we use `@remotion/renderer` directly; use for tuning)
-- `remotion-studio` — feeds T0.3 (`vf studio` verb)
+- `remotion-studio` — feeds T0.3 (`video studio` verb)
 - `remotion-captions` — T1.4 follow-ups (per-word timing, animated captions)
 - `remotion-docs`, `remotion-interactivity`, `remotion-maps`, `remotion-saas`, `remotion-upgrade` — reference; not on the MVP critical path
 
@@ -40,7 +40,7 @@
 
 **Canvas hand-drawn (T4.4):**
 - `javascript-animation` — frame-by-frame JS/Canvas drawing
-- `soundtrack` — procedural music in code (potential `@vf/audio` extension)
+- `soundtrack` — procedural music in code (potential `@video/audio` extension)
 
 ## House rules (from the installer + plan §29)
 

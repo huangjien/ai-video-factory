@@ -49,7 +49,7 @@ chapters:
 thumbnail_prompt: "Young woman · eyes wide with surprise · cozy kitchen at dawn · warm side-light · 35mm cinematic"
 shorts_hook: "A person leans toward camera · reveals the surprise with a clear voice · kitchen morning light · curious hopeful tone"`;
 
-describe("vf youtube end-to-end (todo 2) — mock MiniMax", () => {
+describe("video youtube end-to-end (todo 2) — mock MiniMax", () => {
   let server: Server;
   let baseUrl: string;
 
@@ -87,7 +87,7 @@ describe("vf youtube end-to-end (todo 2) — mock MiniMax", () => {
   }
 
   it("writes title/description/chapters.vtt/package + run record", async () => {
-    const cwd = mkdtempSync(path.join(tmpdir(), "vf-yt-"));
+    const cwd = mkdtempSync(path.join(tmpdir(), "video-yt-"));
     const root = path.join(cwd, "projects", "demo");
     seedProject(root);
     process.env["MINIMAX_API_KEY"] = "test-key-do-not-leak";
@@ -128,7 +128,7 @@ describe("vf youtube end-to-end (todo 2) — mock MiniMax", () => {
   });
 
   it("never writes the API key into projects/ or runs/", async () => {
-    const cwd = mkdtempSync(path.join(tmpdir(), "vf-yt-"));
+    const cwd = mkdtempSync(path.join(tmpdir(), "video-yt-"));
     const root = path.join(cwd, "projects", "leak");
     seedProject(root);
     process.env["MINIMAX_API_KEY"] = "test-key-do-not-leak";

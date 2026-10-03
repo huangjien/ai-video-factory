@@ -2,10 +2,10 @@ import { mkdir, writeFile } from "node:fs/promises";
 import { createHash } from "node:crypto";
 import { execSync } from "node:child_process";
 import path from "node:path";
-import { GLMProvider, loadProviderConfig, MiniMaxProvider } from "@vf/llm";
-import { callScript } from "@vf/script";
-import type { ChatMessage, Provider } from "@vf/llm";
-import { formatRunId } from "@vf/workflow";
+import { GLMProvider, loadProviderConfig, MiniMaxProvider } from "@video/llm";
+import { callScript } from "@video/script";
+import type { ChatMessage, Provider } from "@video/llm";
+import { formatRunId } from "@video/workflow";
 import { runNew } from "./new-command.js";
 import { ensureProject } from "./ensure-project.js";
 import { slugifyProjectName } from "./project-path.js";
@@ -94,7 +94,7 @@ export async function runScript(opts: ScriptOptions): Promise<number> {
       console.error(
         `  run ` +
           "`" +
-          `vf research "${opts.topic}"` +
+          `video research "${opts.topic}"` +
           "`" +
           ` first, or omit --from-research to generate the script from the topic alone`,
       );
@@ -139,7 +139,7 @@ export async function runScript(opts: ScriptOptions): Promise<number> {
     stage: "script",
     status: "succeeded" as const,
     actor: "agent" as const,
-    tool: "vf-script",
+    tool: "video-script",
     input_commit: safeGitHead(projectRoot),
     input_files: [],
     output_files: [`script/${filename}`],
@@ -155,7 +155,7 @@ export async function runScript(opts: ScriptOptions): Promise<number> {
       (result.usage.output / 1000) *
         (result.providerName === "glm" ? 0.0008 : 0.001),
   };
-  const { writeRun } = await import("@vf/workflow");
+  const { writeRun } = await import("@video/workflow");
   await writeRun(projectRoot, record);
 
   console.log(`\u2713 drafted ${slug}/script/${filename}`);
@@ -163,7 +163,7 @@ export async function runScript(opts: ScriptOptions): Promise<number> {
     `  provider=${result.providerName}  sections=7  tokens=${result.usage.input}+${result.usage.output}`,
   );
   console.log(
-    `  next: edit, then \`vf storyboard "${opts.topic}"\` (storyboard picks up the script's structure)`,
+    `  next: edit, then \`video storyboard "${opts.topic}"\` (storyboard picks up the script's structure)`,
   );
   return 0;
 }

@@ -193,10 +193,10 @@ importers:
 
   packages/agent-storyboard:
     dependencies:
-      '@vf/llm':
+      '@video/llm':
         specifier: workspace:*
         version: link:../llm
-      '@vf/vdsl':
+      '@video/vdsl':
         specifier: workspace:*
         version: link:../vdsl
       yaml:
@@ -220,10 +220,10 @@ importers:
 
   packages/audio-plan:
     dependencies:
-      '@vf/draft':
+      '@video/draft':
         specifier: workspace:*
         version: link:../draft
-      '@vf/llm':
+      '@video/llm':
         specifier: workspace:*
         version: link:../llm
       yaml:
@@ -235,64 +235,64 @@ importers:
 
   packages/cli:
     dependencies:
-      '@vf/agent-storyboard':
+      '@video/agent-storyboard':
         specifier: workspace:*
         version: link:../agent-storyboard
-      '@vf/audio-assets':
+      '@video/audio-assets':
         specifier: workspace:*
         version: link:../audio-assets
-      '@vf/audio-mix':
+      '@video/audio-mix':
         specifier: workspace:*
         version: link:../audio-mix
-      '@vf/audio-plan':
+      '@video/audio-plan':
         specifier: workspace:*
         version: link:../audio-plan
-      '@vf/draft':
+      '@video/draft':
         specifier: workspace:*
         version: link:../draft
-      '@vf/llm':
+      '@video/llm':
         specifier: workspace:*
         version: link:../llm
-      '@vf/make':
+      '@video/make':
         specifier: workspace:*
         version: link:../make
-      '@vf/media':
+      '@video/media':
         specifier: workspace:*
         version: link:../media
-      '@vf/media-generators':
+      '@video/media-generators':
         specifier: workspace:*
         version: link:../media-generators
-      '@vf/motion':
+      '@video/motion':
         specifier: workspace:*
         version: link:../motion
-      '@vf/qa':
+      '@video/qa':
         specifier: workspace:*
         version: link:../qa
-      '@vf/research':
+      '@video/research':
         specifier: workspace:*
         version: link:../research
-      '@vf/review':
+      '@video/review':
         specifier: workspace:*
         version: link:../review
-      '@vf/script':
+      '@video/script':
         specifier: workspace:*
         version: link:../script
-      '@vf/tts':
+      '@video/tts':
         specifier: workspace:*
         version: link:../tts
-      '@vf/vdsl':
+      '@video/vdsl':
         specifier: workspace:*
         version: link:../vdsl
-      '@vf/video-components':
+      '@video/video-components':
         specifier: workspace:*
         version: link:../video-components
-      '@vf/video-renderer':
+      '@video/video-renderer':
         specifier: workspace:*
         version: link:../video-renderer
-      '@vf/workflow':
+      '@video/workflow':
         specifier: workspace:*
         version: link:../workflow
-      '@vf/youtube':
+      '@video/youtube':
         specifier: workspace:*
         version: link:../youtube
       commander:
@@ -304,7 +304,7 @@ importers:
 
   packages/draft:
     dependencies:
-      '@vf/llm':
+      '@video/llm':
         specifier: workspace:*
         version: link:../llm
       yaml:
@@ -314,7 +314,7 @@ importers:
         specifier: ^3.25.0
         version: 3.25.76
     devDependencies:
-      '@vf/video-components':
+      '@video/video-components':
         specifier: workspace:*
         version: link:../video-components
 
@@ -329,28 +329,28 @@ importers:
 
   packages/make:
     dependencies:
-      '@vf/audio-assets':
+      '@video/audio-assets':
         specifier: workspace:*
         version: link:../audio-assets
-      '@vf/audio-mix':
+      '@video/audio-mix':
         specifier: workspace:*
         version: link:../audio-mix
-      '@vf/audio-plan':
+      '@video/audio-plan':
         specifier: workspace:*
         version: link:../audio-plan
-      '@vf/draft':
+      '@video/draft':
         specifier: workspace:*
         version: link:../draft
-      '@vf/llm':
+      '@video/llm':
         specifier: workspace:*
         version: link:../llm
-      '@vf/media':
+      '@video/media':
         specifier: workspace:*
         version: link:../media
-      '@vf/media-generators':
+      '@video/media-generators':
         specifier: workspace:*
         version: link:../media-generators
-      '@vf/tts':
+      '@video/tts':
         specifier: workspace:*
         version: link:../tts
       yaml:
@@ -365,16 +365,16 @@ importers:
 
   packages/media-generators:
     dependencies:
-      '@vf/llm':
+      '@video/llm':
         specifier: workspace:*
         version: link:../llm
 
   packages/motion:
     dependencies:
-      '@vf/llm':
+      '@video/llm':
         specifier: workspace:*
         version: link:../llm
-      '@vf/vdsl':
+      '@video/vdsl':
         specifier: workspace:*
         version: link:../vdsl
       yaml:
@@ -383,16 +383,16 @@ importers:
 
   packages/qa:
     dependencies:
-      '@vf/media':
+      '@video/media':
         specifier: workspace:*
         version: link:../media
-      '@vf/vdsl':
+      '@video/vdsl':
         specifier: workspace:*
         version: link:../vdsl
 
   packages/research:
     dependencies:
-      '@vf/llm':
+      '@video/llm':
         specifier: workspace:*
         version: link:../llm
       yaml:
@@ -404,10 +404,10 @@ importers:
 
   packages/review:
     dependencies:
-      '@vf/llm':
+      '@video/llm':
         specifier: workspace:*
         version: link:../llm
-      '@vf/vdsl':
+      '@video/vdsl':
         specifier: workspace:*
         version: link:../vdsl
       yaml:
@@ -419,10 +419,10 @@ importers:
 
   packages/script:
     dependencies:
-      '@vf/llm':
+      '@video/llm':
         specifier: workspace:*
         version: link:../llm
-      '@vf/research':
+      '@video/research':
         specifier: workspace:*
         version: link:../research
       yaml:
@@ -440,7 +440,7 @@ importers:
 
   packages/vdsl:
     dependencies:
-      '@vf/media':
+      '@video/media':
         specifier: workspace:*
         version: link:../media
       yaml:
@@ -483,13 +483,13 @@ importers:
       '@remotion/renderer':
         specifier: ^4.0.0
         version: 4.0.526(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
-      '@vf/media':
+      '@video/media':
         specifier: workspace:*
         version: link:../media
-      '@vf/vdsl':
+      '@video/vdsl':
         specifier: workspace:*
         version: link:../vdsl
-      '@vf/video-components':
+      '@video/video-components':
         specifier: workspace:*
         version: link:../video-components
       react:
@@ -514,7 +514,7 @@ importers:
 
   packages/youtube:
     dependencies:
-      '@vf/llm':
+      '@video/llm':
         specifier: workspace:*
         version: link:../llm
       yaml:

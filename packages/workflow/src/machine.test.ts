@@ -194,12 +194,12 @@ describe("invalidation (todo 11) — §18.2", () => {
 
 describe("project state + checkpoints (todo 11)", () => {
   it("readProjectState returns null when no state.yaml exists", async () => {
-    const dir = mkdtempSync(path.join(tmpdir(), "vf-wf-"));
+    const dir = mkdtempSync(path.join(tmpdir(), "video-wf-"));
     expect(await loadCheckpoint(dir, "storyboard")).toBeNull();
   });
 
   it("writeProjectState round-trips and appendCheckpoint merges records", async () => {
-    const dir = mkdtempSync(path.join(tmpdir(), "vf-wf-"));
+    const dir = mkdtempSync(path.join(tmpdir(), "video-wf-"));
     const state = initState("demo");
     await writeProjectState(dir, state);
     const reloaded = await loadCheckpoint(dir, "init").catch(() => null);

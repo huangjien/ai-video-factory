@@ -1,4 +1,4 @@
-import type { ChatMessage } from "@vf/llm";
+import type { ChatMessage } from "@video/llm";
 import type { WebSearchResult } from "./schemas.js";
 
 export interface ResearchInput {

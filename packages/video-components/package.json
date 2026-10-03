@@ -1,5 +1,5 @@
 {
-  "name": "@vf/video-components",
+  "name": "@video/video-components",
   "version": "0.1.0",
   "files": [
     "dist"

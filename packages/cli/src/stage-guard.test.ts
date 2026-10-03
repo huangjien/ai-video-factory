@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
   appendCheckpoint,
   writeProjectState,
-} from "@vf/workflow";
+} from "@video/workflow";
 import { runNew } from "./new-command.js";
 import { assertStageWritable } from "./stage-guard.js";
 
@@ -15,7 +15,7 @@ describe("assertStageWritable — human-approval guard (doc §58)", () => {
   let slug: string;
 
   beforeEach(async () => {
-    cwd = mkdtempSync(path.join(tmpdir(), "vf-stage-guard-"));
+    cwd = mkdtempSync(path.join(tmpdir(), "video-stage-guard-"));
     slug = path.basename(cwd).toLowerCase();
     await runNew({ projectId: slug, cwd });
     projectDir = path.join(cwd, "projects", slug);

@@ -14,24 +14,24 @@ import {
 import { promisify } from "node:util";
 import os from "node:os";
 import path from "node:path";
-import { parseArticleWithRecovery, articleToStoryboardYaml, expandScenePrompt, type ParsedArticle } from "@vf/draft";
-import { MiniMaxProvider } from "@vf/llm";
+import { parseArticleWithRecovery, articleToStoryboardYaml, expandScenePrompt, type ParsedArticle } from "@video/draft";
+import { MiniMaxProvider } from "@video/llm";
 import { parse as parseYaml, stringify as yamlStringify } from "yaml";
 import {
   FakeTTSProvider,
   EdgeTTSProvider,
   type TTSProvider,
-} from "@vf/tts";
-import { readSceneTimings, syncSceneDurations } from "@vf/media";
+} from "@video/tts";
+import { readSceneTimings, syncSceneDurations } from "@video/media";
 import {
   FileBasedAudioAssetProvider,
   MockAudioAssetProvider,
-} from "@vf/audio-assets";
+} from "@video/audio-assets";
 import {
   MiniMaxImageProvider,
   MockImageProvider,
   type ImageProvider,
-} from "@vf/media-generators";
+} from "@video/media-generators";
 
 const execFileAsync = promisify(execFile);
 
@@ -454,10 +454,10 @@ interface AudioConfigShape {
 
 /**
  * Probe each scene's TTS WAV and rewrite storyboard.yaml so `duration:`
- * matches actual audio length. Now lives in @vf/media (shared with
- * `vf preview`, which must sync before validating audio-vs-scene).
+ * matches actual audio length. Now lives in @video/media (shared with
+ * `video preview`, which must sync before validating audio-vs-scene).
  */
-export { syncSceneDurations as syncStoryboardDurations } from "@vf/media";
+export { syncSceneDurations as syncStoryboardDurations } from "@video/media";
 
 /** SRT from the duration-synced storyboard: cue boundaries accumulate the
  * MEASURED scene durations, so captions stay aligned when TTS runs longer
@@ -510,7 +510,7 @@ async function runTts(
         ? { pauseBetweenSentencesSec: audioConfig.pause_between_sentences_sec }
         : {}),
     });
-    // Same WAV/MP3 detection as @vf/cli runAudio.
+    // Same WAV/MP3 detection as @video/cli runAudio.
     const isWav =
       result.audio.length >= 12 &&
       result.audio[0] === 0x52 &&
@@ -610,7 +610,7 @@ async function runRenderPreview(
     ],
     { cwd: workspaceRoot },
   );
-  // Mirror what `vf preview` actually writes.
+  // Mirror what `video preview` actually writes.
   return ["output/preview.mp4", "output/preview-faststart.mp4"];
 }
 
@@ -620,7 +620,7 @@ async function runMix(
 ): Promise<string[]> {
   const slug = path.basename(projectRoot);
   const workspaceRoot = path.dirname(path.dirname(projectRoot));
-  // Translate audio-config.yaml → vf mix CLI flags rather than
+  // Translate audio-config.yaml → video mix CLI flags rather than
   // duplicating the existing pipeline.
   const mixArgs: string[] = [
     "node",
@@ -639,7 +639,7 @@ async function runMix(
     mixArgs.push("--bgm-fade-out", String(config.bgm_fade_out_sec));
   }
   await runCli(mixArgs, { cwd: workspaceRoot });
-  // Mirror what `vf mix` actually writes.
+  // Mirror what `video mix` actually writes.
   return ["output/final-mixed.mp4"];
 }
 
@@ -687,7 +687,7 @@ function slugify(s: string): string {
   );
 }
 
-/** Same mp3ToWav helper as @vf/cli runAudio — kept local to avoid a
+/** Same mp3ToWav helper as @video/cli runAudio — kept local to avoid a
  * circular import from the CLI package. */
 /** Convert mp3 bytes (from TTS) to 44.1kHz mono WAV, padding to
  * `minDurationSec` total when the narration is shorter. Never truncates:
@@ -700,7 +700,7 @@ async function mp3ToWav(
   minDurationSec: number,
 ): Promise<Uint8Array> {
   const dir = await (await import("node:fs/promises")).mkdtemp(
-    path.join(os.tmpdir(), "vf-make-tts-"),
+    path.join(os.tmpdir(), "video-make-tts-"),
   );
   try {
     const inPath = path.join(dir, "in.mp3");

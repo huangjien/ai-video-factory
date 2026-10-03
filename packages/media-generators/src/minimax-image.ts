@@ -1,4 +1,4 @@
-import { withRetry } from "@vf/llm";
+import { withRetry } from "@video/llm";
 import {
   ImageGenerationError,
   type ImageProvider,
@@ -46,7 +46,7 @@ function closestAspectRatio(width: number, height: number): string {
 /** MiniMax image generation (platform.minimax.io context7-verified).
  * POST `${apiHost}/v1/image_generation` with `{model, prompt, aspect_ratio,
  * response_format: "base64"}`. Bearer `MINIMAX_API_KEY`. Response carries
- * base64-encoded JPEGs in `data.image_base64[]`. Bounded retry via @vf/llm
+ * base64-encoded JPEGs in `data.image_base64[]`. Bounded retry via @video/llm
  * (no 4xx retry). Credentials never persisted or logged. */
 export class MiniMaxImageProvider implements ImageProvider {
   readonly name = "minimax-image";

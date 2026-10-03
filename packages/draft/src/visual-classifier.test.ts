@@ -64,12 +64,12 @@ describe("pickVisualComponent (T2 visual variety)", () => {
     );
   });
 
-  it("matches list keywords to DoodleScene (hand-drawn family)", () => {
+  it("matches list keywords to Checklist (DoodleScene is never auto-selected)", () => {
     expect(
       pickVisualComponent("a list of key bullet points", false).component,
-    ).toBe("DoodleScene");
+    ).toBe("Checklist");
     expect(pickVisualComponent("列表 要点 提纲", false).component).toBe(
-      "DoodleScene",
+      "Checklist",
     );
   });
 
@@ -121,7 +121,7 @@ describe("pickVisualComponent (T2 visual variety)", () => {
     );
   });
 
-  it("matches checklist keywords to Checklist (before generic list→DoodleScene)", () => {
+  it("matches checklist keywords to Checklist", () => {
     expect(pickVisualComponent("a pre-flight checklist", false).component).toBe(
       "Checklist",
     );
@@ -157,10 +157,10 @@ describe("pickVisualComponent (T2 visual variety)", () => {
     );
   });
 
-  it("list keywords still go to DoodleScene (generic list beats nothing new)", () => {
+  it("list keywords never select DoodleScene (retired from auto-selection)", () => {
     expect(
       pickVisualComponent("a list of key bullet points", false).component,
-    ).toBe("DoodleScene");
+    ).not.toBe("DoodleScene");
   });
 
   it("falls through to AnimatedIllustration on no match", () => {

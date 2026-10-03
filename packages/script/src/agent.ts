@@ -1,5 +1,5 @@
-import type { ChatMessage, Provider } from "@vf/llm";
-import { chatWithFallback } from "@vf/llm";
+import type { ChatMessage, Provider } from "@video/llm";
+import { chatWithFallback } from "@video/llm";
 import { parse as parseYaml } from "yaml";
 import { buildScriptMessages, type ScriptInput } from "./prompt.js";
 import { ScriptSchema, type Script } from "./schemas.js";

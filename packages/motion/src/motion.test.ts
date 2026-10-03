@@ -109,7 +109,7 @@ describe("IartSkillAdapter — skills present vs absent (AD-5 fallback)", () => 
   let root: string;
 
   beforeEach(() => {
-    root = mkdtempSync(path.join(tmpdir(), "vf-motion-"));
+    root = mkdtempSync(path.join(tmpdir(), "video-motion-"));
   });
 
   afterEach(() => {

@@ -224,10 +224,10 @@ export function svgSpecToAnimatedSvg(spec: ExcalidrawSpec, opts: { durationSec?:
   );
   parts.push(
     `<style>
-.doodle-path{stroke-dasharray:1;stroke-dashoffset:1;animation:vf-draw ${duration}s ease-in-out forwards;}
-.doodle-fill{opacity:0;animation:vf-fill ${step}s ease-out forwards;}
-@keyframes vf-draw{to{stroke-dashoffset:0;}}
-@keyframes vf-fill{to{opacity:1;}}
+.doodle-path{stroke-dasharray:1;stroke-dashoffset:1;animation:video-draw ${duration}s ease-in-out forwards;}
+.doodle-fill{opacity:0;animation:video-fill ${step}s ease-out forwards;}
+@keyframes video-draw{to{stroke-dashoffset:0;}}
+@keyframes video-fill{to{opacity:1;}}
 </style>`,
   );
   if (spec.title) {

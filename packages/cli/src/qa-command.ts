@@ -1,6 +1,6 @@
 import { existsSync } from "node:fs";
 import path from "node:path";
-import { writeQaArtifacts } from "@vf/qa";
+import { writeQaArtifacts } from "@video/qa";
 import { resolveProjectDir, resolveProjectRoot } from "./project-path.js";
 import { loadOrCompileStoryboard } from "./render-command.js";
 
@@ -35,7 +35,7 @@ export async function runQa(opts: QaOptions): Promise<number> {
   const video = path.join(root, "output", "preview.mp4");
   if (!existsSync(video)) {
     console.error(
-      `qa: no preview at ${video} — run \`vf preview\` first (QA reports always analyze a real render)`,
+      `qa: no preview at ${video} — run \`video preview\` first (QA reports always analyze a real render)`,
     );
     return 1;
   }

@@ -15,21 +15,21 @@ import {
   writeRun,
   type Stage,
   type WorkflowStatus,
-} from "@vf/workflow";
+} from "@video/workflow";
 import {
   compileStoryboard,
   validateProject,
   type CompileOptions,
   type RenderPlan,
-} from "@vf/vdsl";
-import { syncSceneDurations } from "@vf/media";
-import { REGISTRY } from "@vf/video-components";
+} from "@video/vdsl";
+import { syncSceneDurations } from "@video/media";
+import { REGISTRY } from "@video/video-components";
 import {
   concatScenes,
   faststart,
   renderPlanToVideo,
   renderSceneToVideo,
-} from "@vf/video-renderer";
+} from "@video/video-renderer";
 import { runValidate } from "./validate-command.js";
 
 const STORYBOARD_REL = "storyboard/storyboard.yaml";
@@ -216,13 +216,13 @@ export async function runPreview(
   const state = await readProjectState(root);
   if (!state) {
     console.error(
-      `preview: no project state at ${root}/state.yaml — run \`vf new\` first`,
+      `preview: no project state at ${root}/state.yaml — run \`video new\` first`,
     );
     return 1;
   }
   if (state.status === "FINAL_APPROVED") {
     console.error(
-      `preview: project is FINAL_APPROVED (terminal) — run \`vf reset --force\` to rework it`,
+      `preview: project is FINAL_APPROVED (terminal) — run \`video reset --force\` to rework it`,
     );
     return 1;
   }
@@ -231,8 +231,8 @@ export async function runPreview(
     console.error(
       `preview: storyboard is not approved yet — read ${path.join(root, "storyboard", "storyboard.yaml")} (make flow: article.md), then run:`,
     );
-    console.error(`  vf approve storyboard --cwd ${path.dirname(root)}`);
-    console.error(`or skip the gate with: vf preview --force`);
+    console.error(`  video approve storyboard --cwd ${path.dirname(root)}`);
+    console.error(`or skip the gate with: video preview --force`);
     return 1;
   }
   if (force && storyboardCp?.status !== "approved") {
@@ -304,7 +304,7 @@ export async function runPreview(
   // every preview. Findings are surfaced, not fatal — the export gate
   // that hard-fails on QA errors lands in T6.2.
   try {
-    const { writeQaArtifacts } = await import("@vf/qa");
+    const { writeQaArtifacts } = await import("@video/qa");
     const report = await writeQaArtifacts(root, renderPlan, out);
     const errors = report.findings.filter((f) => f.level === "error");
     const warns = report.findings.filter((f) => f.level === "warn");
@@ -365,7 +365,7 @@ export interface FinalOptions {
    * `${cwd ?? "."}/projects/<slug>`. Mutually convenient with the project
    * positional arg on the CLI; cwd overrides it when both are present. */
   projectName?: string;
-  /** When true, after rendering the bare mp4, run `vf mix` to replace
+  /** When true, after rendering the bare mp4, run `video mix` to replace
    * `output/final-mixed.mp4` as the published artifact (narrration + BGM + SFX
    * cues per audio-assets/mix.yaml). */
   mix?: boolean;
@@ -407,12 +407,12 @@ export async function runFinal(
   ].find((p) => existsSync(p));
   if (!qaVideo && !force) {
     console.error(
-      `final: no preview artifact to QA — run \`vf preview\` first (or --force to render un-QA'd)`,
+      `final: no preview artifact to QA — run \`video preview\` first (or --force to render un-QA'd)`,
     );
     return 1;
   }
   if (qaVideo) {
-    const { writeQaArtifacts } = await import("@vf/qa");
+    const { writeQaArtifacts } = await import("@video/qa");
     const report = await writeQaArtifacts(root, renderPlan, qaVideo);
     const errors = report.findings.filter((f) => f.level === "error");
     if (!report.ok) {
@@ -437,7 +437,7 @@ export async function runFinal(
         error: `qa-gate: ${errors.length} error-level finding(s) — see qa/render-report.json`,
       });
       console.error(
-        `final: blocked by the QA gate (${errors.length} error(s)) — fix and re-run, or \`vf final --force\` to override`,
+        `final: blocked by the QA gate (${errors.length} error(s)) — fix and re-run, or \`video final --force\` to override`,
       );
       return 1;
     }
@@ -454,7 +454,7 @@ export async function runFinal(
   // Refresh QA artifacts against the shipped final (non-blocking — the
   // gate already ran pre-render).
   try {
-    const { writeQaArtifacts: writeFinalQa } = await import("@vf/qa");
+    const { writeQaArtifacts: writeFinalQa } = await import("@video/qa");
     await writeFinalQa(root, renderPlan, out);
   } catch (err) {
     console.error(`  QA refresh failed (final is still valid): ${(err as Error).message}`);

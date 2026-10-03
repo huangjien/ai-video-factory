@@ -5,10 +5,10 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { runNew } from "./new-command.js";
 import { runApprove } from "./workflow-commands.js";
 import { runMotion } from "./motion-command.js";
-import { listSceneVersions } from "@vf/workflow";
+import { listSceneVersions } from "@video/workflow";
 
 /**
- * vf motion integration (T4.2) — exercises the CLI wiring with the
+ * video motion integration (T4.2) — exercises the CLI wiring with the
  * deterministic baseline (no network). The LLM path itself is covered by
  * packages/motion/src/agent.test.ts with fake providers.
  */
@@ -41,13 +41,13 @@ scenes:
         steps: ["a", "b"]
 `;
 
-describe("vf motion (T4.2)", () => {
+describe("video motion (T4.2)", () => {
   let cwd: string;
   let projectDir: string;
   let projectName: string;
 
   beforeEach(async () => {
-    cwd = mkdtempSync(path.join(tmpdir(), "vf-motion-cmd-"));
+    cwd = mkdtempSync(path.join(tmpdir(), "video-motion-cmd-"));
     const slug = "motion-demo";
     await runNew({ projectId: slug, cwd });
     projectDir = path.join(cwd, "projects", slug);

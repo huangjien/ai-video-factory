@@ -5,8 +5,8 @@ import { execFile, execSync } from "node:child_process";
 import { promisify } from "node:util";
 import path from "node:path";
 import { resolveProjectDir } from "./project-path.js";
-import { mixTracks, mixTracksWithSpec, parseMixYaml } from "@vf/audio-mix";
-import { formatRunId } from "@vf/workflow";
+import { mixTracks, mixTracksWithSpec, parseMixYaml } from "@video/audio-mix";
+import { formatRunId } from "@video/workflow";
 
 const execFileAsync = promisify(execFile);
 
@@ -33,7 +33,7 @@ function pickBgm(projectRoot: string, explicit?: string): string {
   const bgmDir = path.join(projectRoot, "assets", "audio-assets", "bgm");
   if (!existsSync(bgmDir)) {
     throw new Error(
-      `no BGM found: pass --bgm <path> or run \`vf audio-asset --bgm <tag>\` first`,
+      `no BGM found: pass --bgm <path> or run \`video audio-asset --bgm <tag>\` first`,
     );
   }
   const candidates = readdirSync(bgmDir)
@@ -50,7 +50,7 @@ function pickNarrations(projectRoot: string): string[] {
   const audioDir = path.join(projectRoot, "assets", "audio");
   if (!existsSync(audioDir)) {
     throw new Error(
-      `no narration audio in ${audioDir} — run \`vf audio <project>\` first`,
+      `no narration audio in ${audioDir} — run \`video audio <project>\` first`,
     );
   }
   const files = readdirSync(audioDir)
@@ -82,7 +82,7 @@ function resolveSfxCues(
       const tagFile = path.join(sfxDir, `${tag}.wav`);
       if (!existsSync(tagFile)) {
         throw new Error(
-          `SFX cue "${tag}" for ${sceneKey} not found at ${tagFile} — run \`vf audio-asset --sfx ${tag}\` first`,
+          `SFX cue "${tag}" for ${sceneKey} not found at ${tagFile} — run \`video audio-asset --sfx ${tag}\` first`,
         );
       }
       cues.push({ atSec: cumulative, path: tagFile });
@@ -264,7 +264,7 @@ export async function runMix(opts: MixOptions): Promise<number> {
     tokens: { input: 0, output: 0 },
     estimated_cost_usd: 0,
   };
-  const { writeRun } = await import("@vf/workflow");
+  const { writeRun } = await import("@video/workflow");
   await writeRun(projectRoot, record);
 
   console.log(`\u2713 mixed ${opts.project}/output/final-mixed.mp4`);

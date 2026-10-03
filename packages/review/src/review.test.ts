@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { parse as parseYaml } from "yaml";
-import type { ChatMessage, ChatResponse, Provider } from "@vf/llm";
+import type { ChatMessage, ChatResponse, Provider } from "@video/llm";
 import { ReviewPackageSchema, callReview, ReviewError } from "./index.js";
 
 class CannedProvider implements Provider {

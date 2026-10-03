@@ -1,8 +1,8 @@
 import { existsSync, readdirSync } from "node:fs";
 import path from "node:path";
 
-/** Canonical slugify for a project directory name — used by `vf new`,
- * `vf research`, `vf script`, and `vf storyboard` so the same topic always
+/** Canonical slugify for a project directory name — used by `video new`,
+ * `video research`, `video script`, and `video storyboard` so the same topic always
  * lands at the same directory regardless of which verb ran first.
  *
  * Rules: lowercase; any non-[a-z0-9 CJK] sequence collapses to a single
@@ -109,7 +109,7 @@ export function resolveProjectDir(
   }
   return {
     ok: false,
-    message: `no project matching "${trimmed}" under ${projectsDir} — run \`vf new <topic>\` first`,
+    message: `no project matching "${trimmed}" under ${projectsDir} — run \`video new <topic>\` first`,
   };
 }
 
@@ -121,7 +121,7 @@ export function resolveProjectDir(
  *   2. auto-discovery: exactly one project under `${cwd}/projects/` → use it
  *   3. multiple matches → error listing them; zero → error with next-step hint
  *
- * This lets `vf preview` / `vf final` / `vf status` / workflow verbs run from
+ * This lets `video preview` / `video final` / `video status` / workflow verbs run from
  * the repo root without passing `--cwd projects/<slug>` every time.
  */
 export function resolveProjectRoot(cwd?: string): ResolvedProject {
@@ -146,6 +146,6 @@ export function resolveProjectRoot(cwd?: string): ResolvedProject {
   }
   return {
     ok: false,
-    message: `no project at ${base} (expected storyboard/storyboard.yaml or state.yaml) — pass --cwd projects/<name>, or run \`vf new <topic>\` first`,
+    message: `no project at ${base} (expected storyboard/storyboard.yaml or state.yaml) — pass --cwd projects/<name>, or run \`video new <topic>\` first`,
   };
 }

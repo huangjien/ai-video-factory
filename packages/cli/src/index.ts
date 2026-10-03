@@ -37,22 +37,23 @@ import { runRetrospect } from "./retrospect-command.js";
 
 const program = new Command();
 
-program.name("vf").description("AI Video Factory CLI (v0.1)").version("0.1.0");
+program.name("video").description("AI Video Factory CLI (v0.1)").version("0.1.0");
 
 /** v0.4 (T9): minimal-API banner shown above the verb list. Text is
  *  kept in sync with README.md "Commands" section. */
-const BANNER = `v v f   A I   V I D E O   F A C T O R Y   (v0.4)
+const BANNER = `A I   V I D E O   F A C T O R Y   (v0.4)
 ─────────────────────────────────────────────────
 Quick start — four commands after install:
 
-  vf new <topic>             scaffold projects/<topic>/
-  vf draft <topic>           write article.md + audio-config.yaml
-                               (--no-web, --style, --no-captions, --file)
-  vf approve storyboard      human gate (one of the two checkpoints)
-  vf make <topic>            render → projects/<topic>/output/
+  video new <topic>             scaffold projects/<topic>/
+  video draft <topic>           write article.md + audio-config.yaml
+                               (--no-web, --style, --no-captions, --file,
+                                --no-review, --min-score, --max-attempts)
+  video approve storyboard      human gate (one of the two checkpoints)
+  video make <topic>            render → projects/<topic>/output/
 
   Edit article.md and audio-config.yaml between draft and make.
-  Run \`vf status <topic>\` any time to see where you are.
+  Run \`video status <topic>\` any time to see where you are.
 
 Advanced verbs (research, storyboard, motion, audio, audio-plan, mix,
 thumbnail, shorts, youtube, qa, review, validate, scene …) are wired
@@ -205,6 +206,20 @@ program
     "--no-captions",
     "v0.4: skip the caption overlay (no captions: block in the generated storyboard)",
   )
+  .option(
+    "--no-review",
+    "skip the article quality gate (default: judge rates attractive/interesting/useful, drafts below 25/30 are regenerated)",
+  )
+  .option(
+    "--min-score <n>",
+    "article quality bar of 30 (default: 25)",
+    (v) => parseInt(v, 10),
+  )
+  .option(
+    "--max-attempts <n>",
+    "total draft attempts in the quality loop (default: 3)",
+    (v) => parseInt(v, 10),
+  )
   .action(
     async (
       topic: string,
@@ -220,6 +235,9 @@ program
         audioPlan?: boolean;
         style?: string;
         captions?: boolean;
+        review?: boolean;
+        minScore?: number;
+        maxAttempts?: number;
       },
     ) => {
       process.exitCode = await runDraft({
@@ -235,6 +253,11 @@ program
         noAudioPlan: opts.audioPlan === false,
         ...(opts.style !== undefined ? { style: opts.style } : {}),
         noCaptions: opts.captions === false,
+        noReview: opts.review === false,
+        ...(opts.minScore !== undefined ? { minScore: opts.minScore } : {}),
+        ...(opts.maxAttempts !== undefined
+          ? { maxAttempts: opts.maxAttempts }
+          : {}),
       });
     },
   );
@@ -734,14 +757,14 @@ program
       reason: string | undefined,
       opts: { cwd?: string },
     ) => {
-      // One-argument form: `vf reject wrong-content` — the arg is the
+      // One-argument form: `video reject wrong-content` — the arg is the
       // reason, the project auto-discovers (documented usage).
       if (reason === undefined && project !== undefined) {
         reason = project;
         project = undefined;
       }
       if (reason === undefined) {
-        console.error("reject: missing reason (e.g. vf reject wrong-content)");
+        console.error("reject: missing reason (e.g. video reject wrong-content)");
         process.exitCode = 1;
         return;
       }
@@ -760,7 +783,7 @@ program
       id: string | undefined,
       opts: { cwd?: string },
     ) => {
-      // One-argument form: `vf rollback <checkpoint-id>` — auto-discovers
+      // One-argument form: `video rollback <checkpoint-id>` — auto-discovers
       // the project (documented usage; optional-before-required would
       // otherwise make this form unparsable).
       if (id === undefined && project !== undefined) {
@@ -768,7 +791,7 @@ program
         project = undefined;
       }
       if (id === undefined) {
-        console.error("rollback: missing checkpoint-id (vf rollback <id>)");
+        console.error("rollback: missing checkpoint-id (video rollback <id>)");
         process.exitCode = 1;
         return;
       }
@@ -953,7 +976,7 @@ program
   .option("--cwd <dir>", "project root")
   .option(
     "--mix",
-    "after rendering, run vf mix to produce final-mixed.mp4 with narration + BGM + SFX cues",
+    "after rendering, run video mix to produce final-mixed.mp4 with narration + BGM + SFX cues",
   )
   .option(
     "--force",
@@ -973,7 +996,7 @@ program
     },
   );
 
-// v0.4 (T10): `vf retrospect` — read last few runs + latest QA, ask the
+// v0.4 (T10): `video retrospect` — read last few runs + latest QA, ask the
 // LLM for 3 concrete edits to article.md. Output: projects/<slug>/retrospect.md.
 program
   .command("retrospect")

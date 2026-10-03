@@ -7,9 +7,9 @@ import {
   loadProviderConfig,
   providerForRole,
   type Provider,
-} from "@vf/llm";
-import { parseArticle, parseArticleWithRecovery } from "@vf/draft";
-import { callAudioPlan } from "@vf/audio-plan";
+} from "@video/llm";
+import { parseArticle, parseArticleWithRecovery } from "@video/draft";
+import { callAudioPlan } from "@video/audio-plan";
 import { resolveProjectDir } from "./project-path.js";
 
 export interface AudioPlanOptions {
@@ -41,7 +41,7 @@ export async function runAudioPlan(opts: AudioPlanOptions): Promise<number> {
   }
   if (!existsSync(articlePath)) {
     console.error(`article.md not found at ${articlePath}`);
-    console.error(`hint: run \`vf draft <topic>\` first`);
+    console.error(`hint: run \`video draft <topic>\` first`);
     return 1;
   }
 
@@ -61,7 +61,7 @@ export async function runAudioPlan(opts: AudioPlanOptions): Promise<number> {
       if (parsed.recoveredCount > 0) {
         console.error(`! article.md had ${parsed.recoveredCount} empty scene narrations`);
         console.error(`  (the LLM put all content in ## section bodies — recovered from them)`);
-        console.error(`  next: re-run \`vf draft --from ${articlePath}\` to regenerate cleanly,`);
+        console.error(`  next: re-run \`video draft --from ${articlePath}\` to regenerate cleanly,`);
         console.error(`        or hand-edit each scene's narration in article.md.`);
       }
     } catch (err) {
@@ -109,7 +109,7 @@ export async function runAudioPlan(opts: AudioPlanOptions): Promise<number> {
     `  model=${opts.model ?? "glm"}  tokens=${usage.input}+${usage.output}`,
   );
   console.log(
-    `  next: edit audio-config.yaml (set bgm, sfx, fades), then \`vf make ${opts.project}\``,
+    `  next: edit audio-config.yaml (set bgm, sfx, fades), then \`video make ${opts.project}\``,
   );
   return 0;
 }

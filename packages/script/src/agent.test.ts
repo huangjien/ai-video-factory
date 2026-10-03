@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { ChatMessage, ChatResponse, Provider } from "@vf/llm";
+import type { ChatMessage, ChatResponse, Provider } from "@video/llm";
 import { callScript, ScriptError } from "./agent.js";
 
 class CannedProvider implements Provider {

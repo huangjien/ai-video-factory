@@ -1,5 +1,5 @@
 {
-  "name": "@vf/tts",
+  "name": "@video/tts",
   "version": "0.1.0",
   "files": [
     "dist"

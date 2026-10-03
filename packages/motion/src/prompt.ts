@@ -1,4 +1,4 @@
-import type { ChatMessage } from "@vf/llm";
+import type { ChatMessage } from "@video/llm";
 import type { MotionSpec, SceneMotionInput } from "./plan.js";
 
 /** Skill names whose guidance feeds the prompt when installed (T0.2). */

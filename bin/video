@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# /video — thin wrapper around the vf CLI (doc §58 "Pi Extension").
+# /video — thin wrapper around the video CLI (doc §58 "Pi Extension").
 # Maps `video <verb> [args...]` to `node packages/cli/dist/index.js <verb> [args...]`.
 # Use from OpenCode/Pi agents, shell, or Makefile. Errors propagate via exit code.
 set -euo pipefail
@@ -15,7 +15,7 @@ Example:
   video research "AI 思维链"
   video script "AI 思维链" --from-research projects/ai-思维链/research
   video storyboard "AI 思维链" --from-research ...
-  vf_audio_short="audio"; video audio "AI 思维链"
+  video audio "AI 思维链"
   video review "AI 思维链"
   video preview --cwd projects/demo
   video status --cwd projects/demo
@@ -26,7 +26,7 @@ Combined shortcuts (run several stages in one shot):
   video draft "AI 思维链"          # research + script + storyboard + audio-plan
   video make  "AI 思维链"          # render the final 1080p MP4
 
-All arguments are forwarded to the `vf` CLI under the hood.
+All arguments are forwarded to the `video` CLI under the hood.
 USAGE
   exit 0
 fi

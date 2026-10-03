@@ -1,4 +1,4 @@
-import type { ChatMessage } from "@vf/llm";
+import type { ChatMessage } from "@video/llm";
 
 export interface AgentInput {
   topic: string;
@@ -85,7 +85,7 @@ export function buildMessages(input: AgentInput): ChatMessage[] {
   ];
   if (input.researchContext) {
     userParts.push(
-      "\n## Supporting research (from approved `vf research` output — supporting evidence, not a replacement for your draft)",
+      "\n## Supporting research (from approved `video research` output — supporting evidence, not a replacement for your draft)",
       input.researchContext.markdown.slice(0, 2000),
       "\n### Key claims to incorporate or counter",
       input.researchContext.claimSummary.slice(0, 1500),
@@ -93,7 +93,7 @@ export function buildMessages(input: AgentInput): ChatMessage[] {
   }
   if (input.scriptContext) {
     userParts.push(
-      "\n## Approved script (from `vf script` — map each scene to a section)",
+      "\n## Approved script (from `video script` — map each scene to a section)",
       input.scriptContext.markdown.slice(0, 3000),
     );
   }

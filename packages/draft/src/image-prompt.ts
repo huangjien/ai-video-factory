@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import path from "node:path";
-import type { ChatMessage, Provider } from "@vf/llm";
+import type { ChatMessage, Provider } from "@video/llm";
 
 /**
  * v0.4 (T3) — image-prompt expansion for the MiniMax image provider.

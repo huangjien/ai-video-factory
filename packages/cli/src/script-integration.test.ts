@@ -20,7 +20,7 @@ comparison: "Comparison line."
 implication: "Implication line."
 conclusion: "Conclusion line."`;
 
-describe("vf script end-to-end (todo 3) — mock MiniMax", () => {
+describe("video script end-to-end (todo 3) — mock MiniMax", () => {
   let server: Server;
   let baseUrl: string;
 
@@ -51,7 +51,7 @@ describe("vf script end-to-end (todo 3) — mock MiniMax", () => {
   });
 
   it("writes script.zh-CN.md with all 7 sections + run record", async () => {
-    const cwd = mkdtempSync(path.join(tmpdir(), "vf-sc-"));
+    const cwd = mkdtempSync(path.join(tmpdir(), "video-sc-"));
     process.env["MINIMAX_API_KEY"] = "test-key-do-not-leak";
     process.env["MINIMAX_API_HOST"] = baseUrl;
     const code = await runScript({ topic: "AI 思维链", cwd });
@@ -75,7 +75,7 @@ describe("vf script end-to-end (todo 3) — mock MiniMax", () => {
   });
 
   it("never writes the API key into projects/ or runs/", async () => {
-    const cwd = mkdtempSync(path.join(tmpdir(), "vf-sc-"));
+    const cwd = mkdtempSync(path.join(tmpdir(), "video-sc-"));
     process.env["MINIMAX_API_KEY"] = "test-key-do-not-leak";
     process.env["MINIMAX_API_HOST"] = baseUrl;
     await runScript({ topic: "leak-check", cwd });
@@ -88,7 +88,7 @@ describe("vf script end-to-end (todo 3) — mock MiniMax", () => {
   });
 
   it("uses script.en-US.md when --lang en-US is passed", async () => {
-    const cwd = mkdtempSync(path.join(tmpdir(), "vf-sc-"));
+    const cwd = mkdtempSync(path.join(tmpdir(), "video-sc-"));
     process.env["MINIMAX_API_KEY"] = "test-key-do-not-leak";
     process.env["MINIMAX_API_HOST"] = baseUrl;
     const code = await runScript({ topic: "CoT", cwd, lang: "en-US" });

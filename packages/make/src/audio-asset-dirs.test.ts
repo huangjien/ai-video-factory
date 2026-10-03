@@ -16,7 +16,7 @@ import { runAudioAssets } from "./index.js";
 const execFileAsync = promisify(execFile);
 
 /**
- * vf make --bgm-dir/--sfx-dir wire the FileBasedAudioAssetProvider into
+ * video make --bgm-dir/--sfx-dir wire the FileBasedAudioAssetProvider into
  * the pipeline so real audio from the user's library lands in
  * assets/audio-assets/. Without the flags the mock silent placeholder is
  * written. Guards the regression where BGM ducking mixed 1s of silence
@@ -35,7 +35,7 @@ describe("runAudioAssets with bgmDir/sfxDir", () => {
   };
 
   beforeAll(async () => {
-    dir = mkdtempSync(path.join(tmpdir(), "vf-audio-dirs-"));
+    dir = mkdtempSync(path.join(tmpdir(), "video-audio-dirs-"));
     projectRoot = path.join(dir, "projects", "fixture");
     bgmLib = path.join(dir, "bgm-lib");
     sfxLib = path.join(dir, "sfx-lib");

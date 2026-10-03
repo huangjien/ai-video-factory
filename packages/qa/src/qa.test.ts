@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
 import { afterEach, beforeAll, describe, expect, it } from "vitest";
-import type { RenderPlan } from "@vf/vdsl";
+import type { RenderPlan } from "@video/vdsl";
 import {
   buildRenderReport,
   detectBlackFrames,
@@ -67,12 +67,12 @@ function makePlan(totalFrames: number): RenderPlan {
   };
 }
 
-describe("@vf/qa render report (plan §28)", () => {
+describe("@video/qa render report (plan §28)", () => {
   let dir: string;
   let video: string;
 
   beforeAll(async () => {
-    dir = mkdtempSync(path.join(tmpdir(), "vf-qa-"));
+    dir = mkdtempSync(path.join(tmpdir(), "video-qa-"));
     video = path.join(dir, "fixture.mp4");
     await makeFixtureVideo(video);
   }, 60_000);

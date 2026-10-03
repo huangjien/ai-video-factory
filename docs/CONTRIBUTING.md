@@ -55,14 +55,14 @@ PR and push to `main`. See `.github/workflows/test.yml`.
 | `packages/review/`                        | Read-only Content/Visual/Technical review agent.                                |
 | `packages/youtube/`                       | YouTube publishing package (title/description/chapters.vtt/...).                |
 | `packages/workflow/`                      | 10-state machine + checkpoints + run records.                                   |
-| `packages/cli/`                           | The `vf` CLI (entry point + all `bin/video` verbs).                             |
+| `packages/cli/`                           | The `video` CLI (entry point + all `bin/video` verbs).                             |
 | `packages/cli/src/audio-command.ts`       | TTS per scene.                                                                  |
-| `packages/cli/src/audio-asset-command.ts` | `vf audio-asset` (BGM/SFX).                                                     |
-| `packages/cli/src/mix-command.ts`         | `vf mix` (read `audio-assets/mix.yaml`).                                        |
-| `packages/cli/src/render-command.ts`      | `vf preview` / `vf final` (Remotion render + mix chaining).                     |
-| `packages/cli/src/youtube-command.ts`     | `vf youtube` (title + description + chapters.vtt).                              |
-| `packages/cli/src/thumbnail-command.ts`   | `vf thumbnail` (mock + MiniMax image).                                          |
-| `packages/cli/src/shorts-command.ts`      | `vf shorts` (mock + MiniMax video).                                             |
+| `packages/cli/src/audio-asset-command.ts` | `video audio-asset` (BGM/SFX).                                                     |
+| `packages/cli/src/mix-command.ts`         | `video mix` (read `audio-assets/mix.yaml`).                                        |
+| `packages/cli/src/render-command.ts`      | `video preview` / `video final` (Remotion render + mix chaining).                     |
+| `packages/cli/src/youtube-command.ts`     | `video youtube` (title + description + chapters.vtt).                              |
+| `packages/cli/src/thumbnail-command.ts`   | `video thumbnail` (mock + MiniMax image).                                          |
+| `packages/cli/src/shorts-command.ts`      | `video shorts` (mock + MiniMax video).                                             |
 | `bin/video`                               | Shell wrapper: `video <verb> [args...]` → `node packages/cli/dist/index.js ...` |
 | `.opencode/command/video.md`              | Slash-command definition for OpenCode / Cursor / Claude Code.                   |
 | `projects/benchmark-v01/`                 | Canonical end-to-end project (39s zh-CN CoT explainer).                         |
@@ -112,10 +112,10 @@ The pattern is consistent across `v0.3`:
 
 1. **Create a new package** under `packages/<name>/`.
 2. **Add a zod schema** in `src/schemas.ts` with `.strict()` (rejects unknown fields).
-3. **Add a provider abstraction** if it talks to an external service — see `@vf/llm`, `@vf/media-generators`, `@vf/audio-assets` for the pattern.
+3. **Add a provider abstraction** if it talks to an external service — see `@video/llm`, `@video/media-generators`, `@video/audio-assets` for the pattern.
 4. **Add a CLI verb** in `packages/cli/src/<verb>-command.ts`.
 5. **Wire the verb** into `packages/cli/src/index.ts`.
-6. **Update run records** to include provider/model/tokens fields (per the schema in `@vf/workflow`).
+6. **Update run records** to include provider/model/tokens fields (per the schema in `@video/workflow`).
 7. **Write docs**: README section + ARCHITECTURE entry.
 8. **Add a release tag** when the phase ships.
 

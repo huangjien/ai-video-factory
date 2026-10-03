@@ -19,7 +19,7 @@ describe("Todo 7 — theme tokens", () => {
     expect(ratio).toBeGreaterThan(7);
   });
 
-  it("registry exports the 15 components (14 + DoodleScene from T4.4)", () => {
+  it("registry exports the 24 components (15 v0.2 + 9 v0.4.2 visual family)", () => {
     expect(COMPONENT_NAMES.sort()).toEqual(
       [
         "AnimatedIllustration",
@@ -37,6 +37,15 @@ describe("Todo 7 — theme tokens", () => {
         "Terminal",
         "Timeline",
         "Title",
+        "QuoteBlock",
+        "StatGrid",
+        "BarChart",
+        "Leaderboard",
+        "Checklist",
+        "BigIdea",
+        "PyramidDiagram",
+        "VennDiagram",
+        "CycleDiagram",
       ].sort(),
     );
   });

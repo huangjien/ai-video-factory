@@ -1,9 +1,10 @@
 import type { FC } from "react";
 import { AbsoluteFill } from "remotion";
 import { entrance, fadeOut, typewriter } from "../animations.js";
-import { darkTechTheme } from "../theme.js";
+import { darkTechTheme, type Theme } from "../theme.js";
 
 export interface ParagraphProps {
+  theme?: Theme;
   text: string;
   align?: "left" | "center";
   startFrame: number;
@@ -12,6 +13,7 @@ export interface ParagraphProps {
 }
 
 export const Paragraph: FC<ParagraphProps> = ({
+  theme = darkTechTheme,
   text,
   align = "center",
   startFrame,
@@ -26,7 +28,7 @@ export const Paragraph: FC<ParagraphProps> = ({
   return (
     <AbsoluteFill
       style={{
-        backgroundColor: darkTechTheme.colors.background,
+        backgroundColor: theme.colors.background,
         justifyContent: "center",
         alignItems: align === "left" ? "flex-start" : "center",
         padding: "10%",
@@ -41,9 +43,9 @@ export const Paragraph: FC<ParagraphProps> = ({
       >
         <p
           style={{
-            color: darkTechTheme.colors.primary,
-            fontFamily: darkTechTheme.typography.body.fontFamily,
-            fontSize: darkTechTheme.typography.body.fontSize,
+            color: theme.colors.primary,
+            fontFamily: theme.typography.body.fontFamily,
+            fontSize: theme.typography.body.fontSize,
             lineHeight: 1.6,
             textAlign: align,
             margin: 0,
@@ -54,7 +56,7 @@ export const Paragraph: FC<ParagraphProps> = ({
             <span
               style={{
                 opacity: 0.6 + 0.4 * Math.sin(frame * 0.3),
-                color: darkTechTheme.colors.accent,
+                color: theme.colors.accent,
               }}
             >
               ▍

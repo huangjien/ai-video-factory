@@ -85,7 +85,7 @@ it). Current pairings:
 
 | renderer | component(s) | look |
 |---|---|---|
-| `remotion` | Title, Paragraph, CodeBlock, Terminal, FlowChart, Comparison, Timeline, Callout, EndCard, Character, Image, ImageBackground, AnimatedIllustration | classic motion graphics on the theme background |
+| `remotion` | Title, Paragraph, CodeBlock, Terminal, FlowChart, Comparison, Timeline, Callout, EndCard, Character, Image, ImageBackground, AnimatedIllustration + v0.4.2: QuoteBlock, StatGrid (count-up), BarChart, Leaderboard, Checklist, BigIdea, PyramidDiagram, VennDiagram, CycleDiagram | classic motion graphics on the theme background |
 | `svg` | `SvgScene` | whiteboard/diagram: `nodes` + labeled `edges` that DRAW ON (stroke draw-on), a target-driven camera, automatic stagger |
 | `canvas` | `DoodleScene` | hand-drawn ink: procedural strokes (circle / star / zigzag / spiral) with seeded wobble, sequential pen-draw, optional `bpm` beat-sync, `background: paper \| dark` |
 | `excalidraw` | — | asset generation only (`vf excalidraw` → `.excalidraw` + animated `.svg`); not a render path |

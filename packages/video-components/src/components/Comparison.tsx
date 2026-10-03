@@ -1,10 +1,11 @@
 import type { FC } from "react";
 import { AbsoluteFill } from "remotion";
 import { slide } from "../animations.js";
-import { darkTechTheme } from "../theme.js";
+import { darkTechTheme, type Theme } from "../theme.js";
 import { progressFor, type TimelineAnim } from "./timelineTiming.js";
 
 export interface ComparisonProps {
+  theme?: Theme;
   left: { title: string; items: string[] };
   right: { title: string; items: string[] };
   /** v0.4.1 — scene-level timeline animations. Card slides and per-
@@ -25,7 +26,7 @@ const Card: FC<{
   opacity: number;
   /** Per-item progress 0..1; items with progress=0 are hidden. */
   itemProgress?: number[];
-}> = ({ title, items, x, slideTranslate, opacity, itemProgress }) => (
+}> = ({ title, items, x, slideTranslate, opacity, itemProgress }, theme = darkTechTheme ) => (
   <div
     style={{
       position: "absolute",
@@ -34,17 +35,17 @@ const Card: FC<{
       width: 700,
       transform: `translateX(${slideTranslate}px)`,
       opacity,
-      backgroundColor: darkTechTheme.colors.surface,
-      border: `2px solid ${darkTechTheme.colors.accent}`,
+      backgroundColor: theme.colors.surface,
+      border: `2px solid ${theme.colors.accent}`,
       borderRadius: 16,
       padding: 32,
     }}
   >
     <h3
       style={{
-        color: darkTechTheme.colors.primary,
-        fontFamily: darkTechTheme.typography.subtitle.fontFamily,
-        fontSize: darkTechTheme.typography.subtitle.fontSize,
+        color: theme.colors.primary,
+        fontFamily: theme.typography.subtitle.fontFamily,
+        fontSize: theme.typography.subtitle.fontSize,
         margin: 0,
       }}
     >
@@ -52,7 +53,7 @@ const Card: FC<{
     </h3>
     <ul
       style={{
-        color: darkTechTheme.colors.secondary,
+        color: theme.colors.secondary,
         fontSize: 28,
         lineHeight: 1.6,
       }}
@@ -75,6 +76,7 @@ const Card: FC<{
 );
 
 export const Comparison: FC<ComparisonProps> = ({
+  theme = darkTechTheme,
   left,
   right,
   animations,
@@ -105,7 +107,7 @@ export const Comparison: FC<ComparisonProps> = ({
       : 1,
   );
   return (
-    <AbsoluteFill style={{ backgroundColor: darkTechTheme.colors.background }}>
+    <AbsoluteFill style={{ backgroundColor: theme.colors.background }}>
       <Card
         title={left.title}
         items={left.items}

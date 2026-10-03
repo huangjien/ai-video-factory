@@ -79,3 +79,46 @@ describe("REGISTRY accepts LLM-drifted component props (loose schemas)", () => {
     expect(r.success).toBe(true);
   });
 });
+
+describe("v0.4.2 component schemas", () => {
+  function validate(component: string, props: unknown) {
+    const entry = REGISTRY[component as keyof typeof REGISTRY];
+    if (!entry) throw new Error(`unknown component ${component}`);
+    return entry.propsSchema.safeParse(props);
+  }
+
+  it("QuoteBlock aliases text/content → quote and citation → author", () => {
+    const r = validate("QuoteBlock", {
+      text: "Stay hungry",
+      citation: "Jobs",
+    });
+    expect(r.success).toBe(true);
+    if (r.success) {
+      expect(r.data.quote).toBe("Stay hungry");
+      expect(r.data.author).toBe("Jobs");
+    }
+  });
+
+  it("StatGrid requires stats but tolerates extra props", () => {
+    expect(validate("StatGrid", { stats: [{ value: "5x", label: "faster" }] }).success).toBe(true);
+    expect(validate("StatGrid", { stats: [{ value: "5x" }], note: "hi" }).success).toBe(true);
+    expect(validate("StatGrid", {}).success).toBe(false);
+  });
+
+  it("BarChart requires bars; entries default missing fields", () => {
+    const r = validate("BarChart", { bars: [{ label: "a" }] });
+    expect(r.success).toBe(true);
+    if (r.success) {
+      expect(r.data.bars[0].value).toBe(0);
+    }
+  });
+
+  it("Leaderboard / Checklist / BigIdea / Pyramid / Venn / Cycle parse", () => {
+    expect(validate("Leaderboard", { entries: [{ name: "A" }] }).success).toBe(true);
+    expect(validate("Checklist", { items: [{ text: "a" }] }).success).toBe(true);
+    expect(validate("BigIdea", { text: "less is more" }).success).toBe(true);
+    expect(validate("PyramidDiagram", { levels: ["a"] }).success).toBe(true);
+    expect(validate("VennDiagram", { sets: ["a", "b"] }).success).toBe(true);
+    expect(validate("CycleDiagram", { stages: ["a", "b", "c"] }).success).toBe(true);
+  });
+});

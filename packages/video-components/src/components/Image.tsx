@@ -1,9 +1,10 @@
 import type { FC } from "react";
 import { AbsoluteFill, staticFile } from "remotion";
 import { fade } from "../animations.js";
-import { darkTechTheme } from "../theme.js";
+import { darkTechTheme, type Theme } from "../theme.js";
 
 export interface ImageProps {
+  theme?: Theme;
   src: string;
   fit?: "contain" | "cover";
   startFrame: number;
@@ -14,10 +15,10 @@ export interface ImageProps {
 /** Plain <img> for v0.1 (Remotion's <Img> uses hooks that require a
  * Composition context — unsuitable for SSR / static rendering tests).
  * Replace with <Img> + delayRender once we have network images in v0.2. */
-export const Image: FC<ImageProps> = ({ src, fit = "contain", frame }) => (
+export const Image: FC<ImageProps> = ({ src, fit = "contain", frame, theme = darkTechTheme }) => (
   <AbsoluteFill
     style={{
-      backgroundColor: darkTechTheme.colors.background,
+      backgroundColor: theme.colors.background,
       justifyContent: "center",
       alignItems: "center",
       opacity: fade(frame),

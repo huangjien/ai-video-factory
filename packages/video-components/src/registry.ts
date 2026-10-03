@@ -1,20 +1,29 @@
 import type { ComponentType } from "react";
 import { z } from "zod";
 import { AnimatedIllustration } from "./components/Illustration.js";
+import { BarChart } from "./components/BarChart.js";
+import { BigIdea } from "./components/BigIdea.js";
 import { Callout } from "./components/Callout.js";
 import { Character } from "./components/Character.js";
+import { Checklist } from "./components/Checklist.js";
 import { CodeBlock } from "./components/CodeBlock.js";
 import { Comparison } from "./components/Comparison.js";
+import { CycleDiagram } from "./components/CycleDiagram.js";
 import { DoodleScene, DoodleScenePropsSchema } from "./components/DoodleScene.js";
 import { EndCard } from "./components/EndCard.js";
 import { FlowChart } from "./components/FlowChart.js";
 import { Image } from "./components/Image.js";
 import { ImageBackground } from "./components/ImageBackground.js";
+import { Leaderboard } from "./components/Leaderboard.js";
 import { Paragraph } from "./components/Paragraph.js";
+import { PyramidDiagram } from "./components/PyramidDiagram.js";
+import { QuoteBlock } from "./components/QuoteBlock.js";
+import { StatGrid } from "./components/StatGrid.js";
 import { SvgScene, SvgScenePropsSchema } from "./components/SvgScene.js";
 import { Terminal } from "./components/Terminal.js";
 import { Timeline } from "./components/Timeline.js";
 import { Title } from "./components/Title.js";
+import { VennDiagram } from "./components/VennDiagram.js";
 
 export interface RegistryEntry {
   propsSchema: z.ZodTypeAny;
@@ -150,6 +159,90 @@ const imageBackgroundProps = z
   })
   .passthrough();
 
+const quoteBlockProps = z
+  .object({
+    quote: z.string().min(1),
+    author: z.string().optional(),
+    source: z.string().optional(),
+  })
+  .passthrough();
+
+const statEntry = z
+  .object({
+    value: z.string().default(""),
+    label: z.string().default(""),
+  })
+  .passthrough();
+const statGridProps = z
+  .object({
+    stats: z.array(statEntry).min(1),
+    caption: z.string().optional(),
+  })
+  .passthrough();
+
+const barEntry = z
+  .object({
+    label: z.string().default(""),
+    value: z.number().default(0),
+    display: z.string().optional(),
+  })
+  .passthrough();
+const barChartProps = z
+  .object({
+    bars: z.array(barEntry).min(1),
+    title: z.string().optional(),
+  })
+  .passthrough();
+
+const leaderboardEntry = z
+  .object({
+    name: z.string().min(1),
+    score: z.string().optional(),
+  })
+  .passthrough();
+const leaderboardProps = z
+  .object({
+    entries: z.array(leaderboardEntry).min(1),
+    title: z.string().optional(),
+  })
+  .passthrough();
+
+const checklistProps = z
+  .object({
+    items: z
+      .array(z.object({ text: z.string().min(1) }).passthrough())
+      .min(1),
+    title: z.string().optional(),
+  })
+  .passthrough();
+
+const bigIdeaProps = z
+  .object({
+    text: z.string().min(1),
+    kicker: z.string().optional(),
+  })
+  .passthrough();
+
+const pyramidProps = z
+  .object({
+    levels: z.array(z.string().min(1)).min(1),
+  })
+  .passthrough();
+
+const vennProps = z
+  .object({
+    sets: z.array(z.string().min(1)).min(1),
+    center: z.string().optional(),
+  })
+  .passthrough();
+
+const cycleProps = z
+  .object({
+    stages: z.array(z.string().min(1)).min(1),
+    title: z.string().optional(),
+  })
+  .passthrough();
+
 const CALL_OUT_ALIAS: Record<string, string> = {
   icon: "kind",
   content: "text",
@@ -164,10 +257,16 @@ const END_CARD_ALIAS: Record<string, string> = {
   cta_text: "cta",
   disclaimer: "subtitle",
 };
+const QUOTE_ALIAS: Record<string, string> = {
+  text: "quote",
+  content: "quote",
+  citation: "author",
+};
 const ALIASES_BY_COMPONENT: Record<string, Record<string, string>> = {
   Callout: CALL_OUT_ALIAS,
   Comparison: COMPARISON_ALIAS,
   EndCard: END_CARD_ALIAS,
+  QuoteBlock: QUOTE_ALIAS,
 };
 
 function aliasApply(props: unknown, alias: Record<string, string>): unknown {
@@ -265,6 +364,42 @@ export const REGISTRY: Record<string, RegistryEntry> = {
     propsSchema: DoodleScenePropsSchema,
     component: DoodleScene as ComponentType<unknown>,
   },
+  QuoteBlock: {
+    propsSchema: withAlias("QuoteBlock", quoteBlockProps),
+    component: QuoteBlock as ComponentType<unknown>,
+  },
+  StatGrid: {
+    propsSchema: statGridProps,
+    component: StatGrid as ComponentType<unknown>,
+  },
+  BarChart: {
+    propsSchema: barChartProps,
+    component: BarChart as ComponentType<unknown>,
+  },
+  Leaderboard: {
+    propsSchema: leaderboardProps,
+    component: Leaderboard as ComponentType<unknown>,
+  },
+  Checklist: {
+    propsSchema: checklistProps,
+    component: Checklist as ComponentType<unknown>,
+  },
+  BigIdea: {
+    propsSchema: bigIdeaProps,
+    component: BigIdea as ComponentType<unknown>,
+  },
+  PyramidDiagram: {
+    propsSchema: pyramidProps,
+    component: PyramidDiagram as ComponentType<unknown>,
+  },
+  VennDiagram: {
+    propsSchema: vennProps,
+    component: VennDiagram as ComponentType<unknown>,
+  },
+  CycleDiagram: {
+    propsSchema: cycleProps,
+    component: CycleDiagram as ComponentType<unknown>,
+  },
 };
 
 export const COMPONENT_NAMES = Object.keys(REGISTRY);
@@ -298,4 +433,19 @@ export type RegistryPropsByName = {
     fit?: "cover" | "contain";
     kenBurnsScale?: number;
   };
+  QuoteBlock: { quote: string; author?: string; source?: string };
+  StatGrid: { stats: { value: string; label: string }[]; caption?: string };
+  BarChart: {
+    bars: { label: string; value: number; display?: string }[];
+    title?: string;
+  };
+  Leaderboard: {
+    entries: { name: string; score?: string }[];
+    title?: string;
+  };
+  Checklist: { items: { text: string }[]; title?: string };
+  BigIdea: { text: string; kicker?: string };
+  PyramidDiagram: { levels: string[] };
+  VennDiagram: { sets: string[]; center?: string };
+  CycleDiagram: { stages: string[]; title?: string };
 };

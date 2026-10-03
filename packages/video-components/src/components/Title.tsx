@@ -1,9 +1,10 @@
 import type { FC } from "react";
 import { AbsoluteFill } from "remotion";
 import { entrance, fadeOut } from "../animations.js";
-import { darkTechTheme } from "../theme.js";
+import { darkTechTheme, type Theme } from "../theme.js";
 
 export interface TitleProps {
+  theme?: Theme;
   text: string;
   subtext?: string | undefined;
   startFrame: number;
@@ -24,6 +25,7 @@ function letterOffset(
 }
 
 export const Title: FC<TitleProps> = ({
+  theme = darkTechTheme,
   text,
   subtext,
   startFrame,
@@ -42,7 +44,7 @@ export const Title: FC<TitleProps> = ({
   return (
     <AbsoluteFill
       style={{
-        backgroundColor: darkTechTheme.colors.background,
+        backgroundColor: theme.colors.background,
         justifyContent: "center",
         alignItems: "center",
         opacity,
@@ -59,15 +61,15 @@ export const Title: FC<TitleProps> = ({
       >
         <h1
           style={{
-            color: darkTechTheme.colors.primary,
-            fontFamily: darkTechTheme.typography.title.fontFamily,
+            color: theme.colors.primary,
+            fontFamily: theme.typography.title.fontFamily,
             fontWeight: 700,
             fontSize: 96,
             margin: 0,
             marginBottom: 24,
             opacity,
             display: "flex",
-            textShadow: `0 0 ${40 * enter.opacity}px ${darkTechTheme.colors.accent}`,
+            textShadow: `0 0 ${40 * enter.opacity}px ${theme.colors.accent}`,
           }}
         >
           {chars.map((c, i) => {
@@ -88,7 +90,7 @@ export const Title: FC<TitleProps> = ({
         {subtext !== undefined ? (
           <p
             style={{
-              color: darkTechTheme.colors.secondary,
+              color: theme.colors.secondary,
               fontSize: 36,
               margin: 0,
               opacity: Math.max(0, enter.opacity - 0.3),
@@ -102,10 +104,10 @@ export const Title: FC<TitleProps> = ({
             marginTop: 32,
             width: 240,
             height: 6,
-            backgroundColor: darkTechTheme.colors.accent,
+            backgroundColor: theme.colors.accent,
             transform: `scaleX(${underlineScale})`,
             transformOrigin: "left",
-            boxShadow: `0 0 ${12 * enter.opacity}px ${darkTechTheme.colors.accent}`,
+            boxShadow: `0 0 ${12 * enter.opacity}px ${theme.colors.accent}`,
           }}
         />
       </div>

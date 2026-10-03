@@ -56,11 +56,6 @@ const CANVAS_W = 1920;
 const CANVAS_H = 1080;
 
 const PAPER: DoodleStyle = { background: "#F5F1E8", ink: "#1F1D1A", wobble: 2.5 };
-const DARK: DoodleStyle = {
-  background: darkTechTheme.colors.background,
-  ink: darkTechTheme.colors.primary,
-  wobble: 2.5,
-};
 
 export const DoodleScene = (props: DoodleSceneProps) => {
   const {

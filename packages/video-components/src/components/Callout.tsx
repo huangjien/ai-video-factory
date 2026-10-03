@@ -1,9 +1,10 @@
 import type { FC } from "react";
 import { AbsoluteFill } from "remotion";
 import { fade } from "../animations.js";
-import { darkTechTheme } from "../theme.js";
+import { darkTechTheme, type Theme } from "../theme.js";
 
 export interface CalloutProps {
+  theme?: Theme;
   kind: "info" | "warning" | "success";
   title?: string;
   text: string;
@@ -12,16 +13,20 @@ export interface CalloutProps {
   frame: number;
 }
 
-const TINT: Record<CalloutProps["kind"], string> = {
-  info: darkTechTheme.colors.accent,
-  warning: darkTechTheme.colors.warning,
-  success: darkTechTheme.colors.success,
-};
+const tintOf = (
+  theme: Theme,
+): Record<CalloutProps["kind"], string> => ({
+  info: theme.colors.accent,
+  warning: theme.colors.warning,
+  success: theme.colors.success,
+});
 
-export const Callout: FC<CalloutProps> = ({ kind, title, text, frame }) => (
+export const Callout: FC<CalloutProps> = ({ kind, title, text, frame, theme = darkTechTheme }) => {
+  const TINT = tintOf(theme);
+  return (
   <AbsoluteFill
     style={{
-      backgroundColor: darkTechTheme.colors.background,
+      backgroundColor: theme.colors.background,
       justifyContent: "center",
       alignItems: "center",
       opacity: fade(frame),
@@ -32,7 +37,7 @@ export const Callout: FC<CalloutProps> = ({ kind, title, text, frame }) => (
         width: 1500,
         border: `2px solid ${TINT[kind]}`,
         borderLeft: `12px solid ${TINT[kind]}`,
-        backgroundColor: darkTechTheme.colors.surface,
+        backgroundColor: theme.colors.surface,
         borderRadius: 12,
         padding: 32,
       }}
@@ -41,7 +46,7 @@ export const Callout: FC<CalloutProps> = ({ kind, title, text, frame }) => (
         <h3
           style={{
             color: TINT[kind],
-            fontFamily: darkTechTheme.typography.subtitle.fontFamily,
+            fontFamily: theme.typography.subtitle.fontFamily,
             fontSize: 36,
             margin: 0,
           }}
@@ -51,8 +56,8 @@ export const Callout: FC<CalloutProps> = ({ kind, title, text, frame }) => (
       ) : null}
       <p
         style={{
-          color: darkTechTheme.colors.primary,
-          fontSize: darkTechTheme.typography.body.fontSize,
+          color: theme.colors.primary,
+          fontSize: theme.typography.body.fontSize,
           margin: 0,
           lineHeight: 1.6,
         }}
@@ -61,4 +66,5 @@ export const Callout: FC<CalloutProps> = ({ kind, title, text, frame }) => (
       </p>
     </div>
   </AbsoluteFill>
-);
+  );
+};

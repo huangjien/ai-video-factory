@@ -1,9 +1,10 @@
 import type { FC } from "react";
 import { AbsoluteFill } from "remotion";
 import { fade } from "../animations.js";
-import { darkTechTheme } from "../theme.js";
+import { darkTechTheme, type Theme } from "../theme.js";
 
 export interface CodeBlockProps {
+  theme?: Theme;
   code: string;
   language?: string;
   highlightLines?: number[];
@@ -13,6 +14,7 @@ export interface CodeBlockProps {
 }
 
 export const CodeBlock: FC<CodeBlockProps> = ({
+  theme = darkTechTheme,
   code,
   highlightLines = [],
   frame,
@@ -22,7 +24,7 @@ export const CodeBlock: FC<CodeBlockProps> = ({
   return (
     <AbsoluteFill
       style={{
-        backgroundColor: darkTechTheme.colors.background,
+        backgroundColor: theme.colors.background,
         justifyContent: "center",
         alignItems: "center",
         opacity,
@@ -30,14 +32,14 @@ export const CodeBlock: FC<CodeBlockProps> = ({
     >
       <pre
         style={{
-          backgroundColor: darkTechTheme.colors.surface,
-          color: darkTechTheme.colors.primary,
-          fontFamily: darkTechTheme.typography.code.fontFamily,
-          fontSize: darkTechTheme.typography.code.fontSize,
+          backgroundColor: theme.colors.surface,
+          color: theme.colors.primary,
+          fontFamily: theme.typography.code.fontFamily,
+          fontSize: theme.typography.code.fontSize,
           lineHeight: 1.5,
           padding: 32,
           borderRadius: 12,
-          border: `1px solid ${darkTechTheme.colors.accent}`,
+          border: `1px solid ${theme.colors.accent}`,
           maxWidth: 1600,
           margin: 0,
         }}
@@ -47,7 +49,7 @@ export const CodeBlock: FC<CodeBlockProps> = ({
             key={i}
             style={{
               backgroundColor: highlightLines.includes(i + 1)
-                ? `${darkTechTheme.colors.accent}33`
+                ? `${theme.colors.accent}33`
                 : "transparent",
               padding: "2px 8px",
               margin: "0 -8px",

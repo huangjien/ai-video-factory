@@ -1,10 +1,11 @@
 import type { FC } from "react";
 import { AbsoluteFill } from "remotion";
 import { typewriter } from "../animations.js";
-import { darkTechTheme } from "../theme.js";
+import { darkTechTheme, type Theme } from "../theme.js";
 import { progressFor, type TimelineAnim } from "./timelineTiming.js";
 
 export interface TerminalProps {
+  theme?: Theme;
   lines: string[];
   prompt?: string;
   title?: string;
@@ -18,6 +19,7 @@ export interface TerminalProps {
 }
 
 export const Terminal: FC<TerminalProps> = ({
+  theme = darkTechTheme,
   lines,
   prompt = "$",
   animations,
@@ -47,21 +49,21 @@ export const Terminal: FC<TerminalProps> = ({
   return (
     <AbsoluteFill
       style={{
-        backgroundColor: darkTechTheme.colors.background,
+        backgroundColor: theme.colors.background,
         justifyContent: "center",
         alignItems: "center",
       }}
     >
       <div
         style={{
-          backgroundColor: darkTechTheme.colors.surface,
+          backgroundColor: theme.colors.surface,
           borderRadius: 12,
-          border: `1px solid ${darkTechTheme.colors.accent}`,
+          border: `1px solid ${theme.colors.accent}`,
           padding: 24,
           width: 1600,
-          fontFamily: darkTechTheme.typography.code.fontFamily,
-          fontSize: darkTechTheme.typography.code.fontSize,
-          color: darkTechTheme.colors.primary,
+          fontFamily: theme.typography.code.fontFamily,
+          fontSize: theme.typography.code.fontSize,
+          color: theme.colors.primary,
         }}
       >
         <div style={{ display: "flex", gap: 6, marginBottom: 16 }}>
@@ -94,7 +96,7 @@ export const Terminal: FC<TerminalProps> = ({
           />
         </div>
         <pre style={{ margin: 0, whiteSpace: "pre-wrap" }}>
-          <span style={{ color: darkTechTheme.colors.accent }}>{prompt} </span>
+          <span style={{ color: theme.colors.accent }}>{prompt} </span>
           {visibleText}
         </pre>
       </div>

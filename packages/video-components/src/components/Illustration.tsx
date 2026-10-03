@@ -1,8 +1,9 @@
 import type { FC } from "react";
 import { AbsoluteFill } from "remotion";
-import { darkTechTheme } from "../theme.js";
+import { darkTechTheme, type Theme } from "../theme.js";
 
 export interface IllustrationProps {
+  theme?: Theme;
   /** Caption shown above the illustration. */
   text: string;
   /** Free-text description of what to draw — keyword-matched to a shape set. */
@@ -55,6 +56,7 @@ const drift = (frame: number, period = 240): number =>
  * even when nothing else is happening.
  */
 export const AnimatedIllustration: FC<IllustrationProps> = ({
+  theme = darkTechTheme,
   text,
   visual,
   startFrame,
@@ -71,7 +73,7 @@ export const AnimatedIllustration: FC<IllustrationProps> = ({
   return (
     <AbsoluteFill
       style={{
-        backgroundColor: darkTechTheme.colors.background,
+        backgroundColor: theme.colors.background,
         justifyContent: "center",
         alignItems: "center",
         flexDirection: "column",
@@ -80,8 +82,8 @@ export const AnimatedIllustration: FC<IllustrationProps> = ({
     >
       <h2
         style={{
-          color: darkTechTheme.colors.primary,
-          fontFamily: darkTechTheme.typography.title.fontFamily,
+          color: theme.colors.primary,
+          fontFamily: theme.typography.title.fontFamily,
           fontWeight: 700,
           fontSize: 72,
           margin: 0,

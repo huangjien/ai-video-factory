@@ -6,15 +6,23 @@
  * free, fast, and identical across retries.
  *
  * Mapping (zh-CN + en-US keywords):
+ *   quote / 引用 / 引文 / 名言                    → QuoteBlock
+ *   cycle / loop / 循环 / 闭环 / 迭代 / 飞轮      → CycleDiagram
+ *   rank / leaderboard / top-N / 排名 / 榜单      → Leaderboard
+ *   chart / distribution / 柱状图 / 分布 / 构成    → BarChart
+ *   percent / % / statistics / 增长 / 百分比      → StatGrid
+ *   checklist / 清单 / 注意事项 / 避坑            → Checklist
+ *   pyramid / hierarchy / 金字塔 / 层级           → PyramidDiagram
+ *   venn / overlap / 交集 / 重叠                  → VennDiagram
+ *   key insight / takeaway / 核心观点 / 一句话    → BigIdea
  *   database / 表 / schema / 存储 / sql / query   → Callout
- *   network / 网络 / flow / pipeline / 流水线     → FlowChart
+ *   network / 网络 / flow / pipeline / 流水线     → SvgScene  (draw-on diagram)
  *   compare / 对比 / versus / vs / 差异            → Comparison
  *   code / terminal / 代码 / console / command      → Terminal
  *   timeline / 年表 / 历史 / 年代 / chronology     → Timeline
  *   formula / 公式 / equation / math               → Callout
- *   process / step / 步骤                            → FlowChart
- *   list / 列表 / bullet / 要点 / list of           → AnimatedIllustration
- *   quote / 引用 / 引文 / "..."                    → Callout
+ *   process / step / 步骤                            → SvgScene
+ *   list / 列表 / bullet / 要点 / list of           → DoodleScene (hand-drawn)
  *   first scene                                    → Title
  *   fall-through                                   → AnimatedIllustration
  *
@@ -34,7 +42,18 @@ export type ComponentName =
   | "FlowChart"
   | "Comparison"
   | "Terminal"
-  | "Timeline";
+  | "Timeline"
+  | "SvgScene"
+  | "DoodleScene"
+  | "QuoteBlock"
+  | "StatGrid"
+  | "BarChart"
+  | "Leaderboard"
+  | "Checklist"
+  | "BigIdea"
+  | "PyramidDiagram"
+  | "VennDiagram"
+  | "CycleDiagram";
 
 export interface ComponentChoice {
   component: ComponentName;
@@ -47,7 +66,71 @@ interface ClusterRule {
 
 const RULES: ClusterRule[] = [
   {
-    component: "FlowChart",
+    component: "QuoteBlock",
+    patterns: [
+      /\b(quote|quoted|cited|excerpt|excerpts|attributed|says|said|remark|remarks|statement)\b/i,
+      /(引用|引文|引语|原话|说过|指出|强调|名言|金句|名言警句)/,
+    ],
+  },
+  {
+    component: "CycleDiagram",
+    patterns: [
+      /\b(cycle|cycles|circular|loop|loops|feedback loop|iterat\w*|ooda|pdca|flywheel|vicious|virtuous)\b/i,
+      /(循环|闭环|迭代|飞轮|轮转|反馈环|周期)/,
+    ],
+  },
+  {
+    component: "Leaderboard",
+    patterns: [
+      /\b(rank|ranking|ranked|rankings|leaderboard|top[- ]?\d+|winner|champion)\b/i,
+      /(排名|榜单|排行榜|榜首|冠军|亚军|季军|前十|前五|前三)/,
+    ],
+  },
+  {
+    component: "BarChart",
+    patterns: [
+      /\b(bar ?chart|chart|charts|graph|graphs|distribution|breakdown|proportion|proportions|segment|segments)\b/i,
+      /(柱状图|条形图|饼图|分布|构成|占比分布|份额)/,
+    ],
+  },
+  {
+    component: "StatGrid",
+    patterns: [
+      /%|％/,
+      /\b(stat|stats|statistic|statistics|percentage|percent|metric|metrics|kpi|kpis|growth|increase|decrease|million|billion|trillion)\b/i,
+      /(统计|百分比|百分点|增长率|增长|下降|占比|比例|倍数|关键数字)/,
+    ],
+  },
+  {
+    component: "Checklist",
+    patterns: [
+      /\b(checklist|check ?list|to-?dos?|dos and don'?ts|best practices|pitfalls)\b/i,
+      /(清单|核对|检查表|待办|注意事项|避坑|防坑|秘籍)/,
+    ],
+  },
+  {
+    component: "PyramidDiagram",
+    patterns: [
+      /\b(pyramid|pyramids|hierarchy|hierarchical|layer|layers|tier|tiers|stack|stacked)\b/i,
+      /(金字塔|层级|层次|分层|三层|四层|五层)/,
+    ],
+  },
+  {
+    component: "VennDiagram",
+    patterns: [
+      /\b(venn|overlap|overlapping|intersect\w*|middle ground|sweet spot)\b/i,
+      /(维恩|交集|重叠|交叉|融合|兼得)/,
+    ],
+  },
+  {
+    component: "BigIdea",
+    patterns: [
+      /\b(key insight|key takeaways?|takeaway|main point|core idea|in one sentence|one sentence|bottom line|punchline|remember this)\b/i,
+      /(核心观点|核心思想|一句话|记住|重点是|要点是|说白了|本质上|总结)/,
+    ],
+  },
+  {
+    component: "SvgScene",
     patterns: [
       /\b(network|networks|flow|flows|pipeline|pipelines|pipe|step|steps|process|workflow|workflows|diagram|flowchart|node|nodes|edge|edges)/i,
       /(网络|流水线|流程|步骤|节点|连线|拓扑|链路)/,
@@ -89,17 +172,10 @@ const RULES: ClusterRule[] = [
     ],
   },
   {
-    component: "AnimatedIllustration",
+    component: "DoodleScene",
     patterns: [
       /\b(list|listing|bullet|bullets|points|tips|examples|kinds|items|agenda)/i,
       /(列表|清单|要点|条目|示例|提纲)/,
-    ],
-  },
-  {
-    component: "Callout",
-    patterns: [
-      /\b(quote|quoted|cited|excerpt|excerpts|attributed|says|said|remark|remarks|statement)/i,
-      /(引用|引文|引语|原话|说过|指出|强调)/,
     ],
   },
 ];

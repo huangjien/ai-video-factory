@@ -16,15 +16,15 @@ describe("pickVisualComponent (T2 visual variety)", () => {
     );
   });
 
-  it("matches network/flow/pipeline to FlowChart", () => {
+  it("matches network/flow/pipeline to SvgScene (draw-on diagram family)", () => {
     expect(
       pickVisualComponent("a network of nodes connected by edges", false).component,
-    ).toBe("FlowChart");
+    ).toBe("SvgScene");
     expect(pickVisualComponent("流水线 步骤 流程", false).component).toBe(
-      "FlowChart",
+      "SvgScene",
     );
     expect(pickVisualComponent("flow of data through a pipeline", false).component).toBe(
-      "FlowChart",
+      "SvgScene",
     );
   });
 
@@ -64,22 +64,103 @@ describe("pickVisualComponent (T2 visual variety)", () => {
     );
   });
 
-  it("matches list keywords to AnimatedIllustration (registered name)", () => {
+  it("matches list keywords to DoodleScene (hand-drawn family)", () => {
     expect(
       pickVisualComponent("a list of key bullet points", false).component,
-    ).toBe("AnimatedIllustration");
+    ).toBe("DoodleScene");
     expect(pickVisualComponent("列表 要点 提纲", false).component).toBe(
-      "AnimatedIllustration",
+      "DoodleScene",
     );
   });
 
-  it("matches quote keywords to Callout kind=quote", () => {
+  it("matches quote keywords to QuoteBlock (v0.4.2, was Callout)", () => {
     expect(pickVisualComponent("a famous quote from Einstein", false).component).toBe(
-      "Callout",
+      "QuoteBlock",
     );
     expect(pickVisualComponent("引用 说过 指出", false).component).toBe(
-      "Callout",
+      "QuoteBlock",
     );
+    expect(pickVisualComponent("一句金句 名言", false).component).toBe(
+      "QuoteBlock",
+    );
+  });
+
+  it("matches cycle/loop keywords to CycleDiagram", () => {
+    expect(pickVisualComponent("the feedback loop iterates", false).component).toBe(
+      "CycleDiagram",
+    );
+    expect(pickVisualComponent("闭环 迭代 飞轮", false).component).toBe(
+      "CycleDiagram",
+    );
+  });
+
+  it("matches ranking keywords to Leaderboard", () => {
+    expect(pickVisualComponent("top 10 leaderboard ranking", false).component).toBe(
+      "Leaderboard",
+    );
+    expect(pickVisualComponent("排行榜 冠军 前十", false).component).toBe(
+      "Leaderboard",
+    );
+  });
+
+  it("matches chart/distribution keywords to BarChart", () => {
+    expect(pickVisualComponent("market share distribution chart", false).component).toBe(
+      "BarChart",
+    );
+    expect(pickVisualComponent("柱状图 分布 构成", false).component).toBe(
+      "BarChart",
+    );
+  });
+
+  it("matches percent/statistics keywords to StatGrid", () => {
+    expect(pickVisualComponent("accuracy is 95% wow", false).component).toBe(
+      "StatGrid",
+    );
+    expect(pickVisualComponent("增长 百分比 统计数据", false).component).toBe(
+      "StatGrid",
+    );
+  });
+
+  it("matches checklist keywords to Checklist (before generic list→DoodleScene)", () => {
+    expect(pickVisualComponent("a pre-flight checklist", false).component).toBe(
+      "Checklist",
+    );
+    expect(pickVisualComponent("避坑清单 注意事项", false).component).toBe(
+      "Checklist",
+    );
+  });
+
+  it("matches pyramid/hierarchy keywords to PyramidDiagram", () => {
+    expect(pickVisualComponent("a hierarchy of layers", false).component).toBe(
+      "PyramidDiagram",
+    );
+    expect(pickVisualComponent("金字塔 层级 分层", false).component).toBe(
+      "PyramidDiagram",
+    );
+  });
+
+  it("matches venn/overlap keywords to VennDiagram", () => {
+    expect(pickVisualComponent("a venn diagram with overlap", false).component).toBe(
+      "VennDiagram",
+    );
+    expect(pickVisualComponent("交集 重叠 融合", false).component).toBe(
+      "VennDiagram",
+    );
+  });
+
+  it("matches key-insight keywords to BigIdea", () => {
+    expect(pickVisualComponent("the key takeaway of this video", false).component).toBe(
+      "BigIdea",
+    );
+    expect(pickVisualComponent("核心观点 一句话总结", false).component).toBe(
+      "BigIdea",
+    );
+  });
+
+  it("list keywords still go to DoodleScene (generic list beats nothing new)", () => {
+    expect(
+      pickVisualComponent("a list of key bullet points", false).component,
+    ).toBe("DoodleScene");
   });
 
   it("falls through to AnimatedIllustration on no match", () => {
@@ -100,6 +181,17 @@ describe("pickVisualComponent (T2 visual variety)", () => {
       "Comparison",
       "Terminal",
       "Timeline",
+      "SvgScene",
+      "DoodleScene",
+      "QuoteBlock",
+      "StatGrid",
+      "BarChart",
+      "Leaderboard",
+      "Checklist",
+      "BigIdea",
+      "PyramidDiagram",
+      "VennDiagram",
+      "CycleDiagram",
     ]);
     expect(
       pickVisualComponent("database table", false).component,
@@ -107,7 +199,15 @@ describe("pickVisualComponent (T2 visual variety)", () => {
     expect(
       pickVisualComponent("equation derivation", false).component,
     ).toBe("Callout");
-    expect(pickVisualComponent("a quote", false).component).toBe("Callout");
+    expect(pickVisualComponent("a quote", false).component).toBe("QuoteBlock");
+    // Every rule's component must exist in the registered set above.
+    for (const visual of [
+      "a quote", "cycle loop", "top 10 ranking", "chart distribution",
+      "95% stats", "checklist best practices", "pyramid hierarchy",
+      "venn overlap", "key takeaway",
+    ]) {
+      expect(registered).toContain(pickVisualComponent(visual, false).component);
+    }
     expect([...registered]).toContain(
       pickVisualComponent("a serene lake at sunset", false).component,
     );

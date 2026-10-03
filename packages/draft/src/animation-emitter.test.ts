@@ -136,3 +136,112 @@ describe("emitSceneAnimations (T17)", () => {
     expect(lastAnim.start + lastAnim.duration).toBeLessThanOrEqual(3.1);
   });
 });
+describe("emitSceneAnimations — v0.4.2 components", () => {
+  it("QuoteBlock emits card highlight + author fade", () => {
+    const out = emitSceneAnimations(
+      "QuoteBlock",
+      { quote: "q", author: "a" },
+      ctx,
+    );
+    expect(out.map((a) => a.target)).toEqual(["__quote__", "__author__"]);
+  });
+
+  it("StatGrid emits one scale per stat", () => {
+    const out = emitSceneAnimations(
+      "StatGrid",
+      { stats: [{ value: "1", label: "a" }, { value: "2", label: "b" }] },
+      ctx,
+    );
+    expect(out.map((a) => a.target)).toEqual(["stat-0", "stat-1"]);
+    expect(out[0]?.type).toBe("scale");
+  });
+
+  it("BarChart emits one draw per bar", () => {
+    const out = emitSceneAnimations(
+      "BarChart",
+      { bars: [{ label: "a", value: 1 }, { label: "b", value: 2 }] },
+      ctx,
+    );
+    expect(out.map((a) => a.target)).toEqual(["bar-0", "bar-1"]);
+    expect(out[0]?.type).toBe("draw");
+  });
+
+  it("Leaderboard reveals bottom-up (last rank first)", () => {
+    const out = emitSceneAnimations(
+      "Leaderboard",
+      { entries: [{ name: "a" }, { name: "b" }, { name: "c" }] },
+      ctx,
+    );
+    expect(out.map((a) => a.target)).toEqual(["rank-0", "rank-1", "rank-2"]);
+    expect(out[0]!.start).toBeGreaterThan(out[2]!.start);
+  });
+
+  it("Checklist emits one highlight per item", () => {
+    const out = emitSceneAnimations(
+      "Checklist",
+      { items: [{ text: "a" }, { text: "b" }] },
+      ctx,
+    );
+    expect(out.map((a) => a.target)).toEqual(["item-0", "item-1"]);
+  });
+
+  it("BigIdea emits a single linear write reveal", () => {
+    const out = emitSceneAnimations("BigIdea", { text: "idea" }, ctx);
+    expect(out).toHaveLength(1);
+    expect(out[0]?.target).toBe("__reveal__");
+    expect(out[0]?.type).toBe("write");
+    expect(out[0]?.easing).toBe("linear");
+  });
+
+  it("PyramidDiagram draws bottom-up", () => {
+    const out = emitSceneAnimations(
+      "PyramidDiagram",
+      { levels: ["top", "mid", "base"] },
+      ctx,
+    );
+    expect(out.map((a) => a.target)).toEqual(["level-0", "level-1", "level-2"]);
+    expect(out[0]!.start).toBeGreaterThan(out[2]!.start);
+  });
+
+  it("VennDiagram fades each set", () => {
+    const out = emitSceneAnimations(
+      "VennDiagram",
+      { sets: ["a", "b", "c"] },
+      ctx,
+    );
+    expect(out.map((a) => a.target)).toEqual(["set-0", "set-1", "set-2"]);
+    expect(out[0]?.type).toBe("fade");
+  });
+
+  it("CycleDiagram draws the ring then lights each stage", () => {
+    const out = emitSceneAnimations(
+      "CycleDiagram",
+      { stages: ["a", "b", "c"] },
+      ctx,
+    );
+    expect(out[0]?.target).toBe("__ring__");
+    expect(out[0]?.type).toBe("draw");
+    expect(out.slice(1).map((a) => a.target)).toEqual([
+      "stage-0",
+      "stage-1",
+      "stage-2",
+    ]);
+  });
+
+  it("v0.4.2 animations all fit inside a short scene", () => {
+    for (const [component, props] of [
+      ["StatGrid", { stats: [{ value: "1", label: "a" }] }],
+      ["BarChart", { bars: [{ label: "a", value: 1 }] }],
+      ["Leaderboard", { entries: [{ name: "a" }] }],
+      ["Checklist", { items: [{ text: "a" }] }],
+      ["PyramidDiagram", { levels: ["a", "b"] }],
+      ["VennDiagram", { sets: ["a"] }],
+      ["CycleDiagram", { stages: ["a"] }],
+    ] as const) {
+      const out = emitSceneAnimations(component, props, { sceneDurationSec: 3 });
+      for (const a of out) {
+        expect(a.start + a.duration).toBeLessThanOrEqual(3.1);
+      }
+    }
+  });
+});

@@ -313,6 +313,10 @@ importers:
       zod:
         specifier: ^3.25.0
         version: 3.25.76
+    devDependencies:
+      '@vf/video-components':
+        specifier: workspace:*
+        version: link:../video-components
 
   packages/llm:
     dependencies:

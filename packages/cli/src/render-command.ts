@@ -129,9 +129,34 @@ function sceneFileName(index: number, id: string): string {
 
 interface SceneCacheMeta {
   sceneHash: string;
+  /** Hash of project-level render inputs (style.theme + project geometry).
+   * Absent on sidecars written before this field existed — treated as a
+   * mismatch so legacy caches invalidate exactly once. */
+  projectHash?: string;
   audioPath?: string;
   audioMtimeMs?: number;
   renderedAt: string;
+}
+
+/** Cache freshness: the scene fragment, the narration audio, AND every
+ * project-level render input (theme, fps/width/height) must match. A
+ * style.theme flip leaves all fragment hashes identical — without the
+ * projectHash term it silently reused the old-theme MP4s. */
+export function sceneCacheIsFresh(
+  meta: SceneCacheMeta | null,
+  sceneHash: string | null,
+  projectHash: string,
+  audioPath: string | null,
+  audioMtimeMs: number,
+): boolean {
+  return (
+    meta !== null &&
+    sceneHash !== null &&
+    meta.sceneHash === sceneHash &&
+    meta.projectHash === projectHash &&
+    (meta.audioPath ?? null) === (audioPath ?? null) &&
+    Math.abs((meta.audioMtimeMs ?? 0) - audioMtimeMs) < 1
+  );
 }
 
 async function readSceneCacheMeta(
@@ -238,8 +263,15 @@ export async function runPreview(
   // Scene-isolated incremental render (plan Principle 1): reuse any scene
   // mp4 whose CONTENT hash matches the current storyboard fragment and
   // whose narration audio is unchanged — editing scene-007 re-renders only
-  // scene-007, regardless of mtimes elsewhere in the file.
+  // scene-007, regardless of mtimes elsewhere in the file. projectHash
+  // covers render inputs OUTSIDE the fragments (theme, geometry).
   const scenesDir = path.join(root, draft ? "scenes-draft" : "scenes");
+  const projectHash = hashSceneFragment(
+    JSON.stringify({
+      project: renderPlan.project,
+      style: renderPlan.style,
+    }),
+  );
   const sceneFiles: string[] = [];
   for (const scene of renderPlan.scenes) {
     const file = path.join(scenesDir, sceneFileName(scene.index, scene.id));
@@ -249,13 +281,7 @@ export async function runPreview(
     const audioPath = scene.audio ? path.join(root, scene.audio) : null;
     const audioM = audioPath ? await mtimeOrZero(audioPath) : 0;
     const sidecar = await readSceneCacheMeta(file);
-    const fresh =
-      sidecar !== null &&
-      sceneHash !== null &&
-      sidecar.sceneHash === sceneHash &&
-      (sidecar.audioPath ?? null) === (audioPath ?? null) &&
-      Math.abs((sidecar.audioMtimeMs ?? 0) - audioM) < 1;
-    if (fresh) {
+    if (sceneCacheIsFresh(sidecar, sceneHash, projectHash, audioPath, audioM)) {
       console.log(`  scene ${scene.id}: cached`);
       continue;
     }
@@ -263,6 +289,7 @@ export async function runPreview(
     await renderSceneToVideo(renderPlan, scene.id, file);
     await writeSceneCacheMeta(file, {
       sceneHash: sceneHash ?? "",
+      projectHash,
       ...(audioPath !== null ? { audioPath, audioMtimeMs: audioM } : {}),
       renderedAt: new Date().toISOString(),
     });

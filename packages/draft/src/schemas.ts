@@ -118,6 +118,9 @@ export function articleToStoryboardYaml(article: ParsedArticle): string {
     lines.push(`      text: ${yamlStr(s.narration ?? "")}`);
     lines.push(`    visual:`);
     lines.push(`      component: ${component}`);
+    if (component === "SvgScene" || component === "DoodleScene") {
+      lines.push(`      renderer: ${component === "SvgScene" ? "svg" : "canvas"}`);
+    }
     lines.push(`      props:`);
     for (const pl of propsLines) lines.push(pl);
     const animations = emitSceneAnimations(component, props, {

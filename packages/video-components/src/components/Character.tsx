@@ -1,8 +1,9 @@
 import type { FC } from "react";
 import { AbsoluteFill } from "remotion";
-import { darkTechTheme } from "../theme.js";
+import { darkTechTheme, type Theme } from "../theme.js";
 
 export interface CharacterProps {
+  theme?: Theme;
   /** Toggles mouth-open vs mouth-closed at speech rate (~12 Hz). When
    * the scene is silent (no narration in this slice) pass 0 here and
    * the mouth stays closed. */
@@ -26,6 +27,7 @@ export interface CharacterProps {
  * the illustration occupies the rest of the frame).
  */
 export const Character: FC<CharacterProps> = ({
+  theme = darkTechTheme,
   mouthOpen,
   frame,
   durationInFrames,
@@ -64,7 +66,7 @@ export const Character: FC<CharacterProps> = ({
           <path
             d="M 40 90 Q 110 60 180 90 L 180 260 Q 110 290 40 260 Z"
             fill="url(#char-body)"
-            stroke={darkTechTheme.colors.accent}
+            stroke={theme.colors.accent}
             strokeWidth={2}
           />
           {/* Head */}
@@ -74,15 +76,15 @@ export const Character: FC<CharacterProps> = ({
             rx={36}
             ry={40}
             fill="#0f172a"
-            stroke={darkTechTheme.colors.accent}
+            stroke={theme.colors.accent}
             strokeWidth={2}
           />
           {/* Eyes */}
           <circle cx={94} cy={60} r={4} fill="#5eead4" opacity={blink} />
           <circle cx={126} cy={60} r={4} fill="#5eead4" opacity={blink} />
           {/* Eyelid lines when blinking */}
-          <line x1={86} y1={60} x2={102} y2={60} stroke={darkTechTheme.colors.accent} strokeWidth={1.5} opacity={1 - blink} />
-          <line x1={118} y1={60} x2={134} y2={60} stroke={darkTechTheme.colors.accent} strokeWidth={1.5} opacity={1 - blink} />
+          <line x1={86} y1={60} x2={102} y2={60} stroke={theme.colors.accent} strokeWidth={1.5} opacity={1 - blink} />
+          <line x1={118} y1={60} x2={134} y2={60} stroke={theme.colors.accent} strokeWidth={1.5} opacity={1 - blink} />
           {/* Mouth — opens/closes with speech */}
           <ellipse
             cx={110}
@@ -90,7 +92,7 @@ export const Character: FC<CharacterProps> = ({
             rx={8 + m * 4}
             ry={2 + m * 6}
             fill="#0f172a"
-            stroke={darkTechTheme.colors.accent}
+            stroke={theme.colors.accent}
             strokeWidth={1.5}
           />
           {/* Subtle floating accent dot */}
@@ -98,7 +100,7 @@ export const Character: FC<CharacterProps> = ({
             cx={110 + Math.sin(seconds * 0.8) * 4}
             cy={40 + Math.sin(seconds * 0.6) * 3}
             r={2.5}
-            fill={darkTechTheme.colors.accent}
+            fill={theme.colors.accent}
             opacity={0.8}
           />
         </svg>

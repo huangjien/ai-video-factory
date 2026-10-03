@@ -1,8 +1,9 @@
 import type { FC } from "react";
 import { AbsoluteFill } from "remotion";
-import { darkTechTheme } from "../theme.js";
+import { darkTechTheme, type Theme } from "../theme.js";
 
 export interface ImageBackgroundProps {
+  theme?: Theme;
   /** Image source — data URL (`data:image/jpeg;base64,...`) or any
    * URL the headless browser can resolve. File paths must be converted
    * to data URLs upstream (see renderPlanToVideo). */
@@ -32,6 +33,7 @@ const easeInOut = (t: number): number =>
  * serves the entry over HTTP, blocking file:// access.
  */
 export const ImageBackground: FC<ImageBackgroundProps> = ({
+  theme = darkTechTheme,
   src,
   fit = "cover",
   kenBurnsScale = 0.08,
@@ -48,7 +50,7 @@ export const ImageBackground: FC<ImageBackgroundProps> = ({
     <AbsoluteFill
       style={{
         overflow: "hidden",
-        backgroundColor: darkTechTheme.colors.background,
+        backgroundColor: theme.colors.background,
       }}
     >
       <img
@@ -86,12 +88,12 @@ export const ImageBackground: FC<ImageBackgroundProps> = ({
         >
           <p
             style={{
-              color: darkTechTheme.colors.primary,
-              fontFamily: darkTechTheme.typography.title.fontFamily,
+              color: theme.colors.primary,
+              fontFamily: theme.typography.title.fontFamily,
               fontSize: 48,
               fontWeight: 600,
               margin: 0,
-              textShadow: `0 0 24px ${darkTechTheme.colors.accent}`,
+              textShadow: `0 0 24px ${theme.colors.accent}`,
             }}
           >
             {caption}

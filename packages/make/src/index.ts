@@ -286,10 +286,15 @@ async function generateSceneVisuals(
 
   const outputs: string[] = [];
   const generatedImages: string[] = [];
+  // Scenes rendered by their own visual families (svg/canvas/excalidraw
+  // components, or already ImageBackground) never consume the generated
+  // JPG — skip them so image quota is spent only where it lands on screen.
+  const selfRendered = selfRenderedSceneNumbers(projectRoot);
   for (let i = 0; i < article.scenes.length; i++) {
     const scene = article.scenes[i]!;
     const visual = scene.visual ?? "";
     if (!visual || visual.trim().length === 0) continue;
+    if (selfRendered.has(i + 1)) continue;
 
     const imagePath = path.join(imageDir, `scene_${i + 1}.jpg`);
     if (existsSync(imagePath)) {
@@ -355,6 +360,33 @@ async function generateSceneVisuals(
  * scenes that have a generated image. Uses yaml parse/stringify (not
  * line regex) because this is a structural change, not a value tweak.
  */
+/** 1-based numbers of storyboard scenes whose component draws its own
+ * visuals (anything but AnimatedIllustration, which is the only one the
+ * image swap rewrites). Empty when the storyboard is unreadable. */
+function selfRenderedSceneNumbers(projectRoot: string): Set<number> {
+  const storyboardPath = path.join(
+    projectRoot,
+    "storyboard",
+    "storyboard.yaml",
+  );
+  try {
+    const parsed = parseYaml(
+      readFileSync(storyboardPath, "utf8"),
+    ) as {
+      scenes?: { id?: string; visual?: { component?: string } }[];
+    };
+    const out = new Set<number>();
+    for (const scene of parsed.scenes ?? []) {
+      if (scene.visual?.component === "AnimatedIllustration") continue;
+      const m = scene.id?.match(/scene[-_]?(\d+)/);
+      if (m) out.add(parseInt(m[1]!, 10));
+    }
+    return out;
+  } catch {
+    return new Set();
+  }
+}
+
 function updateStoryboardForImages(
   projectRoot: string,
   imagePaths: string[],

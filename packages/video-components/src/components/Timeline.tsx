@@ -1,10 +1,11 @@
 import type { FC } from "react";
 import { AbsoluteFill } from "remotion";
 import { scale } from "../animations.js";
-import { darkTechTheme } from "../theme.js";
+import { darkTechTheme, type Theme } from "../theme.js";
 import { progressFor, type TimelineAnim } from "./timelineTiming.js";
 
 export interface TimelineProps {
+  theme?: Theme;
   events: { label: string; description?: string }[];
   /** v0.4.1 — scene-level timeline animations. Each event
    *  `target: "event-${label}"` scales up at its own start time. */
@@ -15,6 +16,7 @@ export interface TimelineProps {
 }
 
 export const Timeline: FC<TimelineProps> = ({
+  theme = darkTechTheme,
   events,
   animations,
   frame,
@@ -30,14 +32,14 @@ export const Timeline: FC<TimelineProps> = ({
   const span = maxRight - margin * 2;
   const step = events.length > 1 ? span / (events.length - 1) : 0;
   return (
-    <AbsoluteFill style={{ backgroundColor: darkTechTheme.colors.background }}>
+    <AbsoluteFill style={{ backgroundColor: theme.colors.background }}>
       <svg width="100%" height="100%" viewBox="0 0 1920 1080">
         <line
           x1={margin}
           y1={540}
           x2={maxRight}
           y2={540}
-          stroke={darkTechTheme.colors.secondary}
+          stroke={theme.colors.secondary}
           strokeWidth={3}
         />
         {events.map((ev, i) => {
@@ -57,15 +59,15 @@ export const Timeline: FC<TimelineProps> = ({
                 cx={cx}
                 cy={540}
                 r={16 * s}
-                fill={darkTechTheme.colors.accent}
+                fill={theme.colors.accent}
               />
               <text
                 x={cx}
                 y={540 + 60}
-                fill={darkTechTheme.colors.primary}
+                fill={theme.colors.primary}
                 fontSize={28}
                 textAnchor="middle"
-                fontFamily={darkTechTheme.typography.body.fontFamily}
+                fontFamily={theme.typography.body.fontFamily}
               >
                 {ev.label}
               </text>
@@ -73,10 +75,10 @@ export const Timeline: FC<TimelineProps> = ({
                 <text
                   x={cx}
                   y={540 + 100}
-                  fill={darkTechTheme.colors.secondary}
+                  fill={theme.colors.secondary}
                   fontSize={22}
                   textAnchor="middle"
-                  fontFamily={darkTechTheme.typography.body.fontFamily}
+                  fontFamily={theme.typography.body.fontFamily}
                 >
                   {ev.description}
                 </text>

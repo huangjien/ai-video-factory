@@ -58,6 +58,24 @@ export function emitSceneAnimations(
       return emitTitleAnimations(props, ctx);
     case "SvgScene":
       return emitSvgSceneAnimations(props, ctx);
+    case "QuoteBlock":
+      return emitQuoteBlockAnimations(ctx);
+    case "StatGrid":
+      return emitStatGridAnimations(props, ctx);
+    case "BarChart":
+      return emitBarChartAnimations(props, ctx);
+    case "Leaderboard":
+      return emitLeaderboardAnimations(props, ctx);
+    case "Checklist":
+      return emitChecklistAnimations(props, ctx);
+    case "BigIdea":
+      return emitBigIdeaAnimations(ctx);
+    case "PyramidDiagram":
+      return emitPyramidAnimations(props, ctx);
+    case "VennDiagram":
+      return emitVennAnimations(props, ctx);
+    case "CycleDiagram":
+      return emitCycleAnimations(props, ctx);
     default:
       return [];
   }
@@ -204,7 +222,11 @@ function emitTimelineAnimations(
       target: `event-${label}`,
       type: "highlight" as const,
       start: round2(i * per),
-      duration: round2(Math.min(per * 1.2, 1.2)),
+      duration: fitWithin(
+        round2(Math.min(per * 1.2, 1.2)),
+        i * per,
+        ctx.sceneDurationSec,
+      ),
       easing: EASING,
     };
   });
@@ -270,7 +292,7 @@ function emitSvgSceneAnimations(
       target: nodeId(n, i),
       type: "highlight",
       start: round2(cursor),
-      duration: round2(per * 1.2),
+      duration: fitWithin(round2(per * 1.2), cursor, ctx.sceneDurationSec),
       easing: EASING,
     });
     cursor += per;
@@ -281,7 +303,7 @@ function emitSvgSceneAnimations(
       target: edgeId(e, i),
       type: "draw",
       start: round2(cursor),
-      duration: round2(per * 1.2),
+      duration: fitWithin(round2(per * 1.2), cursor, ctx.sceneDurationSec),
       easing: EASING,
     });
     cursor += per;
@@ -292,6 +314,210 @@ function emitSvgSceneAnimations(
 function edgeId(e: unknown, i: number): string {
   if (isObjectWithStringProp(e, "id")) return e.id;
   return `edge-${i}`;
+}
+
+// ---------------------------------------------------------------------------
+// QuoteBlock — card highlight, then the attribution fades in.
+// ---------------------------------------------------------------------------
+function emitQuoteBlockAnimations(ctx: EmitContext): TimelineAnimation[] {
+  const half = ctx.sceneDurationSec / 2;
+  return [
+    {
+      id: "quote-card",
+      target: "__quote__",
+      type: "highlight",
+      start: 0.1,
+      duration: round2(Math.min(half, 0.8)),
+      easing: EASING,
+    },
+    {
+      id: "quote-author",
+      target: "__author__",
+      type: "fade",
+      start: round2(half),
+      duration: round2(Math.min(half, 0.6)),
+      easing: EASING,
+    },
+  ];
+}
+
+// ---------------------------------------------------------------------------
+// StatGrid — scale each card in and count its number up, staggered.
+// ---------------------------------------------------------------------------
+function emitStatGridAnimations(
+  props: Record<string, unknown>,
+  ctx: EmitContext,
+): TimelineAnimation[] {
+  const stats = (props.stats as unknown[]) ?? [];
+  if (stats.length === 0) return [];
+  const per = ctx.sceneDurationSec / Math.max(1, stats.length + 1);
+  return stats.map((_, i) => ({
+    id: `stat-${i}`,
+    target: `stat-${i}`,
+    type: "scale" as const,
+    start: round2(i * per),
+    duration: fitWithin(round2(per * 1.6), i * per, ctx.sceneDurationSec),
+    easing: EASING,
+  }));
+}
+
+// ---------------------------------------------------------------------------
+// BarChart — grow each bar (draw) in label order.
+// ---------------------------------------------------------------------------
+function emitBarChartAnimations(
+  props: Record<string, unknown>,
+  ctx: EmitContext,
+): TimelineAnimation[] {
+  const bars = (props.bars as unknown[]) ?? [];
+  if (bars.length === 0) return [];
+  const per = ctx.sceneDurationSec / Math.max(1, bars.length + 1);
+  return bars.map((_, i) => ({
+    id: `bar-${i}`,
+    target: `bar-${i}`,
+    type: "draw" as const,
+    start: round2(i * per),
+    duration: fitWithin(round2(per * 1.5), i * per, ctx.sceneDurationSec),
+    easing: EASING,
+  }));
+}
+
+// ---------------------------------------------------------------------------
+// Leaderboard — rows slide in bottom-up so #1 lands last.
+// ---------------------------------------------------------------------------
+function emitLeaderboardAnimations(
+  props: Record<string, unknown>,
+  ctx: EmitContext,
+): TimelineAnimation[] {
+  const entries = (props.entries as unknown[]) ?? [];
+  const n = entries.length;
+  if (n === 0) return [];
+  const per = ctx.sceneDurationSec / Math.max(1, n + 1);
+  return entries.map((_, i) => {
+    const order = n - 1 - i; // bottom row first
+    return {
+      id: `rank-${i}`,
+      target: `rank-${i}`,
+      type: "move" as const,
+      start: round2(order * per),
+      duration: fitWithin(round2(per * 1.5), order * per, ctx.sceneDurationSec),
+      easing: EASING,
+    };
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Checklist — tick each check mark in order.
+// ---------------------------------------------------------------------------
+function emitChecklistAnimations(
+  props: Record<string, unknown>,
+  ctx: EmitContext,
+): TimelineAnimation[] {
+  const items = (props.items as unknown[]) ?? [];
+  if (items.length === 0) return [];
+  const per = ctx.sceneDurationSec / Math.max(1, items.length + 1);
+  return items.map((_, i) => ({
+    id: `item-${i}`,
+    target: `item-${i}`,
+    type: "highlight" as const,
+    start: round2(i * per),
+    duration: fitWithin(round2(per * 1.4), i * per, ctx.sceneDurationSec),
+    easing: EASING,
+  }));
+}
+
+// ---------------------------------------------------------------------------
+// BigIdea — one reveal window for the token-by-token surfacing.
+// ---------------------------------------------------------------------------
+function emitBigIdeaAnimations(ctx: EmitContext): TimelineAnimation[] {
+  return [
+    {
+      id: "bigidea-reveal",
+      target: "__reveal__",
+      type: "write",
+      start: 0.2,
+      duration: round2(Math.max(0.5, ctx.sceneDurationSec * 0.55)),
+      easing: "linear",
+    },
+  ];
+}
+
+// ---------------------------------------------------------------------------
+// PyramidDiagram — draw levels bottom-up (foundation first).
+// ---------------------------------------------------------------------------
+function emitPyramidAnimations(
+  props: Record<string, unknown>,
+  ctx: EmitContext,
+): TimelineAnimation[] {
+  const levels = (props.levels as unknown[]) ?? [];
+  const n = levels.length;
+  if (n === 0) return [];
+  const per = ctx.sceneDurationSec / Math.max(1, n + 1);
+  return levels.map((_, i) => {
+    const order = n - 1 - i;
+    return {
+      id: `level-${i}`,
+      target: `level-${i}`,
+      type: "draw" as const,
+      start: round2(order * per),
+      duration: fitWithin(round2(per * 1.5), order * per, ctx.sceneDurationSec),
+      easing: EASING,
+    };
+  });
+}
+
+// ---------------------------------------------------------------------------
+// VennDiagram — fade each set in, then the whole diagram breathes.
+// ---------------------------------------------------------------------------
+function emitVennAnimations(
+  props: Record<string, unknown>,
+  ctx: EmitContext,
+): TimelineAnimation[] {
+  const sets = (props.sets as unknown[]) ?? [];
+  if (sets.length === 0) return [];
+  const per = ctx.sceneDurationSec / Math.max(1, sets.length + 1);
+  return sets.map((_, i) => ({
+    id: `set-${i}`,
+    target: `set-${i}`,
+    type: "fade" as const,
+    start: round2(i * per),
+    duration: fitWithin(round2(per * 1.4), i * per, ctx.sceneDurationSec),
+    easing: EASING,
+  }));
+}
+
+// ---------------------------------------------------------------------------
+// CycleDiagram — draw the orbit ring, then light each stage in order.
+// ---------------------------------------------------------------------------
+function emitCycleAnimations(
+  props: Record<string, unknown>,
+  ctx: EmitContext,
+): TimelineAnimation[] {
+  const stages = (props.stages as unknown[]) ?? [];
+  const out: TimelineAnimation[] = [
+    {
+      id: "cycle-ring",
+      target: "__ring__",
+      type: "draw",
+      start: 0,
+      duration: round2(Math.min(ctx.sceneDurationSec * 0.25, 1.0)),
+      easing: EASING,
+    },
+  ];
+  if (stages.length === 0) return out;
+  const budgetSec = Math.max(0.5, ctx.sceneDurationSec * 0.75);
+  const per = budgetSec / stages.length;
+  stages.forEach((_, i) => {
+    const start = ctx.sceneDurationSec * 0.25 + i * per;
+    out.push({
+      id: `stage-${i}`,
+      target: `stage-${i}`,
+      type: "highlight",
+      start: round2(start),
+      duration: fitWithin(round2(per * 1.4), start, ctx.sceneDurationSec),
+      easing: EASING,
+    });
+  });
+  return out;
 }
 
 // ---------------------------------------------------------------------------
@@ -311,6 +537,17 @@ function budget(sceneDurationSec: number, elementCount: number): {
 
 function round2(n: number): number {
   return Math.round(n * 100) / 100;
+}
+
+/** Cap an animation so start + duration never exceeds the scene —
+ * stagger multipliers (per × 1.2) otherwise overshoot short scenes and
+ * validation hard-fails the draft. */
+function fitWithin(
+  durationSec: number,
+  startSec: number,
+  sceneDurationSec: number,
+): number {
+  return round2(Math.max(0.05, Math.min(durationSec, sceneDurationSec - startSec)));
 }
 
 /** Narrow `value` to a record that has `prop` as a string. The return

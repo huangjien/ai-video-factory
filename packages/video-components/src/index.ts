@@ -38,6 +38,25 @@ export { Comparison, type ComparisonProps } from "./components/Comparison.js";
 export { Timeline, type TimelineProps } from "./components/Timeline.js";
 export { Callout, type CalloutProps } from "./components/Callout.js";
 export { EndCard, type EndCardProps } from "./components/EndCard.js";
+export { QuoteBlock, type QuoteBlockProps } from "./components/QuoteBlock.js";
+export { StatGrid, type StatEntry, type StatGridProps } from "./components/StatGrid.js";
+export { BarChart, type Bar, type BarChartProps } from "./components/BarChart.js";
+export {
+  Leaderboard,
+  type LeaderboardEntry,
+  type LeaderboardProps,
+} from "./components/Leaderboard.js";
+export { Checklist, type ChecklistItem, type ChecklistProps } from "./components/Checklist.js";
+export { BigIdea, type BigIdeaProps } from "./components/BigIdea.js";
+export {
+  PyramidDiagram,
+  type PyramidDiagramProps,
+} from "./components/PyramidDiagram.js";
+export { VennDiagram, type VennDiagramProps } from "./components/VennDiagram.js";
+export {
+  CycleDiagram,
+  type CycleDiagramProps,
+} from "./components/CycleDiagram.js";
 export {
   CaptionsOverlay,
   type CaptionsOverlayProps,

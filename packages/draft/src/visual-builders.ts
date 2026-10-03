@@ -381,6 +381,254 @@ const buildIllustration: VisualPropsBuilder = (scene) => {
 };
 
 // ---------------------------------------------------------------------------
+// SvgScene — whiteboard draw-on diagram (v0.2 renderer family, svg). Nodes
+// come from the same extractor FlowChart used; layout is a deterministic
+// left-to-right chain on the 1920×1080 canvas (demo-verified coordinates).
+// ---------------------------------------------------------------------------
+const CANVAS_W = 1920;
+const CANVAS_H = 1080;
+
+const buildSvgScene: VisualPropsBuilder = (scene, input) => {
+  const labels = extractNodes(scene, input);
+  const items = (labels.length > 0 ? labels : [scene.caption || scene.visual || "主题"])
+    .slice(0, 5)
+    .map((t) => t.replace(/[.。;；,，、]+$/, "").slice(0, 24));
+  const margin = 140;
+  const usable = CANVAS_W - margin * 2;
+  const step = usable / items.length;
+  const w = Math.min(420, Math.max(220, Math.round(step) - 90));
+  const y = Math.round(CANVAS_H / 2) - 80;
+  const nodes = items.map((text, i) => ({
+    id: `node-${i}`,
+    kind: "rect" as const,
+    x: Math.round(margin + i * step + (step - w) / 2),
+    y,
+    w,
+    h: 160,
+    text,
+  }));
+  const edges = nodes.slice(1).map((n, i) => ({
+    id: `edge-${i}`,
+    from: nodes[i]!.id,
+    to: n.id,
+  }));
+  return { title: scene.caption, nodes, edges };
+};
+
+// ---------------------------------------------------------------------------
+// DoodleScene — hand-drawn canvas (v0.2 renderer family). Shapes are picked
+// deterministically from the scene text (seeded — no Math.random), spread
+// across the canvas; colors/background stay unset so the theme drives ink.
+// ---------------------------------------------------------------------------
+const DOODLE_SHAPES = ["circle", "star", "zigzag", "spiral"] as const;
+
+function seedOf(text: string): number {
+  let h = 7;
+  for (let i = 0; i < text.length; i++) {
+    h = (h * 31 + text.charCodeAt(i)) | 0;
+  }
+  return Math.abs(h);
+}
+
+const buildDoodleScene: VisualPropsBuilder = (scene) => {
+  const seed = seedOf(`${scene.caption ?? ""}|${scene.visual ?? ""}`);
+  const strokes = [0, 1, 2, 3].map((i) => ({
+    id: `doodle-${i}`,
+    shape: DOODLE_SHAPES[(seed + i * 7) % DOODLE_SHAPES.length]!,
+    x: 380 + i * 380 + ((seed >> (i * 3)) % 120),
+    y: 280 + ((seed >> (i * 5)) % 460),
+    size: 130 + ((seed >> (i * 7)) % 90),
+  }));
+  return { strokes };
+};
+
+// ---------------------------------------------------------------------------
+// QuoteBlock — quote card with attribution.
+// ---------------------------------------------------------------------------
+const buildQuoteBlock: VisualPropsBuilder = (scene, input) => {
+  const narration = (scene.narration ?? "").trim();
+  const firstSentence = narration.split(/[。.!?！？\n]/)[0]?.trim() ?? "";
+  const quote = firstSentence || (scene.caption ?? "") || "……";
+  const blob = `${scene.visual ?? ""}\n${narration}\n${input.section?.body ?? ""}`;
+  // Attribution follows a dash run: "——杨绛" / "— Einstein, 1950".
+  const m = blob.match(/[—–]{1,2}\s*([^\n。.,，;；]{2,24})/);
+  const author = m?.[1]?.trim();
+  return { quote, ...(author ? { author } : {}) };
+};
+
+// ---------------------------------------------------------------------------
+// StatGrid — 2-4 big numbers with labels. Numbers are pulled with their
+// unit (% / 倍 / 亿 / x) and a short preceding label token.
+// ---------------------------------------------------------------------------
+const buildStatGrid: VisualPropsBuilder = (scene, input) => {
+  const blob = `${scene.narration ?? ""}\n${input.section?.body ?? ""}\n${scene.caption ?? ""}`;
+  const stats: { value: string; label: string }[] = [];
+  const re =
+    /([\u4e00-\u9fa5A-Za-z]{2,8})?[：:]?\s*(\d[\d,]*(?:\.\d+)?)\s*(%|％|倍|x|×|万亿|亿|万|k|K)/g;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(blob)) !== null && stats.length < 4) {
+    const value = `${m[2]}${m[3]}`;
+    const label = (m[1] ?? "").trim();
+    if (stats.some((s) => s.value === value)) continue;
+    stats.push({ value, label });
+  }
+  if (stats.length === 0) {
+    return {
+      stats: [{ value: "100%", label: scene.caption || input.section?.heading || "关键数据" }],
+    };
+  }
+  return { stats };
+};
+
+// ---------------------------------------------------------------------------
+// BarChart — labeled percentage pairs become horizontal bars.
+// ---------------------------------------------------------------------------
+const buildBarChart: VisualPropsBuilder = (scene, input) => {
+  const blob = `${scene.caption ?? ""}\n${scene.narration ?? ""}\n${input.section?.body ?? ""}`;
+  const bars: { label: string; value: number; display: string }[] = [];
+  const re =
+    /([\u4e00-\u9fa5A-Za-z][\u4e00-\u9fa5A-Za-z0-9 ]{0,10})[：:=为是]?\s*(\d[\d,]*(?:\.\d+)?)\s*[%％]/g;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(blob)) !== null && bars.length < 6) {
+    const label = (m[1] ?? "").trim() || `项 ${bars.length + 1}`;
+    const value = parseFloat((m[2] ?? "0").replace(/,/g, "")) || 0;
+    if (bars.some((b) => b.label === label)) continue;
+    bars.push({ label, value, display: `${m[2]}%` });
+  }
+  if (bars.length < 2) {
+    // Illustrative placeholder bars from the caption — labels real,
+    // values a fixed descending ramp so the shape reads as a chart.
+    const parts = (scene.caption ?? "")
+      .split(/[、，,；;:：\n]/)
+      .map((s) => s.trim())
+      .filter((s) => s.length >= 2)
+      .slice(0, 4);
+    const ramp = [90, 70, 50, 30];
+    const labels = parts.length >= 2 ? parts : ["高", "中", "低"];
+    return {
+      bars: labels.map((label, i) => ({
+        label,
+        value: ramp[i % ramp.length]!,
+        display: `${ramp[i % ramp.length]}%`,
+      })),
+    };
+  }
+  return { bars };
+};
+
+// ---------------------------------------------------------------------------
+// Leaderboard — ranked entries from numbered list lines.
+// ---------------------------------------------------------------------------
+const buildLeaderboard: VisualPropsBuilder = (scene, input) => {
+  const blob = `${input.section?.body ?? ""}\n${scene.narration ?? ""}`;
+  const entries: { name: string; score?: string }[] = [];
+  const lineRe =
+    /^\s*(?:[-*•]\s*)?(?:第\s*([一二三四五六七八九十\d]{1,3})\s*名|(\d{1,2})\s*[.、)）])\s*(.{2,30})$/gm;
+  let m: RegExpExecArray | null;
+  while ((m = lineRe.exec(blob)) !== null && entries.length < 6) {
+    const name = (m[3] ?? "").trim();
+    if (name.length === 0) continue;
+    entries.push({ name });
+  }
+  if (entries.length < 2) {
+    const medal = ["冠军", "亚军", "季军"];
+    return {
+      entries: medal.slice(0, 3).map((name) => ({ name })),
+    };
+  }
+  return { entries };
+};
+
+// ---------------------------------------------------------------------------
+// Checklist — bullets become check rows.
+// ---------------------------------------------------------------------------
+const buildChecklist: VisualPropsBuilder = (scene, input) => {
+  const sectionBody = input.section?.body ?? "";
+  const items: { text: string }[] = [];
+  for (const line of sectionBody.split("\n")) {
+    const m = line.match(/^\s*(?:[-*•]|\d+[.、)）])\s*(.{2,40})$/);
+    if (m && m[1]) {
+      items.push({ text: m[1].trim() });
+      if (items.length >= 6) break;
+    }
+  }
+  if (items.length < 2) {
+    const narration = (scene.narration ?? "").trim();
+    const sentences = narration
+      .split(/[。.!?！？\n]/)
+      .map((s) => s.trim())
+      .filter((s) => s.length >= 2 && s.length <= 40);
+    for (const s of sentences) {
+      items.push({ text: s });
+      if (items.length >= 4) break;
+    }
+  }
+  if (items.length === 0) {
+    return { items: [{ text: scene.caption || "确认要点" }] };
+  }
+  return { items };
+};
+
+// ---------------------------------------------------------------------------
+// BigIdea — full-screen statement; kicker picks the scene's language.
+// ---------------------------------------------------------------------------
+const buildBigIdea: VisualPropsBuilder = (scene) => {
+  const caption = (scene.caption ?? "").trim();
+  const narration = (scene.narration ?? "").trim();
+  const text =
+    caption.length >= 6
+      ? caption
+      : narration.split(/[。.!?！？\n]/)[0]?.trim() || caption || "核心观点";
+  const zh = /[\u4e00-\u9fa5]/.test(`${caption}${narration}`);
+  return { text, kicker: zh ? "核心观点" : "KEY IDEA" };
+};
+
+// ---------------------------------------------------------------------------
+// PyramidDiagram — bullet list becomes levels, top-first.
+// ---------------------------------------------------------------------------
+const buildPyramidDiagram: VisualPropsBuilder = (scene, input) => {
+  const nodes = extractNodes(scene, input).slice(0, 5);
+  if (nodes.length >= 2) {
+    return { levels: nodes.map((t) => t.replace(/[.。;；,，、]+$/, "").slice(0, 16)) };
+  }
+  return { levels: ["顶层结论", "方法路径", "基础事实"] };
+};
+
+// ---------------------------------------------------------------------------
+// VennDiagram — 2-3 set names from conjunction-split caption.
+// ---------------------------------------------------------------------------
+const buildVennDiagram: VisualPropsBuilder = (scene) => {
+  const cap = (scene.caption ?? "").trim();
+  const parts = cap
+    .split(/[、，,；;与和及]/)
+    .map((s) => s.trim())
+    .filter((s) => s.length >= 2 && s.length <= 12);
+  const unique = dedup(parts).slice(0, 3);
+  if (unique.length >= 2) return { sets: unique };
+  const narration = (scene.narration ?? "").trim();
+  const nParts = dedup(
+    narration
+      .split(/[、，,；;与和及]/)
+      .map((s) => s.trim())
+      .filter((s) => s.length >= 2 && s.length <= 12),
+  ).slice(0, 3);
+  if (nParts.length >= 2) return { sets: nParts };
+  return { sets: ["概念A", "概念B"] };
+};
+
+// ---------------------------------------------------------------------------
+// CycleDiagram — loop stages reuse the FlowChart node extractor.
+// ---------------------------------------------------------------------------
+const buildCycleDiagram: VisualPropsBuilder = (scene, input) => {
+  const nodes = extractNodes(scene, input).slice(0, 6);
+  const stages =
+    nodes.length >= 3
+      ? nodes.map((t) => t.replace(/[.。;；,，、]+$/, "").slice(0, 8))
+      : ["计划", "执行", "检查", "改进"].slice(0, Math.max(3, nodes.length));
+  return { stages, title: (scene.caption ?? "").slice(0, 12) || undefined };
+};
+
+// ---------------------------------------------------------------------------
 // Public dispatch
 // ---------------------------------------------------------------------------
 export const VISUAL_BUILDERS: Record<string, VisualPropsBuilder> = {
@@ -390,7 +638,18 @@ export const VISUAL_BUILDERS: Record<string, VisualPropsBuilder> = {
   Callout: buildCallout,
   Comparison: buildComparison,
   Timeline: buildTimeline,
+  SvgScene: buildSvgScene,
+  DoodleScene: buildDoodleScene,
   AnimatedIllustration: buildIllustration,
+  QuoteBlock: buildQuoteBlock,
+  StatGrid: buildStatGrid,
+  BarChart: buildBarChart,
+  Leaderboard: buildLeaderboard,
+  Checklist: buildChecklist,
+  BigIdea: buildBigIdea,
+  PyramidDiagram: buildPyramidDiagram,
+  VennDiagram: buildVennDiagram,
+  CycleDiagram: buildCycleDiagram,
 };
 
 // ---------------------------------------------------------------------------

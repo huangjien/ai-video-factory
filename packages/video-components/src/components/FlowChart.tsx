@@ -1,10 +1,11 @@
 import type { FC } from "react";
 import { AbsoluteFill } from "remotion";
 import { draw, fade } from "../animations.js";
-import { darkTechTheme } from "../theme.js";
+import { darkTechTheme, type Theme } from "../theme.js";
 import { progressFor, type TimelineAnim } from "./timelineTiming.js";
 
 export interface FlowChartProps {
+  theme?: Theme;
   nodes: string[];
   edges?: [number, number][];
   direction?: "left-to-right" | "top-down";
@@ -23,6 +24,7 @@ const GAP_X = 80;
 const GAP_Y = 120;
 
 export const FlowChart: FC<FlowChartProps> = ({
+  theme = darkTechTheme,
   nodes,
   edges = [],
   direction = "left-to-right",
@@ -56,7 +58,7 @@ export const FlowChart: FC<FlowChartProps> = ({
   return (
     <AbsoluteFill
       style={{
-        backgroundColor: darkTechTheme.colors.background,
+        backgroundColor: theme.colors.background,
         opacity: entrance,
       }}
     >
@@ -75,7 +77,7 @@ export const FlowChart: FC<FlowChartProps> = ({
               y1={a.y + NODE_H / 2}
               x2={b.x + NODE_W / 2}
               y2={b.y + NODE_H / 2}
-              stroke={darkTechTheme.colors.accent}
+              stroke={theme.colors.accent}
               strokeWidth={4}
               strokeDasharray={length}
               strokeDashoffset={length - perEdge}
@@ -101,18 +103,18 @@ export const FlowChart: FC<FlowChartProps> = ({
                 width={NODE_W}
                 height={NODE_H}
                 rx={12}
-                fill={darkTechTheme.colors.surface}
-                stroke={darkTechTheme.colors.accent}
+                fill={theme.colors.surface}
+                stroke={theme.colors.accent}
                 strokeWidth={2}
               />
               <text
                 x={NODE_W / 2}
                 y={NODE_H / 2}
-                fill={darkTechTheme.colors.primary}
+                fill={theme.colors.primary}
                 fontSize={24}
                 textAnchor="middle"
                 dominantBaseline="middle"
-                fontFamily={darkTechTheme.typography.body.fontFamily}
+                fontFamily={theme.typography.body.fontFamily}
               >
                 {label}
               </text>

@@ -186,7 +186,7 @@ zod 严格模式——未知字段一律拒绝；校验错误带 YAML 行号）�
 时长单位是秒，编译器按 `Math.round(duration × fps)` 转换为帧。
 
 ```yaml
-schema_version: "0.1"   # 或 "0.2"
+schema_version: "0.2"   # 省略时默认 "0.2"；"0.1" 仍然有效
 
 project:
   id: demo
@@ -234,7 +234,7 @@ scenes:
 
 重要规则：
 
-- `schema_version` 必须是 `"0.1"` 或 `"0.2"`。
+- `schema_version` 必须是 `"0.1"` 或 `"0.2"`（省略时默认 `"0.2"`）。
 - Scene ID 必须唯一；每个 Scene 必须有正数 `duration` 和已注册的视觉组件。
 - 组件必须在 `REGISTRY` 中注册，props 通过该组件的 schema 校验。
 - 旁白音频文件必须存在且不超过场景时长（容差 0.05 秒）——先跑
@@ -259,6 +259,13 @@ scenes:
 `CodeBlock`、`Terminal`、`Image`、`ImageBackground`、`FlowChart`、
 `Comparison`、`Timeline`、`Callout`、`EndCard`、`Character`、
 `SvgScene`、`DoodleScene`。
+
+**项目级渲染器默认值**：省略 `visual.renderer` 的场景继承可选的
+`defaults.renderer` 块（优先级：场景 > defaults > `remotion`）。make 流
+在 `article.md` frontmatter 里写 `default_renderer: canvas`，`vf draft`
+就会把 `defaults:` 块带进派生的 storyboard。继承的渲染器仍受严格接线
+检查——`canvas` + `Title` 依然响亮报错，绝不静默替换。详见
+`docs/schema.md` 的 "Renderer inheritance" 一节。
 
 ## 6. 本地核心流程（推荐）
 

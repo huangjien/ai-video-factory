@@ -6,7 +6,7 @@ import { slugifyProjectName } from "./project-path.js";
 
 const STORYBOARD_TEMPLATE = (
   projectId: string,
-): string => `schema_version: "0.1"
+): string => `schema_version: "0.2"
 
 project:
   id: ${projectId}

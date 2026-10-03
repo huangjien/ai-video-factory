@@ -15,6 +15,7 @@ export const ArticleFrontmatterSchema = z
     language: z.enum(["zh-CN", "en-US"]),
     duration_target_sec: z.number().int().positive(),
     voice: z.string().min(1),
+    default_renderer: z.string().min(1).optional(),
   })
   .passthrough();
 export type ArticleFrontmatter = z.infer<typeof ArticleFrontmatterSchema>;
@@ -54,8 +55,11 @@ export interface ParsedArticle {
 export function articleToStoryboardYaml(article: ParsedArticle): string {
   const f = article.frontmatter;
   const lines: string[] = [
-    `schema_version: "0.1"`,
+    `schema_version: "0.2"`,
     ``,
+    ...(f.default_renderer
+      ? [`defaults:`, `  renderer: ${f.default_renderer}`, ``]
+      : []),
     `project:`,
     `  id: ${f.project}`,
     `  language: ${f.language}`,

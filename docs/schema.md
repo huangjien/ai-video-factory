@@ -8,7 +8,7 @@ numbers. All durations are SECONDS; the compiler converts to frames with
 ## Storyboard
 
 ```yaml
-schema_version: "0.1"   # or "0.2" — both validate; 0.2 fields are optional
+schema_version: "0.2"   # defaults to 0.2 when omitted; 0.1 still validates
 project:
   id: my-video
   language: zh-CN       # zh-CN | en-US
@@ -17,6 +17,8 @@ project:
   height: 1080
 style:
   theme: dark-tech      # single theme today (§25)
+defaults:               # 0.2, optional project-level defaults
+  renderer: svg         # scenes that omit visual.renderer inherit this
 assets:                 # 0.2, optional project-level manifest
   - id: asset-logo
     type: svg           # svg|png|jpg|webp|excalidraw|canvas|audio|video|font
@@ -62,6 +64,33 @@ scenes:
 - LLM synonym coercion is applied BEFORE validation (e.g. `wipe` → `draw`,
   `hand-drawn` → `canvas`, `dissolve` → `fade`); truly unknown values fail
   loudly.
+
+## Renderer inheritance (defaults.renderer)
+
+A scene's `visual.renderer` is optional: an omitted value inherits from
+the project-level `defaults.renderer`, falling back to `remotion`.
+Precedence: **scene > defaults > remotion**. Inheritance resolves at
+parse time — the compiled `vdsl/vdsl.yaml` and the RenderPlan always
+carry explicit per-scene renderers (determinism preserved). Strict by
+design: an inherited renderer that doesn't fit a scene's component
+(e.g. `canvas` + `Title`) still fails loudly at render time
+(`assertPlanRenderable`); there is no silent family-aware fallback.
+
+In the article-driven (`vf make`) flow, the default is set from
+`article.md` frontmatter:
+
+```yaml
+---
+project: my-video
+language: zh-CN
+duration_target_sec: 60
+voice: zh-CN-YunjianNeural
+default_renderer: canvas   # → storyboard emits defaults: {renderer: canvas}
+---
+```
+
+The derived storyboard then carries `schema_version: "0.2"` and the
+`defaults:` block. Synonyms work here too (`hand-drawn` → `canvas`).
 
 ## Camera (T7.4)
 

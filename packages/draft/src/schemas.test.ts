@@ -246,9 +246,26 @@ describe("articleToStoryboardYaml (VDSL sync)", () => {
   it("renders the VDSL header (schema_version + project + style)", () => {
     const yaml = articleToStoryboardYaml(fixture);
     const parsed = parseYaml(yaml) as Record<string, unknown>;
-    expect(parsed["schema_version"]).toBe("0.1");
+    expect(parsed["schema_version"]).toBe("0.2");
     expect(parsed["project"]).toMatchObject({ id: "ai-think", language: "zh-CN", fps: 30 });
     expect(parsed["style"]).toMatchObject({ theme: "dark-tech" });
+  });
+
+  it("emits a defaults block (schema_version 0.2) when frontmatter sets default_renderer", () => {
+    const yaml = articleToStoryboardYaml({
+      ...fixture,
+      frontmatter: { ...fixture.frontmatter, default_renderer: "canvas" },
+    });
+    const parsed = parseYaml(yaml) as Record<string, unknown>;
+    expect(parsed["schema_version"]).toBe("0.2");
+    expect(parsed["defaults"]).toEqual({ renderer: "canvas" });
+  });
+
+  it("omits the defaults block without frontmatter default_renderer", () => {
+    const yaml = articleToStoryboardYaml(fixture);
+    const parsed = parseYaml(yaml) as Record<string, unknown>;
+    expect(parsed["defaults"]).toBeUndefined();
+    expect(parsed["schema_version"]).toBe("0.2");
   });
 
   it("emits one scene per article scene with zero-padded IDs", () => {

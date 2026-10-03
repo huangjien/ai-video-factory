@@ -201,7 +201,7 @@ Durations are SECONDS; the compiler converts to frames with
 `Math.round(duration × fps)`.
 
 ```yaml
-schema_version: "0.1"   # or "0.2"
+schema_version: "0.2"   # defaults to "0.2" when omitted; "0.1" still validates
 
 project:
   id: demo
@@ -249,7 +249,7 @@ scenes:
 
 Important rules:
 
-- `schema_version` must be `"0.1"` or `"0.2"`.
+- `schema_version` must be `"0.1"` or `"0.2"` (defaults to `"0.2"` when omitted).
 - Scene IDs must be unique; each scene needs a positive `duration` and a
   registered visual component.
 - Components must be registered in `REGISTRY`; props must pass the
@@ -279,6 +279,15 @@ The 15 registered components: `Title`, `Paragraph`, `AnimatedIllustration`,
 `CodeBlock`, `Terminal`, `Image`, `ImageBackground`, `FlowChart`,
 `Comparison`, `Timeline`, `Callout`, `EndCard`, `Character`, `SvgScene`,
 `DoodleScene`.
+
+**Project-level renderer default:** scenes that omit `visual.renderer`
+inherit from the optional `defaults.renderer` block (precedence:
+scene > defaults > `remotion`). In the make flow, put
+`default_renderer: canvas` in `article.md` frontmatter and `vf draft`
+emits the `defaults:` block into the storyboard. Inherited renderers are
+still subject to the strict wiring check — `canvas` + `Title` fails
+loudly instead of silently substituting. See `docs/schema.md` §
+"Renderer inheritance".
 
 ## 6. Core local workflow (recommended)
 

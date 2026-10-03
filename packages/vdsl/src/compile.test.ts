@@ -70,6 +70,33 @@ scenes:
     expect(second).toBe(first);
   });
 
+  it("emits explicit per-scene renderers after defaults inheritance (and stays byte-identical on recompile)", async () => {
+    const inherited = `schema_version: "0.2"
+defaults:
+  renderer: svg
+project: {id: t, language: zh-CN, fps: 30, width: 1920, height: 1080}
+scenes:
+  - id: a
+    duration: 8
+    visual: {component: SvgScene, props: {}}
+  - id: b
+    duration: 4
+    visual: {component: Title, props: {text: b}, renderer: remotion}
+`;
+    const root = mkdtempSync(path.join(tmpdir(), "vf-compile-defaults-"));
+    const { renderPlan, yaml, write } = compileStoryboard(inherited, root);
+    await write();
+    const emitted = readFileSync(path.join(root, "vdsl", "vdsl.yaml"), "utf8");
+    expect(renderPlan.scenes[0]?.renderer).toBe("svg");
+    expect(renderPlan.scenes[1]?.renderer).toBe("remotion");
+    expect(yaml).toContain("renderer: svg");
+    expect(emitted).toContain("renderer: remotion");
+    const { write: write2 } = compileStoryboard(emitted, root);
+    await write2();
+    const second = readFileSync(path.join(root, "vdsl", "vdsl.yaml"), "utf8");
+    expect(second).toBe(emitted);
+  });
+
   it("refuses invalid input (shape fail)", () => {
     expect(() => compileStoryboard("not: valid: vdsl", "/proj")).toThrow();
   });

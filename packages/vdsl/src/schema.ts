@@ -457,16 +457,18 @@ const visualSchema = z
   .object({
     component: z.string().min(1),
     props: z.record(z.unknown()),
-    /** Which runtime draws this scene (plan §9). Defaults to "remotion" —
-     * REGISTRY components. svg/canvas/excalidraw renderers land in later
-     * phases; the compiler carries the value and the renderer fails loudly
-     * if asked to draw with an unwired runtime. */
+    /** Which runtime draws this scene (plan §9). Optional at parse time:
+     * an omitted renderer inherits from the project-level `defaults:`
+     * block, falling back to "remotion" (REGISTRY components) — see
+     * applyRendererDefaults below. The compiled vdsl.yaml and RenderPlan
+     * always carry an explicit per-scene renderer; unwired combinations
+     * fail loudly at render time (assertPlanRenderable). */
     renderer: z
       .preprocess(
         safeCoerce(coerceVisualRenderer, VISUAL_RENDERER_CANONICAL),
         z.enum(VISUAL_RENDERER_CANONICAL),
       )
-      .default("remotion"),
+      .optional(),
   })
   .strict();
 
@@ -530,19 +532,56 @@ const sceneSchema = z
   })
   .strict();
 
-export const storyboardSchema = z
+const defaultsSchema = z
   .object({
-    schema_version: z.enum(["0.1", "0.2"]),
+    renderer: z
+      .preprocess(
+        safeCoerce(coerceVisualRenderer, VISUAL_RENDERER_CANONICAL),
+        z.enum(VISUAL_RENDERER_CANONICAL),
+      )
+      .optional(),
+  })
+  .strict();
+
+const storyboardObjectSchema = z
+  .object({
+    schema_version: z.enum(["0.1", "0.2"]).default("0.2"),
     project: projectSchema,
     style: styleSchema.optional(),
+    /** Project-level defaults: scenes that omit visual.renderer inherit
+     * from here (per-scene values always win; final fallback "remotion"). */
+    defaults: defaultsSchema.optional(),
     /** Project-level asset manifest (plan §11). */
     assets: z.array(assetSchema).optional(),
     scenes: z.array(sceneSchema).min(1),
   })
   .strict();
 
-export type Storyboard = z.infer<typeof storyboardSchema>;
-export type Scene = z.infer<typeof sceneSchema>;
+/** Renderer inheritance: scene.visual.renderer ?? defaults.renderer ??
+ * "remotion", resolved at parse time so the compiled vdsl.yaml and the
+ * RenderPlan always carry explicit per-scene renderers (determinism).
+ * Strict by design — an inherited renderer that doesn't fit a scene's
+ * component still fails loudly in assertPlanRenderable; no silent
+ * family-aware fallback (§ "Silent fallback would render the wrong
+ * thing; the CLI should stop instead"). */
+function applyRendererDefaults(board: z.infer<typeof storyboardObjectSchema>) {
+  const fallback = board.defaults?.renderer;
+  return {
+    ...board,
+    scenes: board.scenes.map((scene) => ({
+      ...scene,
+      visual: {
+        ...scene.visual,
+        renderer: scene.visual.renderer ?? fallback ?? "remotion",
+      },
+    })),
+  };
+}
+
+export const storyboardSchema =
+  storyboardObjectSchema.transform(applyRendererDefaults);
+export type Storyboard = z.output<typeof storyboardSchema>;
+export type Scene = Storyboard["scenes"][number];
 export type TimelineAnimation = z.infer<typeof timelineAnimationSchema>;
 export type Asset = z.infer<typeof assetSchema>;
 

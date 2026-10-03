@@ -40,7 +40,7 @@ export function validateStoryboard(
             field,
             line: lineOf(parsed.doc, text, [...issue.path, key]),
             message: `Unknown field "${key}" — VDSL is strict; unknown keys are rejected (§21.1 line 931).`,
-            fix: `Remove "${key}" or check the schema at schema_version 0.1.`,
+            fix: `Remove "${key}" or check the schema (defaults to 0.2 when schema_version is omitted).`,
           });
         }
         continue;

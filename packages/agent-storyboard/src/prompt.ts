@@ -10,7 +10,7 @@ export interface AgentInput {
   scriptContext?: { markdown: string } | undefined;
 }
 
-const FEWSHOT_SAMPLE = `schema_version: "0.1"
+const FEWSHOT_SAMPLE = `schema_version: "0.2"
 project:
   id: ai-cot
   language: zh-CN
@@ -50,7 +50,7 @@ Your ONLY job: produce a valid VDSL 0.1 storyboard.yaml for the given topic.
 
 Rules:
 1. Output strictly one fenced YAML code block (\`\`\`yaml ... \`\`\`).
-2. Use schema_version: "0.1".
+2. Use schema_version: "0.2".
 3. Use the dark-tech theme (theme: dark-tech).
 4. Use components from this registered set ONLY:
    Title, Paragraph, CodeBlock, Terminal, Image, FlowChart, Comparison,

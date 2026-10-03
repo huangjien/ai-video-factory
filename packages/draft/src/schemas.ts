@@ -1,5 +1,9 @@
 import { z } from "zod";
 import { parse as parseYaml } from "yaml";
+import { pickVisualComponent } from "./visual-classifier.js";
+import { VISUAL_BUILDERS } from "./visual-builders.js";
+import type { VisualPropsBuilder } from "./visual-builders.js";
+import { emitSceneAnimations } from "./animation-emitter.js";
 
 /**
  * Draft output schema — markdown-first by design. The LLM produces the
@@ -16,6 +20,13 @@ export const ArticleFrontmatterSchema = z
     duration_target_sec: z.number().int().positive(),
     voice: z.string().min(1),
     default_renderer: z.string().min(1).optional(),
+    /** v0.4: visual theme (e.g. "paper-light", "dark-tech", "blueprint").
+     *  Falls back to "paper-light" when omitted (v0.4.3 default flip). */
+    theme: z.string().min(1).optional(),
+    /** v0.4: when true, articleToStoryboardYaml omits the
+     *  `captions: { source: narration }` block so the renderer skips
+     *  the caption overlay. Default false (captions on). */
+    no_captions: z.boolean().optional(),
   })
   .passthrough();
 export type ArticleFrontmatter = z.infer<typeof ArticleFrontmatterSchema>;
@@ -50,10 +61,17 @@ export interface ParsedArticle {
  * Keeps `vf make`'s video length in sync with `article.md` scenes —
  * without this, the default `storyboard.yaml` from `vf new` (1 scene)
  * would render only 8s of video while `vf make` synthesizes all N scenes.
- * First scene → `Title`; rest → `Paragraph`. The article's prose-y
- * `visual` field maps to `Title.subtext` for the opening scene only. */
+ *
+ * v0.4 changes:
+ *  - `style.theme` honours `frontmatter.theme` (T8 --style flag).
+ *  - `captions: { source: narration }` is emitted for every scene
+ *    unless `frontmatter.no_captions === true` (T1 --no-captions).
+ *  - The visual component is chosen by `pickVisualComponent` (T2) so
+ *    the LLM's "vary visuals" instructions actually take effect.
+ */
 export function articleToStoryboardYaml(article: ParsedArticle): string {
   const f = article.frontmatter;
+  const theme = f.theme ?? "paper-light";
   const lines: string[] = [
     `schema_version: "0.2"`,
     ``,
@@ -68,26 +86,105 @@ export function articleToStoryboardYaml(article: ParsedArticle): string {
     `  height: 1080`,
     ``,
     `style:`,
-    `  theme: dark-tech`,
+    `  theme: ${yamlStr(theme)}`,
     ``,
     `scenes:`,
   ];
+  const captionsOn = f.no_captions !== true;
+  // Map scenes → prose sections (same 1:N rule as recoverEmptyNarrations)
+  // so visual builders can pull structured data from the article body.
+  const sections = parseProseSections(article.proseBody);
+  const perSection =
+    sections.length === 0
+      ? 0
+      : Math.max(1, Math.ceil(article.scenes.length / sections.length));
   article.scenes.forEach((s, i) => {
     const id = `scene-${String(i + 1).padStart(2, "0")}`;
     const isFirst = i === 0;
-    const component = isFirst ? "Title" : "AnimatedIllustration";
-    const props = isFirst
-      ? s.visual && s.visual.length > 0
-        ? `    visual:\n      component: ${component}\n      props:\n        text: ${yamlStr(s.caption ?? "")}\n        subtext: ${yamlStr(truncateForSubtext(s.visual))}`
-        : `    visual:\n      component: ${component}\n      props:\n        text: ${yamlStr(s.caption ?? "")}`
-      : `    visual:\n      component: ${component}\n      props:\n        text: ${yamlStr(s.caption ?? "")}\n        visual: ${yamlStr(s.visual ?? "")}`;
+    const choice = pickVisualComponent(s.visual ?? "", isFirst);
+    const component = choice.component;
+    const sectionIdx =
+      sections.length === 0
+        ? 0
+        : Math.min(Math.floor(i / perSection), sections.length - 1);
+    const section = sections[sectionIdx] ?? null;
+    const builder: VisualPropsBuilder =
+      VISUAL_BUILDERS[component] ?? VISUAL_BUILDERS.AnimatedIllustration!;
+    const props = builder(s, { section });
+    const propsLines = propsToYamlLines(props, "        ");
     lines.push(`  - id: ${id}`);
     lines.push(`    duration: ${s.duration ?? 0}`);
     lines.push(`    narration:`);
     lines.push(`      text: ${yamlStr(s.narration ?? "")}`);
-    lines.push(props);
+    lines.push(`    visual:`);
+    lines.push(`      component: ${component}`);
+    lines.push(`      props:`);
+    for (const pl of propsLines) lines.push(pl);
+    const animations = emitSceneAnimations(component, props, {
+      sceneDurationSec: s.duration ?? 0,
+    });
+    if (animations.length > 0) {
+      lines.push(`    animations:`);
+      for (const a of animations) {
+        lines.push(`      - id: ${yamlStr(a.id)}`);
+        lines.push(`        target: ${yamlStr(a.target)}`);
+        lines.push(`        type: ${a.type}`);
+        lines.push(`        start: ${a.start}`);
+        lines.push(`        duration: ${a.duration}`);
+        lines.push(`        easing: ${a.easing}`);
+      }
+    }
+    if (captionsOn) {
+      lines.push(`    captions:`);
+      lines.push(`      source: narration`);
+    }
   });
   return lines.join("\n") + "\n";
+}
+
+/** Serialize an arbitrary `Record<string, unknown>` to indented YAML
+ *  lines. Top-level scalars use `yamlStr`; arrays of strings become
+ *  block sequences; nested objects become nested mappings. */
+function propsToYamlLines(
+  props: Record<string, unknown>,
+  indent: string,
+): string[] {
+  const out: string[] = [];
+  for (const [k, v] of Object.entries(props)) {
+    if (v === undefined) continue;
+    if (Array.isArray(v)) {
+      if (v.length === 0) {
+        out.push(`${indent}${k}: []`);
+        continue;
+      }
+      if (v.every((item) => typeof item === "string")) {
+        out.push(`${indent}${k}:`);
+        for (const item of v) {
+          out.push(`${indent}- ${yamlStr(String(item))}`);
+        }
+        continue;
+      }
+      // Mixed / object array — write inline JSON for fidelity (rare path).
+      out.push(`${indent}${k}: ${JSON.stringify(v)}`);
+      continue;
+    }
+    if (typeof v === "string") {
+      out.push(`${indent}${k}: ${yamlStr(v)}`);
+      continue;
+    }
+    if (typeof v === "number" || typeof v === "boolean") {
+      out.push(`${indent}${k}: ${String(v)}`);
+      continue;
+    }
+    if (v && typeof v === "object") {
+      out.push(`${indent}${k}:`);
+      const nested = propsToYamlLines(v as Record<string, unknown>, indent + "  ");
+      out.push(...nested);
+      continue;
+    }
+    out.push(`${indent}${k}: ${yamlStr(String(v))}`);
+  }
+  return out;
 }
 
 function yamlStr(s: string): string {

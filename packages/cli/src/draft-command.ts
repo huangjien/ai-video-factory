@@ -33,6 +33,14 @@ export interface DraftOptions {
   noWeb?: boolean;
   /** Skip the merged audio-plan step (article.md only). */
   noAudioPlan?: boolean;
+  /** v0.4 (T8): override the storyboard visual theme. Stamped into the
+   *  article frontmatter so articleToStoryboardYaml emits
+   *  `style.theme: <theme>` instead of the hardcoded "dark-tech". */
+  style?: string;
+  /** v0.4 (T1): when true, the auto-generated storyboard omits the
+   *  `captions: { source: narration }` block (render-time caption
+   *  overlay is skipped). */
+  noCaptions?: boolean;
 }
 
 function providerInstance(name: string): Provider {
@@ -178,6 +186,18 @@ export async function runDraft(opts: DraftOptions): Promise<number> {
       );
     }
     const storyboardPath = path.join(projectRoot, "storyboard", "storyboard.yaml");
+    // v0.4 (T1 + T8): stamp CLI-supplied knobs onto the parsed article
+    // before handing it to the storyboard mapper. We only mutate the
+    // in-memory copy; the article.md on disk stays as the LLM wrote it
+    // so the human-edit invariant (`article.md` is the canonical source)
+    // is preserved.
+    if (opts.style !== undefined || opts.noCaptions === true) {
+      article.frontmatter = {
+        ...article.frontmatter,
+        ...(opts.style !== undefined ? { theme: opts.style } : {}),
+        ...(opts.noCaptions === true ? { no_captions: true } : {}),
+      };
+    }
     await writeFile(storyboardPath, articleToStoryboardYaml(article), "utf8");
   } catch (err) {
     console.error(

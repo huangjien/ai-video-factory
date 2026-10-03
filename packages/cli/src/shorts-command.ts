@@ -6,6 +6,7 @@ import path from "node:path";
 import { resolveProjectDir } from "./project-path.js";
 import { existsSync, readFileSync } from "node:fs";
 import { formatRunId } from "@vf/workflow";
+import { readSceneTimings } from "@vf/media";
 import {
   MiniMaxVideoProvider,
   MockVideoProvider,
@@ -164,6 +165,9 @@ export async function runShorts(opts: ShortsOptions): Promise<number> {
     };
   } else {
     // Mock path — mechanical ffmpeg clip from final.mp4.
+    // v0.4 (T5): when the user didn't pin one, default `start` snaps
+    // to the second scene's start time (skips the Title card and the
+    // silent intro gap). When only one scene exists we fall back to 0.
     const src = path.join(projectRoot, "output", "final-faststart.mp4");
     if (!existsSync(src)) {
       console.error(`missing final mp4: ${src}`);
@@ -171,7 +175,16 @@ export async function runShorts(opts: ShortsOptions): Promise<number> {
       return 1;
     }
     const duration = opts.durationSec ?? 60;
-    const start = opts.startSec ?? 0;
+    let start = opts.startSec ?? -1;
+    if (start < 0) {
+      try {
+        const timings = await readSceneTimings(projectRoot);
+        const scene1Dur = timings.find((t) => t.id === "scene-01")?.duration ?? 0;
+        start = scene1Dur > 0 ? scene1Dur : 0;
+      } catch {
+        start = 0;
+      }
+    }
     try {
       await shortsFfmpeg(src, shortsPath, start, duration);
     } catch (err) {

@@ -1,0 +1,20 @@
+{
+  "$schema": "https://omp.sh/schemas/settings.schema.json",
+  "skills": {
+    "enabled": true,
+    "customDirectories": [
+      ".omp/skills"
+    ],
+    "enableSkillCommands": true
+  },
+  "commands": {
+    "enabled": true,
+    "enableNativeProject": true
+  },
+  "permissions": {
+    "read": "allow",
+    "write": "ask",
+    "edit": "ask",
+    "bash": "ask"
+  }
+}

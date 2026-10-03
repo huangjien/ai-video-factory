@@ -14,7 +14,8 @@ import {
 import { promisify } from "node:util";
 import os from "node:os";
 import path from "node:path";
-import { parseArticleWithRecovery, articleToStoryboardYaml, type ParsedArticle } from "@vf/draft";
+import { parseArticleWithRecovery, articleToStoryboardYaml, expandScenePrompt, type ParsedArticle } from "@vf/draft";
+import { MiniMaxProvider } from "@vf/llm";
 import { parse as parseYaml, stringify as yamlStringify } from "yaml";
 import {
   FakeTTSProvider,
@@ -254,6 +255,12 @@ async function syncStoryboardFromArticle(
  * already exists. When the provider is "none" or a scene has no visual
  * description, it's skipped and the renderer falls back to
  * AnimatedIllustration geometric shapes.
+ *
+ * v0.4 (T3): when `--image-provider minimax`, the article's one-line
+ * `visual:` is rewritten into a real image prompt (subject · lighting ·
+ * composition · style) via `expandScenePrompt`. The expansion is cached
+ * on disk so re-runs are free; the `.prompt.txt` sidecar next to each
+ * JPG is auditable.
  */
 async function generateSceneVisuals(
   projectRoot: string,
@@ -273,6 +280,10 @@ async function generateSceneVisuals(
   const reqWidth = isMock ? 64 : 1920;
   const reqHeight = isMock ? 36 : 1080;
 
+  // v0.4 (T3): MiniMax image path needs an LLM to rewrite the prompt.
+  // Mock path passes null and skips expansion entirely.
+  const expansionProvider = isMock ? null : new MiniMaxProvider();
+
   const outputs: string[] = [];
   const generatedImages: string[] = [];
   for (let i = 0; i < article.scenes.length; i++) {
@@ -286,9 +297,36 @@ async function generateSceneVisuals(
       continue; // idempotent
     }
 
+    let promptForImage = visual;
+    if (expansionProvider) {
+      try {
+        const { prompt } = await expandScenePrompt(
+          {
+            id: scene.id,
+            visual,
+            caption: scene.caption,
+            narration: scene.narration,
+          },
+          expansionProvider,
+          projectRoot,
+          i + 1,
+        );
+        promptForImage = prompt;
+        outputs.push(
+          `assets/images/scene_${i + 1}.prompt.txt (LLM-expanded)`,
+        );
+      } catch (err) {
+        // Fall back to the raw visual line so a provider hiccup doesn't
+        // stall the whole render. The sidecar isn't written in that case.
+        outputs.push(
+          `scene_${i + 1}: prompt expansion failed, using raw visual — ${(err as Error).message.slice(0, 60)}`,
+        );
+      }
+    }
+
     try {
       const result = await provider.generate({
-        prompt: visual,
+        prompt: promptForImage,
         width: reqWidth,
         height: reqHeight,
       });
@@ -304,9 +342,9 @@ async function generateSceneVisuals(
   }
 
   if (generatedImages.length > 0) {
-    updateStoryboardForImages(projectRoot, generatedImages);
+    const switched = updateStoryboardForImages(projectRoot, generatedImages);
     outputs.push(
-      `storyboard.yaml: ${generatedImages.length} scenes switched to ImageBackground`,
+      `storyboard.yaml: ${switched}/${generatedImages.length} scenes switched to ImageBackground`,
     );
   }
   return outputs;
@@ -320,13 +358,13 @@ async function generateSceneVisuals(
 function updateStoryboardForImages(
   projectRoot: string,
   imagePaths: string[],
-): void {
+): number {
   const storyboardPath = path.join(
     projectRoot,
     "storyboard",
     "storyboard.yaml",
   );
-  if (!existsSync(storyboardPath)) return;
+  if (!existsSync(storyboardPath)) return 0;
 
   const yamlText = readFileSync(storyboardPath, "utf8");
   let parsed: {
@@ -341,11 +379,11 @@ function updateStoryboardForImages(
   try {
     parsed = parseYaml(yamlText) as typeof parsed;
   } catch {
-    return;
+    return 0;
   }
-  if (!parsed.scenes) return;
+  if (!parsed.scenes) return 0;
 
-  let changed = false;
+  let switched = 0;
   for (const scene of parsed.scenes) {
     if (scene.visual?.component !== "AnimatedIllustration") continue;
     const idNum = scene.id?.match(/scene[-_]?(\d+)/)?.[1];
@@ -364,12 +402,13 @@ function updateStoryboardForImages(
       src: imagePath,
       ...(prevText !== undefined ? { caption: prevText } : {}),
     };
-    changed = true;
+    switched++;
   }
 
-  if (changed) {
+  if (switched > 0) {
     writeFileSync(storyboardPath, yamlStringify(parsed), "utf8");
   }
+  return switched;
 }
 
 interface AudioConfigShape {

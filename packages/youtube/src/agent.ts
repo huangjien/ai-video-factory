@@ -11,6 +11,11 @@ export interface YouTubeInput {
   storyboard: string;
   script: string;
   research: string;
+  /** v0.4 (T4): the article's hook (first 1-3 sentences). Drives the
+   *  emotional tone of `thumbnail_prompt`. Optional for back-compat. */
+  hook?: string;
+  /** v0.4 (T4): the topic / title of the video. Echoed in `title`. */
+  topic?: string;
 }
 
 export const SYSTEM_PROMPT = `You are the YouTube Automation Agent for the AI Video Factory.
@@ -28,26 +33,43 @@ Output: ONE fenced YAML code block (\`\`\`yaml ... \`\`\`) with EXACTLY these ke
 Constraints:
 - Title must NOT exceed 100 chars (YouTube limit).
 - Chapters must be in MM:SS format and sorted by time.
-- VISUAL STYLE — prefer people over screens in both thumbnail and shorts:
-  - Thumbnail prompt describes what an image generator should produce —
-    be concrete (lighting, framing, expression, mood). The focal subject
-    must be a real-looking person with a clear emotion; avoid text overlay,
-    avoid fake dashboards / terminals / code blocks / abstract UI.
-  - Shorts hook is a self-contained 60-second script beat. The visual beat
-    in the hook text should centre on a person speaking or acting; do not
-    describe screen recordings, terminal sessions, or text-on-screen.
+- VISUAL STYLE — prefer people over screens in both thumbnail and shorts.
+
+HARD RULES for thumbnail_prompt and shorts_hook:
+- NEVER include text, subtitles, watermarks, logos, captions, titles, or brand names in the image.
+- NEVER describe posters, infographics, dashboards, terminals, code blocks, or abstract UI.
+- The focal subject must be a real-looking person with a clear emotion, OR a vivid concrete scene.
+- Output a generic visual scene, not a poster with type.
+
+STRUCTURAL TEMPLATE — every thumbnail_prompt and shorts_hook must follow:
+  [Person or subject] · [action / expression] · [environment] · [lighting] · [mood] · [style modifier]
+- Example (passing):  "Young woman · eyes wide with surprise · cozy kitchen at dawn · warm side-light · curious and hopeful · cinematic 35mm"
+- Example (failing):  "Bold text 'AI 思维链' on dark background with brain graphic and tech accents"
+
+ECHO the article's hook emotional tone (curiosity / tension / surprise / transformation) in the thumbnail.
 - NO prose outside the YAML block.`;
 
 export function buildYouTubeMessages(input: YouTubeInput): ChatMessage[] {
-  const userParts = [
-    "## Storyboard (VDSL)",
-    input.storyboard.slice(0, 4000),
-    "\n## Script (Markdown)",
-    input.script.slice(0, 4000),
-    "\n## Research (excerpt — sources for description citations)",
-    input.research.slice(0, 2000),
-    "\nProduce the YouTube package YAML.",
-  ];
+  const userParts: string[] = [];
+  if (input.hook) {
+    userParts.push("## Hook (first 1-3 sentences — anchor the emotional tone)");
+    userParts.push(input.hook);
+    userParts.push("");
+  }
+  if (input.topic) {
+    userParts.push(`## Topic: ${input.topic}`);
+    userParts.push("");
+  }
+  userParts.push("## Storyboard (VDSL)");
+  userParts.push(input.storyboard.slice(0, 4000));
+  userParts.push("");
+  userParts.push("## Script (Markdown)");
+  userParts.push(input.script.slice(0, 4000));
+  userParts.push("");
+  userParts.push("## Research (excerpt — sources for description citations)");
+  userParts.push(input.research.slice(0, 2000));
+  userParts.push("");
+  userParts.push("Produce the YouTube package YAML.");
   return [
     { role: "system", content: SYSTEM_PROMPT },
     { role: "user", content: userParts.join("\n") },
@@ -158,10 +180,48 @@ export async function callYouTube(
       actualProvider,
     );
   }
+  if (hasTextOverlay(result.data.thumbnail_prompt)) {
+    throw new YouTubeError(
+      "thumbnail_prompt contains banned tokens (text/字幕/字体/logo/标题/海报) — re-prompt with stricter negative constraints",
+      actualProvider,
+      { thumbnail_prompt: result.data.thumbnail_prompt },
+    );
+  }
   return {
     youtube: result.data,
     usage: res.usage,
     providerName: actualProvider,
     messages,
   };
+}
+
+/** v0.4 (T4): banned tokens that indicate the LLM is describing a text
+ *  overlay / poster / dashboard instead of a real scene. The validator
+ *  scans the lowercased prompt for any of these substrings. */
+const BANNED_TOKENS = [
+  "text",
+  "subtitle",
+  "subtitles",
+  "watermark",
+  "logo",
+  "caption",
+  "caption:",
+  "title text",
+  "bold text",
+  "大字",
+  "字幕",
+  "标志",
+  "logo文字",
+  "标题",
+  "海报",
+  "海报风格",
+  "屏幕截图",
+  "截图",
+  "仪表盘",
+  "界面",
+];
+
+export function hasTextOverlay(prompt: string): boolean {
+  const lower = prompt.toLowerCase();
+  return BANNED_TOKENS.some((tok) => lower.includes(tok.toLowerCase()));
 }

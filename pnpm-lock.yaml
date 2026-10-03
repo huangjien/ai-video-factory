@@ -337,6 +337,9 @@ importers:
       '@vf/draft':
         specifier: workspace:*
         version: link:../draft
+      '@vf/llm':
+        specifier: workspace:*
+        version: link:../llm
       '@vf/media':
         specifier: workspace:*
         version: link:../media

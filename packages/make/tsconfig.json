@@ -11,6 +11,7 @@
     { "path": "../tts" },
     { "path": "../audio-assets" },
     { "path": "../audio-mix" },
-    { "path": "../media-generators" }
+    { "path": "../media-generators" },
+    { "path": "../llm" }
   ]
 }

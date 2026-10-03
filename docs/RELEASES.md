@@ -15,6 +15,179 @@ vf research → script → storyboard → audio (TTS) → audio-asset (BGM+SFX)
        vf review                          → Content/Visual/Technical review YAMLs
 ```
 
+## v0.4 — Visual & Publishing Quality
+
+**Branch:** `feat/v0.4-video-quality`
+**Tags:** `v0.4`
+
+Seven quality wins — same human-gate principle, no breaking changes to the
+two-file edit model (`article.md` + `audio-config.yaml`).
+
+### What changed
+
+- **Auto-captions from article** (`vf draft` → T1): every auto-generated
+  storyboard now carries `captions: { source: narration }`. Opt out with
+  `--no-captions`. The existing `writeCaptionsSrt` step in `@vf/make`
+  produces `captions/<lang>.srt`; the new flag stops the overlay from
+  loading it.
+- **Visual-variety classifier** (T2, `packages/draft/src/visual-classifier.ts`):
+  the article's `visual:` field is classified into the right VDSL
+  component (FlowChart / Comparison / Terminal / Timeline / Callout /
+  Illustration) instead of every scene being `AnimatedIllustration`.
+  First scene still `Title`. Keyword vocabulary is bilingual (zh-CN +
+  en-US). Hand-edited storyboards are preserved on subsequent runs.
+- **Image prompt expansion** (T3, `--image-provider minimax`): the
+  80-char `visual:` is rewritten into a 2-3 sentence image prompt
+  (subject · environment · lighting · composition · style) via a
+  cheap LLM call (≤400 chars, temperature 0.4). Cached on
+  `sha256(visual|caption|narration[:200])` so re-runs are free.
+  Audit sidecar: `assets/images/scene_N.prompt.txt`.
+- **`--style <theme>` flag** (T8, `vf draft`): `style.theme: warm-sunset`
+  instead of the hardcoded `dark-tech`. Plumbed through CLI → article
+  frontmatter → storyboard.
+- **Hook ↔ YouTube coherence** (T4): the YouTube agent now receives the
+  article's hook and topic explicitly. The thumbnail prompt is checked
+  against a banned-token list (`text` / `字幕` / `字体` / `logo文字` /
+  `海报` / `界面` / `仪表盘` / `截图` / …) and re-prompted once on a
+  hit. The CLI never silently accepts a poster-style prompt.
+- **QA gate in `vf final`** + **QA surfacing in `vf status`** (T6, T7):
+  `vf final` already ran QA + gated on errors; `vf status` now prints
+  `QA: ✗ N errors, ✓ M warnings` (or `✓ …`) so users know without
+  running `vf qa` manually.
+- **`vf retrospect <project>`** (T10): cheap LLM call that reads the
+  last 5 `runs/*.yaml` + the latest QA report and writes
+  `projects/<slug>/retrospect.md` with 3 concrete edits to
+  `article.md`. `--dry-run` shows the prompt without calling the LLM.
+  Records a run.
+- **CLI banner** (T9): `vf` and `vf --help` print the minimal-API
+  quickstart above the verb list.
+- **Scene-aware mock Shorts** (T5): `vf shorts` (mock) now snaps to
+  the second scene boundary by default, skipping the `Title` card.
+  Override with `--start <sec>`.
+
+### New files
+
+- `packages/draft/src/visual-classifier.ts` (+ test)
+- `packages/draft/src/image-prompt.ts`
+- `packages/cli/src/retrospect-command.ts` (+ test)
+
+### Tests
+
+- 481 + 9 new tests, 76 → 79 test files. `npm test` green.
+- `pnpm run acceptance` (§62.4) still green.
+
+### Non-changes
+
+- The two-file edit model (`article.md` + `audio-config.yaml`) is
+  unchanged.
+- No auto-publishing, no auto-approve.
+- Per-segment BGM transitions + cloud rendering + GLM image provider
+  are still deliberately deferred (no verified spec).
+
+## v0.4.1 — pi / oh-my-pi adapter
+
+**Branch:** `feat/v0.4.1-pi-adapter`
+**Tags:** `v0.4.1`
+
+The harness adapter section of the README is no longer OpenCode-only.
+The repo now ships first-class integration with `pi / oh-my-pi`
+(`@oh-my-pi/pi-coding-agent`, `omp.sh`):
+
+- **`.omp/commands/video.md`** — native slash command. OMP discovers
+  commands at `<cwd>/.omp/commands/*.md`; `name` + `description`
+  frontmatter, plus a body that documents the canonical pipeline,
+  every verb, and the critical invariants. Identical in spirit to the
+  existing `.opencode/command/video.md`.
+- **`.omp/skills/<name>/SKILL.md`** — symlinks for all 28 third-party
+  skills in `.agents/skills/` so OMP's native skill provider picks
+  them up. Single source of truth remains `.agents/skills/`; OMP just
+  needs the directory layout it expects.
+- **`.omp/settings.json`** — enables native project commands, custom
+  skill directories, and `/skill:<name>` interactive commands.
+
+No new packages, no changes to the `vf` CLI. The CLI stays the
+harness-agnostic surface; every adapter forwards to it (OpenCode,
+OMP, Claude Code, Codex, Gemini, or plain shell via `bin/video`).
+
+## v0.4.2 — four new `style.theme` palettes
+
+`packages/video-components/src/theme.ts` grows from 4 to 8 built-in
+palettes. Total stays small so users can pick by name without a
+picker UI:
+
+- `forest-moss` — emerald / lime. Sustainability / botanical / outdoor.
+- `sunset-pop` — near-black / bright yellow. Energetic consumer /
+  entertainment.
+- `terminal-vintage` — phosphor green on dark gray. Dev tutorials /
+  retro hacker nostalgia. Uses JetBrains Mono across all roles and
+  `linear` easing for the classic CRT feel.
+- `paper-cream` — soft beige / burnt orange. Product / food /
+  family-friendly explainers. Warmer and more modern than `paper-light`.
+
+All four pass the existing luma-contrast smoke test
+(`primary`/`background` spread > 120). Unknown / misspelled names
+still fall back to `dark-tech` — renders never crash on a typo. The
+`--style <name>` flag on `vf draft` is unchanged; the article
+frontmatter `theme: <name>` field carries through unchanged. New docs:
+
+- `docs/INSTALLATION_AND_USAGE.md` §"Available themes (v0.4.2)" —
+  English table.
+- `docs/INSTALLATION_AND_USAGE.zh-CN.md` §"可用主题（v0.4.2）" —
+  zh-CN mirror.
+
+- Test additions (`packages/video-components/src/theme-registry.test.ts`):
+3 new cases — assert the 4 v0.4.2 names exist, `resolveTheme` finds
+them, and `terminal-vintage` uses JetBrains Mono everywhere.
+
+## v0.4.3 — default `style.theme` flipped to `paper-light`
+
+The default theme for any storyboard that doesn't declare one (and for
+any `vf draft` that doesn't pass `--style`) is now **`paper-light`**
+instead of `dark-tech`. Unknown / misspelled theme names also fall back
+to `paper-light`. The `dark-tech` palette and every other theme name
+are unchanged — set `theme: dark-tech` explicitly in `article.md`
+frontmatter or `storyboard.yaml` `style:` block to keep the old look.
+
+**Rationale.** `paper-light` pairs naturally with the existing
+`DoodleScene` (canvas hand-drawn) component, which forces its own
+`paper` background regardless of theme; matching defaults reduce
+disagreement. Tech-focused users who prefer `dark-tech` add one line
+to their article frontmatter.
+
+**Source-of-truth defaults updated:**
+- `packages/video-components/src/theme.ts` — `resolveTheme()` returns
+  `paperLightTheme` for both undefined input and unknown names.
+- `packages/video-components/src/components/Background.tsx` — default
+  prop switches to `paperLightTheme`.
+- `packages/vdsl/src/schema.ts` — `styleSchema.theme` zod default →
+  `"paper-light"`.
+- `packages/vdsl/src/compile.ts` — fallback for missing theme →
+  `"paper-light"`.
+- `packages/draft/src/schemas.ts` — `articleToStoryboardYaml` reads
+  `f.theme ?? "paper-light"`.
+- `packages/cli/src/storyboard-command.ts` — `opts.style ?? "paper-light"`.
+- `packages/cli/src/index.ts` — `--help` text for both `vf draft` and
+  `vf storyboard` reflects the new default.
+
+**Tests:**
+- `theme-registry.test.ts` — `resolveTheme(undefined)`, `null`, `""`,
+  and a typo all now resolve to `paperLightTheme`. Explicit
+  `resolveTheme("dark-tech")` still returns `darkTechTheme`. Renamed
+  the case "falls back to dark-tech for unknown/missing names" →
+  "defaults to paper-light for unknown/missing names (v0.4.3)".
+- `packages/draft/src/schemas.test.ts` — header assertion
+  `style.theme: "dark-tech"` → `"paper-light"`. Other tests that
+  supply an explicit theme name (the bulk of the suite) are unchanged.
+
+**Docs:**
+- `docs/INSTALLATION_AND_USAGE.md` §"Available themes (v0.4.3)" —
+  intro + 8-row table now lead with `paper-light` as the new default.
+- `docs/INSTALLATION_AND_USAGE.zh-CN.md` §"可用主题（v0.4.3）" —
+  zh-CN mirror.
+- `docs/schema.md` — `style.theme` example + table show
+  `paper-light (v0.4.3 default)` first; pre-v0.4.3 storyboards still
+  valid (back-compat preserved).
+
 ## v0.3.11 — remove the "old version" traces
 
 **Branch:** `chore/v0.3.11-drop-legacy-traces`

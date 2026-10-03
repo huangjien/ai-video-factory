@@ -113,11 +113,30 @@ export async function runYouTube(opts: YouTubeOptions): Promise<number> {
   try {
     result = await callYouTube(input, provider, fallback);
   } catch (err) {
-    console.error(
-      `\u2717 ${chosenName} youtube agent failed:`,
-      (err as Error).message,
-    );
-    return 1;
+    const msg = (err as Error).message;
+    // v0.4 (T4): retry once if the validator caught a text-overlay
+    // thumbnail prompt. We append an explicit negative-constraint to
+    // the user prompt; one retry is enough — second failure surfaces.
+    if (msg.includes("banned tokens") || msg.includes("thumbnail_prompt")) {
+      console.warn(`  retrying once with stricter negative constraints…`);
+      try {
+        const tightened: YouTubeInput = {
+          ...input,
+          hook: (input.hook ?? "") +
+            "\n\nREMINDER: The thumbnail prompt must be a pure visual scene, never a poster with text. Avoid any text, subtitles, watermarks, logos, or captions in the image.",
+        };
+        result = await callYouTube(tightened, provider, fallback);
+      } catch (retryErr) {
+        console.error(
+          `\u2717 ${chosenName} youtube agent failed:`,
+          (retryErr as Error).message,
+        );
+        return 1;
+      }
+    } else {
+      console.error(`\u2717 ${chosenName} youtube agent failed:`, msg);
+      return 1;
+    }
   }
 
   await mkdir(path.join(projectRoot, "youtube"), { recursive: true });
@@ -200,13 +219,39 @@ export async function runYouTube(opts: YouTubeOptions): Promise<number> {
 }
 
 /** Build a legacy-shaped YouTubeInput from the new article.md —
- * the YouTube agent consumes three string fields; this maps each. */
+ * the YouTube agent consumes three string fields; this maps each.
+ * v0.4 (T4): also extract the article's hook (first 1-3 prose sentences)
+ * and topic so the agent can anchor the thumbnail's emotional tone. */
 function synthFromArticle(articleMd: string): YouTubeInput {
   const { article } = parseArticleWithRecovery(articleMd);
   const storyboard = synthStoryboardYaml(article.scenes);
   const script = `# ${article.frontmatter.project}\n\n${article.proseBody.trim()}\n`;
   const research = articleMd;
-  return { storyboard, script, research };
+  return {
+    storyboard,
+    script,
+    research,
+    hook: extractHook(article.proseBody),
+    topic: article.frontmatter.project,
+  };
+}
+
+/** Pull the first 1-3 sentences of the prose body. Falls back to empty
+ *  string when the body starts with a heading (e.g. when the LLM wrote
+ *  an empty body). */
+function extractHook(proseBody: string): string {
+  const trimmed = proseBody.trim();
+  // Skip leading H1 / H2 heading lines.
+  const lines = trimmed.split("\n").filter((l) => !l.startsWith("#"));
+  const text = lines.join(" ").trim();
+  if (!text) return "";
+  const sentences: string[] = [];
+  const re = /[^。.!?！？\n]+[。.!?！？]+/g;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(text)) !== null && sentences.length < 3) {
+    sentences.push(m[0].trim());
+  }
+  return sentences.join(" ").slice(0, 400);
 }
 
 function synthStoryboardYaml(scenes: Scene[]): string {

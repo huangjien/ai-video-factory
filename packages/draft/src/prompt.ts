@@ -269,40 +269,37 @@ The hook should correspond to the beginning of the first scene's narration.
 
 10. VISUAL DIRECTION
 
-The visual field is an instruction for a downstream visual-generation/editorial agent.
+The visual field is a high-level category hint. It names ONE of the
+visual treatments below — the renderer fills in the structured props
+itself by reading the narration, so the visual field must match the
+narration's substance (numbers, lists, code, years, contrast, sequence).
 
-It must describe what should actually appear on screen.
+Use one of these short category phrases:
 
-Avoid generic descriptions such as:
+- database / 表 / schema / 存储       → Callout or FlowChart
+- network / 流程 / 流水线 / 节点       → FlowChart
+- compare / 对比 / vs / 差异           → Comparison
+- code / terminal / 命令行 / 代码      → Terminal
+- timeline / 历史 / 年表 / 沿革       → Timeline
+- formula / 公式 / 推导                → Callout (formula)
+- list / 列表 / 要点                   → Illustration
+- quote / 引用 / 引文                  → Callout (quote)
+- (anything else)                      → AnimatedIllustration
 
-- "interesting animation"
-- "technology visuals"
-- "people talking"
-- "a modern city"
-- "dramatic background"
+Keep the visual field under 40 characters — it is a category hint, not
+a description. Example: "网络节点流程图", "对比 vs 之前",
+"时间线展示", "代码片段".
 
-Instead specify:
+The visual category must match the scene's actual content. If the
+narration lists 3 steps, the visual should signal a FlowChart ("流程图"
+or "网络节点流程图"); if it contrasts two states, the visual should
+signal a Comparison ("对比 vs 之前"); if it cites a year, the visual
+should signal a Timeline ("时间线展示").
 
-- subject
-- environment
-- action
-- composition
-- camera movement when useful
-- visual metaphor when appropriate
-- historical period when relevant
-- important objects
-- geographic setting
-- transition or montage concept
-
-Example of weak visual direction:
-
-"Show AI technology."
-
-Example of strong visual direction:
-
-"A close-up of a data center rack as status lights flicker; the camera slowly tracks sideways while translucent network lines connect the servers."
-
-Keep the visual field CONCISE — ideally 1-2 short sentences (under 80 characters total). The renderer uses keyword matching against a small shape vocabulary (databases, network, flow, compare, code, timeline, formula) to pick an illustration. Extra detail beyond the matching keyword does not change what gets drawn, but it does bloat the on-screen caption when the renderer falls back to geometric shapes. State the visual category clearly, then move on.
+The renderer ignores everything in the visual field beyond the keyword
+above. Substance must live in the narration field, where the renderer
+can extract concrete items, year tokens, code lines, and contrast
+clauses to populate the visual props.
 
 The visual should directly support the narration.
 

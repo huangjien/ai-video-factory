@@ -2,6 +2,44 @@
 
 Installation and usage manual for the current repository.
 
+## TL;DR — generate something in ~3 minutes
+
+One-time setup: Node 22+, pnpm, ffmpeg → `pnpm install && pnpm run build`,
+then `alias vf='node packages/cli/dist/index.js'` (all examples assume it).
+
+### Path A — no API keys, fully offline (~60 s)
+
+Render the committed MCP Explainer demo — SVG diagram draw-on + hand-drawn
+canvas, with a real QA report:
+
+```bash
+vf new mcp-explainer
+cp examples/mcp-explainer/storyboard.yaml projects/mcp-explainer/storyboard/
+cp examples/mcp-explainer/captions/zh-CN.srt projects/mcp-explainer/captions/
+for i in 01 02 03 04 05; do
+  ffmpeg -y -f lavfi -i anullsrc=r=44100:cl=mono -t 9 projects/mcp-explainer/assets/audio/scene-$i.wav
+done
+vf approve storyboard --cwd projects/mcp-explainer   # 🚪 the one human gate
+vf preview --cwd projects/mcp-explainer              # add --draft for a faster 960×540 pass
+# → projects/mcp-explainer/output/preview.mp4
+```
+
+### Path B — your own topic, with an LLM key
+
+```bash
+export GLM_API_KEY="..."      # or MINIMAX_API_KEY
+vf new my-first-video
+vf draft "why local-first tools win"          # LLM writes article.md + audio-config.yaml
+$EDITOR projects/my-first-video/article.md    # optional: edit the draft
+vf approve storyboard --cwd projects/my-first-video   # 🚪 read it, then approve
+vf make my-first-video                        # TTS → images → render → mix
+# → projects/my-first-video/output/final-mixed.mp4  (--fake = offline TTS + no AI images)
+```
+
+That's the whole product: **2 AI commands + 1 human approval + 2 editable
+files** (`article.md`, `audio-config.yaml`). Deeper: walkthrough §12,
+examples §14, troubleshooting §11, gates §7.1.
+
 ## Overview
 
 AI Video Factory's core interface is **two AI commands + one human
@@ -31,6 +69,87 @@ command (calling `vf preview --force` directly bypasses it, recorded in
 the audit trail). The three gates and invariants live in
 `docs/workflow.md`; the VDSL format in `docs/schema.md`; the system
 architecture in `docs/architecture.md`.
+
+## Harness adapters (v0.4.1)
+
+The `vf` CLI is the **stable harness-agnostic surface**. The repo ships
+adapter files for the harnesses we officially support; every adapter
+forwards to `vf` (or to `bin/video`, a thin shell wrapper).
+
+### Shell wrapper — `bin/video`
+
+```bash
+bin/video new "demo"
+bin/video research "AI 思维链"
+bin/video storyboard "AI 思维链" --from-research projects/.../research
+bin/video preview --cwd projects/demo
+```
+
+Forwards every verb to `vf` so any shell, Makefile, or CI script can
+drive the pipeline with one binary. No harness required.
+
+### OpenCode — `.opencode/command/video.md`
+
+OpenCode / Cursor / Claude Code / similar agentic harnesses that look up
+`.opencode/command/*.md` will pick up `/video` as a slash command. The
+file uses OpenCode's frontmatter (`description`, `tools`) and a markdown
+body listing every verb, the canonical pipeline order, and the
+critical invariants (never auto-approve, credentials stay in env, fail
+loudly).
+
+### pi / oh-my-pi — `.omp/commands/video.md`
+
+The `oh-my-pi` coding agent (`@oh-my-pi/pi-coding-agent`, `omp.sh`)
+discovers native slash commands under `<cwd>/.omp/commands/*.md`. The
+repo ships `.omp/commands/video.md` with the OMP-native frontmatter
+(`name`, `description`) and the same canonical pipeline / invariants
+body. Inside an `omp` interactive session the user types:
+
+```bash
+/video draft "AI 思维链"
+/video approve storyboard --cwd projects/ai-思维链
+/video make ai-思维链
+/video retrospect ai-思维链
+```
+
+The command body uses `$ARGUMENTS` so the slash input maps verbatim to
+the `vf` CLI args. Permissions default to `read: allow, write/edit/bash:
+ask` (in `.omp/settings.json`) to preserve the human-gate principle —
+the agent can read freely but must ask before mutating anything.
+
+#### Skills in OMP
+
+`.agents/skills/<name>/SKILL.md` is the canonical skill source (per
+`skills-lock.json`). For OMP, `.omp/skills/<name>/SKILL.md` are
+symlinks that resolve to the canonical files — `readlink -f
+.omp/skills/<name>/SKILL.md` shows the canonical path. `.omp/settings.json`
+points `skills.customDirectories` at `.omp/skills` so OMP's native
+provider picks them up alongside any others. To install new skills:
+
+```bash
+npx skills add <pack> --yes                       # updates canonical .agents/skills
+ls -l .omp/skills/<new-skill-name>/SKILL.md        # verify the symlink is there
+# (add it manually if not — single symlink per skill)
+```
+
+### Why no auto-approval
+
+Per `docs/workflow.md`, the workflow enforces a human gate between every
+generator step and the next. Whether the caller is OpenCode, OMP, or a
+human at a terminal, the agent invokes the drafting verbs and surfaces
+the artifacts; the human reads and `vf approve`s before `vf preview`
+ever touches the render path.
+
+### Adding a new harness
+
+1. Create the harness-specific command file under the directory it
+   expects (`.opencode/commands/`, `.omp/commands/`, `.claude/commands/`,
+   `.gemini/commands/`, `.codex/commands/`).
+2. Use that harness's native frontmatter shape.
+3. Document the expansion pattern (`$ARGUMENTS` for OMP, positional for
+   OpenCode/Claude) in the body.
+4. The CLI stays the source of truth — never duplicate verb logic in
+   the adapter file.
 
 ## 1. Requirements
 
@@ -274,6 +393,36 @@ Important rules:
 | `excalidraw` | — | asset generator only (`vf excalidraw`); not a render path |
 
 Unwired renderer/component combinations fail loudly at render time.
+
+### Available themes (v0.4.3)
+
+`style.theme` selects one of eight built-in colour palettes. Default is
+**`paper-light`** (v0.4.3 — flipped from `dark-tech` in v0.4.2 and
+earlier). Unknown or missing values also fall back to `paper-light`
+(a render never crashes on a typo). Pass `--style <name>` on `vf draft`
+or write it directly into `article.md` frontmatter /
+`storyboard.yaml` `style:` block.
+
+| `style.theme`    | Background | Accent  | Mood / best for                                         |
+| --------------- | ---------- | ------- | ------------------------------------------------------- |
+| `dark-tech`     | deep navy  | blue    | tech explainers (default prior to v0.4.3)               |
+| `paper-light`   | off-white  | orange  | **default (v0.4.3)** — hand-drawn / bright office / pairs with `DoodleScene` |
+| `ocean-deep`    | deep sea   | teal    | calm/technical, monitoring topics                       |
+| `dusk-warm`      | plum       | coral   | story-led, soft brand                                   |
+| `forest-moss`   | emerald    | lime    | **new** sustainability / outdoor / botanical            |
+| `sunset-pop`    | near-black | yellow  | **new** energetic consumer / entertainment             |
+| `terminal-vintage` | dark gray | phosphor green | **new** dev tutorials, retro/hacker nostalgia (uses JetBrains Mono throughout) |
+| `paper-cream`   | soft beige | burnt orange | **new** product / food / family-friendly              |
+
+The full token set (7 colours + 4 typography roles + spacing + easing
++ fonts) is locked in `packages/video-components/src/theme.ts`; adding
+adding a custom palette requires editing that file and exporting the new theme
+from `THEMES`.
+
+**No skills required to render.** Every renderer family is plain code —
+workspace dependencies plus FFmpeg. The installed skill packs
+(`.agents/skills/`, inventoried in `skills/INVENTORY.md`) only feed LLM
+agents (chiefly `vf motion`); they are never read on the render path.
 
 The 15 registered components: `Title`, `Paragraph`, `AnimatedIllustration`,
 `CodeBlock`, `Terminal`, `Image`, `ImageBackground`, `FlowChart`,
@@ -642,6 +791,11 @@ vf motion my-topic --bpm 120        # quantize entrance/emphasis moments to a be
 vf motion my-topic --scene scene-03 # plan one scene only
 vf motion my-topic --baseline       # skip the LLM — apply deterministic heuristics verbatim
 ```
+
+Works with or without the installed skill packs: when `.agents/skills/`
+is absent, `IartSkillAdapter` degrades to null and planning falls back
+to the deterministic heuristics — the installed `iart-ai` packs simply
+make the LLM's plans better.
 
 ### `vf excalidraw` — diagram asset generator
 

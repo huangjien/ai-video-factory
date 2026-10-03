@@ -46,8 +46,8 @@ chapters:
     title: Hook
   - timestamp: "00:05"
     title: Problem
-thumbnail_prompt: "Dark blue background with bold text"
-shorts_hook: "60-second intro to CoT"`;
+thumbnail_prompt: "Young woman · eyes wide with surprise · cozy kitchen at dawn · warm side-light · 35mm cinematic"
+shorts_hook: "A person leans toward camera · reveals the surprise with a clear voice · kitchen morning light · curious hopeful tone"`;
 
 describe("vf youtube end-to-end (todo 2) — mock MiniMax", () => {
   let server: Server;

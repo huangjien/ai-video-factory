@@ -33,10 +33,32 @@ import { runMotion } from "./motion-command.js";
 import { runQa } from "./qa-command.js";
 import { runStudio } from "./studio-command.js";
 import { runExcalidraw } from "./excalidraw-command.js";
+import { runRetrospect } from "./retrospect-command.js";
 
 const program = new Command();
 
 program.name("vf").description("AI Video Factory CLI (v0.1)").version("0.1.0");
+
+/** v0.4 (T9): minimal-API banner shown above the verb list. Text is
+ *  kept in sync with README.md "Commands" section. */
+const BANNER = `v v f   A I   V I D E O   F A C T O R Y   (v0.4)
+─────────────────────────────────────────────────
+Quick start — four commands after install:
+
+  vf new <topic>             scaffold projects/<topic>/
+  vf draft <topic>           write article.md + audio-config.yaml
+                               (--no-web, --style, --no-captions, --file)
+  vf approve storyboard      human gate (one of the two checkpoints)
+  vf make <topic>            render → projects/<topic>/output/
+
+  Edit article.md and audio-config.yaml between draft and make.
+  Run \`vf status <topic>\` any time to see where you are.
+
+Advanced verbs (research, storyboard, motion, audio, audio-plan, mix,
+thumbnail, shorts, youtube, qa, review, validate, scene …) are wired
+for back-compat but not part of the recommended path.
+─────────────────────────────────────────────────`;
+program.addHelpText("before", BANNER);
 
 program
   .command("new")
@@ -175,6 +197,14 @@ program
     "--no-audio-plan",
     "skip the merged audio-plan step (write article.md only)",
   )
+  .option(
+    "--style <theme>",
+    "v0.4: visual theme written into storyboard.style.theme (default: paper-light)",
+  )
+  .option(
+    "--no-captions",
+    "v0.4: skip the caption overlay (no captions: block in the generated storyboard)",
+  )
   .action(
     async (
       topic: string,
@@ -188,6 +218,8 @@ program
         from?: string;
         file?: string;
         audioPlan?: boolean;
+        style?: string;
+        captions?: boolean;
       },
     ) => {
       process.exitCode = await runDraft({
@@ -201,6 +233,8 @@ program
         ...(opts.from !== undefined ? { from: opts.from } : {}),
         ...(opts.file !== undefined ? { ideaFile: opts.file } : {}),
         noAudioPlan: opts.audioPlan === false,
+        ...(opts.style !== undefined ? { style: opts.style } : {}),
+        noCaptions: opts.captions === false,
       });
     },
   );
@@ -362,7 +396,7 @@ program
     parseInt(v, 10),
   )
   .option("--audience <text>", "target audience (default: developers)")
-  .option("--style <text>", "visual style (default: dark-tech)")
+  .option("--style <text>", "visual style (default: paper-light)")
   .option(
     "--from-research <dir>",
     "consume approved research from this directory",
@@ -938,5 +972,38 @@ program
       });
     },
   );
+
+// v0.4 (T10): `vf retrospect` — read last few runs + latest QA, ask the
+// LLM for 3 concrete edits to article.md. Output: projects/<slug>/retrospect.md.
+program
+  .command("retrospect")
+  .description(
+    "v0.4: ask the LLM for 3 concrete edits to article.md based on the latest runs + QA report (writes projects/<slug>/retrospect.md)",
+  )
+  .argument("[project]", "project: topic, folder name, path, or unique prefix")
+  .option("--cwd <dir>", "project root base directory")
+  .option(
+    "--dry-run",
+    "print what would be sent to the LLM without calling it",
+  )
+  .action(
+    async (
+      project: string | undefined,
+      opts: { cwd?: string; dryRun?: boolean },
+    ) => {
+      process.exitCode = await runRetrospect({
+        project: project ?? "",
+        ...(opts.cwd !== undefined ? { cwd: opts.cwd } : {}),
+        dryRun: opts.dryRun === true,
+      });
+    },
+  );
+
+// v0.4 (T9): when invoked with no args, `program.help()` prints the
+// banner + verb list. Without this branch, Commander silently exits 0
+// and the user sees nothing.
+if (process.argv.length <= 2) {
+  program.help({ error: false });
+}
 
 await program.parseAsync(process.argv);

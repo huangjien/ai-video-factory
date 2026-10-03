@@ -11,6 +11,7 @@ export {
   buildYouTubeMessages,
   chaptersToVtt,
   extractYaml,
+  hasTextOverlay,
   SYSTEM_PROMPT,
   YouTubeError,
   type CallYouTubeResult,

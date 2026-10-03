@@ -248,7 +248,7 @@ describe("articleToStoryboardYaml (VDSL sync)", () => {
     const parsed = parseYaml(yaml) as Record<string, unknown>;
     expect(parsed["schema_version"]).toBe("0.2");
     expect(parsed["project"]).toMatchObject({ id: "ai-think", language: "zh-CN", fps: 30 });
-    expect(parsed["style"]).toMatchObject({ theme: "dark-tech" });
+    expect(parsed["style"]).toMatchObject({ theme: "paper-light" });
   });
 
   it("emits a defaults block (schema_version 0.2) when frontmatter sets default_renderer", () => {

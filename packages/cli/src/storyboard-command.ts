@@ -63,7 +63,7 @@ export async function runStoryboard(opts: StoryboardOptions): Promise<number> {
   const lang = opts.lang ?? "zh-CN";
   const duration = opts.duration ?? 40;
   const audience = opts.audience ?? "developers";
-  const style = opts.style ?? "dark-tech";
+  const style = opts.style ?? "paper-light";
 
   // Scaffold the project (vf new writes state.yaml + dirs)
   const code = await ensureProject(cwd, slug, projectRoot);

@@ -1,5 +1,6 @@
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
+import { parse as parseYaml } from "yaml";
 import { loadCheckpoint, readProjectState, V01_STAGES } from "@vf/workflow";
 import { resolveProjectDir, resolveProjectRoot } from "./project-path.js";
 
@@ -54,5 +55,34 @@ export async function runStatus(
   console.log("");
   console.log(`Current checkpoint: ${state.checkpoint.id}`);
   console.log(`Status: ${state.status}`);
+
+  // v0.4 (T7): surface the latest QA finding count so users see what's
+  // blocking `vf final` without manually running `vf qa`. We read
+  // qa/render-report.json (the on-disk artifact written by `vf final` /
+  // `vf preview`); fall back to the latest qa run record when the JSON
+  // file is missing.
+  const reportPath = path.join(root, "qa", "render-report.json");
+  if (existsSync(reportPath)) {
+    try {
+      const raw = readFileSync(reportPath, "utf8");
+      const parsed = parseYaml(raw) as {
+        findings?: { level?: string }[];
+        ok?: boolean;
+      };
+      const findings = parsed.findings ?? [];
+      const errors = findings.filter((f) => f.level === "error").length;
+      const warnings = findings.filter((f) => f.level === "warn").length;
+      const errMark = errors > 0 ? "✗" : "✓";
+      const warnMark = warnings > 0 ? "!" : "✓";
+      console.log(
+        `QA: ${errMark} ${errors} error${errors === 1 ? "" : "s"}, ${warnMark} ${warnings} warning${warnings === 1 ? "" : "s"}`,
+      );
+      if (errors > 0) {
+        console.log(`  run \`vf qa <project>\` to inspect, or \`vf final --force\` to override`);
+      }
+    } catch {
+      // Corrupt report — leave it; the user can re-run vf qa.
+    }
+  }
   return 0;
 }

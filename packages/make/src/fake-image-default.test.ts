@@ -108,7 +108,7 @@ describe("--fake default imageProvider keeps scenes as AnimatedIllustration", ()
     const before = parseYaml(readFileSync(sbPath, "utf8")) as {
       scenes?: { visual?: { component?: string } }[];
     };
-    expect(before.scenes?.[1]?.visual?.component).toBe("AnimatedIllustration");
+    expect(before.scenes?.[1]?.visual?.component).toBe("Comparison");
 
     // The actual fixed behavior is: imageProvider defaults to "none"
     // when fake=true, so generateSceneVisuals early-returns and

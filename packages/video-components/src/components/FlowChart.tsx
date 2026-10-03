@@ -2,11 +2,16 @@ import type { FC } from "react";
 import { AbsoluteFill } from "remotion";
 import { draw, fade } from "../animations.js";
 import { darkTechTheme } from "../theme.js";
+import { progressFor, type TimelineAnim } from "./timelineTiming.js";
 
 export interface FlowChartProps {
   nodes: string[];
   edges?: [number, number][];
   direction?: "left-to-right" | "top-down";
+  /** v0.4.1 — scene-level timeline animations. When present, each
+   *  node `target: "node-${i}"` fades+scales in at its own start time
+   *  instead of using a single global entrance. */
+  animations?: TimelineAnim[];
   startFrame: number;
   durationInFrames: number;
   frame: number;
@@ -21,8 +26,16 @@ export const FlowChart: FC<FlowChartProps> = ({
   nodes,
   edges = [],
   direction = "left-to-right",
+  animations,
   frame,
+  durationInFrames,
 }) => {
+  // Use the frame-count / scene-duration ratio to derive the local fps,
+  // so animations stay in sync with the composition (draft = 15fps,
+  // final = 30fps). When durationInFrames is 0 (shouldn't happen), fall
+  // back to 30fps so sceneSec is well-defined.
+  const sceneSec =
+    durationInFrames > 0 ? frame * ((durationInFrames / 30) / durationInFrames) : frame / 30;
   const cols =
     direction === "left-to-right" ? Math.ceil(Math.sqrt(nodes.length)) : 1;
   const positions = nodes.map((_, i) => {
@@ -34,8 +47,11 @@ export const FlowChart: FC<FlowChartProps> = ({
     };
   });
 
-  const entrance = fade(frame);
-  const progress = draw(frame, 30);
+  // Back-compat: no animations → single global entrance + uniform edges.
+  // Animations present → per-node fade+scale at its own start.
+  const hasAnimations = Array.isArray(animations) && animations.length > 0;
+  const entrance = hasAnimations ? 1 : fade(frame);
+  const progress = hasAnimations ? 1 : draw(frame, 30);
 
   return (
     <AbsoluteFill
@@ -69,8 +85,18 @@ export const FlowChart: FC<FlowChartProps> = ({
         {nodes.map((label, i) => {
           const p = positions[i];
           if (!p) return null;
+          // Per-node animation when present; otherwise render at full
+          // opacity so the global entrance handles the fade.
+          const nodeProgress = hasAnimations
+            ? progressFor(animations, `node-${i}`, sceneSec, 0.5)
+            : 1;
+          const nodeScale = 0.92 + 0.08 * nodeProgress;
           return (
-            <g key={i} transform={`translate(${p.x},${p.y})`}>
+            <g
+              key={i}
+              transform={`translate(${p.x},${p.y}) scale(${nodeScale})`}
+              opacity={hasAnimations ? nodeProgress : 1}
+            >
               <rect
                 width={NODE_W}
                 height={NODE_H}

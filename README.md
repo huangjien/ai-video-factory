@@ -1,4 +1,4 @@
-# AI Video Factory (v0.3.10)
+# AI Video Factory (v0.4)
 
 A small video factory that turns a topic into a finished 1080p Chinese MP4
 in two commands: `vf draft` (LLM writes article.md + audio-config.yaml),
@@ -114,9 +114,11 @@ do).
 | Command                       | Purpose                                                                                  |
 | ----------------------------- | ---------------------------------------------------------------------------------------- |
 | `vf new <id>`                 | scaffold a project under `projects/<id>/`                                                |
-| `vf draft <topic>`            | write `article.md` + `audio-config.yaml` from a topic via MiniMax/GLM (research + script + storyboard + audio plan in one; `--no-audio-plan` to split; `--file <path>` to seed with your raw idea, opinions preserved) |
+| `vf draft <topic>`            | write `article.md` + `audio-config.yaml` from a topic via MiniMax/GLM (research + script + storyboard + audio plan in one; `--no-audio-plan` to split; `--file <path>` to seed with your raw idea, opinions preserved; **v0.4** `--style <theme>` writes storyboard theme; **v0.4** `--no-captions` skips the caption overlay) |
 | `vf audio-plan <project>`     | (optional) regenerate `audio-config.yaml` after hand-editing article.md                   |
 | `vf make <project>`           | TTS → audio assets → render → mix (`--dry-run` to preview, `--fake` for offline TTS, `--image-provider mock\|minimax\|none`, `--bgm-dir`/`--sfx-dir <dir>` to use your own music library) |
+| `vf retrospect <project>`     | **v0.4** ask the LLM for 3 concrete edits to `article.md` based on the latest runs + QA report (writes `projects/<slug>/retrospect.md`); `--dry-run` shows the input without calling the LLM |
+| `vf status <project>`         | shows current workflow checkpoint + **v0.4** the latest QA finding count next to the gate |
 
 The two human-edit artifacts are `article.md` (narrative + scene data) and
 `audio-config.yaml` (BGM/SFX cues + fades + voice, plus optional
@@ -348,9 +350,11 @@ Thumbnail generation (`vf thumbnail` is mock-only by default) and Shorts
 clipping (`vf shorts`) are part of v0.2 phase 8 (Advanced Media §60) and
 ship separately.
 
-## Pi Extension (v0.2.6)
+## Harness adapters (v0.4.1)
 
-The `vf` CLI is now also exposed as `/video` for agentic harnesses:
+The `vf` CLI is the **stable harness-agnostic surface**. The repo ships
+adapter files for the harnesses we officially support; every adapter
+forwards to `vf` (or to `bin/video`, a thin shell wrapper).
 
 ### Shell wrapper — `bin/video`
 
@@ -361,27 +365,65 @@ bin/video storyboard "AI 思维链" --from-research projects/.../research
 bin/video preview --cwd projects/demo
 ```
 
-The wrapper transparently forwards every verb to the `vf` CLI, so any
-shell, Makefile, or CI script can drive the pipeline with one binary.
+Forwards every verb to `vf` so any shell, Makefile, or CI script can
+drive the pipeline with one binary.
 
-### Agent command — `.opencode/command/video.md`
+### OpenCode — `.opencode/command/video.md`
 
 OpenCode / Cursor / Claude Code / similar agentic harnesses that look up
 `.opencode/command/*.md` will pick up `/video` as a slash command with
-frontmatter (description, tools) plus a markdown body listing every
-verb, the canonical pipeline order, and the critical invariants
-(never auto-approve, credentials stay in env, fail loudly).
+OpenCode frontmatter (`description`, `tools`) plus a markdown body
+listing every verb, the canonical pipeline order, and the critical
+invariants.
 
-The same pattern transfers to Pi (`.pi/agents/` + `.pi/skills/` definitions)
-with a small adaptation — Pi's frontmatter differs. The `vf` CLI is the
-stable surface both harnesses wrap.
+### pi / oh-my-pi — `.omp/commands/video.md` (v0.4.1)
+
+The `oh-my-pi` coding agent (`@oh-my-pi/pi-coding-agent`, `omp.sh`)
+discovers native slash commands under `<root>/.omp/commands/*.md`.
+The repo ships:
+
+```text
+.omp/
+  commands/
+    video.md          ← /video slash command (native frontmatter: name + description)
+  skills/             ← skill discovery
+    <name>/
+      SKILL.md
+  settings.json       ← optional: enable /skill:<name>, skills.customDirectories
+```
+
+The `/video` command body is identical in spirit to the OpenCode one —
+it documents the canonical pipeline, every verb, and the critical
+invariants. The forwarder pattern is the same:
+
+```bash
+bin/video new "demo"            # /video new "demo" expands to this
+node packages/cli/dist/index.js new "demo"   # equivalent
+```
+
+**Skills.** `.agents/skills/<name>/SKILL.md` is the canonical source
+(per `skills-lock.json`); `.omp/skills/<name>/SKILL.md` is symlinked
+from `.agents/skills/` so OMP's `native` skill provider picks them up.
+The skill bodies are unchanged — only the directory layout differs.
 
 ### Why no auto-approval
 
 Per doc §58 and §65, the workflow enforces a human gate between every
-generator step and the next. The agent (whether Pi or OpenCode) calls the
-drafting verbs and surfaces the artifacts; the human reads and
-`vf approve`s before `vf preview` ever touches the render path.
+generator step and the next. The agent (whether OpenCode, OMP, or a
+human at a terminal) calls the drafting verbs and surfaces the
+artifacts; the human reads and `vf approve`s before `vf preview` ever
+touches the render path.
+
+### Adding a new harness
+
+1. Create the harness-specific command file under the directory it
+   expects (`.opencode/commands/`, `.omp/commands/`, `.claude/commands/`,
+   `.gemini/commands/`, `.codex/commands/`).
+2. Use that harness's native frontmatter shape.
+3. Document the expansion pattern (`$ARGUMENTS` for OMP, positional for
+   OpenCode/Claude) in the body.
+4. The CLI stays the source of truth — never duplicate verb logic in
+   the adapter file.
 
 ## Review Agent (v0.2.5)
 
@@ -566,3 +608,37 @@ each gets its own plan.
 `projects/benchmark-v01/` is the canonical v0.1 video: 6 scenes, 39 seconds,
 zh-CN explainer about AI chain-of-thought. Run `pnpm run acceptance` to
 verify it meets all §62.4 acceptance criteria.
+
+## Visual & Publishing Quality (v0.4)
+
+Seven quality wins shipped under the same human-gate principle:
+
+- **Auto-captions from article** (`vf draft`): every auto-generated
+  storyboard now has `captions: { source: narration }`; opt out with
+  `--no-captions`. Captions follow narration timing via the existing
+  `writeCaptionsSrt` step.
+- **Visual variety** (`packages/draft/src/visual-classifier.ts`): the
+  article's `visual:` field is now classified into the right VDSL
+  component (FlowChart / Comparison / Terminal / Timeline / Callout /
+  Illustration) instead of every scene being `AnimatedIllustration`.
+- **Image prompt expansion** (`vf make --image-provider minimax`):
+  the article's 80-char `visual:` is rewritten into a 2-3 sentence
+  prompt (subject · environment · lighting · composition · style)
+  before `image-01`. Cached on content hash so re-runs are free;
+  auditable via `assets/images/scene_N.prompt.txt`.
+- **`--style <theme>` flag** (`vf draft`): `style.theme: warm-sunset`
+  instead of the hardcoded `dark-tech`.
+- **Hook ↔ YouTube coherence** (`vf youtube`): the article's hook is
+  now part of the agent's input. The thumbnail prompt is checked
+  against a banned-token list (`text` / `字幕` / `字体` / `logo文字` /
+  `海报` / `界面` / `仪表盘` / …) and re-prompted once on a hit.
+- **QA gate in `vf final`** + **QA surfacing in `vf status`**: error-
+  level findings exit 1 (existing behaviour, preserved); the latest
+  count is printed under `vf status` so users see the gate without
+  running `vf qa`.
+- **`vf retrospect <project>`**: cheap LLM call that reads the last
+  few `runs/*.yaml` + `qa/render-report.json` and writes
+  `projects/<slug>/retrospect.md` with 3 specific edits to
+  `article.md` for the next render.
+- **CLI banner** (`vf` / `vf --help`): minimal-API quickstart appears
+  above the verb list.

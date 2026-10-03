@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { parse as parseYaml } from "yaml";
 import type { ChatMessage, ChatResponse, Provider } from "@vf/llm";
-import { YouTubePackageSchema, callYouTube, YouTubeError } from "./index.js";
+import { YouTubePackageSchema, callYouTube, YouTubeError, hasTextOverlay } from "./index.js";
 
 class CannedProvider implements Provider {
   readonly name = "minimax";
@@ -32,8 +32,8 @@ chapters:
     title: Problem
   - timestamp: "00:11"
     title: Explanation
-thumbnail_prompt: "Dark blue tech-themed background with bold white text 'CoT'"
-shorts_hook: "60 seconds explaining how Chain-of-Thought works"`;
+thumbnail_prompt: "Young woman · eyes wide with surprise · cozy kitchen at dawn · warm side-light · curious and hopeful · 35mm cinematic"
+shorts_hook: "A person leans toward camera · reveals the surprise with a clear voice · kitchen morning light · curious hopeful tone"`;
 
 describe("YouTubePackageSchema (todo 1) — §58 Phase 9", () => {
   it("accepts a valid YouTube package", () => {
@@ -90,5 +90,38 @@ describe("callYouTube (todo 1)", () => {
     await expect(
       callYouTube({ storyboard: "x", script: "x", research: "x" }, p),
     ).rejects.toThrow(YouTubeError);
+  });
+});
+
+describe("hasTextOverlay (T4 validator)", () => {
+  it("returns false for clean visual scene prompts", () => {
+    expect(
+      hasTextOverlay(
+        "Young woman · eyes wide with surprise · cozy kitchen at dawn · warm side-light · 35mm cinematic",
+      ),
+    ).toBe(false);
+  });
+  it("flags prompts that mention text / subtitles / logos", () => {
+    expect(hasTextOverlay("A bold text overlay reading 'Hello' on a dark background")).toBe(true);
+    expect(hasTextOverlay("A subtitle beneath a person")).toBe(true);
+    expect(hasTextOverlay("A logo in the corner")).toBe(true);
+  });
+  it("flags zh-CN banned tokens", () => {
+    expect(hasTextOverlay("白色粗体大字「AI 思维链」在深色背景")).toBe(true);
+    expect(hasTextOverlay("海报风格设计")).toBe(true);
+    expect(hasTextOverlay("界面 仪表盘")).toBe(true);
+  });
+});
+
+describe("callYouTube text-overlay retry path (T4)", () => {
+  it("throws YouTubeError when thumbnail_prompt contains banned tokens", async () => {
+    const badYaml = goodYaml.replace(
+      "thumbnail_prompt: \"Young woman",
+      "thumbnail_prompt: \"Bold white text 'CoT' centered on dark background with subtitle",
+    );
+    const p = new CannedProvider(["```yaml\n" + badYaml + "\n```"]);
+    await expect(
+      callYouTube({ storyboard: "x", script: "x", research: "x" }, p),
+    ).rejects.toThrow(/banned tokens/);
   });
 });

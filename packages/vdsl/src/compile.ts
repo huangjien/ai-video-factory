@@ -121,7 +121,7 @@ export function compileStoryboard(
 
   const renderPlan: RenderPlan = {
     project,
-    style: { theme: board.style?.theme ?? "dark-tech" },
+    style: { theme: board.style?.theme ?? "paper-light" },
     totalFrames: cursor,
     scenes,
     ...(board.assets ? { assets: board.assets } : {}),

@@ -2,15 +2,29 @@ import type { FC } from "react";
 import { AbsoluteFill } from "remotion";
 import { scale } from "../animations.js";
 import { darkTechTheme } from "../theme.js";
+import { progressFor, type TimelineAnim } from "./timelineTiming.js";
 
 export interface TimelineProps {
   events: { label: string; description?: string }[];
+  /** v0.4.1 — scene-level timeline animations. Each event
+   *  `target: "event-${label}"` scales up at its own start time. */
+  animations?: TimelineAnim[];
   startFrame: number;
   durationInFrames: number;
   frame: number;
 }
 
-export const Timeline: FC<TimelineProps> = ({ events, frame }) => {
+export const Timeline: FC<TimelineProps> = ({
+  events,
+  animations,
+  frame,
+  durationInFrames,
+}) => {
+  const hasAnimations = Array.isArray(animations) && animations.length > 0;
+  const sceneSec =
+    durationInFrames > 0
+      ? frame * ((durationInFrames / 30) / durationInFrames)
+      : frame / 30;
   const maxRight = 1800;
   const margin = 60;
   const span = maxRight - margin * 2;
@@ -28,10 +42,17 @@ export const Timeline: FC<TimelineProps> = ({ events, frame }) => {
         />
         {events.map((ev, i) => {
           const cx = margin + step * i;
-          const s = scale(frame + i * 5, 0.5);
-          const opacity = Math.max(0, Math.min(1, frame / 30 - i * 0.5));
+          // Per-event animation when present; otherwise the legacy
+          // sequential scale-up runs unchanged so older storyboards
+          // still animate.
+          const eventProgress = hasAnimations
+            ? progressFor(animations, `event-${ev.label}`, sceneSec, 0.5)
+            : Math.max(0, Math.min(1, frame / 30 - i * 0.5));
+          const s = hasAnimations
+            ? 0.5 + 0.5 * eventProgress
+            : scale(frame + i * 5, 0.5);
           return (
-            <g key={i} opacity={opacity}>
+            <g key={i} opacity={eventProgress}>
               <circle
                 cx={cx}
                 cy={540}

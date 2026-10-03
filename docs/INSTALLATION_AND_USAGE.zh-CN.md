@@ -2,6 +2,44 @@
 
 本文档说明当前仓库的实际安装方式、CLI 命令和完整使用流程。
 
+## TL;DR — 3 分钟内生成一个视频
+
+一次性准备：Node 22+、pnpm、ffmpeg → `pnpm install && pnpm run build`，
+然后 `alias vf='node packages/cli/dist/index.js'`（下文所有示例都假设已设置）。
+
+### 路径 A — 无需 API key，全程离线（约 60 秒）
+
+渲染仓库自带的 MCP Explainer 示例——SVG 图表 draw-on + 手绘 canvas，
+附真实 QA 报告：
+
+```bash
+vf new mcp-explainer
+cp examples/mcp-explainer/storyboard.yaml projects/mcp-explainer/storyboard/
+cp examples/mcp-explainer/captions/zh-CN.srt projects/mcp-explainer/captions/
+for i in 01 02 03 04 05; do
+  ffmpeg -y -f lavfi -i anullsrc=r=44100:cl=mono -t 9 projects/mcp-explainer/assets/audio/scene-$i.wav
+done
+vf approve storyboard --cwd projects/mcp-explainer   # 🚪 唯一的人工门
+vf preview --cwd projects/mcp-explainer              # 加 --draft 用 960×540 快速档
+# → projects/mcp-explainer/output/preview.mp4
+```
+
+### 路径 B — 用 LLM key 生成你自己的主题
+
+```bash
+export GLM_API_KEY="..."      # 或 MINIMAX_API_KEY
+vf new my-first-video
+vf draft "为什么本地优先的工具会赢"           # LLM 写 article.md + audio-config.yaml
+$EDITOR projects/my-first-video/article.md    # 可选：编辑草稿
+vf approve storyboard --cwd projects/my-first-video   # 🚪 读完再批准
+vf make my-first-video                        # TTS → 生图 → 渲染 → 混音
+# → projects/my-first-video/output/final-mixed.mp4（--fake = 离线 TTS + 不调 AI 生图）
+```
+
+整个产品就这么多：**2 个 AI 命令 + 1 次人工批准 + 2 个可编辑文件**
+（`article.md`、`audio-config.yaml`）。想深入：完整走读 §12、示例 §14、
+常见问题 §11、三道门 §7.1。
+
 ## 概览
 
 AI Video Factory 的对外核心接口是 **2 个 AI 命令 + 1 次人工批准** ——
@@ -28,6 +66,82 @@ flowchart LR
 失败并打印确切的批准命令（直接调 `vf preview --force` 可绕过，但会
 记录在审计轨迹里）。三道门与不变量见 `docs/workflow.md`；VDSL 格式
 见 `docs/schema.md`；系统架构见 `docs/architecture.md`。
+
+## 适配的编程代理（v0.4.1）
+
+`vf` CLI 是**稳定的、与编程代理无关的接口**。仓库为下列官方支持的
+代理都准备了适配层，每个 adapter 最终都调用 `vf`（或 `bin/video` 那个
+薄薄的 shell 封装）。
+
+### Shell 封装 — `bin/video`
+
+```bash
+bin/video new "demo"
+bin/video research "AI 思维链"
+bin/video storyboard "AI 思维链" --from-research projects/.../research
+bin/video preview --cwd projects/demo
+```
+
+把每个动词原样转发给 `vf`，所以 shell、Makefile 或 CI 脚本都能用
+同一个二进制驱动流水线。不依赖任何编程代理。
+
+### OpenCode — `.opencode/command/video.md`
+
+OpenCode / Cursor / Claude Code 等兼容的代理会扫描
+`.opencode/command/*.md` 并注册为 `/video` 斜杠命令。该文件使用
+OpenCode 的 frontmatter（`description`、`tools`），正文列出每个动词、
+标准流水线顺序，以及三条关键不变量（永不自动批准、凭据留在环境
+变量、出错即大声报错）。
+
+### pi / oh-my-pi — `.omp/commands/video.md`
+
+`oh-my-pi` 编程代理（`@oh-my-pi/pi-coding-agent`，`omp.sh`）扫描
+`<cwd>/.omp/commands/*.md` 作为原生斜杠命令。仓库提供了
+`.omp/commands/video.md`，使用 OMP 原生 frontmatter（`name`、
+`description`）和同一份标准流水线 / 不变量正文。在 omp 交互模式下
+用户直接输入：
+
+```bash
+/video draft "AI 思维链"
+/video approve storyboard --cwd projects/ai-思维链
+/video make ai-思维链
+/video retrospect ai-思维链
+```
+
+正文用 `$ARGUMENTS` 把斜杠输入原样映射为 `vf` 的 CLI 参数。
+`.omp/settings.json` 默认权限为 `read: allow, write/edit/bash:
+ask`，保留"人工门"原则：代理可自由读取，但任何写入都要先询问。
+
+#### OMP 中的技能
+
+`.agents/skills/<name>/SKILL.md` 是规范的技能源（见 `skills-lock.json`）。
+对 OMP，`.omp/skills/<name>/SKILL.md` 是软链接，指向规范文件——
+`readlink -f .omp/skills/<name>/SKILL.md` 可以看到真实路径。
+`.omp/settings.json` 把 `skills.customDirectories` 指向 `.omp/skills`，
+OMP 的原生 provider 会自动拾起。要安装新技能：
+
+```bash
+npx skills add <pack> --yes                       # 更新规范 .agents/skills
+ls -l .omp/skills/<new-skill-name>/SKILL.md        # 检查软链接是否存在
+# （如果没有，每个技能补一个软链接）
+```
+
+### 为什么没有自动批准
+
+按 `docs/workflow.md` 的设计，工作流在每两个生成步骤之间都设了
+人工门。不管调用方是 OpenCode、OMP 还是终端前的人，代理都只是
+调用起草型动词、把产物摆出来；人在 `vf preview` 触及渲染路径之前
+必须读完并 `vf approve`。
+
+### 接入新的编程代理
+
+1. 在代理期望的目录下创建命令文件（`.opencode/commands/`、
+   `.omp/commands/`、`.claude/commands/`、`.gemini/commands/`、
+   `.codex/commands/`）。
+2. 使用该代理原生的 frontmatter 格式。
+3. 在正文里写清楚展开模式（OMP 用 `$ARGUMENTS`，OpenCode/Claude
+   用位置参数）。
+4. CLI 仍是唯一事实源——不要在 adapter 文件里复制动词逻辑。
 
 ## 1. 环境要求
 
@@ -254,6 +368,34 @@ scenes:
 | `excalidraw` | — | 仅素材生成器（`vf excalidraw`），不是渲染路径 |
 
 未接线的 renderer/组件组合会在渲染时响亮报错。
+
+### 可用主题（v0.4.3）
+
+`style.theme` 在内置的八种配色里挑一个。**默认是 `paper-light`**
+（v0.4.3 起翻转——v0.4.2 及更早版本默认是 `dark-tech`）。未知或缺失
+的名字同样回退到 `paper-light`（拼错写错不会让渲染崩溃）。通过
+`vf draft --style <name>` 传入，或直接写在 `article.md` frontmatter
+/ `storyboard.yaml` 的 `style:` 块里。
+
+| `style.theme`       | 背景色       | 强调色      | 适用风格                                          |
+| ------------------ | ---------- | --------- | --------------------------------------------- |
+| `paper-light`      | 米白         | 橙          | **v0.4.3 默认**——手绘讲解、明亮办公；与 `DoodleScene` 配对极佳 |
+| `dark-tech`        | 深蓝         | 蓝          | v0.4.2 及更早版本的默认；科技向内容                          |
+| `ocean-deep`       | 深海蓝       | 蓝绿         | 平静/技术向、监控主题                                  |
+| `dusk-warm`        | 紫罗兰       | 珊瑚         | 故事驱动、偏柔和的品牌                                  |
+| `forest-moss`      | 翡翠绿        | 黄绿         | **新增** 可持续、户外、植物讲解                           |
+| `sunset-pop`       | 近黑         | 鲜黄         | **新增** 充满活力的消费/娱乐内容                          |
+| `terminal-vintage` | 深灰         | 荧光绿       | **新增** 开发者教程、复古/极客怀旧（全角色使用 JetBrains Mono）    |
+| `paper-cream`      | 浅米色        | 深橙         | **新增** 产品/食品/家庭向内容                           |
+
+完整 token 集（7 种颜色 + 4 种字体角色 + 间距 + 缓动 + 字体）锁在
+`packages/video-components/src/theme.ts` 里；想新增自定义配色需要
+改那个文件并把新主题从 `THEMES` 里导出。
+
+**渲染不需要安装任何 skills。** 所有渲染器家族都是纯代码——只依赖
+workspace 依赖和 FFmpeg。已安装的技能包（`.agents/skills/`，清单见
+`skills/INVENTORY.md`）只服务于 LLM agent（主要是 `vf motion`），
+渲染路径从不读取它们。
 
 当前注册的 15 个组件：`Title`、`Paragraph`、`AnimatedIllustration`、
 `CodeBlock`、`Terminal`、`Image`、`ImageBackground`、`FlowChart`、
@@ -560,6 +702,10 @@ vf motion my-topic --bpm 120        # 入场/强调时刻对齐节拍网格
 vf motion my-topic --scene scene-03 # 只规划一场
 vf motion my-topic --baseline       # 跳过 LLM，直接套确定性启发式
 ```
+
+装没装技能包都能跑：`.agents/skills/` 不存在时，`IartSkillAdapter`
+返回 null，规划退回确定性启发式——已安装的 `iart-ai` 技能包只是让
+LLM 的规划更好。
 
 ### `vf excalidraw` — 图表素材生成器
 

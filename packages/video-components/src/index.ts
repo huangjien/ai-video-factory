@@ -4,7 +4,17 @@ export {
   type RegistryEntry,
   type RegistryPropsByName,
 } from "./registry.js";
-export { darkTechTheme, type Theme } from "./theme.js";
+export {
+  THEME_NAMES,
+  THEMES,
+  darkTechTheme,
+  isValidTheme,
+  paperLightTheme,
+  oceanDeepTheme,
+  duskWarmTheme,
+  resolveTheme,
+  type Theme,
+} from "./theme.js";
 export {
   draw,
   fade,

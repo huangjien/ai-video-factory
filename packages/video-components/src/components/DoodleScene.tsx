@@ -1,6 +1,6 @@
 import { useLayoutEffect, useRef } from "react";
 import { z } from "zod";
-import { darkTechTheme } from "../theme.js";
+import { darkTechTheme, type Theme } from "../theme.js";
 import {
   buildStrokePlan,
   drawDoodleFrame,
@@ -48,6 +48,8 @@ export const DoodleScenePropsSchema = z
 export type DoodleSceneProps = {
   frame: number;
   durationInFrames: number;
+  /** Theme palette (passed by Root); drives the "dark" background mode. */
+  theme?: Theme;
 } & z.infer<typeof DoodleScenePropsSchema>;
 
 const CANVAS_W = 1920;
@@ -69,13 +71,14 @@ export const DoodleScene = (props: DoodleSceneProps) => {
     wobble,
     seed,
     bpm,
+    theme = darkTechTheme,
   } = props;
   const fps = (props as { fps?: number }).fps ?? 30;
   // Raw props (no zod defaults applied at this boundary) — undefined
   // must not overwrite the style defaults (wobble=NaN poisoned strokes).
   const style: DoodleStyle = {
-    background: background === "paper" ? PAPER.background : DARK.background,
-    ink: background === "paper" ? PAPER.ink : DARK.ink,
+    background: background === "paper" ? PAPER.background : theme.colors.background,
+    ink: background === "paper" ? PAPER.ink : theme.colors.primary,
     wobble: wobble ?? PAPER.wobble,
   };
   const specs: DoodleStrokeSpec[] = strokes.map((s) => ({

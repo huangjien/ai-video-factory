@@ -1,7 +1,11 @@
 import { useCurrentFrame } from "remotion";
 import type { RenderPlan, RenderPlanScene } from "@vf/vdsl";
-import { REGISTRY, Background, CaptionsOverlay } from "@vf/video-components";
-import { darkTechTheme } from "@vf/video-components";
+import {
+  REGISTRY,
+  Background,
+  CaptionsOverlay,
+  resolveTheme,
+} from "@vf/video-components";
 
 export interface RootProps {
   renderPlan: RenderPlan;
@@ -53,6 +57,9 @@ export function sceneOpacityAtFrame(
 
 export const Root = ({ renderPlan }: RootProps) => {
   const frame = useCurrentFrame();
+  // The storyboard's style.theme picks the palette (plan §25/v0.2 themes);
+  // unknown names fall back to dark-tech so a typo never crashes a render.
+  const theme = resolveTheme(renderPlan.style.theme);
   const sceneIdx = renderPlan.scenes.findIndex(
     (s) =>
       frame >= s.startFrame && frame < s.startFrame + s.durationInFrames,
@@ -71,7 +78,7 @@ export const Root = ({ renderPlan }: RootProps) => {
   const wrapStyle: React.CSSProperties = {
     position: "absolute",
     inset: 0,
-    backgroundColor: darkTechTheme.colors.background,
+    backgroundColor: theme.colors.background,
   };
 
   const baseProps = {
@@ -83,11 +90,12 @@ export const Root = ({ renderPlan }: RootProps) => {
     // (SvgScene consumes both; passthrough props ignore them).
     animations: scene.animations,
     fps: renderPlan.project.fps,
+    theme,
   } as unknown as Record<string, unknown> & React.JSX.IntrinsicElements["div"];
 
   return (
     <div style={wrapStyle}>
-      <Background frame={frame} />
+      <Background frame={frame} theme={theme} />
       <div style={{ position: "absolute", inset: 0, opacity }}>
         <SceneComponent {...baseProps} />
       </div>
@@ -96,6 +104,7 @@ export const Root = ({ renderPlan }: RootProps) => {
           lines={scene.captions.lines}
           width={renderPlan.project.width}
           height={renderPlan.project.height}
+          theme={theme}
         />
       ) : null}
     </div>

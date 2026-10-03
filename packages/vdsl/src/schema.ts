@@ -442,7 +442,7 @@ const projectSchema = z
 
 const styleSchema = z
   .object({
-    theme: z.string().min(1).default("dark-tech"),
+    theme: z.string().min(1).default("paper-light"),
   })
   .strict();
 
@@ -455,14 +455,35 @@ const narrationSchema = z
 
 const visualSchema = z
   .object({
+    /**
+     * `visual` — WHAT the audience sees for the whole scene. Two choices
+     * pair up: `component` picks the registered implementation (validated
+     * against REGISTRY, doc §21.1 line 928) and `renderer` picks the
+     * scene family that draws it (plan §9). Current pairings:
+     *
+     * | renderer   | component      | look |
+     * |------------|----------------|------|
+     * | remotion   | Title, Paragraph, CodeBlock, Terminal, FlowChart, Comparison, Timeline, Callout, EndCard, Character, Image, ImageBackground, AnimatedIllustration | classic motion graphics on the theme background |
+     * | svg        | SvgScene       | whiteboard/diagram: nodes + labeled arrows that DRAW ON, target-driven camera, automatic stagger |
+     * | canvas     | DoodleScene    | hand-drawn ink: procedural strokes (circle/star/zigzag/spiral) with seeded wobble, sequential pen-draw, optional BPM beat-sync |
+     * | excalidraw | —              | asset generation only (`vf excalidraw`); not a render path |
+     *
+     * `props` are validated against the component's own registry schema,
+     * so each component documents its own shape (SvgScene wants `nodes[]`
+     * + `edges[]`; Title wants `text` + optional `subtext`). Synonyms are
+     * coerced for `renderer` (e.g. "hand-drawn"/"doodle" → canvas,
+     * "diagram"/"whiteboard" → svg); unknown renderers fail loudly at
+     * render time rather than silently substituting a different look.
+     */
     component: z.string().min(1),
     props: z.record(z.unknown()),
-    /** Which runtime draws this scene (plan §9). Optional at parse time:
-     * an omitted renderer inherits from the project-level `defaults:`
-     * block, falling back to "remotion" (REGISTRY components) — see
-     * applyRendererDefaults below. The compiled vdsl.yaml and RenderPlan
-     * always carry an explicit per-scene renderer; unwired combinations
-     * fail loudly at render time (assertPlanRenderable). */
+    /** Which scene family draws this scene (plan §9). Optional at parse
+     * time: an omitted renderer inherits from the project-level
+     * `defaults:` block, falling back to "remotion" (REGISTRY components)
+     * — see applyRendererDefaults below. The compiled vdsl.yaml and
+     * RenderPlan always carry an explicit per-scene renderer; unwired
+     * combinations (e.g. canvas + FlowChart) fail loudly at render time
+     * (assertPlanRenderable lists the wired pairings). */
     renderer: z
       .preprocess(
         safeCoerce(coerceVisualRenderer, VISUAL_RENDERER_CANONICAL),
@@ -495,6 +516,13 @@ const animationSchema = z
   })
   .strict();
 
+/**
+ * `captions` — on-screen text for the scene (§16: burn-in captions).
+ * `source: narration` derives the text from the scene's narration (CJK-
+ * aware wrapped by the compiler); `text` overrides verbatim; `none`
+ * disables. The compiled lines feed BOTH the burned-in overlay and the
+ * safe-area validation (≤ 3 wrapped lines of 24 units).
+ */
 const captionsSchema = z
   .object({
     source: z.preprocess(
@@ -505,6 +533,15 @@ const captionsSchema = z
   })
   .strict();
 
+/**
+ * `transition` — how the scene enters and leaves (plan §8). `in: fade`
+ * eases the scene up from the background over its first moments; `out:
+ * fade` dissolves to the background at the end. `cut` renders at full
+ * opacity from the first frame — a hard switch with no animation. The
+ * window scales with fps (0.6 s wall-clock at any frame rate). Omitted →
+ * both default to fade (0.1 storyboards never declared transitions and
+ * always faded).
+ */
 const transitionSchema = z
   .object({
     in: z.preprocess(
@@ -525,7 +562,35 @@ const sceneSchema = z
     narration: narrationSchema.optional(),
     visual: visualSchema,
     animation: animationSchema.optional(),
-    /** Timeline animation model (plan §10) — scene-relative seconds. */
+    /**
+     * Timeline animation model (plan §10) — the scene's choreography, in
+     * scene-relative SECONDS. Each entry animates ONE named element
+     * (`target`) with one verb (`type`) between `start` and
+     * `start + duration` (must fit inside the scene — the validator
+     * enforces this), eased by `easing`.
+     *
+     * What each type does per scene family:
+     * - `draw`      — svg: stroke draw-on of a node/edge; canvas: pen
+     *                 strokes; remotion components: wipe-style reveal
+     * - `write`     — text appears as if written/typed (Terminals,
+     *                 CodeBlocks, labels)
+     * - `fade`      — opacity fade-in (the gentle default)
+     * - `move`      — translate from off/offset position into place
+     * - `scale`     — grow/pop into place
+     * - `rotate`    — rotation reveal
+     * - `highlight` — svg: a marker ring while the window lasts; a good
+     *                 "this part matters" beat mid-scene
+     * - `morph`     — reserved (not yet drawn differently from fade)
+     * - `camera`    — svg only: pans/zooms the VIEW to focus `target`
+     *                 (the node rect is the camera parameter); does NOT
+     *                 affect that element's own draw timing
+     *
+     * Elements with no explicit entry fall back to the family default —
+     * svg/canvas scenes auto-draw sequentially (nodes then edges,
+     * ease-out) so a minimal storyboard still animates. `target` refers
+     * to an element id inside the scene's props (SvgScene node/edge id,
+     * DoodleScene stroke id); `type: camera` targets a NODE id.
+     */
     animations: z.array(timelineAnimationSchema).optional(),
     captions: captionsSchema.optional(),
     transition: transitionSchema.optional(),

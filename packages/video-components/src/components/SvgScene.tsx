@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { darkTechTheme } from "../theme.js";
+import { darkTechTheme, type Theme } from "../theme.js";
 import {
   elementProgress,
   resolveCameraTransform,
@@ -54,6 +54,8 @@ export const SvgScenePropsSchema = z
 export type SvgSceneProps = {
   frame: number;
   durationInFrames: number;
+  /** Theme palette (passed by Root from style.theme). */
+  theme?: Theme;
   animations?: {
     id: string;
     target: string;
@@ -77,6 +79,7 @@ export const SvgScene = (props: SvgSceneProps) => {
     title,
     nodes = [],
     edges = [],
+    theme = darkTechTheme,
   } = props;
   const fps = (props as { fps?: number }).fps ?? 30;
   const durationSec = durationInFrames / fps;
@@ -118,9 +121,9 @@ export const SvgScene = (props: SvgSceneProps) => {
         <text
           x={80}
           y={110}
-          fill={darkTechTheme.colors.primary}
+          fill={theme.colors.primary}
           fontSize={52}
-          fontFamily={darkTechTheme.typography.title.fontFamily}
+          fontFamily={theme.typography.title.fontFamily}
           fontWeight={700}
         >
           {title}
@@ -152,7 +155,7 @@ export const SvgScene = (props: SvgSceneProps) => {
               y1={y1}
               x2={ex}
               y2={ey}
-              stroke={darkTechTheme.colors.accent}
+              stroke={theme.colors.accent}
               strokeWidth={6}
               strokeLinecap="round"
               pathLength={1}
@@ -161,14 +164,14 @@ export const SvgScene = (props: SvgSceneProps) => {
             />
             <polygon
               points={`${ex},${ey} ${ex - dx / len * 34 - dy / len * 16},${ey - dy / len * 34 + dx / len * 16} ${ex - dx / len * 34 + dy / len * 16},${ey - dy / len * 34 - dx / len * 16}`}
-              fill={darkTechTheme.colors.accent}
+              fill={theme.colors.accent}
               opacity={headOpacity}
             />
             {edge.label && t ? (
               <text
                 x={(x1 + ex) / 2}
                 y={(y1 + ey) / 2 - 18}
-                fill={darkTechTheme.colors.secondary}
+                fill={theme.colors.secondary}
                 fontSize={38}
                 textAnchor="middle"
                 opacity={Math.min(1, Math.max(0, prog * 1.4 - 0.4))}
@@ -183,8 +186,8 @@ export const SvgScene = (props: SvgSceneProps) => {
       {nodes.map((node) => {
         const prog = p(node.id);
         const t = timing.get(node.id);
-        const fill = node.fill ?? darkTechTheme.colors.surface;
-        const stroke = darkTechTheme.colors.primary;
+        const fill = node.fill ?? theme.colors.surface;
+        const stroke = theme.colors.primary;
         const common = {
           x: node.x,
           y: node.y,
@@ -217,7 +220,7 @@ export const SvgScene = (props: SvgSceneProps) => {
                 width={node.w + 28}
                 height={node.h + 28}
                 fill="none"
-                stroke={darkTechTheme.colors.warning}
+                stroke={theme.colors.warning}
                 strokeWidth={8}
                 rx={24}
                 opacity={0.9}
@@ -227,10 +230,10 @@ export const SvgScene = (props: SvgSceneProps) => {
               <text
                 x={node.x + node.w / 2}
                 y={node.y + node.h / 2 + 14}
-                fill={darkTechTheme.colors.primary}
+                fill={theme.colors.primary}
                 fontSize={44}
                 textAnchor="middle"
-                fontFamily={darkTechTheme.typography.body.fontFamily}
+                fontFamily={theme.typography.body.fontFamily}
                 opacity={Math.min(1, prog * 1.3)}
               >
                 {node.text}

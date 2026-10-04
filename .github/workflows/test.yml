@@ -6,8 +6,19 @@ on:
   pull_request:
     branches: [main]
 
+# Superseded pushes cancel their in-flight runs — render jobs are
+# expensive; don't finish work for a commit that's already obsolete.
+concurrency:
+  group: test-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  test:
+  # Fast feedback: build, lint, and every test that does not rasterize a
+  # video. Render-heavy files (pipeline integration + the three demo
+  # tests) run in the `render` job — a single 15-min job covering both
+  # classes timed out mid-render once the suite grew past ~600 tests
+  # (the "operation was canceled" failure).
+  unit:
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
@@ -55,8 +66,49 @@ jobs:
       - name: Lint
         run: pnpm run lint
 
-      - name: Unit + integration tests
-        run: pnpm test
+      - name: Unit + non-render tests
+        # Same suite as `pnpm test`, minus the files that rasterize real
+        # videos (Remotion + Chromium; the bundler cache is disabled by
+        # design — determinism — so every render re-bundles).
+        run: >-
+          pnpm exec vitest run
+          --exclude 'packages/cli/src/pipeline-integration.test.ts'
+          --exclude 'packages/cli/src/demo-*.test.ts'
+
+  # Slow lane: the tests and audits that render real video. Budgeted for
+  # re-bundling every render on 2-core runners.
+  render:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with: {}
+
+      - name: Install ffmpeg
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg && ffmpeg -version | head -1
+
+      - name: Install dependencies
+        run: rm -rf node_modules && pnpm install
+
+      - name: Build
+        run: pnpm run build
+
+      - name: Render integration tests
+        run: >-
+          pnpm exec vitest run
+          packages/cli/src/pipeline-integration.test.ts
+          packages/cli/src/demo-mcp.test.ts
+          packages/cli/src/demo-ai-concept.test.ts
+          packages/cli/src/demo-devops.test.ts
 
       - name: §62.4 acceptance audit
         run: |

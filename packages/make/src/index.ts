@@ -1,4 +1,5 @@
 import { execFile } from "node:child_process";
+import { createHash } from "node:crypto";
 import {
   mkdir,
   writeFile,
@@ -492,23 +493,31 @@ async function runTts(
   const voice =
     article.frontmatter.voice ||
     (article.frontmatter.language === "en-US" ? EN_VOICE : ZH_VOICE);
+  const pause =
+    typeof audioConfig.pause_between_sentences_sec === "number"
+      ? audioConfig.pause_between_sentences_sec
+      : undefined;
   const audioDir = path.join(projectRoot, "assets", "audio");
   await mkdir(audioDir, { recursive: true });
 
   const outputs: string[] = [];
   for (const scene of article.scenes) {
     const wavPath = path.join(audioDir, `${scene.id}.wav`);
-    if (existsSync(wavPath)) {
-      // Skip — narration already produced.
+    // Cache key: the narration TEXT (hashed), voice, and pause option —
+    // not file existence. An existence check silently kept stale WAVs
+    // after any re-draft/narration edit, desyncing audio from the
+    // picture and subtitles (the render cache uses the same
+    // content-hash discipline).
+    const cacheKey = ttsCacheKey(scene.narration, voice, pause);
+    const meta = await readTtsMeta(wavPath);
+    if (meta !== null && meta.cacheKey === cacheKey && existsSync(wavPath)) {
       continue;
     }
     const result = await provider.synthesize({
       text: scene.narration,
       voice,
       language: article.frontmatter.language,
-      ...(typeof audioConfig.pause_between_sentences_sec === "number"
-        ? { pauseBetweenSentencesSec: audioConfig.pause_between_sentences_sec }
-        : {}),
+      ...(pause !== undefined ? { pauseBetweenSentencesSec: pause } : {}),
     });
     // Same WAV/MP3 detection as @video/cli runAudio.
     const isWav =
@@ -521,10 +530,48 @@ async function runTts(
       ? result.audio
       : await mp3ToWav(result.audio, scene.duration);
     await writeFile(wavPath, wavBytes);
+    await writeTtsMeta(wavPath, { cacheKey, synthesizedAt: new Date().toISOString() });
     outputs.push(`assets/audio/${scene.id}.wav`);
   }
 
   return outputs;
+}
+
+interface TtsCacheMeta {
+  cacheKey: string;
+  synthesizedAt: string;
+}
+
+function ttsCacheKey(
+  narration: string,
+  voice: string,
+  pauseSec: number | undefined,
+): string {
+  return (
+    "sha256:" +
+    createHash("sha256")
+      .update(`${voice}\u0000${pauseSec ?? "-"}\u0000${narration.trim()}`)
+      .digest("hex")
+  );
+}
+
+async function readTtsMeta(wavPath: string): Promise<TtsCacheMeta | null> {
+  try {
+    const { readFile } = await import("node:fs/promises");
+    return JSON.parse(
+      await readFile(`${wavPath}.json`, "utf8"),
+    ) as TtsCacheMeta;
+  } catch {
+    return null;
+  }
+}
+
+async function writeTtsMeta(
+  wavPath: string,
+  meta: TtsCacheMeta,
+): Promise<void> {
+  const { writeFile: wf } = await import("node:fs/promises");
+  await wf(`${wavPath}.json`, JSON.stringify(meta, null, 2), "utf8");
 }
 
 function formatSrtTime(sec: number): string {

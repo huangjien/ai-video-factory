@@ -112,6 +112,11 @@ jobs:
 
       - name: §62.4 acceptance audit
         run: |
+          # The storyboard approval checkpoint is not part of the committed
+          # fixture (only checkpoints/review.yaml is tracked), and a fresh
+          # checkout starts ungated — approve explicitly before preview.
+          # CI is the automation proxy for the human gate here.
+          node packages/cli/dist/index.js approve storyboard --cwd projects/benchmark-v01
           node packages/cli/dist/index.js preview --cwd projects/benchmark-v01
           # `video approve` takes `[project] [stage]` — omit the stage so it
           # auto-resolves from state.yaml.current_stage (set to `review` by

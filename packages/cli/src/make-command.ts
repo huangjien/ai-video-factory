@@ -13,6 +13,8 @@ export interface MakeOptions {
   bgmDir?: string;
   /** Local SFX library dir — same lookup rule as bgmDir. */
   sfxDir?: string;
+  /** BGM generation: auto (MiniMax when key present) | minimax | mock. */
+  musicProvider?: "auto" | "minimax" | "mock";
 }
 
 export async function runMakeCli(opts: MakeOptions): Promise<number> {
@@ -32,6 +34,9 @@ export async function runMakeCli(opts: MakeOptions): Promise<number> {
       : {}),
     ...(opts.bgmDir !== undefined ? { bgmDir: opts.bgmDir } : {}),
     ...(opts.sfxDir !== undefined ? { sfxDir: opts.sfxDir } : {}),
+    ...(opts.musicProvider !== undefined
+      ? { musicProvider: opts.musicProvider }
+      : {}),
   });
 
   // Pretty-print the report.

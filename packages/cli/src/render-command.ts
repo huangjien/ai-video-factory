@@ -1,4 +1,4 @@
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { readFile, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { execSync } from "node:child_process";
@@ -17,11 +17,13 @@ import {
   type WorkflowStatus,
 } from "@video/workflow";
 import {
+  brandSchema,
   compileStoryboard,
   validateProject,
   type CompileOptions,
   type RenderPlan,
 } from "@video/vdsl";
+import { parse as parseYaml } from "yaml";
 import { syncSceneDurations } from "@video/media";
 import { REGISTRY } from "@video/video-components";
 import {
@@ -108,6 +110,7 @@ export async function loadOrCompileStoryboard(
   try {
     const { renderPlan, write } = compileStoryboard(source, root, compileOpts);
     if (!compiledFromVdsl) await write();
+    await mergeBrandConfig(renderPlan, root);
     return { renderPlan, storyboardText: text, compiledFromVdsl };
   } catch (err) {
     if (!compiledFromVdsl) throw err;
@@ -116,8 +119,83 @@ export async function loadOrCompileStoryboard(
     );
     const { renderPlan, write } = compileStoryboard(text, root, compileOpts);
     await write();
+    await mergeBrandConfig(renderPlan, root);
     return { renderPlan, storyboardText: text, compiledFromVdsl: false };
   }
+}
+
+/** Branding resources live at the WORKSPACE root (`<ws>/brand.yaml`,
+ * `<ws>/assets/brand/*`) and every project inherits them; a project-level
+ * `brand.yaml` overrides per top-level key (a project `intro:` replaces
+ * the root `intro:` wholesale). Icon paths resolve relative to the brand
+ * file that declared them and are stored absolute, so the renderer's
+ * data-URL inlining works regardless of process CWD. */
+export async function mergeBrandConfig(
+  renderPlan: RenderPlan,
+  root: string,
+): Promise<void> {
+  const wsRoot = workspaceRootFor(root);
+  const sources: { dir: string; file: string }[] = [];
+  if (wsRoot) sources.push({ dir: wsRoot, file: path.join(wsRoot, "brand.yaml") });
+  sources.push({ dir: root, file: path.join(root, "brand.yaml") });
+
+  let merged: Record<string, unknown> = {};
+  let iconBase: string | null = null;
+  let loadedAny = false;
+  for (const { dir, file } of sources) {
+    if (!existsSync(file)) continue;
+    const parsed = parseBrandFile(file);
+    if (!parsed) continue;
+    loadedAny = true;
+    merged = { ...merged, ...parsed.block };
+    if (parsed.block.icon !== undefined) iconBase = dir;
+  }
+  if (!loadedAny) return;
+
+  if (iconBase && typeof merged.icon === "string" && merged.icon.length > 0) {
+    merged.icon = path.resolve(iconBase, merged.icon);
+  }
+  const parsed = brandSchema.safeParse(merged);
+  if (!parsed.success) {
+    console.error(
+      `warn: merged brand config invalid — ignored (${parsed.error.issues.map((i) => i.path.join(".")).join(", ")})`,
+    );
+    return;
+  }
+  renderPlan.style.brand = parsed.data;
+}
+
+/** `<anywhere>/projects/<slug>` → `<anywhere>`; null otherwise. */
+function workspaceRootFor(projectRoot: string): string | null {
+  const parentDir = path.dirname(projectRoot);
+  if (path.basename(parentDir) === "projects") {
+    return path.dirname(parentDir);
+  }
+  return null;
+}
+
+/** Parse + normalize one brand.yaml. Returns null (with a warning) when
+ * unparsable. Accepts both `brand: {...}` and a bare brand block. */
+function parseBrandFile(file: string): { block: Record<string, unknown> } | null {
+  let raw: unknown;
+  try {
+    raw = parseYaml(readFileSync(file, "utf8"));
+  } catch (err) {
+    console.error(`warn: ${file} unparsable — ignored (${(err as Error).message.split("\n")[0]})`);
+    return null;
+  }
+  if (
+    raw &&
+    typeof raw === "object" &&
+    "brand" in raw &&
+    (raw as Record<string, unknown>).brand &&
+    typeof (raw as Record<string, unknown>).brand === "object"
+  ) {
+    return { block: { ...((raw as Record<string, unknown>).brand as Record<string, unknown>) } };
+  }
+  return raw && typeof raw === "object"
+    ? { block: { ...(raw as Record<string, unknown>) } }
+    : null;
 }
 
 /** Per-scene cache file name: index-prefixed (stable concat order) with a

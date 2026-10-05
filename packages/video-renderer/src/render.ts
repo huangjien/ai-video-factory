@@ -225,7 +225,22 @@ export async function resolveImageSources(
       };
     }),
   );
-  return { ...plan, scenes };
+  // Brand watermark icon (branding 2026-10-05): same bundler constraint —
+  // the headless browser only renders what the entry embeds, so inline the
+  // icon as a data URL too. Missing file → watermark silently skipped.
+  let brand = plan.style.brand;
+  const icon = brand?.icon;
+  if (brand && icon && !icon.startsWith("data:") && existsSync(icon)) {
+    const bytes = await readFile(icon);
+    const ext = path.extname(icon).toLowerCase();
+    const mime =
+      ext === ".png" ? "image/png" : ext === ".svg" ? "image/svg+xml" : "image/jpeg";
+    brand = {
+      ...brand,
+      icon: `data:${mime};base64,${Buffer.from(bytes).toString("base64")}`,
+    };
+  }
+  return { ...plan, scenes, ...(brand ? { style: { ...plan.style, brand } } : {}) };
 }
 
 /** Re-mux with +faststart for streamable MP4 without recompressing video. */

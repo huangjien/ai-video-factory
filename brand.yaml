@@ -1,0 +1,17 @@
+# Workspace-level brand configuration (branding feature 2026-10-05).
+# EVERY project inherits this file — projects/reference it automatically at
+# render time. Override per project by dropping a `brand.yaml` into
+# `projects/<id>/` (per top-level key; a project `intro:` replaces this
+# `intro:` wholesale).
+#
+# Paths resolve relative to THIS file's directory (workspace root).
+brand:
+  name: "AI 视频工厂"
+  icon: assets/brand/icon.png    # corner watermark on every scene
+  corner: bottom-right           # top-left | top-right | bottom-left | bottom-right
+  size_px: 72
+  opacity: 0.85
+  intro:                         # omit this whole block = no branded opening
+    duration_sec: 15             # fixed-look opening window (10-20s typical)
+    background: aurora           # aurora | sunset | ocean | citrus
+    show_name: true

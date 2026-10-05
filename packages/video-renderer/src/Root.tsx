@@ -3,6 +3,8 @@ import type { RenderPlan, RenderPlanScene } from "@video/vdsl";
 import {
   REGISTRY,
   Background,
+  BrandIntro,
+  BrandWatermark,
   CaptionsOverlay,
   resolveTheme,
 } from "@video/video-components";
@@ -105,6 +107,23 @@ export const Root = ({ renderPlan }: RootProps) => {
           width={renderPlan.project.width}
           height={renderPlan.project.height}
           theme={theme}
+        />
+      ) : null}
+      {/* Branding (2026-10-05): fixed opening chrome inside the intro
+          window, then the corner watermark on every frame of every scene. */}
+      {renderPlan.style.brand ? (
+        <BrandIntro
+          brand={renderPlan.style.brand}
+          frame={frame}
+          fps={renderPlan.project.fps}
+          width={renderPlan.project.width}
+        />
+      ) : null}
+      {renderPlan.style.brand ? (
+        <BrandWatermark
+          brand={renderPlan.style.brand}
+          width={renderPlan.project.width}
+          height={renderPlan.project.height}
         />
       ) : null}
     </div>

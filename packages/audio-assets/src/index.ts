@@ -12,3 +12,8 @@ export {
   FileBasedAudioAssetProvider,
   MockAudioAssetProvider,
 } from "./providers.js";
+export {
+  MiniMaxMusicProvider,
+  MUSIC_PROMPTS,
+  type MiniMaxMusicProviderOptions,
+} from "./minimax-music.js";

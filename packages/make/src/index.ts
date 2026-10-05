@@ -23,10 +23,16 @@ import {
   EdgeTTSProvider,
   type TTSProvider,
 } from "@video/tts";
-import { readSceneTimings, syncSceneDurations } from "@video/media";
+import { readSceneTimings, syncSceneDurations, probeAudioDuration } from "@video/media";
+import {
+  planBgmWindows,
+  renderBgmTimeline,
+} from "@video/audio-mix";
 import {
   FileBasedAudioAssetProvider,
+  MiniMaxMusicProvider,
   MockAudioAssetProvider,
+  type AudioAssetProvider,
 } from "@video/audio-assets";
 import {
   MiniMaxImageProvider,
@@ -54,6 +60,9 @@ export interface MakeOptions {
   bgmDir?: string;
   /** Local SFX library, same lookup rule as bgmDir. */
   sfxDir?: string;
+  /** BGM generation backend: "auto" (default) uses MiniMax music
+   * generation when MINIMAX_API_KEY is set, else silent mock. */
+  musicProvider?: "auto" | "minimax" | "mock";
 }
 
 export interface MakeStep {
@@ -152,6 +161,9 @@ export async function runMake(opts: MakeOptions): Promise<MakeReport> {
       runAudioAssets(opts.projectRoot, audioConfig, {
         ...(opts.bgmDir !== undefined ? { bgmDir: opts.bgmDir } : {}),
         ...(opts.sfxDir !== undefined ? { sfxDir: opts.sfxDir } : {}),
+        ...(opts.musicProvider !== undefined
+          ? { musicProvider: opts.musicProvider }
+          : {}),
       }),
     );
 
@@ -447,6 +459,8 @@ function updateStoryboardForImages(
 interface AudioConfigShape {
   voice?: string;
   bgm?: string | null;
+  /** Multi-BGM timeline (branding 2026-10-05) — overrides `bgm`. */
+  bgm_tracks?: { track: string; until_sec?: number }[];
   bgm_fade_in_sec?: number;
   bgm_fade_out_sec?: number;
   pause_between_sentences_sec?: number;
@@ -588,6 +602,13 @@ function formatSrtTime(sec: number): string {
 export interface AudioAssetDirs {
   bgmDir?: string;
   sfxDir?: string;
+  /** BGM generation backend (branding 2026-10-05). "auto" (default) uses
+   * MiniMax music generation when MINIMAX_API_KEY is set, else mock.
+   * "minimax" forces it (fails loudly without a key); "mock" disables.
+   * bgmDir always wins over all of these. */
+  musicProvider?: "auto" | "minimax" | "mock";
+  /** Test seam — overrides the constructed MiniMax music provider. */
+  minimaxProvider?: Pick<AudioAssetProvider, "pickBackgroundMusic">;
 }
 
 /** Materialize the BGM/SFX tags declared in audio-config.yaml into
@@ -612,16 +633,51 @@ export async function runAudioAssets(
       sfxDirectory: dirs.sfxDir ?? dirs.bgmDir ?? ".",
     });
 
-  if (config.bgm && typeof config.bgm === "string") {
-    const out = path.join(assetsDir, "bgm", `${config.bgm}.wav`);
-    if (!existsSync(out)) {
-      const provider = dirs.bgmDir ? fileBased() : mock();
-      const r = await provider.pickBackgroundMusic({ tag: config.bgm });
+  const useMinimax = (() => {
+    const mode = dirs.musicProvider ?? "auto";
+    if (mode === "mock") return false;
+    if (dirs.bgmDir) return false; // user library wins
+    if (mode === "minimax") return true;
+    return Boolean(process.env["MINIMAX_API_KEY"]);
+  })();
+  const minimax = () => dirs.minimaxProvider ?? new MiniMaxMusicProvider();
+
+  /** Generate one named BGM tag: file-based library → MiniMax music gen
+   * (degrading to mock on failure so the pipeline keeps moving) → mock. */
+  const materializeBgm = async (tag: string): Promise<string | null> => {
+    const out = path.join(assetsDir, "bgm", `${tag}.wav`);
+    if (existsSync(out)) return null;
+    if (dirs.bgmDir) {
+      const r = await fileBased().pickBackgroundMusic({ tag });
       await writeFile(out, r.bytes);
-      outputs.push(
-        `assets/audio-assets/bgm/${config.bgm}.wav (${r.source}, ${r.license})`,
-      );
+      return `assets/audio-assets/bgm/${tag}.wav (${r.source}, ${r.license})`;
     }
+    if (useMinimax) {
+      try {
+        const r = await minimax().pickBackgroundMusic({ tag });
+        await writeFile(out, r.bytes);
+        return `assets/audio-assets/bgm/${tag}.wav (${r.source}, ${r.license})`;
+      } catch (err) {
+        console.error(
+          `  ! minimax music gen failed for "${tag}" — falling back to mock: ${(err as Error).message.slice(0, 120)}`,
+        );
+      }
+    }
+    const r = await mock().pickBackgroundMusic({ tag });
+    await writeFile(out, r.bytes);
+    return `assets/audio-assets/bgm/${tag}.wav (${r.source}, ${r.license})`;
+  };
+
+  if (config.bgm && typeof config.bgm === "string") {
+    const line = await materializeBgm(config.bgm);
+    if (line) outputs.push(line);
+  }
+  // Multi-BGM timeline: materialize every NAMED track tag exactly like
+  // `bgm` above (path-shaped tracks point at existing files instead).
+  for (const t of config.bgm_tracks ?? []) {
+    if (isTrackPath(t.track)) continue;
+    const line = await materializeBgm(t.track);
+    if (line) outputs.push(line);
   }
   const sfx = config.sfx ?? {};
   for (const [sceneId, tag] of Object.entries(sfx)) {
@@ -675,9 +731,41 @@ async function runMix(
     "mix",
     slug,
   ];
-  if (config.bgm) {
+  if (config.bgm && typeof config.bgm === "string") {
     const bgmAbs = path.join(projectRoot, "assets", "audio-assets", "bgm", `${config.bgm}.wav`);
     mixArgs.push("--bgm", bgmAbs);
+  }
+  if (config.bgm_tracks && config.bgm_tracks.length > 0) {
+    // Multi-BGM timeline (branding 2026-10-05): pre-render the ordered
+    // windows into one wav, then mix it through the normal single-`--bgm`
+    // path — the ducker and master fades in mix.ts apply unchanged.
+    const wsRoot = workspaceRootFor(projectRoot);
+    const total = await totalNarrationSeconds(projectRoot);
+    const windows = planBgmWindows(
+      config.bgm_tracks,
+      total,
+      (track) => {
+        if (!isTrackPath(track)) {
+          return path.join(projectRoot, "assets", "audio-assets", "bgm", `${track}.wav`);
+        }
+        // Path tracks: project-relative first, then workspace root —
+        // shared brand audio lives in <ws>/assets/brand/.
+        const inProject = path.resolve(projectRoot, track);
+        if (existsSync(inProject)) return inProject;
+        if (wsRoot && existsSync(path.resolve(wsRoot, track))) {
+          return path.resolve(wsRoot, track);
+        }
+        return inProject; // missing → ffmpeg fails loudly downstream
+      },
+    );
+    const timelinePath = await renderBgmTimeline(
+      windows,
+      path.join(projectRoot, "assets", "audio-assets", "bgm", "_timeline.wav"),
+    );
+    console.log(
+      `  bgm timeline: ${windows.map((w) => `${path.basename(w.path)}[${w.startSec.toFixed(1)}-${w.endSec.toFixed(1)}s]`).join(" → ")}`,
+    );
+    mixArgs.push("--bgm", timelinePath);
   }
   if (typeof config.bgm_fade_in_sec === "number") {
     mixArgs.push("--bgm-fade-in", String(config.bgm_fade_in_sec));
@@ -688,6 +776,41 @@ async function runMix(
   await runCli(mixArgs, { cwd: workspaceRoot });
   // Mirror what `video mix` actually writes.
   return ["output/final-mixed.mp4"];
+}
+
+/** A track value is a FILE PATH when it looks like one — contains a
+ * separator or an audio extension. Everything else is a named tag. */
+function isTrackPath(track: string): boolean {
+  return /[\\/]/.test(track) || /\.(wav|mp3|m4a|ogg|flac)$/i.test(track);
+}
+
+/** `<anywhere>/projects/<slug>` → `<anywhere>`; null otherwise. Shared
+ * branding resources (brand.yaml, assets/brand/) live at the workspace
+ * root and every project references them. */
+function workspaceRootFor(projectRoot: string): string | null {
+  const parentDir = path.dirname(projectRoot);
+  if (path.basename(parentDir) === "projects") {
+    return path.dirname(parentDir);
+  }
+  return null;
+}
+
+/** Sum the measured scene narration wavs — the timeline's `until_sec`
+ * values are absolute video seconds, so the windows need the real total,
+ * not the article's estimate. */
+async function totalNarrationSeconds(projectRoot: string): Promise<number> {
+  const audioDir = path.join(projectRoot, "assets", "audio");
+  const files = (await readdir(audioDir))
+    .filter((f) => /^scene[-_]\d+\.wav$/i.test(f))
+    .sort();
+  if (files.length === 0) {
+    throw new Error(`no scene narration wavs in ${audioDir} — run TTS first`);
+  }
+  let total = 0;
+  for (const f of files) {
+    total += await probeAudioDuration(path.join(audioDir, f));
+  }
+  return total;
 }
 
 async function runCli(

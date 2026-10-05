@@ -8,6 +8,32 @@ export const AudioConfigSchema = z.object({
   voice: z.string().min(1).optional(),
   /** BGM tag (mock) or filename (file-based). Use null to disable BGM. */
   bgm: z.string().nullable().optional(),
+  /**
+   * Multi-BGM timeline (branding feature 2026-10-05). Ordered windows in
+   * absolute video seconds; each entry plays its track until `until_sec`,
+   * the last (or an omitted `until_sec`) runs to the end. Windows are
+   * crossfaded by the mixer, so the intro can carry a different mood than
+   * the body:
+   *
+   *   bgm_tracks:
+   *     - { track: calm, until_sec: 18 }   # branded opening
+   *     - { track: epic }                  # rest of the video
+   *
+   * `track` is a named tag (assets/audio-assets/bgm/<tag>.wav — generated
+   * by the audio-asset step like `bgm`) or a path relative to the project.
+   * When present, `bgm_tracks` overrides `bgm`.
+   */
+  bgm_tracks: z
+    .array(
+      z
+        .object({
+          track: z.string().min(1),
+          until_sec: z.number().positive().optional(),
+        })
+        .strict(),
+    )
+    .min(1)
+    .optional(),
   bgm_fade_in_sec: z.number().min(0).max(10).optional(),
   bgm_fade_out_sec: z.number().min(0).max(10).optional(),
   /** Seconds of silence inserted between sentences in TTS output.

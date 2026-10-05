@@ -1,0 +1,11 @@
+Source:    https://www.youtube.com/watch?v=SIROfFySw_Q
+Track:     Overturn（反转进行曲）
+Uploader:  GFY1994 (YouTube channel)
+Extracted: 2026-10-05, yt-dlp bestaudio → mp3 (135s)
+
+STATUS: NOT LICENSED for redistribution. Standard YouTube license
+(all rights reserved by default). Use for personal reference only.
+
+Publishing this track as BGM in your own videos requires the rights
+holder's permission (contact GFY1994 via the channel). Without it,
+expect Content ID claims or strikes on uploads.

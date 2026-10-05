@@ -440,9 +440,53 @@ const projectSchema = z
   })
   .strict();
 
+/**
+ * Branding / marketing identity (feature 2026-10-05). Authored either in
+ * storyboard `style.brand` directly or in a project-level `brand.yaml`
+ * that the render command merges over the compiled plan.
+ *
+ * - `icon` (project-relative path, served via staticFile) is drawn at a
+ *   fixed corner of EVERY scene for the whole duration — the channel
+ *   watermark.
+ * - `intro` fixes the opening look: for the first `duration_sec` the
+ *   renderer adds a brand gradient chrome (top band with `name` + a
+ *   subtle full-screen tint) so the opening reads as one branded block.
+ */
+export const brandSchema = z
+  .object({
+    /** Channel / product name shown in the intro band. */
+    name: z.string().min(1).optional(),
+    /** Project-relative image path (png/jpg/svg) — corner watermark. */
+    icon: z.string().min(1).optional(),
+    corner: z
+      .enum(["top-left", "top-right", "bottom-left", "bottom-right"])
+      .default("bottom-right"),
+    /** Watermark edge length in px at 1080p (scaled by width/1920). */
+    size_px: z.number().int().min(16).max(512).default(72),
+    /** Watermark opacity 0-1. */
+    opacity: z.number().min(0.05).max(1).default(0.85),
+    intro: z
+      .object({
+        /** Branded-chrome window from t=0; 10-20s is the marketing norm. */
+        duration_sec: z.number().min(1).max(120).default(15),
+        /** Named gradient: aurora | sunset | ocean | citrus. */
+        background: z
+          .enum(["aurora", "sunset", "ocean", "citrus"])
+          .default("aurora"),
+        /** Show `name` in the intro band (requires name when true). */
+        show_name: z.boolean().default(true),
+      })
+      .strict()
+      .optional(),
+  })
+  .strict();
+
+export type BrandConfig = z.infer<typeof brandSchema>;
+
 const styleSchema = z
   .object({
     theme: z.string().min(1).default("paper-light"),
+    brand: brandSchema.optional(),
   })
   .strict();
 

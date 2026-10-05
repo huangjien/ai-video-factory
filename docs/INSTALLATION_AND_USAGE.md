@@ -928,6 +928,69 @@ replace with a formally licensed provider (MiniMax TTS, ElevenLabs,
 etc.), implement the `TTSProvider` interface in `@video/tts` and pass it to
 `video make` (CLI integration in a follow-up).
 
+## 9.5 Branding and marketing (`brand.yaml` + multi-BGM)
+
+Branding lives at the WORKSPACE root — `<repo>/brand.yaml` plus shared
+assets in `<repo>/assets/brand/` — and every project inherits it
+automatically at render time (`preview` / `final` / `make`). To rebrand a
+single project, drop `projects/<id>/brand.yaml`: it overrides the root
+config per top-level key (a project `intro:` block replaces the root
+`intro:` wholesale). Paths in a brand file resolve relative to that file's
+own directory, and icons are stored absolute after the merge, so rendering
+works from any working directory.
+
+```yaml
+# <repo>/brand.yaml  (shipped default: "AI 视频工厂" + placeholder icon)
+brand:
+  name: "我的频道"              # shown in the intro band
+  icon: assets/brand/icon.png   # corner watermark on EVERY scene (png/jpg/svg)
+  corner: bottom-right          # top-left | top-right | bottom-left | bottom-right
+  size_px: 72                   # authored at 1080p; scales with composition width
+  opacity: 0.85
+  intro:                        # omit the whole intro block = no branded opening
+    duration_sec: 15            # fixed-look opening window (10-20s is typical)
+    background: aurora          # aurora | sunset | ocean | citrus
+    show_name: true
+```
+
+During the intro window the renderer adds a brand gradient band (with the
+channel name) plus a subtle full-screen tint — the opening reads as one
+branded block while scene content stays legible; after the window only the
+corner watermark remains. Visual check: `node scripts/render-brand-smoke.mjs`.
+
+Multi-BGM (different mood for opening vs body) lives in
+`audio-config.yaml`; when present it overrides `bgm`:
+
+```yaml
+bgm_tracks:
+  - { track: calm, until_sec: 18 }   # absolute seconds; last entry → end
+  - { track: epic }
+```
+
+`track` is a named tag (materialized to
+`assets/audio-assets/bgm/<tag>.wav` by the audio-asset step, exactly like
+`bgm`) or a file path — resolved against the project first, then the
+workspace root, so shared brand audio can live in
+`<repo>/assets/brand/`. The windows are crossfaded
+(1 s) into `assets/audio-assets/bgm/_timeline.wav`, then mixed through the
+normal ducker and master fades — `bgm_fade_in_sec` / `bgm_fade_out_sec`
+still apply.
+
+#### Where named BGM tracks come from
+
+`video make <project> --music-provider auto|minimax|mock` (default
+`auto`): with `MINIMAX_API_KEY` set, named tags are **generated** as
+original license-clean music via the MiniMax music-01 API (beds ≈60 s,
+looped to fill their windows). Curated prompt vocabulary ships for
+`calm`, `epic`, `guofeng`, `liubang-xiaodiao` (古风小调，琵琶竹笛，
+汉代帝王气象) and `fanzhuan-march` (剧情反转进行曲，由压抑渐强到爆发) —
+add entries to `MUSIC_PROMPTS` in
+`packages/audio-assets/src/minimax-music.ts`; unknown tags become
+free-text style prompts verbatim (Chinese accepted). A failed generation
+degrades to the silent mock with a warning, so a render never dies on
+music. `--bgm-dir` (your own library) always wins over generation, and
+`--music-provider mock` restores the silent placeholder.
+
 
 ## 10. Project artifacts and provenance
 

@@ -199,3 +199,26 @@ animations do not affect element draw timing.
   fresh and fall back to the storyboard loudly when it is corrupt,
 - draft mode (`video preview --draft`) overrides fps/width/height (960×540@15)
   without touching the storyboard.
+
+## Branding (`style.brand`, feature 2026-10-05)
+
+Optional `brand` block on `style` — authored in the storyboard directly or
+in a project-level `brand.yaml` (render time merge; `brand.yaml` wins).
+Schema: `brandSchema` in `packages/vdsl/src/schema.ts`.
+
+| field | default | meaning |
+|---|---|---|
+| `name` | — | channel name, shown in the intro band |
+| `icon` | — | corner watermark image, every scene, whole duration |
+| `corner` | `bottom-right` | `top-left`/`top-right`/`bottom-left`/`bottom-right` |
+| `size_px` | `72` | watermark edge at 1080p, scales with composition width |
+| `opacity` | `0.85` | watermark opacity |
+| `intro.duration_sec` | `15` | branded-opening window (omit `intro` = no chrome) |
+| `intro.background` | `aurora` | `aurora`/`sunset`/`ocean`/`citrus` gradient |
+| `intro.show_name` | `true` | render `name` in the intro band |
+
+Renderer: `BrandWatermark` + `BrandIntro` in video-components (overlay
+family, not REGISTRY scenes); the icon is inlined as a data URL by
+`resolveImageSources` like scene images. Audio counterpart:
+`audio-config.yaml` `bgm_tracks` (ordered absolute-second windows, 1 s
+crossfades, pre-rendered to `assets/audio-assets/bgm/_timeline.wav`).

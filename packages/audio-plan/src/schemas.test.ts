@@ -19,6 +19,29 @@ describe("AudioConfigSchema", () => {
     expect(r.success).toBe(true);
   });
 
+  it("accepts an ordered bgm_tracks timeline (branding 2026-10-05)", () => {
+    const r = AudioConfigSchema.safeParse({
+      bgm_tracks: [
+        { track: "calm", until_sec: 18 },
+        { track: "assets/brand/bgm-body.mp3" },
+      ],
+    });
+    expect(r.success).toBe(true);
+  });
+
+  it("rejects bgm_tracks entries with unknown keys or bad until_sec", () => {
+    expect(
+      AudioConfigSchema.safeParse({
+        bgm_tracks: [{ track: "calm", mood: "chill" }],
+      }).success,
+    ).toBe(false);
+    expect(
+      AudioConfigSchema.safeParse({ bgm_tracks: [{ track: "calm", until_sec: 0 }] })
+        .success,
+    ).toBe(false);
+    expect(AudioConfigSchema.safeParse({ bgm_tracks: [] }).success).toBe(false);
+  });
+
   it("rejects negative fades", () => {
     const r = AudioConfigSchema.safeParse({ bgm_fade_in_sec: -1 });
     expect(r.success).toBe(false);

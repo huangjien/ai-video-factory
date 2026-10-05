@@ -61,6 +61,17 @@ export {
   CaptionsOverlay,
   type CaptionsOverlayProps,
 } from "./components/CaptionsOverlay.js";
+export {
+  BrandWatermark,
+  BrandIntro,
+  INTRO_GRADIENTS,
+  cornerStyle,
+  introGradient,
+  introWindowActive,
+  type BrandCorner,
+  type BrandIntroProps,
+  type BrandWatermarkProps,
+} from "./components/BrandOverlay.js";
 export { SvgScene, SvgScenePropsSchema } from "./components/SvgScene.js";
 export {
   DoodleScene,

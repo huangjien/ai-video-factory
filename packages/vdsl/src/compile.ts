@@ -2,6 +2,7 @@ import { wrapText } from "@video/media";
 import { stringify as yamlStringify } from "yaml";
 import type {
   Asset,
+  BrandConfig,
   Storyboard,
   TimelineAnimation,
 } from "./schema.js";
@@ -40,7 +41,7 @@ export interface RenderPlanScene {
 
 export interface RenderPlan {
   project: Storyboard["project"];
-  style: { theme: string };
+  style: { theme: string; brand?: BrandConfig };
   totalFrames: number;
   scenes: RenderPlanScene[];
   /** Project-level asset manifest (plan §11), carried for renderer/QA. */
@@ -121,7 +122,10 @@ export function compileStoryboard(
 
   const renderPlan: RenderPlan = {
     project,
-    style: { theme: board.style?.theme ?? "paper-light" },
+    style: {
+      theme: board.style?.theme ?? "paper-light",
+      ...(board.style?.brand ? { brand: board.style.brand } : {}),
+    },
     totalFrames: cursor,
     scenes,
     ...(board.assets ? { assets: board.assets } : {}),

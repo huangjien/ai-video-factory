@@ -322,6 +322,16 @@ program
     "local SFX library dir — sfx cue tags resolve to {tag}.wav inside it (default: mock silent placeholder)",
   )
   .option(
+    "--music-provider <mode>",
+    "BGM generation: auto (MiniMax music gen when MINIMAX_API_KEY set, else mock) | minimax | mock",
+    (v) => {
+      if (v !== "auto" && v !== "minimax" && v !== "mock") {
+        throw new Error(`--music-provider must be auto|minimax|mock, got: ${v}`);
+      }
+      return v as "auto" | "minimax" | "mock";
+    },
+  )
+  .option(
     "--dry-run",
     "log which steps would run without executing them",
   )
@@ -334,6 +344,7 @@ program
         imageProvider?: "minimax" | "mock" | "none";
         bgmDir?: string;
         sfxDir?: string;
+        musicProvider?: "auto" | "minimax" | "mock";
         dryRun?: boolean;
       },
     ) => {
@@ -346,6 +357,9 @@ program
           : {}),
         ...(opts.bgmDir !== undefined ? { bgmDir: opts.bgmDir } : {}),
         ...(opts.sfxDir !== undefined ? { sfxDir: opts.sfxDir } : {}),
+        ...(opts.musicProvider !== undefined
+          ? { musicProvider: opts.musicProvider }
+          : {}),
         ...(opts.dryRun !== undefined ? { dryRun: opts.dryRun } : {}),
       });
     },

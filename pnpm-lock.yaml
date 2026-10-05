@@ -205,6 +205,9 @@ importers:
 
   packages/audio-assets:
     dependencies:
+      '@video/llm':
+        specifier: workspace:*
+        version: link:../llm
       zod:
         specifier: ^3.25.0
         version: 3.25.76
@@ -452,6 +455,9 @@ importers:
 
   packages/video-components:
     dependencies:
+      '@video/vdsl':
+        specifier: workspace:*
+        version: link:../vdsl
       react:
         specifier: ^19.0.0
         version: 19.3.0

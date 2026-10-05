@@ -1,0 +1,20 @@
+version: 1
+hash: sha256:a48b89274eebe19914ee1fdc7b8cc498b20b39c4122e87e2376650db4483834f
+createdAt: 2026-10-04T18:30:49.520Z
+fragment: |2-
+    - id: scene-05
+      duration: 7
+      narration:
+        text: "加入思维链后，模型的推理能力和可解释性都明显提高。"
+        audio: assets/audio/scene-05.wav
+      visual:
+        component: Comparison
+        props:
+          left:
+            { title: "无 CoT", items: ["直接给答案", "难以解释", "复杂问题易错"] }
+          right:
+            { title: "有 CoT", items: ["逐步推理", "过程可见", "准确率提升"] }
+      animation:
+        entrance: slide
+      captions:
+        source: narration

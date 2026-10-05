@@ -116,6 +116,11 @@ jobs:
           # fixture (only checkpoints/review.yaml is tracked), and a fresh
           # checkout starts ungated — approve explicitly before preview.
           # CI is the automation proxy for the human gate here.
+          # Guard: a finished local run may be committed with state.yaml at
+          # FINAL_APPROVED, which makes every approve an illegal transition.
+          # rewind to ungated first (rewrites state.yaml only — rendered
+          # artifacts are untouched).
+          node packages/cli/dist/index.js reset --force --cwd projects/benchmark-v01
           node packages/cli/dist/index.js approve storyboard --cwd projects/benchmark-v01
           node packages/cli/dist/index.js preview --cwd projects/benchmark-v01
           # `video approve` takes `[project] [stage]` — omit the stage so it

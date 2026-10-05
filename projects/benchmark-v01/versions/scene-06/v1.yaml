@@ -1,0 +1,19 @@
+version: 1
+hash: sha256:c68d64f27a9a31416b48f49802395336df78f89128d3c30e54e014dfc50d74e0
+createdAt: 2026-10-04T18:30:49.520Z
+fragment: |2-
+    - id: scene-06
+      duration: 5
+      narration:
+        text: "谢谢观看。"
+        audio: assets/audio/scene-06.wav
+      visual:
+        component: EndCard
+        props:
+          title: "谢谢观看"
+          subtitle: "AI 视频工厂 v0.1"
+          cta: "订阅 / 点赞 / 评论"
+      animation:
+        entrance: fade
+      captions:
+        source: narration

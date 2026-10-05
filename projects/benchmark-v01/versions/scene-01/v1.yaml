@@ -1,0 +1,17 @@
+version: 1
+hash: sha256:2bfd28f2e0e076815a2ad959e940adc47e808a511aca6cf4cc5ca3272999a39b
+createdAt: 2026-10-04T18:30:49.518Z
+fragment: |2-
+    - id: scene-01
+      duration: 5
+      narration:
+        text: "AI 思维链有什么用？"
+        audio: assets/audio/scene-01.wav
+      visual:
+        component: Title
+        props:
+          text: "AI 思维链有什么用？"
+      animation:
+        entrance: fade
+      captions:
+        source: narration

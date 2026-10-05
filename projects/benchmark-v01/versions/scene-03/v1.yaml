@@ -1,0 +1,19 @@
+version: 1
+hash: sha256:a7cd1e941ebc3b2af6ec57ffda00eb113f9d278429afa2bc9f259f8a95bff590
+createdAt: 2026-10-04T18:30:49.519Z
+fragment: |2-
+    - id: scene-03
+      duration: 8
+      narration:
+        text: "思维链是把问题拆解成一步一步的推理，再把每一步的答案串起来。"
+        audio: assets/audio/scene-03.wav
+      visual:
+        component: FlowChart
+        props:
+          nodes: ["问题", "步骤 1", "步骤 2", "步骤 3", "答案"]
+          edges: [[0, 1], [1, 2], [2, 3], [3, 4]]
+          direction: left-to-right
+      animation:
+        entrance: draw
+      captions:
+        source: narration

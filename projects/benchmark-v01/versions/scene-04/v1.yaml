@@ -1,0 +1,25 @@
+version: 1
+hash: sha256:1c025515beb4ce44aefe7951409676ed84c2bf5846f20ea57c8c61e8f95865f9
+createdAt: 2026-10-04T18:30:49.519Z
+fragment: |2-
+    - id: scene-04
+      duration: 8
+      narration:
+        text: "在提示里给出几个推理示例，模型就能模仿这种思维过程。"
+        audio: assets/audio/scene-04.wav
+      visual:
+        component: Terminal
+        props:
+          title: "prompt.py"
+          lines:
+            [
+              "Q: 24 * 7 = ?",
+              "Let's think step by step.",
+              "1. 24 * 7 = 168",
+              "A: 168",
+            ]
+          prompt: "▶"
+      animation:
+        entrance: typewriter
+      captions:
+        source: narration

@@ -1,0 +1,18 @@
+version: 1
+hash: sha256:bfaa412f0109f5d1cbf160872e09bbf9e6eaaed462f081e90c47e1181d0e7f76
+createdAt: 2026-10-04T18:30:49.519Z
+fragment: |2-
+    - id: scene-02
+      duration: 6
+      narration:
+        text: "直接向大模型提问复杂问题，往往会得到错误的答案。"
+        audio: assets/audio/scene-02.wav
+      visual:
+        component: Callout
+        props:
+          kind: warning
+          text: "直接提问为什么出错"
+      animation:
+        entrance: slide
+      captions:
+        source: narration

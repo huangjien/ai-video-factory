@@ -63,6 +63,12 @@ export const INTRO_GRADIENTS: Record<string, { band: string; tint: string }> = {
     band: "linear-gradient(90deg, #FACC15 0%, #84CC16 55%, #10B981 100%)",
     tint: "linear-gradient(135deg, rgba(250,204,21,0.14) 0%, rgba(16,185,129,0.12) 100%)",
   },
+  // Channel art: signature red fades into the player dark chrome. Pairs
+  // with `style.theme: ai-red`.
+  "channel-banner": {
+    band: "linear-gradient(135deg, #FF0000 0%, #282828 65%, #0F0F0F 100%)",
+    tint: "linear-gradient(135deg, rgba(255,0,0,0.10) 0%, rgba(15,15,15,0.22) 100%)",
+  },
 };
 
 export function introGradient(name: string): { band: string; tint: string } {

@@ -182,6 +182,36 @@ export const duskWarmTheme: Theme = {
   },
 };
 
+/** AI Video Factory native palette — creator/playback feel.
+ * Player-dark `#0F0F0F` background, signature `#FF0000` red accent,
+ * white primary, soft-grey secondary. Pairs naturally with the
+ * `channel-banner` intro gradient for an end-to-end creator look.
+ * Theme name feeds `style.theme: ai-red` in VDSL. */
+export const aiRedTheme: Theme = {
+  colors: {
+    background: "#0F0F0F",
+    surface: "#1F1F1F",
+    primary: "#FFFFFF",
+    secondary: "#AAAAAA",
+    accent: "#FF0000",
+    warning: "#F0B400",
+    success: "#3FB68B",
+  },
+  typography: {
+    title: { fontFamily: "Noto Sans SC", fontWeight: 700, fontSize: 72 },
+    subtitle: { fontFamily: "Noto Sans SC", fontWeight: 600, fontSize: 48 },
+    body: { fontFamily: "Noto Sans SC", fontWeight: 400, fontSize: 32 },
+    code: { fontFamily: "JetBrains Mono", fontWeight: 400, fontSize: 26 },
+  },
+  spacing: { unit: 8 },
+  defaultEasing: "inOut-cubic",
+  fonts: {
+    title: "Noto Sans SC",
+    body: "Noto Sans SC",
+    code: "JetBrains Mono",
+  },
+};
+
 /** Forest moss — deep emerald canopy with lime accent. Calm botanical,
  * sustainability, outdoor / nature explainers. Pairs naturally with
  * image-01 generations of plants, weather, ecosystems. */
@@ -304,6 +334,7 @@ export const THEMES: Record<string, Theme> = {
   "sunset-pop": sunsetPopTheme,
   "terminal-vintage": terminalVintageTheme,
   "paper-cream": paperCreamTheme,
+  "ai-red": aiRedTheme,
 };
 
 export const THEME_NAMES = Object.keys(THEMES);

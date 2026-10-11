@@ -119,6 +119,7 @@ do).
 | `video make <project>`           | TTS → audio assets → render → mix (`--dry-run` to preview, `--fake` for offline TTS, `--image-provider mock\|minimax\|none`, `--bgm-dir`/`--sfx-dir <dir>` to use your own music library) |
 | `video retrospect <project>`     | **v0.4** ask the LLM for 3 concrete edits to `article.md` based on the latest runs + QA report (writes `projects/<slug>/retrospect.md`); `--dry-run` shows the input without calling the LLM |
 | `video status <project>`         | shows current workflow checkpoint + **v0.4** the latest QA finding count next to the gate |
+| `video theme [name] / --cwd <root>` | **v0.4** palette inspector — list every theme, print one theme's full token set, or resolve `style.theme` from a project's storyboard |
 
 The two human-edit artifacts are `article.md` (narrative + scene data) and
 `audio-config.yaml` (BGM/SFX cues + fades + voice, plus optional
@@ -134,6 +135,27 @@ routing per-command with `--model <provider>` or globally via the
 `LL_CONFIG` YAML file.
 
 The fine-grained per-stage verbs (`video research`, `video script`, `video storyboard`, `video audio`, `video audio-asset`, `video mix`, `video final`, `video preview`, `video approve`/`reject`/`rollback`, `video review`, `video youtube`, `video thumbnail`, `video shorts`, `video status`/`video resume`, `video validate`) remain wired for back-compat with projects created before the minimal API but are not part of the recommended path.
+
+### Theme presets
+
+`style.theme` (set on `video draft --style <name>` or written directly into
+`article.md` / `storyboard.yaml`) selects one of nine built-in palettes. Use
+`video theme` to print the index, `video theme <name>` for one palette, or
+`video theme --cwd <root>` to resolve a project's current theme. Unknown
+values fall back to `paper-light` (the v0.4.3 default) at render time and
+`video validate` surfaces a hint when an unknown name is detected.
+
+| Name | Mood | Accent |
+|------|------|--------|
+| `paper-light` (v0.4.3 default) | warm paper / hand-drawn | `#C2410C` |
+| `dark-tech` | deep navy / tutorial | `#4C8DFF` |
+| `ocean-deep` | calm teal / monitoring | `#2DD4BF` |
+| `dusk-warm` | plum / story-led | `#F97362` |
+| `forest-moss` | emerald / nature | `#84CC16` |
+| `sunset-pop` | magenta / lifestyle | `#FACC15` |
+| `terminal-vintage` | CRT phosphor / dev | `#22FF22` |
+| `paper-cream` | beige / friendly product | `#D97706` |
+| `ai-red` | player dark / creator | `#FF0000` |
 
 ## Scripts
 

@@ -12,6 +12,7 @@ export {
   paperLightTheme,
   oceanDeepTheme,
   duskWarmTheme,
+  aiRedTheme,
   resolveTheme,
   type Theme,
 } from "./theme.js";

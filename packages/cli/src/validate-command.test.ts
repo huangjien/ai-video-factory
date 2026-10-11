@@ -72,4 +72,76 @@ describe("video validate (end command)", () => {
     );
     expect(code).toBe(1);
   });
+
+  describe("unknown theme hint", () => {
+    /** Capture console.error / console.log for a single invocation so the
+     *  hint assertions can match strings without polluting stdout. */
+    async function captureAndValidate(yamlText: string): Promise<{
+      stdout: string;
+      stderr: string;
+      exit: number;
+    }> {
+      const root = makeProject("scene-01.wav");
+      writeFileSync(
+        path.join(root, "storyboard", "storyboard.yaml"),
+        yamlText,
+      );
+      const orig = { log: console.log, error: console.error };
+      const stdoutChunks: string[] = [];
+      const stderrChunks: string[] = [];
+      console.log = (...chunks: unknown[]) =>
+        stdoutChunks.push(chunks.map(stringify).join(" "));
+      console.error = (...chunks: unknown[]) =>
+        stderrChunks.push(chunks.map(stringify).join(" "));
+      try {
+        const exit = await runValidate(
+          path.join(root, "storyboard", "storyboard.yaml"),
+          root,
+        );
+        return {
+          stdout: stdoutChunks.join("\n"),
+          stderr: stderrChunks.join("\n"),
+          exit,
+        };
+      } finally {
+        console.log = orig.log;
+        console.error = orig.error;
+      }
+    }
+    const stringify = (v: unknown) =>
+      typeof v === "string" ? v : JSON.stringify(v);
+
+    /** Insert `style:` as a top-level sibling of `project:` and `scenes:`
+     *  by anchoring before the `scenes:` line. Naive `.replace("  id: ...")`
+     *  breaks YAML indentation because `style:` becomes zero-indented and
+     *  the remaining project fields reparent to it. */
+    function withStyle(themeName: string): string {
+      return storyboardYaml.replace(
+        /^(scenes:)/m,
+        `style:\n  theme: ${themeName}\n$1`,
+      );
+    }
+
+    it("hints when style.theme names an unknown palette (exit 0)", async () => {
+      const { stdout, stderr, exit } = await captureAndValidate(
+        withStyle("youtube-red-replaced"), // post-rename typo
+      );
+      expect(exit).toBe(0);
+      expect(stderr).toContain("hint: style.theme");
+      expect(stderr).toContain("youtube-red-replaced");
+      expect(stdout).toContain("valid");
+    });
+
+    it("stays silent when style.theme names a known palette", async () => {
+      const { stderr, exit } = await captureAndValidate(withStyle("ai-red"));
+      expect(exit).toBe(0);
+      expect(stderr).not.toContain("hint: style.theme");
+    });
+
+    it("stays silent when style.theme is missing entirely (default is paper-light)", async () => {
+      const { stderr, exit } = await captureAndValidate(storyboardYaml);
+      expect(exit).toBe(0);
+      expect(stderr).not.toContain("hint: style.theme");
+    });
+  });
 });

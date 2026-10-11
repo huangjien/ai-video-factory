@@ -396,12 +396,15 @@ Unwired renderer/component combinations fail loudly at render time.
 
 ### Available themes (v0.4.3)
 
-`style.theme` selects one of eight built-in colour palettes. Default is
+`style.theme` selects one of nine built-in colour palettes. Default is
 **`paper-light`** (v0.4.3 — flipped from `dark-tech` in v0.4.2 and
 earlier). Unknown or missing values also fall back to `paper-light`
-(a render never crashes on a typo). Pass `--style <name>` on `video draft`
+(a render never crashes on a typo, and `video validate` surfaces a hint
+when an unknown name appears). Pass `--style <name>` on `video draft`
 or write it directly into `article.md` frontmatter /
-`storyboard.yaml` `style:` block.
+`storyboard.yaml` `style:` block. Run `video theme` to see the palette
+index with swatches; `video theme <name>` for one palette; `video theme
+--cwd <root>` to resolve a project's current theme.
 
 | `style.theme`    | Background | Accent  | Mood / best for                                         |
 | --------------- | ---------- | ------- | ------------------------------------------------------- |
@@ -409,10 +412,11 @@ or write it directly into `article.md` frontmatter /
 | `paper-light`   | off-white  | orange  | **default (v0.4.3)** — hand-drawn / bright office / pairs with `DoodleScene` |
 | `ocean-deep`    | deep sea   | teal    | calm/technical, monitoring topics                       |
 | `dusk-warm`      | plum       | coral   | story-led, soft brand                                   |
-| `forest-moss`   | emerald    | lime    | **new** sustainability / outdoor / botanical            |
-| `sunset-pop`    | near-black | yellow  | **new** energetic consumer / entertainment             |
-| `terminal-vintage` | dark gray | phosphor green | **new** dev tutorials, retro/hacker nostalgia (uses JetBrains Mono throughout) |
-| `paper-cream`   | soft beige | burnt orange | **new** product / food / family-friendly              |
+| `forest-moss`   | emerald    | lime    | sustainability / outdoor / botanical                    |
+| `sunset-pop`    | near-black | yellow  | energetic consumer / entertainment                      |
+| `terminal-vintage` | dark gray | phosphor green | dev tutorials, retro/hacker nostalgia (uses JetBrains Mono throughout) |
+| `paper-cream`   | soft beige | burnt orange | product / food / family-friendly                     |
+| `ai-red`        | player dark | red `#FF0000` | creator/playback feel — pairs with the `channel-banner` intro gradient |
 
 The full token set (7 colours + 4 typography roles + spacing + easing
 + fonts) is locked in `packages/video-components/src/theme.ts`; adding

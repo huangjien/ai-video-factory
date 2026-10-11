@@ -371,22 +371,25 @@ scenes:
 
 ### 可用主题（v0.4.3）
 
-`style.theme` 在内置的八种配色里挑一个。**默认是 `paper-light`**
+`style.theme` 在内置的九种配色里挑一个。**默认是 `paper-light`**
 （v0.4.3 起翻转——v0.4.2 及更早版本默认是 `dark-tech`）。未知或缺失
-的名字同样回退到 `paper-light`（拼错写错不会让渲染崩溃）。通过
-`video draft --style <name>` 传入，或直接写在 `article.md` frontmatter
-/ `storyboard.yaml` 的 `style:` 块里。
+的名字同样回退到 `paper-light`（拼错写错不会让渲染崩溃，`video validate`
+会在检测到未知名字时给出提示）。通过 `video draft --style <name>` 传入，
+或直接写在 `article.md` frontmatter / `storyboard.yaml` 的 `style:`
+块里。运行 `video theme` 看带色块的索引；`video theme <name>` 查看
+单个主题的完整配色；`video theme --cwd <root>` 解析某个项目当前的主题。
 
 | `style.theme`       | 背景色       | 强调色      | 适用风格                                          |
 | ------------------ | ---------- | --------- | --------------------------------------------- |
 | `paper-light`      | 米白         | 橙          | **v0.4.3 默认**——手绘讲解、明亮办公；与 `DoodleScene` 配对极佳 |
-| `dark-tech`        | 深蓝         | 蓝          | v0.4.2 及更早版本的默认；科技向内容                          |
+| `dark-tech`        | 深蓝         | 蓝          | v0.4.2 及更早版本的默认；科技向内容                         |
 | `ocean-deep`       | 深海蓝       | 蓝绿         | 平静/技术向、监控主题                                  |
 | `dusk-warm`        | 紫罗兰       | 珊瑚         | 故事驱动、偏柔和的品牌                                  |
-| `forest-moss`      | 翡翠绿        | 黄绿         | **新增** 可持续、户外、植物讲解                           |
-| `sunset-pop`       | 近黑         | 鲜黄         | **新增** 充满活力的消费/娱乐内容                          |
-| `terminal-vintage` | 深灰         | 荧光绿       | **新增** 开发者教程、复古/极客怀旧（全角色使用 JetBrains Mono）    |
-| `paper-cream`      | 浅米色        | 深橙         | **新增** 产品/食品/家庭向内容                           |
+| `forest-moss`      | 翡翠绿        | 黄绿         | 可持续、户外、植物讲解                                   |
+| `sunset-pop`       | 近黑         | 鲜黄         | 充满活力的消费/娱乐内容                                  |
+| `terminal-vintage` | 深灰         | 荧光绿       | 开发者教程、复古/极客怀旧（全角色使用 JetBrains Mono）             |
+| `paper-cream`      | 浅米色        | 深橙         | 产品/食品/家庭向内容                                  |
+| `ai-red`           | 播放台深色     | 红 `#FF0000` | 创作者/播放台触感——与 `channel-banner` 开场过渡配对极佳       |
 
 完整 token 集（7 种颜色 + 4 种字体角色 + 间距 + 缓动 + 字体）锁在
 `packages/video-components/src/theme.ts` 里；想新增自定义配色需要

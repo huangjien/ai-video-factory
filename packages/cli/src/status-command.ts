@@ -3,12 +3,21 @@ import path from "node:path";
 import { parse as parseYaml } from "yaml";
 import { loadCheckpoint, readProjectState, V01_STAGES } from "@video/workflow";
 import { resolveProjectDir, resolveProjectRoot } from "./project-path.js";
+import {
+  MARK_FAIL,
+  MARK_NOW,
+  MARK_OK,
+  MARK_TODO,
+  MARK_WARN,
+  brandBannerLine,
+  channelHeader,
+} from "./ui.js";
 
-const MARK: Record<string, string> = {
-  approved: "✓",
-  rejected: "✗",
-  invalidated: "✗",
-  in_progress: "●",
+const STAGE_MARK: Record<string, string> = {
+  approved: MARK_OK,
+  rejected: MARK_FAIL,
+  invalidated: MARK_FAIL,
+  in_progress: MARK_NOW,
 };
 
 export async function runStatus(
@@ -33,12 +42,17 @@ export async function runStatus(
   }
   const state = await readProjectState(root);
   if (!state) return 1;
-  console.log("AI Video Factory");
-  console.log(`Project: ${path.basename(root)}`);
+
+  // Channel-home header: operator sees project + current checkpoint at a
+  // glance, then a vertical timeline, then a QA footer.
+  console.log(brandBannerLine());
+  console.log(channelHeader(path.basename(root), state.checkpoint.id));
   console.log("");
+  console.log("Pipeline");
+  console.log("────────");
   for (const stage of V01_STAGES) {
     const cp = await loadCheckpoint(root, stage);
-    let mark = "○";
+    let mark = MARK_TODO;
     if (cp) {
       const key =
         cp.status === "approved" ||
@@ -46,14 +60,13 @@ export async function runStatus(
         cp.status === "invalidated"
           ? cp.status
           : "in_progress";
-      mark = MARK[key] ?? "○";
+      mark = STAGE_MARK[key] ?? MARK_TODO;
     }
     const isCurrent = state.current_stage === stage;
-    const prefix = isCurrent ? "●" : " ";
-    console.log(`${prefix} ${mark} ${stage}`);
+    const indicator = isCurrent ? "▷" : " ";
+    console.log(`${indicator} ${mark} ${stage}`);
   }
   console.log("");
-  console.log(`Current checkpoint: ${state.checkpoint.id}`);
   console.log(`Status: ${state.status}`);
 
   // v0.4 (T7): surface the latest QA finding count so users see what's
@@ -72,8 +85,8 @@ export async function runStatus(
       const findings = parsed.findings ?? [];
       const errors = findings.filter((f) => f.level === "error").length;
       const warnings = findings.filter((f) => f.level === "warn").length;
-      const errMark = errors > 0 ? "✗" : "✓";
-      const warnMark = warnings > 0 ? "!" : "✓";
+      const errMark = errors > 0 ? MARK_FAIL : MARK_OK;
+      const warnMark = warnings > 0 ? MARK_WARN : MARK_OK;
       console.log(
         `QA: ${errMark} ${errors} error${errors === 1 ? "" : "s"}, ${warnMark} ${warnings} warning${warnings === 1 ? "" : "s"}`,
       );

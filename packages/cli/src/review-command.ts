@@ -9,6 +9,12 @@ import { callReview, ReviewPackageSchema } from "@video/review";
 import { parse as parseYaml, stringify as yamlStringify } from "yaml";
 import type { ChatMessage, Provider } from "@video/llm";
 import { formatRunId } from "@video/workflow";
+import {
+  MARK_FAIL,
+  MARK_OK,
+  brandBannerLine,
+  channelHeader,
+} from "./ui.js";
 
 export interface ReviewOptions {
   project: string;
@@ -89,7 +95,7 @@ export async function runReview(opts: ReviewOptions): Promise<number> {
     );
   } catch (err) {
     console.error(
-      `\u2717 ${chosenName} review agent failed:`,
+      `${MARK_FAIL} ${chosenName} review agent failed:`,
       (err as Error).message,
     );
     return 1;
@@ -155,9 +161,13 @@ export async function runReview(opts: ReviewOptions): Promise<number> {
     result.review.visual.overall,
     result.review.technical.overall,
   ];
-  console.log(`\u2713 reviewed ${opts.project}/review/`);
+  const verdict = overall.every((v) => v === "pass") ? "pass" : "warn";
+  console.log(brandBannerLine());
+  console.log(channelHeader(opts.project, `review · ${verdict} · ${result.providerName}`));
+  console.log("");
+  console.log(`${MARK_OK} wrote review/{content,visual,technical}-review.yaml`);
   console.log(
-    `  provider=${result.providerName}  content=${overall[0]}  visual=${overall[1]}  technical=${overall[2]}`,
+    `  content=${overall[0]}  visual=${overall[1]}  technical=${overall[2]}`,
   );
   if (overall.some((v) => v !== "pass")) {
     console.log(

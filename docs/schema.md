@@ -69,6 +69,7 @@ typo never crashes a render. Pre-v0.4.3 storyboards defaulted to
 | `dark-tech` (default prior to v0.4.3) | `#0B1220` deep navy | `#E6EDF3` | `#4C8DFF` blue | the original technical look; best for dev/protocol topics |
 | `ocean-deep` | `#071A1E` deep teal | `#D9F2EF` | `#2DD4BF` teal | calm, softer contrast; monitoring/infra topics |
 | `dusk-warm` | `#1E1420` plum | `#F5E9E0` cream | `#F97362` coral | warm, story-led and brand pieces |
+| `ai-red` | `#0F0F0F` player dark | `#FFFFFF` | `#FF0000` signature red | creator/playback feel; pairs with the `channel-banner` intro gradient |
 
 Notes: `DoodleScene`'s `background: paper` always uses its own light
 paper regardless of theme (ink-on-paper is the look), so light themes are

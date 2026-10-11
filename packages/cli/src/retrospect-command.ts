@@ -21,6 +21,7 @@ import {
 import { chatWithFallback } from "@video/llm";
 import { listRuns, formatRunId, type RunRecord } from "@video/workflow";
 import { resolveProjectDir } from "./project-path.js";
+import { MARK_FAIL, MARK_OK, brandBannerLine, channelHeader } from "./ui.js";
 
 export interface RetrospectOptions {
   project: string;
@@ -170,7 +171,15 @@ export async function runRetrospect(
   let usage = { input: 0, output: 0 };
 
   if (opts.dryRun) {
-    console.log(`dry-run: would prompt LLM with ${messages.length} messages`);
+    console.log(brandBannerLine());
+    console.log(
+      channelHeader(
+        opts.project,
+        `retrospect · dry-run · ${evidence.recent.length} runs · ${evidence.qaFindings.length} findings`,
+      ),
+    );
+    console.log("");
+    console.log(`  dry-run: would prompt LLM with ${messages.length} messages`);
     console.log(
       `  evidence: ${evidence.recent.length} runs, ${evidence.qaFindings.length} findings, ${evidence.articleExcerpt.length} chars of article`,
     );
@@ -183,7 +192,9 @@ export async function runRetrospect(
     providerName = out.provider;
     usage = out.response.usage;
   } catch (err) {
-    console.error(`\u2717 retrospect LLM failed: ${(err as Error).message}`);
+    console.error(
+      `${MARK_FAIL} retrospect LLM failed: ${(err as Error).message}`,
+    );
     return 1;
   }
 
@@ -222,7 +233,15 @@ export async function runRetrospect(
   const { writeRun } = await import("@video/workflow");
   await writeRun(projectRoot, record);
 
-  console.log(`\u2713 wrote projects/${opts.project}/retrospect.md`);
+  console.log(brandBannerLine());
+  console.log(
+    channelHeader(
+      opts.project,
+      `retrospect · done · ${providerName} · ${evidence.recent.length} runs · ${evidence.qaFindings.length} findings · ${usage.input + usage.output} tokens`,
+    ),
+  );
+  console.log("");
+  console.log(`${MARK_OK} wrote projects/${opts.project}/retrospect.md`);
   console.log(
     `  provider=${providerName}  tokens=${usage.input}+${usage.output}  next: edit article.md per the suggestions, then \`video draft <topic> --from article.md\``,
   );

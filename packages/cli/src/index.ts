@@ -16,6 +16,7 @@ import { runShorts } from "./shorts-command.js";
 import { runValidate } from "./validate-command.js";
 import { runYouTube } from "./youtube-command.js";
 import { runStatus } from "./status-command.js";
+import { runTheme } from "./theme-command.js";
 import {
   runApprove,
   runReject,
@@ -37,13 +38,33 @@ import { runRetrospect } from "./retrospect-command.js";
 
 const program = new Command();
 
-program.name("video").description("AI Video Factory CLI (v0.1)").version("0.1.0");
+program.name("video").description("AI Video Factory — turn a topic into a finished 1080p MP4.").version("0.4.0");
 
 /** v0.4 (T9): minimal-API banner shown above the verb list. Text is
- *  kept in sync with README.md "Commands" section. */
-const BANNER = `A I   V I D E O   F A C T O R Y   (v0.4)
+ *  kept in sync across the user-facing docs.
+ *
+ *  Editing this string? Keep these lines in sync:
+ *    - README.md § "Commands" → "Minimal API (recommended)" table
+ *    - README.md § "Theme presets" subsection
+ *    - docs/INSTALLATION_AND_USAGE.md § "Available themes"
+ *    - docs/INSTALLATION_AND_USAGE.md § "6. Core local workflow (recommended)"
+ *
+ *  When you add a new theme:
+ *    - packages/video-components/src/theme.ts (THEMES + new theme const)
+ *    - docs/schema.md (theme table)
+ *    - README.md (Theme presets table)
+ *    - docs/INSTALLATION_AND_USAGE.md (theme table)
+ *    - this banner's "Theme presets" line
+ *    - packages/video-components/src/theme-registry.test.ts (add a `it(...)`)
+ *
+ *  When you add a new verb:
+ *    - register in this file (see the `program.command(...)` block below)
+ *    - README.md § "Commands" → minimal-API table OR Advanced verbs line
+ *    - this banner's "Advanced verbs" line
+ */
+const BANNER = `A I   V I D E O   F A C T O R Y   ·   v0.4
 ─────────────────────────────────────────────────
-Quick start — four commands after install:
+▷ Turn a topic into a finished 1080p Chinese MP4 in four commands.
 
   video new <topic>             scaffold projects/<topic>/
   video draft <topic>           write article.md + audio-config.yaml
@@ -55,8 +76,12 @@ Quick start — four commands after install:
   Edit article.md and audio-config.yaml between draft and make.
   Run \`video status <topic>\` any time to see where you are.
 
+  Theme presets: paper-light · dark-tech · ocean-deep · dusk-warm
+                 forest-moss · sunset-pop · terminal-vintage
+                 paper-cream · ai-red
+
 Advanced verbs (research, storyboard, motion, audio, audio-plan, mix,
-thumbnail, shorts, youtube, qa, review, validate, scene …) are wired
+thumbnail, shorts, youtube, theme, qa, review, validate, scene …) are wired
 for back-compat but not part of the recommended path.
 ─────────────────────────────────────────────────`;
 program.addHelpText("before", BANNER);
@@ -740,6 +765,22 @@ program
   .action(async (project: string | undefined, opts: { cwd?: string }) => {
     process.exitCode = await runStatus(project, opts.cwd);
   });
+
+program
+  .command("theme")
+  .description(
+    "Theme inspector (palette index + per-theme detail + project resolver)",
+  )
+  .argument("[name]", "theme name (omit to list every available theme)")
+  .option("--cwd <dir>", "project root — resolve style.theme from this project")
+  .action(
+    async (name: string | undefined, opts: { cwd?: string }) => {
+      process.exitCode = runTheme({
+        ...(name !== undefined ? { name } : {}),
+        ...(opts.cwd !== undefined ? { cwd: opts.cwd } : {}),
+      });
+    },
+  );
 
 program
   .command("approve")

@@ -3,6 +3,12 @@ import path from "node:path";
 import { writeQaArtifacts } from "@video/qa";
 import { resolveProjectDir, resolveProjectRoot } from "./project-path.js";
 import { loadOrCompileStoryboard } from "./render-command.js";
+import {
+  MARK_FAIL,
+  MARK_OK,
+  brandBannerLine,
+  channelHeader,
+} from "./ui.js";
 
 export interface QaOptions {
   project?: string | undefined;
@@ -45,13 +51,25 @@ export async function runQa(opts: QaOptions): Promise<number> {
   const errors = report.findings.filter((f) => f.level === "error");
   const warns = report.findings.filter((f) => f.level === "warn");
 
+  console.log(brandBannerLine());
   console.log(
-    `QA report for ${path.basename(video)}: ${report.ok ? "OK" : "FAILED"} — ${errors.length} error(s), ${warns.length} warning(s)`,
+    channelHeader(path.basename(root), report.ok ? `qa · ok · ${errors.length} err / ${warns.length} warn` : `qa · failed · ${errors.length} err / ${warns.length} warn`),
   );
-  for (const f of report.findings) {
-    console.log(`  [${f.level}] ${f.check}: ${f.message}`);
-    if (f.fix) console.log(`         fix: ${f.fix}`);
+  console.log("");
+  console.log(
+    `Preview: ${path.basename(video)}`,
+  );
+  console.log("");
+  if (report.findings.length === 0) {
+    console.log(`  ${MARK_OK} no findings`);
+  } else {
+    for (const f of report.findings) {
+      const tag = f.level === "error" ? MARK_FAIL : "!";
+      console.log(`  ${tag} [${f.level}] ${f.check}: ${f.message}`);
+      if (f.fix) console.log(`         fix: ${f.fix}`);
+    }
   }
+  console.log("");
   console.log(
     `  details: qa/render-report.json + qa/contact-sheet.png`,
   );

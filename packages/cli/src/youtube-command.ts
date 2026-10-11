@@ -10,6 +10,7 @@ import { parseArticleWithRecovery, type Scene } from "@video/draft";
 import { stringify as yamlStringify } from "yaml";
 import type { ChatMessage, Provider } from "@video/llm";
 import { formatRunId } from "@video/workflow";
+import { MARK_FAIL, MARK_OK, MARK_RUN, brandBannerLine, channelHeader } from "./ui.js";
 
 export interface YouTubeOptions {
   project: string;
@@ -118,7 +119,7 @@ export async function runYouTube(opts: YouTubeOptions): Promise<number> {
     // thumbnail prompt. We append an explicit negative-constraint to
     // the user prompt; one retry is enough — second failure surfaces.
     if (msg.includes("banned tokens") || msg.includes("thumbnail_prompt")) {
-      console.warn(`  retrying once with stricter negative constraints…`);
+      console.warn(`  ${MARK_RUN} retrying once with stricter negative constraints…`);
       try {
         const tightened: YouTubeInput = {
           ...input,
@@ -128,13 +129,13 @@ export async function runYouTube(opts: YouTubeOptions): Promise<number> {
         result = await callYouTube(tightened, provider, fallback);
       } catch (retryErr) {
         console.error(
-          `\u2717 ${chosenName} youtube agent failed:`,
+          `${MARK_FAIL} ${chosenName} youtube agent failed:`,
           (retryErr as Error).message,
         );
         return 1;
       }
     } else {
-      console.error(`\u2717 ${chosenName} youtube agent failed:`, msg);
+      console.error(`${MARK_FAIL} ${chosenName} youtube agent failed:`, msg);
       return 1;
     }
   }
@@ -207,7 +208,10 @@ export async function runYouTube(opts: YouTubeOptions): Promise<number> {
   const { writeRun } = await import("@video/workflow");
   await writeRun(projectRoot, record);
 
-  console.log(`\u2713 packaged ${opts.project}/youtube/`);
+  console.log(brandBannerLine());
+  console.log(channelHeader(opts.project, `youtube · ${result.providerName}`));
+  console.log("");
+  console.log(`${MARK_OK} packaged projects/${opts.project}/youtube/`);
   console.log(`  title: ${result.youtube.title}`);
   console.log(
     `  chapters: ${result.youtube.chapters.length} · vtt=youtube/chapters.vtt`,

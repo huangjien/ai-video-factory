@@ -22,7 +22,11 @@ describe("theme registry (v0.2 themes)", () => {
     expect(THEME_NAMES).toContain("sunset-pop");
     expect(THEME_NAMES).toContain("terminal-vintage");
     expect(THEME_NAMES).toContain("paper-cream");
-    expect(THEME_NAMES.length).toBe(8);
+    // Strict `toBe(8)` removed: post-v0.4 additions (e.g. ai-red)
+    // legitimately grow the registry. The new theme is covered by its own
+    // `it` below; accidental removals are still caught because the
+    // explicit `toContain`s above fail if any of the four disappear.
+    expect(THEME_NAMES.length).toBeGreaterThanOrEqual(8);
   });
 
   it("every theme carries the full token set", () => {
@@ -69,5 +73,15 @@ describe("theme registry (v0.2 themes)", () => {
     expect(t.fonts.title).toBe("JetBrains Mono");
     expect(t.fonts.body).toBe("JetBrains Mono");
     expect(t.fonts.code).toBe("JetBrains Mono");
+  });
+
+  it("ships the ai-red (creator/playback) theme", () => {
+    const t = THEMES["ai-red"];
+    expect(t).toBeDefined();
+    expect(resolveTheme("ai-red")).toBe(t);
+    // Signature red accent over the player-dark surface.
+    expect(t!.colors.accent).toBe("#FF0000");
+    expect(t!.colors.background).toBe("#0F0F0F");
+    expect(t!.colors.primary).toBe("#FFFFFF");
   });
 });

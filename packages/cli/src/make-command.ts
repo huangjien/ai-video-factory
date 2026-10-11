@@ -1,6 +1,13 @@
 import path from "node:path";
 import { runMake } from "@video/make";
 import { resolveProjectDir } from "./project-path.js";
+import {
+  MARK_FAIL,
+  MARK_OK,
+  MARK_RUN,
+  MARK_SKIP,
+  brandBannerLine,
+} from "./ui.js";
 
 export interface MakeOptions {
   project: string;
@@ -39,9 +46,20 @@ export async function runMakeCli(opts: MakeOptions): Promise<number> {
       : {}),
   });
 
-  // Pretty-print the report.
+  // Pretty-print the report. Marks come from the shared ui module so the
+  // operator reads the same vocabulary across `video status / make / qa`.
+  console.log(brandBannerLine());
+  console.log(`▷ ${opts.project}  ·  make`);
+  console.log("");
   for (const s of report.steps) {
-    const tag = s.status === "ran" ? "✓" : s.status === "skip" ? "⏭" : s.status === "would-run" ? "?" : "✗";
+    const tag =
+      s.status === "ran"
+        ? MARK_OK
+        : s.status === "skip"
+          ? MARK_SKIP
+          : s.status === "would-run"
+            ? MARK_RUN
+            : MARK_FAIL;
     const line = `  ${tag} ${s.name}` + (s.message ? `: ${s.message}` : "");
     console.log(line);
     for (const o of s.outputs ?? []) console.log(`      ${o}`);

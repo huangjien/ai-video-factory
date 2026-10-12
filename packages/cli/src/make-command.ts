@@ -1,3 +1,4 @@
+import type { Command } from "commander";
 import path from "node:path";
 import { runMake } from "@video/make";
 import { resolveProjectDir } from "./project-path.js";
@@ -73,4 +74,73 @@ export async function runMakeCli(opts: MakeOptions): Promise<number> {
   }
   console.log(`\nmake: done`);
   return 0;
+}
+
+export function registerMake(program: Command): void {
+program
+  .command("make")
+  .argument(
+    "<project>",
+    "project: topic, folder name, path, or unique prefix (defaults to cwd-discovered single project)",
+  )
+  .option("--cwd <dir>", "base directory for the project")
+  .option(
+    "--fake",
+    "use FakeTTSProvider (no Edge-TTS network call) — produces silent placeholder WAVs",
+  )
+  .option(
+    "--image-provider <provider>",
+    "image provider for scene visuals: minimax (real AI), mock, none (default: minimax; --fake implies none)",
+  )
+  .option(
+    "--bgm-dir <dir>",
+    "local BGM library dir — the bgm tag from audio-config.yaml resolves to {tag}.wav inside it (default: mock silent placeholder)",
+  )
+  .option(
+    "--sfx-dir <dir>",
+    "local SFX library dir — sfx cue tags resolve to {tag}.wav inside it (default: mock silent placeholder)",
+  )
+  .option(
+    "--music-provider <mode>",
+    "BGM generation: auto (MiniMax music gen when MINIMAX_API_KEY set, else mock) | minimax | mock",
+    (v) => {
+      if (v !== "auto" && v !== "minimax" && v !== "mock") {
+        throw new Error(`--music-provider must be auto|minimax|mock, got: ${v}`);
+      }
+      return v as "auto" | "minimax" | "mock";
+    },
+  )
+  .option(
+    "--dry-run",
+    "log which steps would run without executing them",
+  )
+  .action(
+    async (
+      project: string,
+      opts: {
+        cwd?: string;
+        fake?: boolean;
+        imageProvider?: "minimax" | "mock" | "none";
+        bgmDir?: string;
+        sfxDir?: string;
+        musicProvider?: "auto" | "minimax" | "mock";
+        dryRun?: boolean;
+      },
+    ) => {
+      process.exitCode = await runMakeCli({
+        project,
+        ...(opts.cwd !== undefined ? { cwd: opts.cwd } : {}),
+        ...(opts.fake !== undefined ? { fake: opts.fake } : {}),
+        ...(opts.imageProvider !== undefined
+          ? { imageProvider: opts.imageProvider }
+          : {}),
+        ...(opts.bgmDir !== undefined ? { bgmDir: opts.bgmDir } : {}),
+        ...(opts.sfxDir !== undefined ? { sfxDir: opts.sfxDir } : {}),
+        ...(opts.musicProvider !== undefined
+          ? { musicProvider: opts.musicProvider }
+          : {}),
+        ...(opts.dryRun !== undefined ? { dryRun: opts.dryRun } : {}),
+      });
+    },
+  );
 }

@@ -1,3 +1,4 @@
+import type { Command } from "commander";
 import { execSync } from "node:child_process";
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
@@ -8,7 +9,7 @@ import {
   svgSpecToExcalidraw,
   type ExcalidrawSpec,
 } from "@video/video-components";
-import { loadOrCompileStoryboard } from "./render-command.js";
+import { loadOrCompileStoryboard } from "@video/video-renderer";
 import { resolveProjectDir, resolveProjectRoot } from "./project-path.js";
 
 const OUT_DIR = path.join("assets", "excalidraw");
@@ -104,4 +105,29 @@ function safeGitHead(cwd: string): string {
   } catch {
     return "unknown";
   }
+}
+
+export function registerExcalidraw(program: Command): void {
+program
+  .command("excalidraw")
+  .description(
+    "Excalidraw asset generator (plan §4.2/T7.1): each svg/SvgScene becomes a hand-editable .excalidraw + a standalone animated SVG under assets/excalidraw/",
+  )
+  .argument("<project>", "project: topic, folder name, path, or unique prefix")
+  .option("--cwd <dir>", "base directory for the project")
+  .option("--duration <seconds>", "animation length for generated SVGs", (v) =>
+    parseFloat(v),
+  )
+  .action(
+    async (
+      project: string,
+      opts: { cwd?: string; duration?: number },
+    ) => {
+      process.exitCode = await runExcalidraw({
+        project,
+        ...(opts.cwd !== undefined ? { cwd: opts.cwd } : {}),
+        ...(opts.duration !== undefined ? { durationSec: opts.duration } : {}),
+      });
+    },
+  );
 }

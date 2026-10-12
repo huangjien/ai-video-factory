@@ -1,3 +1,4 @@
+import type { Command } from "commander";
 import { mkdir, writeFile } from "node:fs/promises";
 import { createHash } from "node:crypto";
 import { execSync } from "node:child_process";
@@ -274,4 +275,27 @@ function synthStoryboardYaml(scenes: Scene[]): string {
 function yamlScalar(s: string): string {
   if (/[:#\n]/.test(s)) return JSON.stringify(s);
   return s;
+}
+
+export function registerYouTube(program: Command): void {
+program
+  .command("youtube")
+  .argument("<project>", "project to package: topic, folder name, path, or unique prefix")
+  .option("--cwd <dir>", "base directory for the project")
+  .option(
+    "--model <provider>",
+    "model provider: minimax|glm (default: review-role config)",
+  )
+  .action(
+    async (
+      project: string,
+      opts: { cwd?: string; model?: "minimax" | "glm" },
+    ) => {
+      process.exitCode = await runYouTube({
+        project,
+        ...(opts.cwd !== undefined ? { cwd: opts.cwd } : {}),
+        ...(opts.model !== undefined ? { model: opts.model } : {}),
+      });
+    },
+  );
 }

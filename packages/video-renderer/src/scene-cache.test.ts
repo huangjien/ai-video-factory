@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { sceneCacheIsFresh } from "./render-command.js";
+import { sceneCacheIsFresh } from "./pipeline.js";
 
 const HASH_A = "sha256:" + "a".repeat(64);
 const HASH_B = "sha256:" + "b".repeat(64);

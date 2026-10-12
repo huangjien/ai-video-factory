@@ -28,6 +28,7 @@
     "@video/media": "workspace:*",
     "@video/media-generators": "workspace:*",
     "@video/tts": "workspace:*",
+    "@video/video-renderer": "workspace:*",
     "yaml": "^2.7.0"
   }
 }

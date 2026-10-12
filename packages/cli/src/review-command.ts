@@ -1,3 +1,4 @@
+import type { Command } from "commander";
 import { mkdir, writeFile } from "node:fs/promises";
 import { createHash } from "node:crypto";
 import { execSync } from "node:child_process";
@@ -183,3 +184,26 @@ function stringifyYaml(value: unknown): string {
 
 // Schema validation re-export for the test
 export { ReviewPackageSchema, parseYaml };
+
+export function registerReview(program: Command): void {
+program
+  .command("review")
+  .argument("<project>", "project to review: topic, folder name, path, or unique prefix")
+  .option("--cwd <dir>", "base directory for the project")
+  .option(
+    "--model <provider>",
+    "model provider: minimax|glm (default: research-role config)",
+  )
+  .action(
+    async (
+      project: string,
+      opts: { cwd?: string; model?: "minimax" | "glm" },
+    ) => {
+      process.exitCode = await runReview({
+        project,
+        ...(opts.cwd !== undefined ? { cwd: opts.cwd } : {}),
+        ...(opts.model !== undefined ? { model: opts.model } : {}),
+      });
+    },
+  );
+}

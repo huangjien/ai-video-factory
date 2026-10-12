@@ -1,3 +1,4 @@
+import type { Command } from "commander";
 import { mkdir, writeFile, readFile } from "node:fs/promises";
 import path from "node:path";
 import { existsSync } from "node:fs";
@@ -112,4 +113,42 @@ export async function runAudioPlan(opts: AudioPlanOptions): Promise<number> {
     `  next: edit audio-config.yaml (set bgm, sfx, fades), then \`video make ${opts.project}\``,
   );
   return 0;
+}
+
+export function registerAudioPlan(program: Command): void {
+program
+  .command("audio-plan")
+  .argument("<project>", "project: topic, folder name, path, or unique prefix")
+  .option("--cwd <dir>", "base directory for the project")
+  .option(
+    "--model <provider>",
+    "model provider: minimax|glm (default: glm)",
+  )
+  .option(
+    "--from <file>",
+    "path to an existing audio-config.yaml to revise",
+  )
+  .option(
+    "--strict",
+    "fail loudly on empty scene narrations instead of auto-recovering from section bodies",
+  )
+  .action(
+    async (
+      project: string,
+      opts: {
+        cwd?: string;
+        model?: "minimax" | "glm";
+        from?: string;
+        strict?: boolean;
+      },
+    ) => {
+      process.exitCode = await runAudioPlan({
+        project,
+        ...(opts.cwd !== undefined ? { cwd: opts.cwd } : {}),
+        ...(opts.model !== undefined ? { model: opts.model } : {}),
+        ...(opts.from !== undefined ? { from: opts.from } : {}),
+        ...(opts.strict === true ? { strict: opts.strict } : {}),
+      });
+    },
+  );
 }

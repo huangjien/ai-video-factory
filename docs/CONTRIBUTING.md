@@ -42,7 +42,7 @@ PR and push to `main`. See `.github/workflows/test.yml`.
 | Path                                      | What's there                                                                    |
 | ----------------------------------------- | ------------------------------------------------------------------------------- |
 | `packages/vdsl/`                          | VDSL schema (zod) + validator + compiler. The video format's source of truth.   |
-| `packages/video-components/`              | 10 React components + 5 animation primitives + `dark-tech` theme.               |
+| `packages/video-components/`              | 24 scene components in `REGISTRY` + chrome overlays (`CaptionsOverlay`, `BrandWatermark`, `BrandIntro`) + 7 animation primitives (`fade`, `slide`, `scale`, `draw`, `typewriter`, `entrance`, `fadeOut`) + 9 `style.theme` palettes (3 official + 6 v0.4.x additions) + 5 intro gradients (`aurora`, `sunset`, `ocean`, `citrus`, `channel-banner`). |
 | `packages/video-renderer/`                | Remotion composition that consumes `RenderPlan`. The renderer.                  |
 | `packages/llm/`                           | Provider abstraction: `MiniMaxProvider`, `GLMProvider`. Used by every agent.    |
 | `packages/agent-storyboard/`              | Storyboard Agent (system prompt + agent).                                       |

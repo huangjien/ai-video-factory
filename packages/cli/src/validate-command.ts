@@ -1,3 +1,4 @@
+import type { Command } from "commander";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { probeAudioDuration } from "@video/media";
@@ -48,4 +49,17 @@ export async function runValidate(
   }
   console.error(formatErrors(result.errors));
   return 1;
+}
+
+export function registerValidate(program: Command): void {
+program
+  .command("validate")
+  .description(
+    "validate a storyboard.yaml (VDSL 0.1) against the full rule set",
+  )
+  .argument("<file>", "path to storyboard.yaml")
+  .option("--root <dir>", "project root for resolving assets")
+  .action(async (file: string, opts: { root?: string }) => {
+    process.exitCode = await runValidate(file, opts.root);
+  });
 }

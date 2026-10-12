@@ -38,3 +38,10 @@ export {
   type SceneApproval,
   type SceneVersionMeta,
 } from "./versions.js";
+export {
+  approveCheckpoint,
+  rejectCheckpoint,
+  resetProject,
+  rollbackToCheckpoint,
+  type WorkflowCommandResult,
+} from "./commands.js";

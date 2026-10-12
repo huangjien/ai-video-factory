@@ -1,3 +1,4 @@
+import type { Command } from "commander";
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { parse as parseYaml } from "yaml";
@@ -98,4 +99,14 @@ export async function runStatus(
     }
   }
   return 0;
+}
+
+export function registerStatus(program: Command): void {
+program
+  .command("status")
+  .argument("[project]", "project name (slug) — optional")
+  .option("--cwd <dir>", "project root")
+  .action(async (project: string | undefined, opts: { cwd?: string }) => {
+    process.exitCode = await runStatus(project, opts.cwd);
+  });
 }

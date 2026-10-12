@@ -139,6 +139,85 @@ frontmatter `theme: <name>` field carries through unchanged. New docs:
 3 new cases — assert the 4 v0.4.2 names exist, `resolveTheme` finds
 them, and `terminal-vintage` uses JetBrains Mono everywhere.
 
+## v0.4.4 — cosmetic UX redesign (creator / playback feel)
+
+A surface pass that unifies the CLI typography + the video output palette
+around the creator/playback aesthetic. **No changes to the human-gate
+principle, the two human-edit files (`article.md`, `audio-config.yaml`),
+or the acceptance gate.** Storyboards keep their current theme unless
+`style.theme: ai-red` is set explicitly. The post-v0.4 visual plan
+(`docs/v0.4-video-quality-plan.md`) is otherwise complete; this release is
+its cosmetic + operator-UX follow-through.
+
+**User-facing CLI surface:**
+- New `packages/cli/src/ui.ts` — shared glyph vocabulary (`✓ ✗ ! ▷ ⏭ ● ○`)
+  + `brandBannerLine()` + `channelHeader(name, state)` helpers.
+- 8 commands now open with `brandBannerLine()` + `channelHeader(project,
+  "stage · verdict · provider")`: `status`, `make`, `new`, `qa`, `youtube`,
+  `retrospect`, `review`, `validate`. Inline `\u2713`/`\u2717` glyphs
+  replaced with `MARK_OK`/`MARK_FAIL`.
+- New `video theme` verb (`packages/cli/src/theme-command.ts` + tests):
+  palette index with ANSI truecolor swatches; `video theme <name>` for
+  one palette's full token set; `video theme --cwd <root>` resolves
+  a project's current `style.theme`. Honors the `NO_COLOR` env per the
+  <https://no-color.org> convention.
+- `video validate` now surfaces a stderr hint when `style.theme` names
+  an unknown palette: lists every known name + a `video theme`
+  cross-reference. Exit code unchanged (still 0 / 1 on validation
+  status); the hint goes to stderr so structured-data pipelines aren't
+  polluted.
+- `video --help` BANNER: tagline refined, version 0.1.0 → 0.4.0,
+  theme-preset list added; extended in-source sync comment lists every
+  doc that must move in lockstep with the BANNER.
+
+**Video output surface:**
+- New `ai-red` palette (`#0F0F0F` player dark / `#FF0000` signature red /
+  `#FFFFFF` text) registered as `style.theme: ai-red` (renamed from
+  an exploratory `youtube-red` to avoid the trademark).
+- New `channel-banner` intro gradient in `INTRO_GRADIENTS` (red → dark
+  chrome) — pairs with `ai-red` for end-to-end creator look.
+- `EndCard` CTA: square 8px-radius → subscribe-shaped pill
+  (`border-radius: 999`, accent glow, inline SVG play triangle). API
+  unchanged; the SVG replaces the `▶` text glyph so renders no longer
+  depend on font fallback.
+
+**Source-of-truth updates:**
+- `packages/video-components/src/theme.ts` — `aiRedTheme` exported and
+  registered in `THEMES` (now 9 entries).
+- `packages/video-components/src/components/BrandOverlay.tsx` —
+  `INTRO_GRADIENTS["channel-banner"]` added.
+- `packages/video-components/src/components/EndCard.tsx` — pill CTA +
+  inline SVG.
+- `packages/cli/src/ui.ts` (new) — shared glyph + header helpers.
+- `packages/cli/src/{index,status,make,new,qa,youtube,retrospect,review,
+  validate,theme}-command.ts` — banner + ui markers.
+- `packages/cli/src/{theme,validate}-command.test.ts` — new + extended
+  test coverage (16 new test cases: 13 for `theme`, 3 for the validate
+  hint).
+- `packages/video-components/src/theme-registry.test.ts` — `toBe(8)`
+  loosened to `toBeGreaterThanOrEqual(8)` since post-v0.4 theme additions
+  legitimately grow the registry; the explicit per-name `toContain`
+  checks still catch accidental removals.
+
+**Tests:**
+- `pnpm test` → **92 / 92 files, 653 / 653 tests pass**.
+- `npm run acceptance` → **11 / 11 §62.4 checks pass** (render exists,
+  no external AI providers, state FINAL_APPROVED, status exits 0).
+
+**Docs synced in this release:**
+- `README.md` — `video theme` row added to the minimal-API table; new
+  "Theme presets" subsection with 9-row table; cross-reference to
+  `video theme` for inspection.
+- `docs/INSTALLATION_AND_USAGE.md` (EN + zh-CN) — theme count lifted
+  from "eight" to "nine"; `ai-red` row added; `video theme` mention.
+- `docs/schema.md` — `ai-red` row in the theme table.
+- `docs/CONTRIBUTING.md` + `docs/architecture.md` +
+  `docs/architecture-v01-map.md` — `@video/video-components` row updated
+  to current counts (24 scene components + chrome overlays + 7 animation
+  primitives + 9 themes + 5 intro gradients).
+- `packages/cli/src/index.ts` — extended BANNER sync comment to list
+  every doc surface that must move in lockstep with the BANNER.
+
 ## v0.4.3 — default `style.theme` flipped to `paper-light`
 
 The default theme for any storyboard that doesn't declare one (and for

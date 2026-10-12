@@ -1,3 +1,4 @@
+import type { Command } from "commander";
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { parse as parseYaml } from "yaml";
@@ -151,4 +152,22 @@ export function runTheme(opts: ThemeOptions): number {
   }
   console.log(themeIndex());
   return 0;
+}
+
+export function registerTheme(program: Command): void {
+program
+  .command("theme")
+  .description(
+    "Theme inspector (palette index + per-theme detail + project resolver)",
+  )
+  .argument("[name]", "theme name (omit to list every available theme)")
+  .option("--cwd <dir>", "project root — resolve style.theme from this project")
+  .action(
+    async (name: string | undefined, opts: { cwd?: string }) => {
+      process.exitCode = runTheme({
+        ...(name !== undefined ? { name } : {}),
+        ...(opts.cwd !== undefined ? { cwd: opts.cwd } : {}),
+      });
+    },
+  );
 }

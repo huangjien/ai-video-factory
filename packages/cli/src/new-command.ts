@@ -1,3 +1,4 @@
+import type { Command } from "commander";
 import { existsSync } from "node:fs";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
@@ -86,4 +87,14 @@ export async function readStateOrNull(projectRoot: string) {
     "utf8",
   ).catch(() => null);
   return text;
+}
+
+export function registerNew(program: Command): void {
+program
+  .command("new")
+  .argument("<project-id>", "project id (used as directory name)")
+  .option("--cwd <dir>", "base directory for the project")
+  .action(async (projectId: string, opts: { cwd?: string }) => {
+    process.exitCode = await runNew({ projectId, cwd: opts.cwd });
+  });
 }

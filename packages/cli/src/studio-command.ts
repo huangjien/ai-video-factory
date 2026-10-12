@@ -1,3 +1,4 @@
+import type { Command } from "commander";
 import { spawn } from "node:child_process";
 import { resolveProjectDir, resolveProjectRoot } from "./project-path.js";
 import { prepareStudioWorkspace } from "@video/video-renderer";
@@ -31,7 +32,7 @@ export async function runStudio(opts: StudioOptions): Promise<number> {
     root = resolved.root;
   }
 
-  const { loadOrCompileStoryboard } = await import("./render-command.js");
+  const { loadOrCompileStoryboard } = await import("@video/video-renderer");
   const { renderPlan } = await loadOrCompileStoryboard(root);
   const workspace = await prepareStudioWorkspace(root, renderPlan);
 
@@ -53,4 +54,29 @@ export async function runStudio(opts: StudioOptions): Promise<number> {
     });
     child.on("close", (code) => resolve(code ?? 0));
   });
+}
+
+export function registerStudio(program: Command): void {
+program
+  .command("studio")
+  .description(
+    "Open the project in Remotion Studio (live preview; regenerated from the storyboard on each launch)",
+  )
+  .argument("[project]", "project name (slug) — optional if exactly one project exists")
+  .option("--cwd <dir>", "project root base directory")
+  .option("--port <n>", "port for the Studio web server", (v) =>
+    parseInt(v, 10),
+  )
+  .action(
+    async (
+      project: string | undefined,
+      opts: { cwd?: string; port?: number },
+    ) => {
+      process.exitCode = await runStudio({
+        ...(project !== undefined ? { project } : {}),
+        ...(opts.cwd !== undefined ? { cwd: opts.cwd } : {}),
+        ...(opts.port !== undefined ? { port: opts.port } : {}),
+      });
+    },
+  );
 }

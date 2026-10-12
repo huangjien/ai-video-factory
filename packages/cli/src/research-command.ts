@@ -1,3 +1,4 @@
+import type { Command } from "commander";
 import { mkdir, writeFile } from "node:fs/promises";
 import { createHash } from "node:crypto";
 import { execSync } from "node:child_process";
@@ -155,4 +156,50 @@ export async function runResearch(opts: ResearchOptions): Promise<number> {
     `  next: edit research.md / claims.yaml, then \`video storyboard --from-research projects/${slug}/research\``,
   );
   return 0;
+}
+
+export function registerResearch(program: Command): void {
+program
+  .command("research")
+  .argument("<topic>", "topic to research")
+  .option("--cwd <dir>", "base directory for the project")
+  .option("--no-web", "disable MiniMax web search (use LLM knowledge only)")
+  .option(
+    "--model <provider>",
+    "model provider: minimax|glm (default from config)",
+  )
+  .option("--lang <lang>", "language: zh-CN|en-US (default zh-CN)")
+  .option("--duration <seconds>", "total duration target", (v) =>
+    parseInt(v, 10),
+  )
+  .option("--audience <text>", "target audience (default: developers)")
+  .option(
+    "--force",
+    "regenerate even when the project is FINAL_APPROVED (prints a warning)",
+  )
+  .action(
+    async (
+      topic: string,
+      opts: {
+        cwd?: string;
+        web?: boolean;
+        model?: "minimax" | "glm";
+        lang?: "zh-CN" | "en-US";
+        duration?: number;
+        audience?: string;
+        force?: boolean;
+      },
+    ) => {
+      process.exitCode = await runResearch({
+        topic,
+        ...(opts.cwd !== undefined ? { cwd: opts.cwd } : {}),
+        noWeb: opts.web === false,
+        ...(opts.model !== undefined ? { model: opts.model } : {}),
+        ...(opts.lang !== undefined ? { lang: opts.lang } : {}),
+        ...(opts.duration !== undefined ? { duration: opts.duration } : {}),
+        ...(opts.audience !== undefined ? { audience: opts.audience } : {}),
+        ...(opts.force !== undefined ? { force: opts.force } : {}),
+      });
+    },
+  );
 }

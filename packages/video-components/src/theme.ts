@@ -339,12 +339,81 @@ export const THEMES: Record<string, Theme> = {
 
 export const THEME_NAMES = Object.keys(THEMES);
 
+/** The `style.theme` value used when a storyboard omits it or typos it. */
+export const DEFAULT_THEME_NAME = "paper-light";
+
+/** Doc-facing metadata per theme — the single source for the CLI banner's
+ * theme list, the README "Theme presets" table, the INSTALLATION_AND_USAGE
+ * "Available themes" table, and the schema.md example comment. Regenerate
+ * those with `pnpm run docs:commands`. Colour hexes themselves are NOT
+ * duplicated here — read them from `THEMES[name].colors`. */
+export const THEME_META: Record<
+  string,
+  { bg: string; accent: string; mood: string; bestFor: string; note?: string }
+> = {
+  "dark-tech": {
+    bg: "deep navy",
+    accent: "blue",
+    mood: "tutorial",
+    bestFor: "tech explainers (default prior to v0.4.3)",
+  },
+  "paper-light": {
+    bg: "warm paper",
+    accent: "orange",
+    mood: "hand-drawn",
+    bestFor: "hand-drawn / bright office / pairs with `DoodleScene`",
+    note: "**default (v0.4.3)**",
+  },
+  "ocean-deep": {
+    bg: "calm teal",
+    accent: "teal",
+    mood: "monitoring",
+    bestFor: "calm/technical, monitoring topics",
+  },
+  "dusk-warm": {
+    bg: "plum",
+    accent: "coral",
+    mood: "story-led",
+    bestFor: "story-led, soft brand",
+  },
+  "forest-moss": {
+    bg: "emerald",
+    accent: "lime",
+    mood: "nature",
+    bestFor: "sustainability / outdoor / botanical",
+  },
+  "sunset-pop": {
+    bg: "near-black",
+    accent: "yellow",
+    mood: "lifestyle",
+    bestFor: "energetic consumer / entertainment",
+  },
+  "terminal-vintage": {
+    bg: "CRT phosphor",
+    accent: "phosphor green",
+    mood: "dev",
+    bestFor: "dev tutorials, retro/hacker nostalgia (JetBrains Mono throughout)",
+  },
+  "paper-cream": {
+    bg: "beige",
+    accent: "burnt orange",
+    mood: "friendly product",
+    bestFor: "product / food / family-friendly",
+  },
+  "ai-red": {
+    bg: "player dark",
+    accent: "red `#FF0000`",
+    mood: "creator",
+    bestFor: "creator/playback feel — pairs with the `channel-banner` intro gradient",
+  },
+};
+
 /** Resolve a storyboard `style.theme` value to a Theme. Unknown, misspelled
- * or missing names fall back to darkTechTheme — renders never crash on a
- * theme typo. */
+ * or missing names fall back to the default theme — renders never crash on
+ * a theme typo. */
 export function resolveTheme(name?: string | null): Theme {
-  if (!name) return paperLightTheme;
-  return THEMES[name] ?? paperLightTheme;
+  const resolved = name ? THEMES[name] : undefined;
+  return resolved ?? THEMES[DEFAULT_THEME_NAME]!;
 }
 
 /** Validate an object as a complete theme (used by tests and by anything

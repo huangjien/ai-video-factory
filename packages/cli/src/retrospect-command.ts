@@ -1,3 +1,4 @@
+import type { Command } from "commander";
 /**
  * v0.4 (T10) — `video retrospect` learning loop.
  *
@@ -246,4 +247,30 @@ export async function runRetrospect(
     `  provider=${providerName}  tokens=${usage.input}+${usage.output}  next: edit article.md per the suggestions, then \`video draft <topic> --from article.md\``,
   );
   return 0;
+}
+
+export function registerRetrospect(program: Command): void {
+program
+  .command("retrospect")
+  .description(
+    "v0.4: ask the LLM for 3 concrete edits to article.md based on the latest runs + QA report (writes projects/<slug>/retrospect.md)",
+  )
+  .argument("[project]", "project: topic, folder name, path, or unique prefix")
+  .option("--cwd <dir>", "project root base directory")
+  .option(
+    "--dry-run",
+    "print what would be sent to the LLM without calling it",
+  )
+  .action(
+    async (
+      project: string | undefined,
+      opts: { cwd?: string; dryRun?: boolean },
+    ) => {
+      process.exitCode = await runRetrospect({
+        project: project ?? "",
+        ...(opts.cwd !== undefined ? { cwd: opts.cwd } : {}),
+        dryRun: opts.dryRun === true,
+      });
+    },
+  );
 }

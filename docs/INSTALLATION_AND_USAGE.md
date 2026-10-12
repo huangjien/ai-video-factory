@@ -320,11 +320,11 @@ Durations are SECONDS; the compiler converts to frames with
 `Math.round(duration × fps)`.
 
 ```yaml
-schema_version: "0.2"   # defaults to "0.2" when omitted; "0.1" still validates
+schema_version: "0.2" # defaults to "0.2" when omitted; "0.1" still validates
 
 project:
   id: demo
-  language: zh-CN        # zh-CN | en-US
+  language: zh-CN # zh-CN | en-US
   fps: 30
   width: 1920
   height: 1080
@@ -332,10 +332,10 @@ project:
 style:
   theme: dark-tech
 
-assets:                  # 0.2: optional project-level manifest
+assets: # 0.2: optional project-level manifest
   - id: asset-logo
-    type: svg            # svg|png|jpg|webp|excalidraw|canvas|audio|video|font
-    source: generated    # generated|user|external
+    type: svg # svg|png|jpg|webp|excalidraw|canvas|audio|video|font
+    source: generated # generated|user|external
     path: assets/svg/logo.svg
 
 scenes:
@@ -343,26 +343,26 @@ scenes:
     duration: 8
     narration:
       text: "AI Agent 为什么需要 Memory？"
-      audio: assets/audio/scene-01.wav   # optional; mounted by video audio flows
+      audio: assets/audio/scene-01.wav # optional; mounted by video audio flows
     visual:
       component: SvgScene
-      renderer: svg      # remotion (default) | svg | canvas | excalidraw
-      props: { … }       # validated against the component's REGISTRY props schema
-    animation:           # v0.1 entrance model (still honored)
+      renderer: svg # remotion (default) | svg | canvas | excalidraw
+      props: { … } # validated against the component's REGISTRY props schema
+    animation: # v0.1 entrance model (still honored)
       entrance: fade
       emphasis: none
       exit: none
-    animations:          # 0.2 timeline model (scene-relative)
+    animations: # 0.2 timeline model (scene-relative)
       - id: draw-arrow
         target: arrow-1
-        type: draw       # draw|write|fade|move|scale|rotate|highlight|morph|camera
+        type: draw # draw|write|fade|move|scale|rotate|highlight|morph|camera
         start: 1.2
         duration: 0.8
-        easing: easeInOut   # linear|easeIn|easeOut|easeInOut (+synonyms)
+        easing: easeInOut # linear|easeIn|easeOut|easeInOut (+synonyms)
     captions:
       source: narration
     transition:
-      in: fade           # fade|cut (+synonyms); default fade
+      in: fade # fade|cut (+synonyms); default fade
       out: fade
 ```
 
@@ -378,19 +378,19 @@ Important rules:
   durations to the measured audio before validating.
 - Captions must wrap to ≤ 3 lines of 24 CJK units (bottom safe area).
 - Timeline animations must fit inside the scene (`start + duration ≤
-  duration`).
+duration`).
 - LLM synonyms are coerced BEFORE validation (`wipe` → `draw`,
   `hand-drawn` → `canvas`, `dissolve` → `fade`); truly unknown values
   fail loudly.
 
 ### Renderer families (visual.renderer)
 
-| renderer | Component | Notes |
-| --- | --- | --- |
-| `remotion` | any classic REGISTRY component | default |
-| `svg` | `SvgScene` | whiteboard/diagram, draw-on + target-driven camera |
-| `canvas` | `DoodleScene` | hand-drawn ink, seeded wobble, `bpm` beat-sync |
-| `excalidraw` | — | asset generator only (`video excalidraw`); not a render path |
+| renderer     | Component                      | Notes                                                        |
+| ------------ | ------------------------------ | ------------------------------------------------------------ |
+| `remotion`   | any classic REGISTRY component | default                                                      |
+| `svg`        | `SvgScene`                     | whiteboard/diagram, draw-on + target-driven camera           |
+| `canvas`     | `DoodleScene`                  | hand-drawn ink, seeded wobble, `bpm` beat-sync               |
+| `excalidraw` | —                              | asset generator only (`video excalidraw`); not a render path |
 
 Unwired renderer/component combinations fail loudly at render time.
 
@@ -406,32 +406,41 @@ or write it directly into `article.md` frontmatter /
 index with swatches; `video theme <name>` for one palette; `video theme
 --cwd <root>` to resolve a project's current theme.
 
-| `style.theme`    | Background | Accent  | Mood / best for                                         |
-| --------------- | ---------- | ------- | ------------------------------------------------------- |
-| `dark-tech`     | deep navy  | blue    | tech explainers (default prior to v0.4.3)               |
-| `paper-light`   | off-white  | orange  | **default (v0.4.3)** — hand-drawn / bright office / pairs with `DoodleScene` |
-| `ocean-deep`    | deep sea   | teal    | calm/technical, monitoring topics                       |
-| `dusk-warm`      | plum       | coral   | story-led, soft brand                                   |
-| `forest-moss`   | emerald    | lime    | sustainability / outdoor / botanical                    |
-| `sunset-pop`    | near-black | yellow  | energetic consumer / entertainment                      |
-| `terminal-vintage` | dark gray | phosphor green | dev tutorials, retro/hacker nostalgia (uses JetBrains Mono throughout) |
-| `paper-cream`   | soft beige | burnt orange | product / food / family-friendly                     |
-| `ai-red`        | player dark | red `#FF0000` | creator/playback feel — pairs with the `channel-banner` intro gradient |
+<!-- BEGIN: theme-table (generated by `pnpm run docs:commands` — do not edit) -->
+
+| `style.theme`      | Background   | Accent         | Mood / best for                                                              |
+| ------------------ | ------------ | -------------- | ---------------------------------------------------------------------------- |
+| `paper-light`      | warm paper   | orange         | **default (v0.4.3)** — hand-drawn / bright office / pairs with `DoodleScene` |
+| `dark-tech`        | deep navy    | blue           | tech explainers (default prior to v0.4.3)                                    |
+| `ocean-deep`       | calm teal    | teal           | calm/technical, monitoring topics                                            |
+| `dusk-warm`        | plum         | coral          | story-led, soft brand                                                        |
+| `forest-moss`      | emerald      | lime           | sustainability / outdoor / botanical                                         |
+| `sunset-pop`       | near-black   | yellow         | energetic consumer / entertainment                                           |
+| `terminal-vintage` | CRT phosphor | phosphor green | dev tutorials, retro/hacker nostalgia (JetBrains Mono throughout)            |
+| `paper-cream`      | beige        | burnt orange   | product / food / family-friendly                                             |
+| `ai-red`           | player dark  | red `#FF0000`  | creator/playback feel — pairs with the `channel-banner` intro gradient       |
+
+<!-- END: theme-table -->
 
 The full token set (7 colours + 4 typography roles + spacing + easing
-+ fonts) is locked in `packages/video-components/src/theme.ts`; adding
-adding a custom palette requires editing that file and exporting the new theme
-from `THEMES`.
+
+- fonts) is locked in `packages/video-components/src/theme.ts`; adding
+  adding a custom palette requires editing that file and exporting the new theme
+  from `THEMES`.
 
 **No skills required to render.** Every renderer family is plain code —
 workspace dependencies plus FFmpeg. The installed skill packs
 (`.agents/skills/`, inventoried in `skills/INVENTORY.md`) only feed LLM
 agents (chiefly `video motion`); they are never read on the render path.
 
-The 15 registered components: `Title`, `Paragraph`, `AnimatedIllustration`,
-`CodeBlock`, `Terminal`, `Image`, `ImageBackground`, `FlowChart`,
-`Comparison`, `Timeline`, `Callout`, `EndCard`, `Character`, `SvgScene`,
-`DoodleScene`.
+The 24 scene components in `REGISTRY`: `Title`, `Paragraph`,
+`AnimatedIllustration`, `CodeBlock`, `Terminal`, `Image`,
+`ImageBackground`, `Character`, `FlowChart`, `Comparison`, `Timeline`,
+`Callout`, `EndCard`, `QuoteBlock`, `StatGrid`, `BarChart`, `Leaderboard`,
+`Checklist`, `BigIdea`, `PyramidDiagram`, `VennDiagram`, `CycleDiagram`,
+`SvgScene`, `DoodleScene`. Plus the chrome overlays `CaptionsOverlay`,
+`BrandWatermark`, `BrandIntro` — registered separately because they
+overlay the timeline rather than own a scene.
 
 **Project-level renderer default:** scenes that omit `visual.renderer`
 inherit from the optional `defaults.renderer` block (precedence:
@@ -571,16 +580,15 @@ node packages/cli/dist/index.js validate \
 
 Reports file / line / field / reason on errors.
 
-
 ## 7. Editing, iteration, and recovery
 
 ### 7.1 The three human gates (workflow state, not a chat "please confirm")
 
-| Gate | Command | Blocks |
-| --- | --- | --- |
+| Gate       | Command                    | Blocks                                                                                         |
+| ---------- | -------------------------- | ---------------------------------------------------------------------------------------------- |
 | Storyboard | `video approve storyboard` | `video preview` / `video make`'s render step refuses without it (`--force` bypasses, recorded) |
-| Review | `video approve review` | `video final` refuses without it |
-| Final | `video final` (QA gate) | error-level QA findings block the export (`--force` bypasses, recorded) |
+| Review     | `video approve review`     | `video final` refuses without it                                                               |
+| Final      | `video final` (QA gate)    | error-level QA findings block the export (`--force` bypasses, recorded)                        |
 
 Before re-running after edits, note the **stage guard**: generator verbs
 (`research` / `script` / `storyboard` / `audio` / `motion`) refuse to
@@ -663,7 +671,6 @@ The supported flows are:
 - Pixel-level art direction → hand-edit `storyboard.yaml`, then run
   `video make` directly. **Don't** re-run `video draft` until you're ready
   to lose those tweaks.
-
 
 ## 8. Optional AI workflow
 
@@ -827,7 +834,6 @@ video qa my-topic
 video qa my-topic --no-strict
 ```
 
-
 ### YouTube package
 
 Not part of `video make`; invoke separately when needed:
@@ -894,7 +900,7 @@ voice: zh-CN-XiaoxiaoNeural
 bgm: "calm"
 bgm_fade_in_sec: 1.5
 bgm_fade_out_sec: 2
-pause_between_sentences_sec: 1     # 1-second pause after every sentence
+pause_between_sentences_sec: 1 # 1-second pause after every sentence
 sfx: {}
 ```
 
@@ -915,10 +921,10 @@ per-project, edit `voice:` in `audio-config.yaml`. To change the global
 default, edit `ZH_VOICE` / `EN_VOICE` in
 `packages/make/src/index.ts` and re-build.
 
-| Language | Default (male) | Female alt. | Other male alts |
-| --- | --- | --- | --- |
-| `zh-CN` | `zh-CN-YunjianNeural` (documentary-style) | `zh-CN-XiaoxiaoNeural` | `zh-CN-YunxiNeural` (warm), `zh-CN-YunyangNeural` (news) |
-| `en-US` | `en-US-ChristopherNeural` (calm narration) | `en-US-AriaNeural` | `en-US-GuyNeural`, `en-US-EricNeural` |
+| Language | Default (male)                             | Female alt.            | Other male alts                                          |
+| -------- | ------------------------------------------ | ---------------------- | -------------------------------------------------------- |
+| `zh-CN`  | `zh-CN-YunjianNeural` (documentary-style)  | `zh-CN-XiaoxiaoNeural` | `zh-CN-YunxiNeural` (warm), `zh-CN-YunyangNeural` (news) |
+| `en-US`  | `en-US-ChristopherNeural` (calm narration) | `en-US-AriaNeural`     | `en-US-GuyNeural`, `en-US-EricNeural`                    |
 
 Any voice ID listed by Edge TTS works — pass it as `voice:` in
 `audio-config.yaml`. The LLM-generated article always uses the male
@@ -946,14 +952,14 @@ works from any working directory.
 ```yaml
 # <repo>/brand.yaml  (shipped default: "AI 视频工厂" + placeholder icon)
 brand:
-  name: "我的频道"              # shown in the intro band
-  icon: assets/brand/icon.png   # corner watermark on EVERY scene (png/jpg/svg)
-  corner: bottom-right          # top-left | top-right | bottom-left | bottom-right
-  size_px: 72                   # authored at 1080p; scales with composition width
+  name: "我的频道" # shown in the intro band
+  icon: assets/brand/icon.png # corner watermark on EVERY scene (png/jpg/svg)
+  corner: bottom-right # top-left | top-right | bottom-left | bottom-right
+  size_px: 72 # authored at 1080p; scales with composition width
   opacity: 0.85
-  intro:                        # omit the whole intro block = no branded opening
-    duration_sec: 15            # fixed-look opening window (10-20s is typical)
-    background: aurora          # aurora | sunset | ocean | citrus
+  intro: # omit the whole intro block = no branded opening
+    duration_sec: 15 # fixed-look opening window (10-20s is typical)
+    background: aurora # aurora | sunset | ocean | citrus
     show_name: true
 ```
 
@@ -967,7 +973,7 @@ Multi-BGM (different mood for opening vs body) lives in
 
 ```yaml
 bgm_tracks:
-  - { track: calm, until_sec: 18 }   # absolute seconds; last entry → end
+  - { track: calm, until_sec: 18 } # absolute seconds; last entry → end
   - { track: epic }
 ```
 
@@ -994,7 +1000,6 @@ free-text style prompts verbatim (Chinese accepted). A failed generation
 degrades to the silent mock with a warning, so a render never dies on
 music. `--bgm-dir` (your own library) always wins over generation, and
 `--music-provider mock` restores the silent placeholder.
-
 
 ## 10. Project artifacts and provenance
 
@@ -1124,7 +1129,6 @@ For CI, keep the old fail-loudly behaviour on `video audio-plan`:
 ```bash
 video audio-plan <project> --strict
 ```
-
 
 ### Remotion cannot find a port
 
@@ -1360,7 +1364,6 @@ video shorts "$TOPIC"
 The publishable artifact is `projects/$TOPIC/output/final-mixed.mp4`
 plus the YouTube package under `projects/$TOPIC/youtube/`.
 
-
 ## 13. Verifying with the acceptance audit
 
 After running the above, `npm run acceptance` performs the §62.4 audit on
@@ -1378,11 +1381,11 @@ npm run acceptance
 Three complete examples live under `examples/`, exercising every v0.2
 capability with no API keys required — copy them and render:
 
-| Example | Length | Exercises |
-| --- | --- | --- |
-| `examples/mcp-explainer` | 45 s | full pipeline: SvgScene diagram draw-on, explicit `animations[]`, DoodleScene hand-drawn ink, duration sync, scene versioning, the QA report/gate, Excalidraw asset generation |
-| `examples/ai-concept` | 60 s | hand-drawn canvas + beat-sync (100 BPM grid) |
-| `examples/devops-architecture` | 90 s | diagrams, target-driven camera, cut/fade transitions, timeline choreography, Excalidraw |
+| Example                        | Length | Exercises                                                                                                                                                                      |
+| ------------------------------ | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `examples/mcp-explainer`       | 45 s   | full pipeline: SvgScene diagram draw-on, explicit `animations[]`, DoodleScene hand-drawn ink, duration sync, scene versioning, the QA report/gate, Excalidraw asset generation |
+| `examples/ai-concept`          | 60 s   | hand-drawn canvas + beat-sync (100 BPM grid)                                                                                                                                   |
+| `examples/devops-architecture` | 90 s   | diagrams, target-driven camera, cut/fade transitions, timeline choreography, Excalidraw                                                                                        |
 
 Running the MCP Explainer for real (full sequence in its `README.md`):
 

@@ -5,6 +5,8 @@ export {
   type RegistryPropsByName,
 } from "./registry.js";
 export {
+  DEFAULT_THEME_NAME,
+  THEME_META,
   THEME_NAMES,
   THEMES,
   darkTechTheme,

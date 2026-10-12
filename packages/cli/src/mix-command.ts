@@ -1,3 +1,4 @@
+import type { Command } from "commander";
 import { existsSync, readdirSync } from "node:fs";
 import { mkdir } from "node:fs/promises";
 import { createHash } from "node:crypto";
@@ -275,4 +276,63 @@ console.log(
      `  next: this is the audio you ship`,
    );
   return 0;
+}
+
+export function registerMix(program: Command): void {
+program
+  .command("mix")
+  .argument("<project>", "project: topic, folder name, path, or unique prefix")
+  .option("--cwd <dir>", "base directory for the project")
+  .option(
+    "--bgm <path>",
+    "explicit BGM file (default: first .wav in assets/audio-assets/bgm/ or bgm tag from audio-assets/mix.yaml)",
+  )
+  .option(
+    "--bgm-attenuation <db>",
+    "BGM attenuation in dB while narration is silent (default -18)",
+    (v) => Number.parseFloat(v),
+  )
+  .option(
+    "--bgm-fade-in <sec>",
+    "fade BGM in over N seconds (overrides mix.yaml)",
+    (v) => Number.parseFloat(v),
+  )
+  .option(
+    "--bgm-fade-out <sec>",
+    "fade BGM out over last N seconds (overrides mix.yaml)",
+    (v) => Number.parseFloat(v),
+  )
+  .option(
+    "--mix-yaml <path>",
+    "explicit mix.yaml path (default: audio-assets/mix.yaml)",
+  )
+  .action(
+    async (
+      project: string,
+      opts: {
+        cwd?: string;
+        bgm?: string;
+        bgmAttenuation?: number;
+        bgmFadeIn?: number;
+        bgmFadeOut?: number;
+        mixYaml?: string;
+      },
+    ) => {
+      process.exitCode = await runMix({
+        project,
+        ...(opts.cwd !== undefined ? { cwd: opts.cwd } : {}),
+        ...(opts.bgm !== undefined ? { bgmPath: opts.bgm } : {}),
+        ...(opts.bgmAttenuation !== undefined
+          ? { bgmAttenuationDb: opts.bgmAttenuation }
+          : {}),
+        ...(opts.bgmFadeIn !== undefined
+          ? { bgmFadeInSec: opts.bgmFadeIn }
+          : {}),
+        ...(opts.bgmFadeOut !== undefined
+          ? { bgmFadeOutSec: opts.bgmFadeOut }
+          : {}),
+        ...(opts.mixYaml !== undefined ? { mixYamlPath: opts.mixYaml } : {}),
+      });
+    },
+  );
 }

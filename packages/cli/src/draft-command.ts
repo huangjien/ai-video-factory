@@ -1,3 +1,4 @@
+import type { Command } from "commander";
 import { mkdir, writeFile, readFile } from "node:fs/promises";
 import path from "node:path";
 import { existsSync } from "node:fs";
@@ -312,4 +313,98 @@ export async function runDraft(opts: DraftOptions): Promise<number> {
   }
   console.log(`  next: ${audioPlanHint}`);
   return 0;
+}
+
+export function registerDraft(program: Command): void {
+program
+  .command("draft")
+  .argument(
+    "<topic>",
+    "topic — used as project slug (slugify the topic for the directory name)",
+  )
+  .option("--cwd <dir>", "base directory for the project")
+  .option("--model <provider>", "model provider: minimax|glm (default: glm)")
+  .option("--no-web", "disable MiniMax web search (use LLM knowledge only)")
+  .option("--lang <lang>", "language: zh-CN|en-US (default zh-CN)")
+  .option(
+    "--duration <seconds>",
+    "total duration target in seconds (default: 40)",
+    (v) => parseInt(v, 10),
+  )
+  .option("--audience <text>", "target audience (default: developers)")
+  .option(
+    "--from <file>",
+    "path to a file containing pre-existing content to revise",
+  )
+  .option(
+    "--file <path>",
+    "path to a text/markdown file holding your raw idea — polished into the article, opinions preserved",
+  )
+  .option(
+    "--no-audio-plan",
+    "skip the merged audio-plan step (write article.md only)",
+  )
+  .option(
+    "--style <theme>",
+    "v0.4: visual theme written into storyboard.style.theme (default: paper-light)",
+  )
+  .option(
+    "--no-captions",
+    "v0.4: skip the caption overlay (no captions: block in the generated storyboard)",
+  )
+  .option(
+    "--no-review",
+    "skip the article quality gate (default: judge rates attractive/interesting/useful, drafts below 25/30 are regenerated)",
+  )
+  .option(
+    "--min-score <n>",
+    "article quality bar of 30 (default: 25)",
+    (v) => parseInt(v, 10),
+  )
+  .option(
+    "--max-attempts <n>",
+    "total draft attempts in the quality loop (default: 3)",
+    (v) => parseInt(v, 10),
+  )
+  .action(
+    async (
+      topic: string,
+      opts: {
+        cwd?: string;
+        model?: "minimax" | "glm";
+        web?: boolean;
+        lang?: "zh-CN" | "en-US";
+        duration?: number;
+        audience?: string;
+        from?: string;
+        file?: string;
+        audioPlan?: boolean;
+        style?: string;
+        captions?: boolean;
+        review?: boolean;
+        minScore?: number;
+        maxAttempts?: number;
+      },
+    ) => {
+      process.exitCode = await runDraft({
+        topic,
+        ...(opts.cwd !== undefined ? { cwd: opts.cwd } : {}),
+        ...(opts.model !== undefined ? { model: opts.model } : {}),
+        noWeb: opts.web === false,
+        ...(opts.lang !== undefined ? { lang: opts.lang } : {}),
+        ...(opts.duration !== undefined ? { duration: opts.duration } : {}),
+        ...(opts.audience !== undefined ? { audience: opts.audience } : {}),
+        ...(opts.from !== undefined ? { from: opts.from } : {}),
+        ...(opts.file !== undefined ? { ideaFile: opts.file } : {}),
+        noAudioPlan: opts.audioPlan === false,
+        ...(opts.style !== undefined ? { style: opts.style } : {}),
+        noCaptions: opts.captions === false,
+        noReview: opts.review === false,
+        ...(opts.minScore !== undefined ? { minScore: opts.minScore } : {}),
+        ...(opts.maxAttempts !== undefined
+          ? { maxAttempts: opts.maxAttempts }
+          : {}),
+      });
+    },
+  );
 }

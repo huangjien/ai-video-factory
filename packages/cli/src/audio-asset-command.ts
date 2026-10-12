@@ -1,3 +1,4 @@
+import type { Command } from "commander";
 import { mkdir, writeFile } from "node:fs/promises";
 import { createHash } from "node:crypto";
 import { execSync } from "node:child_process";
@@ -140,4 +141,42 @@ export async function runAudioAsset(opts: AudioAssetOptions): Promise<number> {
     `  next: reference these in your storyboard / pipeline (mixing into final audio is a separate phase)`,
   );
   return 0;
+}
+
+export function registerAudioAsset(program: Command): void {
+program
+  .command("audio-asset")
+  .argument("<project>", "project: topic, folder name, path, or unique prefix")
+  .option("--cwd <dir>", "base directory for the project")
+  .option("--bgm <tag>", "BGM tag (mock provider) or filename (file-based)")
+  .option("--sfx <tag>", "SFX tag (mock provider) or filename (file-based)")
+  .option(
+    "--bgm-dir <dir>",
+    "BGM directory for the file-based provider (enables real-file lookup)",
+  )
+  .option(
+    "--sfx-dir <dir>",
+    "SFX directory for the file-based provider (enables real-file lookup)",
+  )
+  .action(
+    async (
+      project: string,
+      opts: {
+        cwd?: string;
+        bgm?: string;
+        sfx?: string;
+        bgmDir?: string;
+        sfxDir?: string;
+      },
+    ) => {
+      process.exitCode = await runAudioAsset({
+        project,
+        ...(opts.cwd !== undefined ? { cwd: opts.cwd } : {}),
+        ...(opts.bgm !== undefined ? { bgmTag: opts.bgm } : {}),
+        ...(opts.sfx !== undefined ? { sfxTag: opts.sfx } : {}),
+        ...(opts.bgmDir !== undefined ? { bgmDir: opts.bgmDir } : {}),
+        ...(opts.sfxDir !== undefined ? { sfxDir: opts.sfxDir } : {}),
+      });
+    },
+  );
 }

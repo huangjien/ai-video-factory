@@ -12,3 +12,13 @@ export {
   prepareStudioWorkspace,
   type StudioWorkspace,
 } from "./studio.js";
+export {
+  DRAFT_COMPILE,
+  loadOrCompileStoryboard,
+  mergeBrandConfig,
+  renderPreviewProject,
+  renderScenesIncrementally,
+  sceneCacheIsFresh,
+  type IncrementalRenderResult,
+  type PreviewOutcome,
+} from "./pipeline.js";

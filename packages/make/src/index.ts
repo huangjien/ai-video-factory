@@ -77,13 +77,36 @@ export interface MakeReport {
   outputFiles: string[];
 }
 
+/** Process-boundary adapters, injectable so tests can drive the whole
+ *  pipeline without ffmpeg/Remotion/CLI subprocesses. The defaults shell
+ *  out (`video preview`, `video mix`, `ffmpeg`); everything else in the
+ *  pipeline is already offline-selectable via MakeOptions (fake/mock
+ *  providers), so these three are the only seams tests need. */
+export interface MakeDeps {
+  renderPreview?: (
+    projectRoot: string,
+    article: ParsedArticle,
+  ) => Promise<string[]>;
+  mix?: (
+    projectRoot: string,
+    config: AudioConfigShape,
+  ) => Promise<string[]>;
+  mp3ToWav?: (
+    mp3Bytes: Uint8Array,
+    minDurationSec: number,
+  ) => Promise<Uint8Array>;
+}
+
 // Default: male narration voices. Female alternatives: zh-CN-XiaoxiaoNeural,
 // en-US-AriaNeural.
 const ZH_VOICE = "zh-CN-YunjianNeural";
 const EN_VOICE = "en-US-ChristopherNeural";
 
 /** Run the make pipeline against an article.md + audio-config.yaml project. */
-export async function runMake(opts: MakeOptions): Promise<MakeReport> {
+export async function runMake(
+  opts: MakeOptions,
+  deps: MakeDeps = {},
+): Promise<MakeReport> {
   const idempotent = opts.idempotent !== false;
   const dryRun = opts.dryRun === true;
   const report: MakeReport = { steps: [], outputFiles: [] };
@@ -140,9 +163,13 @@ export async function runMake(opts: MakeOptions): Promise<MakeReport> {
 
     // 1b. TTS scenes — narrate each scene's voice-over text.
     await runStep(report, "tts", idempotent, dryRun, () =>
-      runTts(opts.projectRoot, article, audioConfig, {
-        fake: opts.fake === true,
-      }),
+      runTts(
+        opts.projectRoot,
+        article,
+        audioConfig,
+        { fake: opts.fake === true },
+        deps.mp3ToWav,
+      ),
     );
 
     // 1b. Resync storyboard.yaml durations to actual TTS lengths.
@@ -169,12 +196,12 @@ export async function runMake(opts: MakeOptions): Promise<MakeReport> {
 
     // 3. Render preview (compile article → VDSL → mp4).
     await runStep(report, "render-preview", idempotent, dryRun, () =>
-      runRenderPreview(opts.projectRoot, article),
+      (deps.renderPreview ?? runRenderPreview)(opts.projectRoot, article),
     );
 
     // 4. Mix narration + BGM + SFX cues.
     await runStep(report, "mix", idempotent, dryRun, () =>
-      runMix(opts.projectRoot, audioConfig),
+      (deps.mix ?? runMix)(opts.projectRoot, audioConfig),
     );
   } catch {
     // runStep already recorded the failure; later steps depend on the
@@ -500,6 +527,7 @@ async function runTts(
   article: ParsedArticle,
   audioConfig: AudioConfigShape,
   opts: { fake?: boolean },
+  convertMp3: (mp3Bytes: Uint8Array, minDurationSec: number) => Promise<Uint8Array> = mp3ToWav,
 ): Promise<string[]> {
   const provider: TTSProvider = opts.fake
     ? new FakeTTSProvider({ sampleBytes: 256 })
@@ -542,7 +570,7 @@ async function runTts(
       result.audio[3] === 0x46;
     const wavBytes = isWav
       ? result.audio
-      : await mp3ToWav(result.audio, scene.duration);
+      : await convertMp3(result.audio, scene.duration);
     await writeFile(wavPath, wavBytes);
     await writeTtsMeta(wavPath, { cacheKey, synthesizedAt: new Date().toISOString() });
     outputs.push(`assets/audio/${scene.id}.wav`);
@@ -696,25 +724,20 @@ export async function runAudioAssets(
 
 async function runRenderPreview(
   projectRoot: string,
-  article: ParsedArticle,
+  _article: ParsedArticle,
 ): Promise<string[]> {
-  // For v1 we shell out to the existing render path; a future revision
-  // will compile article.md scenes directly to VDSL without going via
-  // storyboard.yaml.
-  const slug = article.frontmatter.project;
-  const workspaceRoot = path.dirname(path.dirname(projectRoot));
-  await runCli(
-    [
-      "node",
-      "packages/cli/dist/index.js",
-      "preview",
-      "--cwd",
-      `projects/${slug}`,
-    ],
-    { cwd: workspaceRoot },
-  );
-  // Mirror what `video preview` actually writes.
-  return ["output/preview.mp4", "output/preview-faststart.mp4"];
+  // In-process call into the shared preview operation (same one behind
+  // `video preview`) — no nested CLI subprocess, no dist-path assumptions.
+  const { renderPreviewProject } = await import("@video/video-renderer");
+  const outcome = await renderPreviewProject(projectRoot, {
+    log: (l) => console.log(l),
+  });
+  for (const warning of outcome.warnings) console.warn(warning);
+  if (!outcome.ok) {
+    for (const line of outcome.lines) console.error(line);
+    throw new Error(outcome.error !== "" ? outcome.error : "preview failed");
+  }
+  return outcome.outputs;
 }
 
 async function runMix(

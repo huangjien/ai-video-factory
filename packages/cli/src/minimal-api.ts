@@ -122,8 +122,10 @@ export function buildBanner(version: string): string {
     a === DEFAULT_THEME_NAME ? -1 : b === DEFAULT_THEME_NAME ? 1 : 0,
   );
   lines.push(
-    ...wrapWords(themeOrder.join(" · "), 78, "  Theme presets: ".length).map((l, i) =>
-      i === 0 ? `  Theme presets: ${l}` : l,
+    ...wrapWords(
+      `  Theme presets: ${themeOrder.join(" · ")}`,
+      78,
+      "  Theme presets: ".length,
     ),
     "",
   );

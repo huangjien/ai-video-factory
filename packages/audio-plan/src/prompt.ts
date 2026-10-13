@@ -43,8 +43,16 @@ export function buildMessages(input: AudioPlanInput): ChatMessage[] {
   const sceneSummary = input.article.scenes
     .map((s) => `- ${s.id} (${s.duration}s): ${s.caption} — ${s.visual}`)
     .join("\n");
+  // First heading of the prose body (frontmatter already stripped by the
+  // parser); falls back to the project id when no heading exists.
+  const title =
+    input.article.proseBody
+      .split("\n")
+      .map((l) => l.trim())
+      .find((l) => l.length > 0 && !l.startsWith(">"))
+      ?.replace(/^#\s*/, "") ?? input.article.frontmatter.project;
   const userParts = [
-    `Article title: ${input.article.markdown.split("\n")[0]?.replace(/^---[\s\S]*?---\n/, "").split("\n")[0] ?? ""}`,
+    `Article title: ${title}`,
     `Language: ${input.language}`,
     `Total scenes: ${input.article.scenes.length}`,
     "",

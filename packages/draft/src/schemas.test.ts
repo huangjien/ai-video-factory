@@ -446,3 +446,69 @@ scenes:
     );
   });
 });
+
+describe("schema edge cases", () => {
+  it("frontmatter rejects non-positive duration_target_sec", () => {
+    const r = ArticleFrontmatterSchema.safeParse({
+      project: "p",
+      language: "zh-CN",
+      duration_target_sec: 0,
+      voice: "v",
+    });
+    expect(r.success).toBe(false);
+  });
+
+  it("frontmatter rejects an empty voice", () => {
+    const r = ArticleFrontmatterSchema.safeParse({
+      project: "p",
+      language: "zh-CN",
+      duration_target_sec: 10,
+      voice: "",
+    });
+    expect(r.success).toBe(false);
+  });
+
+  it("scene rejects zero duration and empty caption", () => {
+    const base = {
+      id: "scene_1",
+      caption: "c",
+      visual: "v",
+      narration: "n",
+    };
+    expect(
+      SceneBlockSchema.safeParse({ scenes: [{ ...base, duration: 0 }] }).success,
+    ).toBe(false);
+    expect(
+      SceneBlockSchema.safeParse({ scenes: [{ ...base, duration: 5, caption: "" }] })
+        .success,
+    ).toBe(false);
+  });
+});
+
+describe("articleToStoryboardYaml — theme + captions flags", () => {
+  const parse = () => parseArticle(SAMPLE_MD);
+
+  it("defaults style.theme to paper-light", () => {
+    const yaml = articleToStoryboardYaml(parse());
+    expect(yaml).toContain("style:");
+    expect(yaml).toContain('theme: "paper-light"');
+  });
+
+  it("honours frontmatter.theme when set", () => {
+    const article = parse();
+    article.frontmatter = { ...article.frontmatter, theme: "dark-tech" };
+    const yaml = articleToStoryboardYaml(article);
+    expect(yaml).toContain('theme: "dark-tech"');
+  });
+
+  it("emits the captions block by default and omits it with no_captions", () => {
+    const withCaptions = articleToStoryboardYaml(parse());
+    expect(withCaptions).toContain("captions:");
+    expect(withCaptions).toContain("source: narration");
+
+    const article = parse();
+    article.frontmatter = { ...article.frontmatter, no_captions: true };
+    const without = articleToStoryboardYaml(article);
+    expect(without).not.toContain("captions:");
+  });
+});

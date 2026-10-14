@@ -1,40 +1,48 @@
-import { execFile } from "node:child_process";
+import { execFile, spawnSync } from "node:child_process";
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
-import { EdgeTTS } from "edge-tts-universal";
+import { fileURLToPath } from "node:url";
+import { existsSync } from "node:fs";
 import type {
   TTSProvider,
   TTSRequest,
   TTSResult,
   TTSWord,
 } from "./provider.js";
+import { TTSError } from "./provider.js";
 
 const execFileAsync = promisify(execFile);
 
 export interface EdgeTTSProviderOptions {
-  /** Override the default Edge TTS endpoint (rare; default is Microsoft's public endpoint). */
-  endpoint?: string | undefined;
-  /** Prosody: rate, volume, pitch. */
+  /** Prosody: rate, volume, pitch (SSML-style strings, e.g. "+10%"). */
   rate?: string;
   volume?: string;
   pitch?: string;
   /** When WordBoundary events are unavailable (rare), estimate duration from this char rate. */
   charsPerSecond?: number;
+  /** Command that runs the python worker (default `uv run python tts_worker.py`). */
+  pythonBin?: string;
+  pythonArgs?: string[];
 }
 
 /**
- * Microsoft Edge online TTS adapter (edge-tts-universal package).
- * No API key — uses Edge's free online endpoint. May rate-limit or fail
+ * Microsoft Edge online TTS adapter via the Python `edge-tts` sidecar
+ * (`../python/tts_worker.py`). No API key. May rate-limit or fail
  * without network — callers must handle TTSError gracefully.
  *
- * NOTE: edge-tts-universal always wraps `text` in a `<speak><voice><prosody>`
- * SSML envelope and HTML-escapes the user's input. That means literal
- * `<break>` tags do NOT work — they get read aloud as "break time 1000ms".
- * So `pauseBetweenSentencesSec` is honored via post-processing:
+ * Why a Python sidecar: the JS `edge-tts-universal` 1.4.0 hangs against
+ * Microsoft's current endpoint (silent retry during the DRM-token
+ * handshake — verified 2026-10-14: constructor OK, synthesize() never
+ * settles). The Python `edge-tts` package is the reference
+ * implementation and works. TTS has no model load (~1 s per call), so
+ * a per-call subprocess is fine — unlike the flux worker, no warm
+ * daemon is needed.
+ *
+ * `pauseBetweenSentencesSec` is honored via post-processing:
  * split into sentences, synthesize each separately, ffmpeg-concat with
- * literal silence gaps. See `pauseBetweenSentencesSec` on `TTSRequest`.
+ * literal silence gaps (Edge SSML `<break>` tags get read aloud).
  */
 export class EdgeTTSProvider implements TTSProvider {
   readonly name = "edge";
@@ -64,20 +72,80 @@ export class EdgeTTSProvider implements TTSProvider {
     text: string,
     voice: string,
   ): Promise<TTSResult> {
-    const tts = new EdgeTTS(text, voice, {
-      ...(this.opts.rate !== undefined ? { rate: this.opts.rate } : {}),
-      ...(this.opts.volume !== undefined ? { volume: this.opts.volume } : {}),
-      ...(this.opts.pitch !== undefined ? { pitch: this.opts.pitch } : {}),
-    });
-    const result = await tts.synthesize();
-    const audio = new Uint8Array(await result.audio.arrayBuffer());
-    const words = parseSubtitleToWords(result.subtitle);
-    const durationMs =
-      words.length > 0
-        ? (words[words.length - 1]?.endMs ?? 0)
-        : estimateDurationMs(text, this.opts.charsPerSecond);
-    return { audio, durationMs, words };
+    const pythonDir = resolvePythonDir();
+    if (!existsSync(path.join(pythonDir, "tts_worker.py"))) {
+      throw new TTSError(
+        `python sidecar not found at ${pythonDir} — run uv sync in packages/tts/python/`,
+        this.name,
+      );
+    }
+    const tmp = await mkdtemp(path.join(tmpdir(), "video-tts-"));
+    try {
+      const mp3Path = path.join(tmp, "out.mp3");
+      const request = JSON.stringify({
+        text,
+        voice,
+        ...(this.opts.rate !== undefined ? { rate: this.opts.rate } : {}),
+        ...(this.opts.volume !== undefined ? { volume: this.opts.volume } : {}),
+        ...(this.opts.pitch !== undefined ? { pitch: this.opts.pitch } : {}),
+        output: mp3Path,
+      });
+      const bin = this.opts.pythonBin ?? "uv";
+      const args = [
+        ...(this.opts.pythonArgs ?? ["run", "python", "tts_worker.py"]),
+      ];
+      const proc = spawnSync(bin, args, {
+        cwd: pythonDir,
+        input: request,
+        encoding: "utf8",
+        timeout: 120_000,
+      });
+      if (proc.error) {
+        throw new TTSError(
+          `edge tts worker failed to spawn ${bin} (${proc.error.message}) — install uv (https://github.com/astral-sh/uv) and run uv sync in packages/tts/python/`,
+          this.name,
+        );
+      }
+      const outLine = (proc.stdout ?? "").trim().split("\n").pop() ?? "";
+      let parsed: {
+        ok?: boolean;
+        error?: string;
+        durationMs?: number;
+        words?: TTSWord[];
+      };
+      try {
+        parsed = JSON.parse(outLine) as typeof parsed;
+      } catch {
+        throw new TTSError(
+          `edge tts worker returned no JSON (exit ${proc.status}) — ${(proc.stderr ?? "").trim().slice(-200)}`,
+          this.name,
+        );
+      }
+      if (proc.status !== 0 || parsed.ok !== true) {
+        throw new TTSError(
+          `edge tts failed: ${parsed.error ?? `exit ${proc.status}`}`,
+          this.name,
+        );
+      }
+      const audio = new Uint8Array(await readFile(mp3Path));
+      const words = parsed.words ?? [];
+      const durationMs =
+        words.length > 0
+          ? (words[words.length - 1]?.endMs ?? 0)
+          : (parsed.durationMs && parsed.durationMs > 0
+            ? parsed.durationMs
+            : estimateDurationMs(text, this.opts.charsPerSecond));
+      return { audio, durationMs, words };
+    } finally {
+      await rm(tmp, { recursive: true, force: true }).catch(() => {});
+    }
   }
+}
+
+/** packages/tts/{dist|src} → ../python (same either way). */
+function resolvePythonDir(): string {
+  const here = path.dirname(fileURLToPath(import.meta.url));
+  return path.resolve(here, "..", "python");
 }
 
 /** Split text on sentence-ending punctuation. Captured separators
@@ -191,28 +259,6 @@ async function concatenateWithSilence(
   } finally {
     await rm(tmpRoot, { recursive: true, force: true }).catch(() => {});
   }
-}
-
-function parseSubtitleToWords(subtitle: unknown): TTSWord[] {
-  if (!Array.isArray(subtitle)) return [];
-  return subtitle
-    .filter(
-      (
-        e,
-      ): e is {
-        text?: unknown;
-        offset?: unknown;
-        duration?: unknown;
-      } => typeof e === "object" && e !== null,
-    )
-    .map((e) => ({
-      text: String(e.text ?? ""),
-      startMs: Math.round(Number(e.offset ?? 0) / 10_000),
-      endMs: Math.round(
-        (Number(e.offset ?? 0) + Number(e.duration ?? 0)) / 10_000,
-      ),
-    }))
-    .filter((w) => w.text.length > 0);
 }
 
 function estimateDurationMs(text: string, cps = 5): number {

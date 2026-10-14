@@ -20,6 +20,5 @@
     "build": "tsc -p tsconfig.json"
   },
   "dependencies": {
-    "edge-tts-universal": "^1.1.0"
   }
 }

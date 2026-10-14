@@ -154,7 +154,7 @@ export async function runDraft(opts: DraftOptions): Promise<number> {
         : undefined;
   const fallback = fallbackName ? providerInstance(fallbackName) : null;
   const language = opts.lang ?? "zh-CN";
-  const duration = opts.duration ?? 40;
+  const duration = opts.duration ?? 180;
   const audience = opts.audience ?? "developers";
 
   let webContext:
@@ -328,7 +328,7 @@ program
   .option("--lang <lang>", "language: zh-CN|en-US (default zh-CN)")
   .option(
     "--duration <seconds>",
-    "total duration target in seconds (default: 40)",
+    "total duration target in seconds (default: 180)",
     (v) => parseInt(v, 10),
   )
   .option("--audience <text>", "target audience (default: developers)")

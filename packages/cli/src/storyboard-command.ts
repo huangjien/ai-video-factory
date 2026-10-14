@@ -62,7 +62,7 @@ export async function runStoryboard(opts: StoryboardOptions): Promise<number> {
   const slug = slugifyProjectName(opts.topic);
   const projectRoot = path.join(cwd, "projects", slug);
   const lang = opts.lang ?? "zh-CN";
-  const duration = opts.duration ?? 40;
+  const duration = opts.duration ?? 180;
   const audience = opts.audience ?? "developers";
   const style = opts.style ?? "paper-light";
 

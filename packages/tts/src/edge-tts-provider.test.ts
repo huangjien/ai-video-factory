@@ -1,4 +1,7 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import path from "node:path";
 import {
   EdgeTTSProvider,
   mockEdgeTTSProvider,
@@ -6,49 +9,70 @@ import {
 } from "./edge-tts.js";
 
 /**
- * The real EdgeTTSProvider talks to Microsoft's online TTS service via the
- * edge-tts-universal package. These tests mock the EdgeTTS class so the
- * provider's own logic — multi-sentence split, word-boundary parsing,
- * duration fallback, prosody passthrough, error propagation — runs fully
- * offline.
+ * The real EdgeTTSProvider shells out to the Python edge-tts sidecar
+ * (packages/tts/python/tts_worker.py) because the JS edge-tts-universal
+ * 1.4.0 hangs against Microsoft's current endpoint. These tests inject
+ * a fake worker (a node script) via pythonBin/pythonArgs, so the
+ * provider's own logic — subprocess protocol, multi-sentence split,
+ * duration fallback, prosody passthrough, error propagation — runs
+ * fully offline against the same stdin/stdout contract the real
+ * worker speaks.
  *
- * The post-processing pause-insertion path (ffmpeg concat) is exercised
- * via mock helpers and via `splitSentences` tests; the full ffmpeg round-
- * trip is covered by an end-to-end smoke in @video/make.
+ * The fake worker appends every request it receives to $CAPTURE_FILE so
+ * the tests can assert on exactly what the provider sent. Requests whose
+ * text contains "FAIL" are answered with an error (exit path). Text
+ * "nowords" returns empty words + durationMs 0 (cps-estimate path).
  */
 
-type SynthesizeResult = {
-  audio: Blob;
-  subtitle: unknown;
-};
+const FAKE_WORKER = `
+const chunks = [];
+process.stdin.on("data", (d) => chunks.push(d));
+process.stdin.on("end", () => {
+  const req = JSON.parse(Buffer.concat(chunks).toString());
+  const fs = require("node:fs");
+  fs.appendFileSync(process.env.CAPTURE_FILE, JSON.stringify(req) + "\\n");
+  if (req.text.includes("FAIL")) {
+    console.log(JSON.stringify({ ok: false, error: "WebSocketError: network down" }));
+    process.exit(1);
+  }
+  const nowords = req.text.startsWith("nowords") || req.text === "!!";
+  const words = nowords ? [] : [
+    { text: "你好", startMs: 0, endMs: 500 },
+    { text: "世界", startMs: 500, endMs: 900 },
+  ];
+  require("node:fs").writeFileSync(req.output, Buffer.from([1, 2, 3, 4]));
+  console.log(JSON.stringify({
+    ok: true, mp3: req.output, bytes: 4,
+    durationMs: nowords ? 0 : 900, words,
+  }));
+});
+`;
 
-type EdgeTTSConstructorArgs = [
-  text: string,
-  voice: string,
-  opts: { rate?: string; volume?: string; pitch?: string },
-];
+let tempDir: string;
+let captureFile: string;
 
-const synthesizeMock = vi.fn<() => Promise<SynthesizeResult>>();
+function fakeWorkerProvider(
+  opts: ConstructorParameters<typeof EdgeTTSProvider>[0] = {},
+): EdgeTTSProvider {
+  return new EdgeTTSProvider({
+    pythonBin: process.execPath,
+    pythonArgs: [path.join(tempDir, "fake-worker.cjs")],
+    ...opts,
+  });
+}
 
-vi.mock("edge-tts-universal", () => ({
-  EdgeTTS: vi.fn().mockImplementation(function (
-    this: { synthesize: typeof synthesizeMock },
-    ...args: EdgeTTSConstructorArgs
-  ) {
-    lastConstructorArgs = args;
-    this.synthesize = synthesizeMock;
-  }),
-}));
-
-let lastConstructorArgs: EdgeTTSConstructorArgs | undefined;
-
-function blobOf(bytes: number[]): Blob {
-  return new Blob([new Uint8Array(bytes)]);
+function capturedRequests(): unknown[] {
+  const raw = readFileSync(captureFile, "utf8").trim();
+  if (raw.length === 0) return [];
+  return raw.split("\n").map((l) => JSON.parse(l) as unknown);
 }
 
 beforeEach(() => {
-  vi.clearAllMocks();
-  lastConstructorArgs = undefined;
+  tempDir = mkdtempSync(path.join(tmpdir(), "tts-provider-test-"));
+  captureFile = path.join(tempDir, "capture.jsonl");
+  writeFileSync(captureFile, "");
+  writeFileSync(path.join(tempDir, "fake-worker.cjs"), FAKE_WORKER);
+  process.env["CAPTURE_FILE"] = captureFile;
 });
 
 describe("splitSentences", () => {
@@ -81,19 +105,9 @@ describe("splitSentences", () => {
   });
 });
 
-describe("EdgeTTSProvider.synthesize (mocked edge-tts-universal)", () => {
+describe("EdgeTTSProvider.synthesize (fake python worker)", () => {
   it("returns audio bytes + words + duration from word boundaries", async () => {
-    // edge-tts-universal emits subtitle entries as
-    // { text, offset, duration } where offset and duration are in 100-ns
-    // units (1000 ticks = 0.1 ms). The parser divides by 10_000 to ms.
-    synthesizeMock.mockResolvedValue({
-      audio: blobOf([1, 2, 3, 4]),
-      subtitle: [
-        { text: "你好", offset: 0, duration: 5_000_000 },
-        { text: "世界", offset: 5_000_000, duration: 4_000_000 },
-      ],
-    });
-    const p = new EdgeTTSProvider();
+    const p = fakeWorkerProvider();
     const result = await p.synthesize({
       text: "你好世界",
       voice: "zh-CN-XiaoxiaoNeural",
@@ -109,28 +123,27 @@ describe("EdgeTTSProvider.synthesize (mocked edge-tts-universal)", () => {
     expect(result.durationMs).toBe(900);
   });
 
-  it("passes text + voice to the EdgeTTS constructor (single-chunk path)", async () => {
-    synthesizeMock.mockResolvedValue({ audio: blobOf([0]), subtitle: [] });
-    const p = new EdgeTTSProvider();
+  it("passes text + voice to the worker request (single-chunk path)", async () => {
+    const p = fakeWorkerProvider();
     await p.synthesize({
       text: "hi",
       voice: "en-US-EmmaNeural",
       language: "en-US",
     });
-    expect(lastConstructorArgs?.[0]).toBe("hi");
-    expect(lastConstructorArgs?.[1]).toBe("en-US-EmmaNeural");
-    expect(synthesizeMock).toHaveBeenCalledTimes(1);
+    const reqs = capturedRequests();
+    expect(reqs).toHaveLength(1);
+    expect((reqs[0] as { text: string }).text).toBe("hi");
+    expect((reqs[0] as { voice: string }).voice).toBe("en-US-EmmaNeural");
   });
 
-  it("forwards prosody options (rate/volume/pitch) to EdgeTTS", async () => {
-    synthesizeMock.mockResolvedValue({ audio: blobOf([0]), subtitle: [] });
-    const p = new EdgeTTSProvider({
+  it("forwards prosody options (rate/volume/pitch) to the worker", async () => {
+    const p = fakeWorkerProvider({
       rate: "+10%",
       volume: "-20%",
       pitch: "+5Hz",
     });
     await p.synthesize({ text: "x", voice: "v", language: "en-US" });
-    expect(lastConstructorArgs?.[2]).toEqual({
+    expect(capturedRequests()[0]).toMatchObject({
       rate: "+10%",
       volume: "-20%",
       pitch: "+5Hz",
@@ -138,17 +151,19 @@ describe("EdgeTTSProvider.synthesize (mocked edge-tts-universal)", () => {
   });
 
   it("omits prosody keys entirely when not configured", async () => {
-    synthesizeMock.mockResolvedValue({ audio: blobOf([0]), subtitle: [] });
-    const p = new EdgeTTSProvider();
+    const p = fakeWorkerProvider();
     await p.synthesize({ text: "x", voice: "v", language: "en-US" });
-    expect(lastConstructorArgs?.[2]).toEqual({});
+    const req = capturedRequests()[0] as Record<string, unknown>;
+    expect("rate" in req).toBe(false);
+    expect("volume" in req).toBe(false);
+    expect("pitch" in req).toBe(false);
   });
 
   it("falls back to chars-per-second estimate when no word boundaries", async () => {
-    synthesizeMock.mockResolvedValue({ audio: blobOf([0]), subtitle: [] });
-    const p = new EdgeTTSProvider({ charsPerSecond: 10 });
+    const p = fakeWorkerProvider({ charsPerSecond: 10 });
     const result = await p.synthesize({
-      text: "a".repeat(20),
+      // "nowords-" (8) + 12 a's = 20 chars / 10 cps = 2000ms.
+      text: `nowords-${"a".repeat(12)}`,
       voice: "v",
       language: "en-US",
     });
@@ -157,10 +172,10 @@ describe("EdgeTTSProvider.synthesize (mocked edge-tts-universal)", () => {
   });
 
   it("uses the default 5 cps estimate when charsPerSecond is unset", async () => {
-    synthesizeMock.mockResolvedValue({ audio: blobOf([0]), subtitle: [] });
-    const p = new EdgeTTSProvider();
+    const p = fakeWorkerProvider();
     const result = await p.synthesize({
-      text: "a".repeat(10),
+      // "nowords-" (8) + 2 a's = 10 chars / 5 cps = 2000ms.
+      text: `nowords-${"a".repeat(2)}`,
       voice: "v",
       language: "en-US",
     });
@@ -168,43 +183,54 @@ describe("EdgeTTSProvider.synthesize (mocked edge-tts-universal)", () => {
   });
 
   it("enforces a 500ms minimum on the duration estimate", async () => {
-    synthesizeMock.mockResolvedValue({ audio: blobOf([0]), subtitle: [] });
-    const p = new EdgeTTSProvider();
+    const p = fakeWorkerProvider();
     const result = await p.synthesize({
-      text: "a",
+      // "!!" (2 chars / 5 cps = 400ms) clamps up to 500.
+      text: "!!",
       voice: "v",
       language: "en-US",
     });
     expect(result.durationMs).toBe(500);
   });
 
-  it("propagates synthesize() failures", async () => {
-    synthesizeMock.mockRejectedValue(new Error("WebSocketError: network down"));
-    const p = new EdgeTTSProvider();
+  it("propagates worker failures as TTSError", async () => {
+    const p = fakeWorkerProvider();
     await expect(
-      p.synthesize({ text: "x", voice: "v", language: "en-US" }),
+      p.synthesize({ text: "FAIL please", voice: "v", language: "en-US" }),
     ).rejects.toThrow(/network down/);
   });
 
-  it("with pauseBetweenSentencesSec=0, makes a single EdgeTTS call", async () => {
-    synthesizeMock.mockResolvedValue({ audio: blobOf([0]), subtitle: [] });
-    const p = new EdgeTTSProvider();
+  it("reports a missing worker script readably", async () => {
+    const p = new EdgeTTSProvider({
+      pythonBin: process.execPath,
+      pythonArgs: [path.join(tempDir, "no-such-worker.cjs")],
+    });
+    await expect(
+      p.synthesize({ text: "x", voice: "v", language: "en-US" }),
+    ).rejects.toThrow(/returned no JSON/);
+  });
+
+  it("with pauseBetweenSentencesSec=0, makes a single worker call", async () => {
+    const p = fakeWorkerProvider();
     await p.synthesize({
       text: "今天天气好。我们去公园。",
       voice: "zh-CN-XiaoxiaoNeural",
       language: "zh-CN",
       pauseBetweenSentencesSec: 0,
     });
-    expect(synthesizeMock).toHaveBeenCalledTimes(1);
-    expect(lastConstructorArgs?.[0]).toBe("今天天气好。我们去公园。");
+    expect(capturedRequests()).toHaveLength(1);
+    expect((capturedRequests()[0] as { text: string }).text).toBe(
+      "今天天气好。我们去公园。",
+    );
   });
 
   it("with pauseBetweenSentencesSec > 0, drives the multi-part path", async () => {
-    // Full ffmpeg concat path is exercised by @video/make end-to-end (mocked
-    // bytes here can't be decoded by ffmpeg). This only verifies that the
-    // pause knob reaches the per-sentence code path.
-    synthesizeMock.mockRejectedValue(new Error("synthesize mocked-out"));
-    const p = new EdgeTTSProvider();
+    // Full ffmpeg concat path is exercised by @video/make end-to-end (fake
+    // bytes here can't be decoded by ffmpeg). This only verifies the pause
+    // knob reaches the per-sentence code path: two sentences → two worker
+    // calls. The ffmpeg concat of 4-byte mp3s fails, which proves the
+    // multi-part path was taken.
+    const p = fakeWorkerProvider();
     await expect(
       p.synthesize({
         text: "今天天气好。我们去公园。",
@@ -212,69 +238,25 @@ describe("EdgeTTSProvider.synthesize (mocked edge-tts-universal)", () => {
         language: "zh-CN",
         pauseBetweenSentencesSec: 1.0,
       }),
-    ).rejects.toThrow(/mocked-out/);
+    ).rejects.toThrow();
+    expect(capturedRequests()).toHaveLength(2);
   });
 
   it("with one sentence + pause, still does single call (no concat needed)", async () => {
-    synthesizeMock.mockResolvedValue({ audio: blobOf([0]), subtitle: [] });
-    const p = new EdgeTTSProvider();
+    const p = fakeWorkerProvider();
     await p.synthesize({
       text: "没有任何标点的长句 but really just one thing happens here",
       voice: "v",
       language: "en-US",
       pauseBetweenSentencesSec: 1.0,
     });
-    expect(synthesizeMock).toHaveBeenCalledTimes(1);
-  });
-});
-
-describe("parseSubtitleToWords edge cases (via synthesize)", () => {
-  it("ignores a non-array subtitle", async () => {
-    synthesizeMock.mockResolvedValue({
-      audio: blobOf([0]),
-      subtitle: "not-an-array",
-    });
-    const p = new EdgeTTSProvider();
-    const result = await p.synthesize({
-      text: "x",
-      voice: "v",
-      language: "en-US",
-    });
-    expect(result.words).toEqual([]);
-  });
-
-  it("filters non-object and empty-text entries, defaults missing times to 0", async () => {
-    // offset/duration in 100-nanosecond units; offset=50000 → 5ms,
-    // offset=250000 with no duration → endMs = startMs.
-    synthesizeMock.mockResolvedValue({
-      audio: blobOf([0]),
-      subtitle: [
-        "a string entry",
-        null,
-        { text: "", offset: 100_000, duration: 100_000 },
-        { text: "ok" },
-        42,
-        { text: "full", offset: 50_000, duration: 200_000 },
-      ],
-    });
-    const p = new EdgeTTSProvider();
-    const result = await p.synthesize({
-      text: "x",
-      voice: "v",
-      language: "en-US",
-    });
-    expect(result.words).toEqual([
-      { text: "ok", startMs: 0, endMs: 0 },
-      { text: "full", startMs: 5, endMs: 25 },
-    ]);
-    expect(result.durationMs).toBe(25);
+    expect(capturedRequests()).toHaveLength(1);
   });
 });
 
 describe("mockEdgeTTSProvider honors pauseBetweenSentencesSec via duration padding", () => {
   it("zero pause → baseline duration estimate", async () => {
     const m = mockEdgeTTSProvider({ sampleBytes: 64, charsPerSecond: 10 });
-    // 20 chars / 10 cps = 2000ms; no pause; expect 2000ms.
     const r = await m.synthesize({
       text: "a".repeat(20),
       voice: "v",
@@ -286,9 +268,6 @@ describe("mockEdgeTTSProvider honors pauseBetweenSentencesSec via duration paddi
 
   it("positive pause + multi-sentence → adds N-1 silences", async () => {
     const m = mockEdgeTTSProvider({ sampleBytes: 64, charsPerSecond: 10 });
-    // Text: "X. Y. Z." → 3 sentences, 2 silences of 1s each.
-    // Each sentence has one char + " . " etc. ≈ 5 chars; char count dominated by periods.
-    // Just assert that pause-padding is > 0.
     const r = await m.synthesize({
       text: "X. Y. Z.",
       voice: "v",
@@ -297,4 +276,9 @@ describe("mockEdgeTTSProvider honors pauseBetweenSentencesSec via duration paddi
     });
     expect(r.durationMs).toBeGreaterThan(2000);
   });
+});
+
+afterEach(() => {
+  delete process.env["CAPTURE_FILE"];
+  rmSync(tempDir, { recursive: true, force: true });
 });

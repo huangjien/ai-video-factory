@@ -55,7 +55,12 @@ Rules:
 4. Use components from this registered set ONLY:
    Title, Paragraph, CodeBlock, Terminal, Image, FlowChart, Comparison,
    Timeline, Callout, EndCard, Character.
-5. Visual durations are in SECONDS; scene count 5-8; total duration <= 60.
+5. Visual durations are in SECONDS; scene count and total duration are driven by the requested target (refer to the "Total duration target (seconds): N" value emitted later):
+   - target ≤ 60s  → 5-8 scenes
+   - target 60-120s → 8-12 scenes
+   - target 120-300s → 12-20 scenes
+   - target > 300s → 18+ scenes
+   - per-scene duration: keep most scenes in the 6-12s range; for long targets, allow 10-20s scenes where the visual needs breathing room (e.g. diagrams, comparisons, timeline).
 6. Each scene needs: id (snake_case), duration, visual.component+props.
    Optional: narration.text/audio, animation.entrance, captions.source.
 7. NO prose outside the YAML code block.

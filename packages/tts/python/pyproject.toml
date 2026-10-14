@@ -1,0 +1,8 @@
+[project]
+name = "tts-worker"
+version = "0.1.0"
+description = "Edge TTS worker for @video/tts (python edge-tts; the JS edge-tts-universal hangs against the current endpoint)"
+requires-python = ">=3.11,<3.14"
+dependencies = [
+    "edge-tts>=7.0",
+]

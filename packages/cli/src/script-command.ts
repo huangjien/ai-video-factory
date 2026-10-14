@@ -58,7 +58,7 @@ export async function runScript(opts: ScriptOptions): Promise<number> {
   const slug = slugifyProjectName(opts.topic);
   const projectRoot = path.join(cwd, "projects", slug);
   const lang = opts.lang ?? "zh-CN";
-  const duration = opts.duration ?? 40;
+  const duration = opts.duration ?? 180;
   const audience = opts.audience ?? "developers";
 
   const code = await ensureProject(cwd, slug, projectRoot);

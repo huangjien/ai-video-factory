@@ -99,7 +99,7 @@ program
   )
   .option(
     "--image-provider <provider>",
-    "image provider for scene visuals: minimax (real AI), flux (local FLUX.2 Klein 4B, no quota), mock, none (default: minimax; --fake implies none)",
+    "image provider for scene visuals: minimax (real AI), flux (local FLUX.2 Klein 4B, no quota), mock, none (default: flux since v0.5.3; --fake implies none)",
   )
   .option(
     "--bgm-dir <dir>",

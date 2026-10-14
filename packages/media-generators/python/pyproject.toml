@@ -1,0 +1,18 @@
+[project]
+name = "flux-klein-worker"
+version = "0.1.0"
+description = "Local FLUX.2 Klein 4B image worker for @video/media-generators (diffusers + pillow + LoRA)"
+requires-python = ">=3.11,<3.14"
+dependencies = [
+    "torch>=2.6",
+    "diffusers>=0.41.0",
+    "transformers>=4.57",
+    "accelerate>=1.4",
+    "peft>=0.17",
+    "safetensors>=0.5",
+    "pillow>=11.0",
+    "huggingface_hub>=0.34",
+]
+
+[dependency-groups]
+dev = []

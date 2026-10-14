@@ -35,8 +35,10 @@ import {
   type AudioAssetProvider,
 } from "@video/audio-assets";
 import {
+  FluxKleinImageProvider,
   MiniMaxImageProvider,
   MockImageProvider,
+  resolveLoraConfigPath,
   type ImageProvider,
 } from "@video/media-generators";
 
@@ -50,10 +52,15 @@ export interface MakeOptions {
   idempotent?: boolean;
   /** If true, log what would be done without executing. */
   dryRun?: boolean;
-  /** Image provider for scene visuals: "minimax" (real AI), "mock"
-   * (deterministic placeholder), or "none" (skip image generation;
-   * scenes fall back to AnimatedIllustration geometric shapes). */
-  imageProvider?: "minimax" | "mock" | "none";
+  /** Image provider for scene visuals: "minimax" (real AI), "flux"
+   * (local FLUX.2 Klein 4B via diffusers — no quota, no network),
+   * "mock" (deterministic placeholder), or "none" (skip image
+   * generation; scenes fall back to AnimatedIllustration shapes). */
+  imageProvider?: "minimax" | "flux" | "mock" | "none";
+  /** Absolute path to lora-config.yaml for the flux provider. */
+  loraConfigPath?: string;
+  /** Legacy: LoRA adapters as "path[:scale][,path2[:scale2]]". */
+  lora?: string;
   /** Local music library for real BGM — a directory containing
    * `{tag}.wav` (or any .wav whose name contains the tag). Without it
    * the audio-assets step writes a mock silent placeholder. */
@@ -158,6 +165,8 @@ export async function runMake(
       generateSceneVisuals(opts.projectRoot, article, {
         provider:
           opts.imageProvider ?? (opts.fake ? "none" : "minimax"),
+        loraConfigPath: opts.loraConfigPath,
+        lora: opts.lora,
       }),
     );
 
@@ -305,7 +314,11 @@ async function syncStoryboardFromArticle(
 async function generateSceneVisuals(
   projectRoot: string,
   article: ParsedArticle,
-  opts: { provider: "minimax" | "mock" | "none" },
+  opts: {
+    provider: "minimax" | "flux" | "mock" | "none";
+    loraConfigPath?: string | undefined;
+    lora?: string | undefined;
+  },
 ): Promise<string[]> {
   if (opts.provider === "none") return [];
 
@@ -313,10 +326,28 @@ async function generateSceneVisuals(
   await mkdir(imageDir, { recursive: true });
 
   const isMock = opts.provider === "mock";
-  const provider: ImageProvider =
-    opts.provider === "minimax"
-      ? new MiniMaxImageProvider()
-      : new MockImageProvider();
+  let provider: ImageProvider;
+  if (opts.provider === "minimax") {
+    provider = new MiniMaxImageProvider();
+  } else if (opts.provider === "flux") {
+    const repoRoot = workspaceRootFor(projectRoot) ?? projectRoot;
+    const explicitLora = opts.lora;
+    const explicitConfig = opts.loraConfigPath;
+    const discoveredConfig =
+      explicitLora === undefined && explicitConfig === undefined
+        ? resolveLoraConfigPath({ projectRoot, repoRoot })
+        : undefined;
+    if (discoveredConfig) {
+      console.log(`[flux] lora config: ${discoveredConfig}`);
+    }
+    provider = new FluxKleinImageProvider({
+      ...(explicitConfig ? { loraConfigPath: explicitConfig } : {}),
+      ...(discoveredConfig ? { loraConfigPath: discoveredConfig } : {}),
+      ...(explicitLora ? { lora: explicitLora } : {}),
+    });
+  } else {
+    provider = new MockImageProvider();
+  }
   const reqWidth = isMock ? 64 : 1920;
   const reqHeight = isMock ? 36 : 1080;
 
@@ -391,6 +422,9 @@ async function generateSceneVisuals(
     outputs.push(
       `storyboard.yaml: ${switched}/${generatedImages.length} scenes switched to ImageBackground`,
     );
+  }
+  if ("dispose" in provider && typeof provider.dispose === "function") {
+    (provider as { dispose: () => void }).dispose();
   }
   return outputs;
 }

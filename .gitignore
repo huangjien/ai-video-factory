@@ -11,6 +11,10 @@ dist/
 .omo/run-continuation/
 coverage/
 
+# Local FLUX.2 Klein model weights + python worker venv (~16 GB, never tracked)
+models/
+packages/media-generators/python/.venv/
+
 # Test projects hold generated media (hundreds of MB) — only the
 # canonical benchmark fixture is tracked.
 projects/*

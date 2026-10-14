@@ -10,6 +10,17 @@ export {
   type MiniMaxImageProviderOptions,
 } from "./minimax-image.js";
 export {
+  FluxKleinImageProvider,
+  type FluxKleinImageProviderOptions,
+} from "./flux-image.js";
+export {
+  loadLoraConfig,
+  resolveLoraConfigPath,
+  LoraConfigError,
+  type LoraConfigEntry,
+  type ResolvedLoraConfig,
+} from "./lora-config.js";
+export {
   MockVideoProvider,
   type VideoProvider,
   type VideoRequest,

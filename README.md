@@ -118,7 +118,7 @@ do).
 | `video new <id>`                    | scaffold a project under `projects/<id>/`                                                                                                                                                                                                                                                                                      |
 | `video draft <topic>`               | write `article.md` + `audio-config.yaml` from a topic via MiniMax/GLM (research + script + storyboard + audio plan in one; `--no-audio-plan` to split; `--file <path>` to seed with your raw idea, opinions preserved; **v0.4** `--style <theme>` writes storyboard theme; **v0.4** `--no-captions` skips the caption overlay) |
 | `video audio-plan <project>`        | (optional) regenerate `audio-config.yaml` after hand-editing article.md                                                                                                                                                                                                                                                        |
-| `video make <project>`              | TTS → audio assets → render → mix (`--dry-run` to preview, `--fake` for offline TTS, `--image-provider mock\|minimax\|none`, `--bgm-dir`/`--sfx-dir <dir>` to use your own music library)                                                                                                                                      |
+| `video make <project>`              | TTS → audio assets → render → mix (`--dry-run` to preview, `--fake` for offline TTS, `--image-provider mock\|minimax\|flux\|none`, `--bgm-dir`/`--sfx-dir <dir>` to use your own music library)                                                                                                                                |
 | `video retrospect <project>`        | **v0.4** ask the LLM for 3 concrete edits to `article.md` based on the latest runs + QA report (writes `projects/<slug>/retrospect.md`); `--dry-run` shows the input without calling the LLM                                                                                                                                   |
 | `video status <project>`            | shows current workflow checkpoint + **v0.4** the latest QA finding count next to the gate                                                                                                                                                                                                                                      |
 | `video theme [name] / --cwd <root>` | **v0.4** palette inspector — list every theme, print one theme's full token set, or resolve `style.theme` from a project's storyboard                                                                                                                                                                                          |
@@ -180,6 +180,85 @@ values fall back to `paper-light` (the v0.4.3 default) at render time and
 
 See `docs/ARCHITECTURE.md` — maps each design-doc section to the package and
 file that implements it, plus the v0.2+ roadmap.
+
+## Local Image Generation (v0.5 — FLUX.2 Klein 4B)
+
+`--image-provider flux` runs **FLUX.2-klein-4B** (Black Forest Labs,
+Apache-2.0) locally on Apple Silicon via a Python sidecar
+(`packages/media-generators/python/` — Hugging Face `diffusers` +
+`pillow` + LoRA). No API key, no quota, no network after the one-time
+weight download. Design + rationale: `docs/v0.5-local-image-generation-plan.md`.
+
+```bash
+# One-time setup (~22 GB download, ungated — no HF token needed)
+cd packages/media-generators/python
+uv sync && uv run python flux_worker.py --download
+
+# Then use it anywhere images are generated
+video make my-project --image-provider flux     # scene visuals, 1920×1080
+video thumbnail my-project --provider flux      # 1280×720 thumbnails
+```
+
+LoRA style adapters (startup-time, human-chosen). Two surfaces —
+checked-in config (preferred) or env override:
+
+```bash
+# Checked-in lora-config.yaml — picked up automatically when the file
+# lives at <projectRoot>/lora-config.yaml or <repo>/lora-config.yaml.
+cat > projects/my-project/lora-config.yaml <<'YAML'
+loras:
+  - source: loras/ink-style.safetensors     # relative to config dir,
+    scale: 0.8                              # absolute path, or HF id
+    license: loras/ink-style.license.txt    # optional but recommended
+YAML
+video make my-project --image-provider flux
+
+# Or one-shot env override (legacy) — string form "path[:scale][,…]"
+FLUX2_LORA="loras/ink-style.safetensors:0.8" video make my-project --image-provider flux
+# …or the explicit yaml path
+FLUX2_LORA_CONFIG=/abs/path/to/lora-config.yaml video make my-project --image-provider flux
+```
+
+The `lora-config.yaml` convention (mirrors `audio-config.yaml`): humans
+declare the project's style at the file level, license sidecars are
+enforced when declared, and the worker keeps the pipeline warm
+(no per-scene reload). Schema + precedence are documented in
+`docs/v0.5-local-image-generation-plan.md` §T5 and
+`packages/media-generators/src/lora-config.ts`.
+
+The worker keeps the pipeline warm across a whole render (model load ≈
+28 s on M4; scene images ≈ 1–3 min each), streams the text encoder via
+group offloading to fit 24 GB unified memory, snaps dimensions to the
+ FLUX.2 VAE alignment and Pillow-fits to the exact requested box. Scene
+ image prompts still go through the v0.4 LLM expansion; failures are
+ non-fatal (scene falls back to `AnimatedIllustration`). Knobs:
+ `FLUX2_MODEL / FLUX2_STEPS / FLUX2_GUIDANCE / FLUX2_DEVICE / FLUX2_DTYPE /
+ FLUX2_OFFLOAD / FLUX2_LORA / FLUX2_LORA_CONFIG / FLUX2_HF_HOME` — full
+ table in `packages/media-generators/python/README.md`.
+
+### Choosing a model
+
+The worker auto-detects `is_distilled` from the checkpoint's
+`model_index.json`. Default `black-forest-labs/FLUX.2-klein-4B` is
+step-distilled (8 steps, guidance ignored — fast). For the 50-step
+quality path with guidance honored, switch to the base:
+
+```bash
+FLUX2_MODEL=black-forest-labs/FLUX.2-klein-base-4B video make my-project --image-provider flux
+```
+
+Inspect any candidate checkpoint before committing to the multi-GB
+download (no safetensors fetched):
+
+```bash
+cd packages/media-generators/python
+uv run python flux_worker.py --check-model black-forest-labs/FLUX.2-klein-base-4B
+# → is_distilled: false, default_steps_with_worker: 50, guidance_honored: true
+```
+
+Both `video make` and `video thumbnail` resolve `lora-config.yaml` from
+`<projectRoot>` then `<repoRoot>` automatically; pass `--lora-config
+<path>` to override.
 
 ## Advanced Media (v0.2.8 — final phase)
 

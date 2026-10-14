@@ -6,8 +6,10 @@ import path from "node:path";
 import { resolveProjectDir } from "./project-path.js";
 import { existsSync } from "node:fs";
 import {
+  FluxKleinImageProvider,
   MiniMaxImageProvider,
   MockImageProvider,
+  resolveLoraConfigPath,
   type ImageProvider,
 } from "@video/media-generators";
 import { formatRunId } from "@video/workflow";
@@ -17,7 +19,11 @@ export interface ThumbnailOptions {
   cwd?: string | undefined;
   width?: number;
   height?: number;
-  providerName?: "mock" | "minimax" | undefined;
+  providerName?: "mock" | "minimax" | "flux" | undefined;
+  /** Absolute path to lora-config.yaml (overrides the auto-resolved file). */
+  loraConfigPath?: string | undefined;
+  /** Legacy: LoRA adapters as "path[:scale][,path2[:scale2]]". */
+  lora?: string | undefined;
 }
 
 function safeGitHead(cwd: string): string {
@@ -54,11 +60,27 @@ export async function runThumbnail(opts: ThumbnailOptions): Promise<number> {
   const height = opts.height ?? 720;
 
   // v0.3: `minimax` uses the real image API (image-01, needs
-  // MINIMAX_API_KEY); `mock` (default) keeps the offline deterministic path.
-  const provider: ImageProvider =
-    opts.providerName === "minimax"
-      ? new MiniMaxImageProvider()
-      : new MockImageProvider({ width, height });
+  // MINIMAX_API_KEY); `flux` runs local FLUX.2 Klein 4B (no quota);
+  // `mock` (default) keeps the offline deterministic path.
+  let provider: ImageProvider;
+  if (opts.providerName === "minimax") {
+    provider = new MiniMaxImageProvider();
+  } else if (opts.providerName === "flux") {
+    const repoRoot = path.dirname(path.dirname(projectRoot));
+    const explicitLora = opts.lora;
+    const explicitConfig = opts.loraConfigPath;
+    const discoveredConfig =
+      explicitLora === undefined && explicitConfig === undefined
+        ? resolveLoraConfigPath({ projectRoot, repoRoot })
+        : undefined;
+    provider = new FluxKleinImageProvider({
+      ...(explicitConfig ? { loraConfigPath: explicitConfig } : {}),
+      ...(discoveredConfig ? { loraConfigPath: discoveredConfig } : {}),
+      ...(explicitLora ? { lora: explicitLora } : {}),
+    });
+  } else {
+    provider = new MockImageProvider({ width, height });
+  }
   let result;
   try {
     result = await provider.generate({ prompt, width, height });
@@ -129,7 +151,15 @@ program
   )
   .option(
     "--provider <name>",
-    "image provider: mock|minimax (default mock — minimax needs MINIMAX_API_KEY)",
+    "image provider: mock|minimax|flux (default mock — minimax needs MINIMAX_API_KEY; flux runs local FLUX.2 Klein 4B)",
+  )
+  .option(
+    "--lora-config <path>",
+    "absolute path to a lora-config.yaml for the flux provider (overrides <projectRoot>/lora-config.yaml and <repo>/lora-config.yaml)",
+  )
+  .option(
+    "--lora <spec>",
+    'legacy: LoRA adapters for the flux provider, "path[:scale][,path2[:scale2]]"',
   )
   .action(
     async (
@@ -138,7 +168,9 @@ program
         cwd?: string;
         width?: number;
         height?: number;
-        provider?: "mock" | "minimax";
+        provider?: "mock" | "minimax" | "flux";
+        loraConfig?: string;
+        lora?: string;
       },
     ) => {
       process.exitCode = await runThumbnail({
@@ -147,6 +179,10 @@ program
         ...(opts.width !== undefined ? { width: opts.width } : {}),
         ...(opts.height !== undefined ? { height: opts.height } : {}),
         ...(opts.provider !== undefined ? { providerName: opts.provider } : {}),
+        ...(opts.loraConfig !== undefined
+          ? { loraConfigPath: opts.loraConfig }
+          : {}),
+        ...(opts.lora !== undefined ? { lora: opts.lora } : {}),
       });
     },
   );

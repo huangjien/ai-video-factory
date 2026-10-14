@@ -28,7 +28,7 @@ export const MINIMAL_API_COMMANDS: readonly MinimalApiCommand[] = [
   {
     invocation: "video make <project>",
     purpose:
-      "TTS → audio assets → render → mix (`--dry-run` to preview, `--fake` for offline TTS, `--image-provider mock\\|minimax\\|none`, `--bgm-dir`/`--sfx-dir <dir>` to use your own music library)",
+      "TTS → audio assets → render → mix (`--dry-run` to preview, `--fake` for offline TTS, `--image-provider mock\\|minimax\\|flux\\|none`, `--bgm-dir`/`--sfx-dir <dir>` to use your own music library)",
   },
   {
     invocation: "video retrospect <project>",

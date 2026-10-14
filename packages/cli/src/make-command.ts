@@ -15,14 +15,19 @@ export interface MakeOptions {
   cwd?: string;
   fake?: boolean;
   dryRun?: boolean;
-  /** Image provider for scene visuals: minimax (real AI), mock, or none. */
-  imageProvider?: "minimax" | "mock" | "none";
+  /** Image provider for scene visuals: minimax (real AI), flux (local
+   *  FLUX.2 Klein 4B via diffusers), mock, or none. */
+  imageProvider?: "minimax" | "flux" | "mock" | "none";
   /** Local music library dir — BGM tags resolve to {tag}.wav inside it. */
   bgmDir?: string;
   /** Local SFX library dir — same lookup rule as bgmDir. */
   sfxDir?: string;
   /** BGM generation: auto (MiniMax when key present) | minimax | mock. */
   musicProvider?: "auto" | "minimax" | "mock";
+  /** Absolute path to lora-config.yaml for the flux provider. */
+  loraConfigPath?: string;
+  /** Legacy: LoRA adapters as "path[:scale][,path2[:scale2]]". */
+  lora?: string;
 }
 
 export async function runMakeCli(opts: MakeOptions): Promise<number> {
@@ -90,7 +95,7 @@ program
   )
   .option(
     "--image-provider <provider>",
-    "image provider for scene visuals: minimax (real AI), mock, none (default: minimax; --fake implies none)",
+    "image provider for scene visuals: minimax (real AI), flux (local FLUX.2 Klein 4B, no quota), mock, none (default: minimax; --fake implies none)",
   )
   .option(
     "--bgm-dir <dir>",
@@ -114,17 +119,27 @@ program
     "--dry-run",
     "log which steps would run without executing them",
   )
+  .option(
+    "--lora-config <path>",
+    "absolute path to a lora-config.yaml for the flux image provider (overrides <projectRoot>/lora-config.yaml and <repo>/lora-config.yaml)",
+  )
+  .option(
+    "--lora <spec>",
+    'legacy: LoRA adapters for the flux provider, "path[:scale][,path2[:scale2]]"',
+  )
   .action(
     async (
       project: string,
       opts: {
         cwd?: string;
         fake?: boolean;
-        imageProvider?: "minimax" | "mock" | "none";
+        imageProvider?: "minimax" | "flux" | "mock" | "none";
         bgmDir?: string;
         sfxDir?: string;
         musicProvider?: "auto" | "minimax" | "mock";
         dryRun?: boolean;
+        loraConfig?: string;
+        lora?: string;
       },
     ) => {
       process.exitCode = await runMakeCli({
@@ -140,6 +155,10 @@ program
           ? { musicProvider: opts.musicProvider }
           : {}),
         ...(opts.dryRun !== undefined ? { dryRun: opts.dryRun } : {}),
+        ...(opts.loraConfig !== undefined
+          ? { loraConfigPath: opts.loraConfig }
+          : {}),
+        ...(opts.lora !== undefined ? { lora: opts.lora } : {}),
       });
     },
   );

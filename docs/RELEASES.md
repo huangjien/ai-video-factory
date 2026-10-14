@@ -218,6 +218,213 @@ its cosmetic + operator-UX follow-through.
 - `packages/cli/src/index.ts` — extended BANNER sync comment to list
   every doc surface that must move in lockstep with the BANNER.
 
+## v0.5.2 — image-to-image style anchor + idempotency fix
+
+Builds on v0.5 with **image-to-image style consistency** across a
+video. When `--image-provider flux --reference-style-anchor` is
+set, the orchestrator generates the anchor scene first, then
+conditions every subsequent scene on it via the 4B pipeline's
+`image=` argument (the 9B KV variant is gated; not used here). New
+`--anchor-scene <N>` (default 1) lets the user pick a later scene
+as the anchor. Off by default — current per-scene-independent
+behavior is preserved.
+
+A real bug was caught and fixed in the same release: the first
+version of the orchestrator only set `styleAnchor` in the
+post-generation try-block, so re-runs with
+`--reference-style-anchor` silently dropped the anchor when the
+anchor scene's image already existed on disk. Now the anchor is
+promoted on both fresh and idempotent paths. Guarded by a vitest
+regression test (`packages/make/src/style-anchor.test.ts`).
+
+**User-facing CLI surface:**
+- `video make <p> --image-provider flux --reference-style-anchor` —
+  style anchor mode (off by default).
+- `video make <p> --image-provider flux --reference-style-anchor --anchor-scene <N>` —
+  1-based scene number to use as the anchor.
+- `video make` and `video thumbnail` now accept `--lora-config` and
+  `--lora` (covered under v0.5.1, but threaded through here).
+
+**Source-of-truth updates:**
+- `packages/media-generators/src/image.ts` — `ImageRequest` gains
+  optional `referenceImage?: string` (backwards-compatible: providers
+  that don't support it ignore the field).
+- `packages/media-generators/src/flux-image.ts` — `FluxKleinImageProvider`
+  forwards `referenceImage` into the JSONL job envelope.
+- `packages/media-generators/python/flux_worker.py` — new
+  `referenceImage` field on the request protocol; opens the file via
+  PIL in real mode and validates readability in selftest mode;
+  passes it as `image=` to `Flux2KleinPipeline.__call__`.
+- `packages/make/src/index.ts` — `generateSceneVisuals` is now
+  exported; `referenceStyleAnchor` and `anchorScene` options with
+  idempotency-safe promotion; warning when `anchorScene > scene count`.
+- `packages/cli/src/make-command.ts` — `--reference-style-anchor` and
+  `--anchor-scene <n>` options (with positive-integer parser).
+
+**Tests:**
+- 4 new vitest cases in `style-anchor.test.ts` (fresh run, idempotent
+  regression, anchorScene=3, anchorScene > count warning).
+- 2 new vitest cases in `flux-image.test.ts` (reference-image happy
+  path and missing-file negative path).
+- `pnpm build` clean; 233 / 233 tests green.
+
+**Docs synced in this release:**
+- `docs/v0.5-local-image-generation-plan.md` §T6.2 marked shipped
+  with the real-pipeline evidence (per-pixel RMS diff p95 = 225/255
+  between t2i and i2i at 512×512, 4 steps on the 4B pipeline).
+- `README.md` — new "Style anchor — image-to-image across scenes"
+  subsection under "Local Image Generation".
+- `packages/media-generators/python/README.md` — protocol section
+  documents the `referenceImage` field.
+- `~/.agents/skills/video/SKILL.md` — synced to v0.5.2 surface.
+
+## v0.5.1 — LoRA config surface + base-4B model switch
+
+Builds on v0.5 with the **LoRA conventions** (T5) and the **base-4B
+quality path** (T6.1) from the v0.5 plan. Adapters are now a
+checked-in human-edit file (`lora-config.yaml` at `<projectRoot>` or
+`<repo>`), mirroring the `audio-config.yaml` convention. License
+sidecars are enforced when declared. The legacy `FLUX2_LORA` env /
+`lora:` option still works for quick experiments. `flux_worker.py
+--check-model <repo_id>` reports the `is_distilled` field for any
+checkpoint so users can pick between the 4B (8 steps, distilled)
+and the 4B base (50 steps, guidance honored) variants before
+committing to a multi-GB download.
+
+**User-facing CLI surface:**
+- `video make <p> --lora-config <path>` — explicit lora-config.yaml
+  path (overrides the auto-resolved file).
+- `video make <p> --lora <spec>` — legacy "path[:scale][,…]" string
+  form.
+- `video thumbnail <p> --provider flux` now auto-resolves
+  lora-config.yaml and accepts the same `--lora-config` /
+  `--lora` overrides as `video make`.
+
+**Source-of-truth updates:**
+- `packages/media-generators/src/lora-config.ts` — `lora-config.yaml`
+  loader + `resolveLoraConfigPath` with project-→-root-→-env
+  precedence. Source resolution distinguishes HF repo ids from local
+  files by extension (`.safetensors` / `.bin` / `.pt` / `.gguf` /
+  `.ckpt` → local).
+- `packages/media-generators/src/flux-image.ts` — new
+  `loraConfigPath` provider option, flows as `FLUX2_LORA_CONFIG` env
+  to the worker.
+- `packages/media-generators/python/flux_worker.py` —
+  `parse_lora_config`; existing `load_lora_weights` /
+  `set_adapters` path reused.
+- `packages/make/src/index.ts` — `generateSceneVisuals` resolves
+  lora config (project → root) when the provider is flux.
+- `packages/cli/src/{make,thumbnail}-command.ts` — `--lora-config` and
+  `--lora` options.
+- `packages/media-generators/python/flux_worker.py` — new
+  `--check-model REPO_ID` mode that fetches only `model_index.json`
+  (no safetensors) and reports `is_distilled` + the worker-derived
+  step/guidance defaults.
+
+**Tests:**
+- 8 new vitest cases in `lora-config.test.ts` (empty config, source
+  resolution, scale+license, sidecar enforcement, malformed YAML,
+  precedence ordering for `resolveLoraConfigPath`).
+- 2 new vitest cases in `flux-image.test.ts` (end-to-end against the
+  `--selftest` worker: lora-config forward-through, license
+  sidecar path propagation).
+- 2 new vitest cases in `flux-image.test.ts` (real LoRA download +
+  real 4B pipeline smoke: `fal/flux-2-klein-4B-outpaint-lora`,
+  Apache-2.0; pipeline ready in 27.5 s, lora adapter loaded, 75 s
+  per image post-ready).
+- `pnpm build` clean; all tests green at the time of the v0.5
+  merge (the v0.5 entry is the same merge, since T5 + T6.1 landed
+  there).
+
+**Docs synced in this release:**
+- `docs/v0.5-local-image-generation-plan.md` §T5 and §T6.1 marked
+  shipped with the verification evidence.
+- `README.md` — new "LoRA style adapters" section under "Local
+  Image Generation".
+- `packages/media-generators/python/README.md` — new "LoRA" section
+  documenting the two surfaces (config file + env override).
+- `~/.agents/skills/video/SKILL.md` — synced to the v0.5.1 surface.
+
+## v0.5 — local FLUX.2 Klein 4B image generation
+
+The headline v0.5 release. Adds a fourth image provider
+(`--image-provider flux`) that runs `black-forest-labs/FLUX.2-klein-4B`
+locally on Apple Silicon via a Python sidecar (Hugging Face
+`diffusers` + `pillow` + LoRA). No API key, no quota, no network
+after the one-time ~22 GB weight download. The TS provider keeps
+one warm pipeline across a render via a JSONL stdio protocol;
+the worker applies MPS group offloading so the ~22 GB bf16 stack
+fits in 24 GB unified memory on Apple Silicon.
+
+T1–T4 of the v0.5 plan (`docs/v0.5-local-image-generation-plan.md`)
+are all shipped: Python worker, TS provider, full pipeline
+wiring (make + thumbnail), env config, weights downloaded. The
+design doc was written first and the implementation followed its
+acceptance criteria end-to-end (real-pipeline smoke on this M4:
+load 27.5 s, first image 81 s incl. shader warmup, valid JPEG at
+exact requested dimensions).
+
+**User-facing CLI surface:**
+- `video make <p> --image-provider flux` — scene visuals at
+  1920×1080 from the local model.
+- `video thumbnail <p> --provider flux` — 1280×720 thumbnails.
+- New Python sidecar under `packages/media-generators/python/`:
+  `uv sync` to install deps; `uv run python flux_worker.py
+  --download` to fetch weights; `uv run python flux_worker.py
+  --check` to verify MPS.
+
+**Source-of-truth updates (this is a long list — v0.5 was a real
+milestone):**
+- `packages/media-generators/python/pyproject.toml` — uv-managed
+  Python 3.12 env (lockfile committed): torch, diffusers,
+  transformers, accelerate, peft, safetensors, pillow,
+  huggingface_hub. (torchao added in v0.5.2.)
+- `packages/media-generators/python/flux_worker.py` — JSONL daemon
+  + `--check` / `--download` / `--selftest` / `--check-model`
+  modes; VAE-align dim snapping + Pillow fit; MPS group-offload
+  memory strategy; per-job error isolation.
+- `packages/media-generators/src/image.ts` — `ImageProvider` contract
+  unchanged (since v0.2).
+- `packages/media-generators/src/flux-image.ts` — `FluxKleinImageProvider`
+  implementing `ImageProvider` via worker subprocess; lazy spawn,
+  ready handshake, per-job timeouts, crash-restart on next call,
+  stderr tail surfaced in `ImageGenerationError`, `dispose()` +
+  parent-exit kill.
+- `packages/media-generators/src/{index,minimax-image,minimax-video}.ts` —
+  new provider + new exports.
+- `packages/make/src/index.ts` — `generateSceneVisuals` widens
+  provider union to include `flux`; constructs `FluxKleinImageProvider`
+  with env-resolved lora config.
+- `packages/cli/src/{make,thumbnail}-command.ts` — `flux` added to
+  the `--image-provider` and `--provider` choices; help text
+  updated.
+- `.gitignore` — `models/` (weights) and `.venv/` added.
+- `eslint.config.mjs` — `**/.venv/**` and `**/models/**` added
+  to ignores so the Python venv's bundled JS doesn't get linted.
+
+**Tests:**
+- New `packages/media-generators/src/flux-image.test.ts` — 6
+  initial cases (provider name, empty-prompt guard, JPEG magic
+  bytes, determinism, worker-error propagation, missing-sidecar
+  guard).
+- Real pipeline smoke on this M4: 640×384 at 6 steps, ~22 s warm
+  per image, JPEG validated by PIL.
+- `pnpm build` clean; all tests green at the time of the v0.5
+  merge (per the v0.5 commit message: 227 across media-generators,
+  make, and cli; 40 new tests added in this release on top of the
+  pre-v0.5 baseline of 187).
+
+**Docs synced in this release:**
+- New `docs/v0.5-local-image-generation-plan.md` — the design
+  doc for v0.5. Two human-edit files (`article.md`,
+  `audio-config.yaml`) remain the only files a user must hand-edit.
+  Derived files stay re-derivable and idempotent.
+- `README.md` — new "Local Image Generation" section, the
+  minimal-API table regenerated via `pnpm run docs:commands`.
+- `packages/media-generators/python/README.md` — setup, usage,
+  LoRA, env-knob table, protocol.
+- `~/.agents/skills/video/SKILL.md` — synced to the v0.5 surface.
+
 ## v0.4.3 — default `style.theme` flipped to `paper-light`
 
 The default theme for any storyboard that doesn't declare one (and for
@@ -404,6 +611,9 @@ to their article frontmatter.
 | `v0.3.9` | `feat/v0.3.9-draft-merges-audio-plan`                    | merge commit on main |
 | `v0.3.10` | `feat/v0.3.10-draft-idea-file`                            | merge commit on main |
 | `v0.3.11` | `chore/v0.3.11-drop-legacy-traces`                        | merge commit on main |
+| `v0.5`   | (no separate branch — v0.5 landed on main)             | `a674437` (+ `d438666` lint config) |
+| `v0.5.1` | (no separate branch — T5+T6.1 landed on main)          | `a674437` … (cumulative) |
+| `v0.5.2` | (no separate branch — T6.2 + T6.3 + fix landed on main)| `3da7ff2`, `7d97608`, `638ac88`, `2170a4c` |
 
 All release tags are on `origin` and pushed.
 

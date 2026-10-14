@@ -7,6 +7,17 @@
 **目标：建立一个长期可演进、低成本、Human-in-the-Loop 的 AI
 视频生产系统**
 
+> **Note (2026-10-14):** v0.5 / v0.5.1 / v0.5.2 added a *local* image
+> generation subsystem (FLUX.2 Klein 4B via Python sidecar, with
+> LoRA + style anchor + int8 quantization). That subsystem is
+> specified in **`docs/v0.5-local-image-generation-plan.md`**
+> (T1–T6.2 all shipped) and is the only image-generation surface
+> that lives outside the MiniMax / GLM / Remotion model that this
+> v1.1 doc describes. The two human-edit files (`article.md` and
+> `audio-config.yaml`) and the §65 design principles remain
+> unchanged; v0.5.2 only adds a Python sidecar + the lora-config
+> surface to the same principles.
+
 ---
 
 ## 1. 文档目的

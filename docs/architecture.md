@@ -1,11 +1,13 @@
-# Architecture — AI Video Agent (v0.2 agent era)
+# Architecture — AI Video Agent (v0.5.2: local image gen)
 
 The design source is `docs/ai-video-agent-development-plan-v0.2.md`; the
-traceable task plan is `docs/ai-video-agent-design-and-tasks-v0.2.md`; the
-v0.1 codebase mapping lives in `docs/architecture-v01-map.md`. This
-document describes the system AS BUILT (v0.2-D1 implementation complete).
+traceable task plan is `docs/ai-video-agent-design-and-tasks-v0.2.md`;
+the v0.1 codebase mapping lives in `docs/architecture-v01-map.md`.
+The local image generation subsystem added in v0.5 is specified in
+`docs/v0.5-local-image-generation-plan.md`. This document describes
+the system AS BUILT — v0.5.2 (T1–T6.2 all shipped).
 
-## Principles (plan §29)
+## Principles (plan §29 + v0.5 plan §65)
 
 1. **Scene is the minimal editable unit** — scenes render to their own MP4
    cache (`scenes/`, `scenes-draft/`), keyed by fragment content hash;
@@ -18,6 +20,20 @@ document describes the system AS BUILT (v0.2-D1 implementation complete).
 4. **Human approval is workflow state** — `checkpoints/<stage>.yaml` with
    status approved/rejected/invalidated; preview is gated on an approved
    storyboard; final is gated on QA + review approval.
+5. **AI generates · Human decides · Code renders · Git remembers**
+   (v0.5 plan §65) — the two human-edit files (`article.md` and
+   `audio-config.yaml`) are the only files a user must hand-edit.
+   Image generation follows the same pattern: `lora-config.yaml`
+   (per-project) and `brand.yaml` (workspace-root) are checked-in
+   human-decision files the orchestrator respects; the actual
+   generation runs deterministically off the resolved config.
+6. **Local model sidecar pattern** (v0.5) — when a model is available
+   locally (e.g. FLUX.2 Klein 4B), the TS pipeline spawns a Python
+   worker via `uv run` rather than embedding model code in Node.
+   The Python sidecar speaks a JSONL stdio protocol; the worker
+   keeps one warm pipeline across a render. This is the same
+   pattern used for any model that has a Python-native ecosystem
+   (diffusers / peft / torchao) — never a Node binding.
 
 ## The pipeline
 
@@ -33,7 +49,15 @@ pipeline (draft → tts → assets → preview → mix) and stops at the same
 storyboard gate. Every render writes `qa/render-report.json` +
 `qa/contact-sheet.png`.
 
-## Packages (plan §32 aliases in parentheses)
+For the flux image provider, the scene-visual step (within
+`generateSceneVisuals`) adds a Python-sidecar round trip: TS sends
+JSONL jobs to `flux_worker.py`, which loads `Flux2KleinPipeline`
+once, keeps it warm across the render, and returns JPEG bytes per
+scene. With `--reference-style-anchor` (v0.5.2), scene 1 is
+generated first and scenes 2..N condition on it via the 4B
+pipeline's `image=` argument.
+
+## Packages (plan §32 aliases in parentheses; v0.5.2 additions marked)
 
 | Package | §32 alias | Role |
 |---|---|---|
@@ -43,11 +67,13 @@ storyboard gate. Every render writes `qa/render-report.json` +
 | `@video/video-components` | renderer | 24 scene components in `REGISTRY` incl. `SvgScene` (whiteboard/diagram + camera) and `DoodleScene` (canvas hand-drawn + beat-sync); chrome overlays (`CaptionsOverlay`, `BrandWatermark`, `BrandIntro`); 9 `style.theme` palettes; 5 intro gradients; animation/easing/doodle/excalidraw logic. |
 | `@video/video-renderer` | remotion | scene-isolated Remotion rendering (`renderSceneToVideo`, `concatScenes`), draft mode, studio workspace generator |
 | `@video/media` | assets | CJK caption wrap, ffprobe, duration sync (`syncSceneDurations`), scene-timing reader |
+| `@video/media-generators` *(v0.5)* | images | `ImageProvider` + `VideoProvider` abstractions; `MockImageProvider`, `MiniMaxImageProvider`, `FluxKleinImageProvider` (v0.5; local FLUX.2 Klein 4B via Python sidecar), `MiniMaxVideoProvider`. `lora-config.yaml` loader + `resolveLoraConfigPath`. |
 | `@video/tts`, `@video/audio-assets`, `@video/audio-mix` | audio | Edge TTS (+word timestamps), BGM/SFX providers, ducking/fades mix engine |
 | `@video/qa` | qa | render report (duration/fps/resolution/audio/black-frames/assets/scene-audio-sync/captions/boundaries), contact sheet, export gate |
 | `@video/workflow` | (agent state) | 10-state machine, checkpoints + invalidation, scene version store, run records |
 | `@video/cli` | cli | all verbs (`video`), stage guards, state-machine wiring |
 | `skills/`, `.agents/skills/` | skills | first-party + installed skill packs (`skills/INVENTORY.md`) |
+| `packages/media-generators/python/` *(v0.5)* | — | Python sidecar for local model providers: `flux_worker.py` (JSONL daemon, `Flux2KleinPipeline` via diffusers + pillow + peft), `pyproject.toml` + `uv.lock` (uv-managed Python 3.12 env: torch / diffusers / transformers / peft / pillow / torchao). |
 
 ## Visual renderer families (plan §9)
 

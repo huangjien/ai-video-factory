@@ -513,6 +513,7 @@ video make my-topic                                  # TTS → audio assets → 
 video make my-topic --fake                           # offline: silent placeholder WAVs + no AI images
 video make my-topic --image-provider mock            # force mock images (64×36 placeholders) for offline testing
 video make my-topic --image-provider minimax         # force real AI image generation (needs MINIMAX_API_KEY)
+video make my-topic --image-provider flux             # local FLUX.2 Klein 4B via Python sidecar (no quota; v0.5+)
 video make my-topic --bgm-dir ~/audio/bgm --sfx-dir ~/audio/sfx  # real BGM/SFX from your library
 video make my-topic --dry-run                        # print what would run, do not execute
 ```
@@ -859,6 +860,7 @@ produced by `video make` in one invocation — no need for separate `video audio
 video make <slug>           # real Edge TTS (requires network)
 video make <slug> --fake    # silent placeholder WAVs + no AI images (offline / CI-friendly)
 video make <slug> --image-provider minimax  # force real AI image generation (default when not --fake)
+video make <slug> --image-provider flux     # local FLUX.2 Klein 4B (v0.5+; no quota; needs the one-time weight download)
 ```
 
 Default provider is Edge TTS (free, no API key). It depends on the
@@ -868,8 +870,11 @@ apply.
 `--fake` also disables AI image generation (no `MINIMAX_API_KEY`
 required). Scenes stay as `AnimatedIllustration` (caption + animated
 SVG), so the rendered video is visible end-to-end without any network
-access. Override with `--image-provider mock` (placeholders) or
-`--image-provider minimax` (real AI).
+access. Override with `--image-provider mock` (placeholders),
+`--image-provider minimax` (real AI), or `--image-provider flux`
+(local FLUX.2 Klein 4B, v0.5+, no quota — see
+`docs/v0.5-local-image-generation-plan.md` and the README's
+"Local Image Generation" section for setup).
 
 By default the BGM/SFX tags in `audio-config.yaml` materialize as
 1-second **silent mock placeholders** — the mixing machinery runs, but
@@ -1267,13 +1272,18 @@ video approve storyboard --cwd "projects/$TOPIC"
 video make "$TOPIC"                       # TTS → audio assets → render → mix (real Edge TTS)
 video make "$TOPIC" --fake                # FakeTTSProvider (no network; silent placeholder WAVs + no AI images)
 video make "$TOPIC" --image-provider minimax  # force real AI image generation
+video make "$TOPIC" --image-provider flux     # local FLUX.2 Klein 4B (v0.5+; no quota)
 video make "$TOPIC" --dry-run             # print which steps would run; do not execute
 ```
 
 `--fake` skips both Edge TTS and AI image generation, so the rendered
 video is fully offline — scenes keep their `AnimatedIllustration`
 component (caption + animated SVG). Use `--image-provider mock` to
-exercise the `ImageBackground` path with placeholders.
+exercise the `ImageBackground` path with placeholders, or
+`--image-provider flux` (v0.5+) for a local model that needs no
+quota — see the "Local Image Generation" section in the README or
+`docs/v0.5-local-image-generation-plan.md` for the one-time
+~22 GB weight download and the LoRA / style-anchor knobs.
 
 Outputs:
 

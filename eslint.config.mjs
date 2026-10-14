@@ -21,6 +21,10 @@ export default [
       // Third-party agent skills ship their own code style (T0.2).
       ".agents/**",
       ".claude/**",
+      // Python venvs (uv) and model weights — third-party JS bundles
+      // in the venv shouldn't be linted.
+      "**/.venv/**",
+      "**/models/**",
     ],
   },
   eslint.configs.recommended,

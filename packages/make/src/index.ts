@@ -67,6 +67,14 @@ export interface MakeOptions {
    * Off by default — preserves the current per-scene-independent render.
    */
   referenceStyleAnchor?: boolean;
+  /**
+   * 1-based scene number to use as the style anchor. Default 1 (the
+   * first scene's image conditions scenes 2..N). Use a higher value
+   * for videos where the first scenes are titles and the first real
+   * visual is later (e.g. anchorScene=3 conditions scenes 4..N on
+   * scene 3's image).
+   */
+  anchorScene?: number;
   /** Local music library for real BGM — a directory containing
    * `{tag}.wav` (or any .wav whose name contains the tag). Without it
    * the audio-assets step writes a mock silent placeholder. */
@@ -174,6 +182,7 @@ export async function runMake(
         loraConfigPath: opts.loraConfigPath,
         lora: opts.lora,
         referenceStyleAnchor: opts.referenceStyleAnchor,
+        anchorScene: opts.anchorScene,
       }),
     );
 
@@ -318,7 +327,7 @@ async function syncStoryboardFromArticle(
  * on disk so re-runs are free; the `.prompt.txt` sidecar next to each
  * JPG is auditable.
  */
-async function generateSceneVisuals(
+export async function generateSceneVisuals(
   projectRoot: string,
   article: ParsedArticle,
   opts: {
@@ -326,6 +335,7 @@ async function generateSceneVisuals(
     loraConfigPath?: string | undefined;
     lora?: string | undefined;
     referenceStyleAnchor?: boolean | undefined;
+    anchorScene?: number | undefined;
   },
 ): Promise<string[]> {
   if (opts.provider === "none") return [];
@@ -366,10 +376,16 @@ async function generateSceneVisuals(
   const outputs: string[] = [];
   const generatedImages: string[] = [];
   let styleAnchor: string | undefined;
+  const anchorScene = opts.anchorScene ?? 1;
   // Scenes rendered by their own visual families (svg/canvas/excalidraw
   // components, or already ImageBackground) never consume the generated
   // JPG — skip them so image quota is spent only where it lands on screen.
   const selfRendered = selfRenderedSceneNumbers(projectRoot);
+  if (opts.referenceStyleAnchor && anchorScene > article.scenes.length) {
+    outputs.push(
+      `referenceStyleAnchor: anchorScene=${anchorScene} > scene count (${article.scenes.length}); no scenes will be conditioned`,
+    );
+  }
   for (let i = 0; i < article.scenes.length; i++) {
     const scene = article.scenes[i]!;
     const visual = scene.visual ?? "";
@@ -377,9 +393,16 @@ async function generateSceneVisuals(
     if (selfRendered.has(i + 1)) continue;
 
     const imagePath = path.join(imageDir, `scene_${i + 1}.jpg`);
+    // Promote the anchor on both fresh and idempotent paths — earlier
+    // versions only set styleAnchor after a successful generation, so
+    // re-runs silently dropped the anchor and scenes 2..N lost their
+    // conditioning. Doc §T6.2.
     if (existsSync(imagePath)) {
       generatedImages.push(imagePath);
-      continue; // idempotent
+      if (opts.referenceStyleAnchor && anchorScene === i + 1) {
+        styleAnchor = imagePath;
+      }
+      continue;
     }
 
     let promptForImage = visual;
@@ -414,20 +437,24 @@ async function generateSceneVisuals(
         prompt: promptForImage,
         width: reqWidth,
         height: reqHeight,
-        // Style anchor: after the first successful generation, every
-        // subsequent scene conditions on it (flux-only — other providers
-        // ignore the field per the ImageRequest contract). Doc §T6.2.
-        ...(styleAnchor && opts.referenceStyleAnchor
+      // Style anchor: every later scene conditions on the anchor scene's
+      // image (flux-only; other providers ignore the field per the
+      // ImageRequest contract). Doc §T6.2.
+        ...(styleAnchor
           ? { referenceImage: styleAnchor }
           : {}),
       });
       await writeFile(imagePath, result.bytes);
       outputs.push(`assets/images/scene_${i + 1}.jpg`);
       generatedImages.push(imagePath);
-      if (styleAnchor === undefined && opts.referenceStyleAnchor) {
+      if (
+        opts.referenceStyleAnchor &&
+        anchorScene === i + 1 &&
+        styleAnchor === undefined
+      ) {
         styleAnchor = imagePath;
         outputs.push(
-          `style anchor: scene_${i + 1}.jpg will condition scenes 2..N`,
+          `style anchor: scene_${i + 1}.jpg will condition scenes ${i + 2}..N`,
         );
       }
     } catch (err) {

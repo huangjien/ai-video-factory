@@ -255,12 +255,16 @@ FLUX2_OFFLOAD=full FLUX2_TEXT_ENCODER_QUANT=int8 video make big-project --image-
 
 ### Style anchor — image-to-image across scenes
 
-`--reference-style-anchor` (v0.5.2, doc §T6.2) generates scene 1 first
-and conditions every subsequent scene on it. Off by default — each
-scene looks independent. On, the whole video shares the scene-1 look:
+`--reference-style-anchor` (v0.5.2, doc §T6.2) generates the anchor
+scene first and conditions every subsequent scene on it. Off by
+default — each scene looks independent. On, every scene after the
+anchor shares the anchor's look:
 
 ```bash
 video make my-project --image-provider flux --reference-style-anchor
+# Pick a later scene as the anchor (default 1) when the first scenes
+# are titles and the first real visual is later.
+video make my-project --image-provider flux --reference-style-anchor --anchor-scene 3
 ```
 
 Same path is followed for the LoRA flow above. The reference

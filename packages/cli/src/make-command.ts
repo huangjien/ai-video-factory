@@ -30,6 +30,8 @@ export interface MakeOptions {
   lora?: string;
   /** v0.5.2 (T6.2): flux style-anchor across all scenes from scene 1. */
   referenceStyleAnchor?: boolean;
+  /** 1-based scene to use as the anchor (default 1). */
+  anchorScene?: number;
 }
 
 export async function runMakeCli(opts: MakeOptions): Promise<number> {
@@ -133,6 +135,17 @@ program
     "--reference-style-anchor",
     "v0.5.2 (T6.2): for --image-provider flux, generate scene 1 first and condition every subsequent scene on it (style anchor for visual consistency). Off by default.",
   )
+  .option(
+    "--anchor-scene <n>",
+    "1-based scene number to use as the style anchor (default 1; with --reference-style-anchor). Useful when the first scenes are titles and the first real visual is later.",
+    (v) => {
+      const n = parseInt(v, 10);
+      if (!Number.isInteger(n) || n < 1) {
+        throw new Error(`--anchor-scene must be a positive integer, got: ${v}`);
+      }
+      return n;
+    },
+  )
   .action(
     async (
       project: string,
@@ -147,6 +160,7 @@ program
         loraConfig?: string;
         lora?: string;
         referenceStyleAnchor?: boolean;
+        anchorScene?: number;
       },
     ) => {
       process.exitCode = await runMakeCli({
@@ -168,6 +182,9 @@ program
         ...(opts.lora !== undefined ? { lora: opts.lora } : {}),
         ...(opts.referenceStyleAnchor !== undefined
           ? { referenceStyleAnchor: opts.referenceStyleAnchor }
+          : {}),
+        ...(opts.anchorScene !== undefined
+          ? { anchorScene: opts.anchorScene }
           : {}),
       });
     },

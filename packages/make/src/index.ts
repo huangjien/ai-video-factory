@@ -178,7 +178,7 @@ export async function runMake(
     await runStep(report, "generate-visuals", idempotent, dryRun, () =>
       generateSceneVisuals(opts.projectRoot, article, {
         provider:
-          opts.imageProvider ?? (opts.fake ? "none" : "minimax"),
+          opts.imageProvider ?? (opts.fake ? "none" : "flux"),
         loraConfigPath: opts.loraConfigPath,
         lora: opts.lora,
         referenceStyleAnchor: opts.referenceStyleAnchor,

@@ -425,6 +425,87 @@ milestone):**
   LoRA, env-knob table, protocol.
 - `~/.agents/skills/video/SKILL.md` — synced to the v0.5 surface.
 
+## v0.5.3 — flux is the default; pre-flight health check
+
+Two product calls in one release:
+
+1. **`flux` is now the default image provider** for `video make`.
+   `packages/make/src/index.ts:181` — `provider: opts.imageProvider ??
+   (opts.fake ? "none" : "flux")` (was `minimax`). The `mock` provider
+   was the only other default-flip change this would conflict with;
+   `--fake` keeps its existing "none" path. `video thumbnail` is
+   intentionally untouched — its `mock` default is the right answer
+   for a one-shot operation, and a user who wants flux on
+   thumbnails passes `--provider flux` explicitly. No code change
+   to the `--image-provider` flag — only the default when the
+   flag is omitted.
+
+2. **Pre-flight health check** before the first scene image
+   generation. `FluxKleinImageProvider` runs `uv run python
+   flux_worker.py --check` once per provider instance; on
+   failure, throws `ImageGenerationError` with the actionable
+   fix hint: "Fix: cd packages/media-generators/python && uv sync
+   && uv run python flux_worker.py --check". This catches the
+   three real first-time-user failure modes (uv missing, python
+   env not synced, weights not downloaded) with a clear message
+   instead of a confusing traceback. Bypass with
+   `FLUX2_SKIP_HEALTH_CHECK=1` (for CI / known-good envs).
+   Doc §T7.
+
+Side-effect fix from the same session: `spawnWorker` now
+listens for the `error` event on the spawned `ChildProcess`.
+Without this, an async spawn that fails with ENOENT (e.g. bad
+`pythonBin` with bypass) would hang the ready handshake until
+timeout. The bypass test exercises this path; the fix is two
+lines + a comment.
+
+**User-facing CLI surface:**
+- `video make <p>` — now generates images via the local
+  FLUX.2 Klein 4B by default (no flag required). If the local
+  flux service is not ready, the render fails loud with the fix
+  hint before any other work begins.
+- `FLUX2_SKIP_HEALTH_CHECK=1` env — bypass the pre-flight check
+  (e.g. for CI / a known-good env where uv + python + weights
+  are already verified).
+
+**Source-of-truth updates:**
+- `packages/make/src/index.ts:181` — default image provider
+  flipped from `minimax` to `flux` (gated on `!fake`).
+- `packages/media-generators/src/flux-image.ts`:
+  `FluxKleinImageProvider` now has `runHealthCheck()` called
+  from `preflightAndSpawn()` (replaces the old direct
+  `spawnWorker` call). The check runs once per provider
+  instance (memoized via `healthChecked`); result is a
+  synchronous throw with a clear error message. Bypass via
+  `FLUX2_SKIP_HEALTH_CHECK=1`. Also adds a `proc.once("error",
+  ...)` handler to the async `spawn` so ENOENT doesn't hang
+  the ready handshake.
+- `packages/cli/src/index.ts` — `VERSION = "0.5.3"` (BANNER
+  displays "v0.5").
+
+**Tests:**
+- 3 new vitest cases in `flux-image.test.ts`:
+  - health check exits non-zero → `ImageGenerationError` with
+    the fix hint + "exited with code 1" + the `uv sync` command
+    and `--check` flag
+  - health check fails because `uv` itself is missing (ENOENT)
+    → `ImageGenerationError` with "failed to spawn"
+  - `FLUX2_SKIP_HEALTH_CHECK=1` honored → failure message does
+    NOT contain "flux service not ready" (proves the bypass
+    is engaged, even when the env is otherwise broken)
+- 236 / 236 tests green.
+
+**Docs synced in this release:**
+- `docs/v0.5-local-image-generation-plan.md` §T7 marked
+  shipped.
+- `README.md` — `video make` snippet now implies flux as the
+  default; "Local Image Generation" section notes the default
+  change.
+- `docs/INSTALLATION_AND_USAGE.md` — `video make` snippets
+  updated to flag the flux default + the pre-flight check.
+- `~/.agents/skills/video/SKILL.md` — synced to the v0.5.3
+  surface.
+
 ## v0.4.3 — default `style.theme` flipped to `paper-light`
 
 The default theme for any storyboard that doesn't declare one (and for
@@ -614,6 +695,7 @@ to their article frontmatter.
 | `v0.5`   | (no separate branch — v0.5 landed on main)             | `a674437` (+ `d438666` lint config) |
 | `v0.5.1` | (no separate branch — T5+T6.1 landed on main)          | `a674437` … (cumulative) |
 | `v0.5.2` | (no separate branch — T6.2 + T6.3 + fix landed on main)| `3da7ff2`, `7d97608`, `638ac88`, `2170a4c` |
+| `v0.5.3` | (no separate branch — flux default + pre-flight landed on main) | TBD in commit message |
 
 All release tags are on `origin` and pushed.
 

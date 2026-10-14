@@ -509,11 +509,11 @@ An ambiguous prefix errors listing the candidates; a zero-match error
 lists every available project.
 
 ```bash
-video make my-topic                                  # TTS → audio assets → render → mix
+video make my-topic                                  # TTS → audio assets → render → mix (default image provider: flux, v0.5.3+)
 video make my-topic --fake                           # offline: silent placeholder WAVs + no AI images
 video make my-topic --image-provider mock            # force mock images (64×36 placeholders) for offline testing
 video make my-topic --image-provider minimax         # force real AI image generation (needs MINIMAX_API_KEY)
-video make my-topic --image-provider flux             # local FLUX.2 Klein 4B via Python sidecar (no quota; v0.5+)
+video make my-topic --image-provider flux             # local FLUX.2 Klein 4B via Python sidecar (no quota; default since v0.5.3)
 video make my-topic --bgm-dir ~/audio/bgm --sfx-dir ~/audio/sfx  # real BGM/SFX from your library
 video make my-topic --dry-run                        # print what would run, do not execute
 ```
@@ -857,10 +857,10 @@ produced by `video make` in one invocation — no need for separate `video audio
 `video audio-asset`, or `video mix` calls:
 
 ```bash
-video make <slug>           # real Edge TTS (requires network)
+video make <slug>           # real Edge TTS (requires network); image provider defaults to flux (v0.5.3+) — no API key
 video make <slug> --fake    # silent placeholder WAVs + no AI images (offline / CI-friendly)
-video make <slug> --image-provider minimax  # force real AI image generation (default when not --fake)
-video make <slug> --image-provider flux     # local FLUX.2 Klein 4B (v0.5+; no quota; needs the one-time weight download)
+video make <slug> --image-provider minimax  # force real AI image generation (MiniMax HTTP API; needs MINIMAX_API_KEY)
+video make <slug> --image-provider flux     # explicit (also the default) — local FLUX.2 Klein 4B, no quota, one-time weight download
 ```
 
 Default provider is Edge TTS (free, no API key). It depends on the

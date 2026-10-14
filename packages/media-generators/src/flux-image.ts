@@ -1,4 +1,4 @@
-import { spawn, type ChildProcess } from "node:child_process";
+import { spawn, spawnSync, type ChildProcess } from "node:child_process";
 import { createInterface } from "node:readline";
 import { existsSync } from "node:fs";
 import { mkdtemp, readFile, rm } from "node:fs/promises";
@@ -94,6 +94,7 @@ export class FluxKleinImageProvider implements ImageProvider {
   private readonly opts: FluxKleinImageProviderOptions;
   private readonly stderrTail: string[] = [];
   private workerPromise: Promise<ChildProcess> | null = null;
+  private healthChecked = false;
   private pending = new Map<number, PendingJob>();
   private nextId = 0;
 
@@ -173,8 +174,61 @@ export class FluxKleinImageProvider implements ImageProvider {
   }
 
   private ensureWorker(): Promise<ChildProcess> {
-    this.workerPromise ??= this.spawnWorker();
+    this.workerPromise ??= this.preflightAndSpawn();
     return this.workerPromise;
+  }
+
+  /**
+   * Run `uv run python flux_worker.py --check` once per provider
+   * instance to fail loud with a fix hint if the local flux service
+   * is not ready (weights missing, uv missing, python env broken).
+   * Skipped if FLUX2_SKIP_HEALTH_CHECK=1. Doc §T7.
+   */
+  private runHealthCheck(pythonDir: string): void {
+    if (this.healthChecked) return;
+    this.healthChecked = true;
+    if (process.env["FLUX2_SKIP_HEALTH_CHECK"] === "1") {
+      return;
+    }
+    const bin = this.opts.pythonBin ?? "uv";
+    const args = [
+      ...(this.opts.pythonArgs ?? ["run", "python", "flux_worker.py"]),
+      "--check",
+    ];
+    const res = spawnSync(bin, args, {
+      cwd: pythonDir,
+      encoding: "utf8",
+      timeout: 60_000,
+      env: { ...process.env, HF_HUB_VERBOSITY: "error" },
+    });
+    if (res.error) {
+      throw new ImageGenerationError(
+        `flux service not ready: failed to spawn ${bin} (${res.error.message}). ` +
+          `Install uv (https://github.com/astral-sh/uv) or set FLUX2_SKIP_HEALTH_CHECK=1 to bypass.`,
+        this.name,
+      );
+    }
+    if (res.status !== 0) {
+      const detail = (res.stderr || res.stdout || "").trim().split("\n").pop();
+      throw new ImageGenerationError(
+        `flux service not ready: ${bin} ${args.join(" ")} exited with code ${res.status}. ` +
+          `Fix: cd packages/media-generators/python && uv sync && uv run python flux_worker.py --check. ` +
+          (detail ? `Last line: ${detail.slice(0, 200)}` : ""),
+        this.name,
+      );
+    }
+  }
+
+  private preflightAndSpawn(): Promise<ChildProcess> {
+    const pythonDir = resolvePythonDir();
+    if (!existsSync(path.join(pythonDir, "flux_worker.py"))) {
+      throw new ImageGenerationError(
+        `python sidecar not found at ${pythonDir} — run the setup in packages/media-generators/python/README.md`,
+        this.name,
+      );
+    }
+    this.runHealthCheck(pythonDir);
+    return this.spawnWorker();
   }
 
   private async spawnWorker(): Promise<ChildProcess> {
@@ -229,6 +283,13 @@ export class FluxKleinImageProvider implements ImageProvider {
           ),
         this.opts.readyTimeoutMs ?? READY_TIMEOUT_MS,
       );
+      // Async spawn doesn't raise on ENOENT — it emits 'error' on the
+      // returned ChildProcess. Without this handler, a missing
+      // pythonBin would hang the ready handshake until timeout.
+      proc.once("error", (err) => {
+        clearTimeout(readyTimer);
+        reject(fail(`worker failed to spawn: ${err.message}`));
+      });
       const settleReady = (proc2: ChildProcess) => {
         clearTimeout(readyTimer);
         resolve(proc2);

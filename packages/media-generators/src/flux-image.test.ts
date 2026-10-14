@@ -4,7 +4,7 @@ import { mkdirSync, writeFileSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { describe, expect, it, afterEach } from "vitest";
+import { describe, expect, it, afterEach, beforeAll, afterAll } from "vitest";
 import { FluxKleinImageProvider } from "./flux-image.js";
 import { ImageGenerationError } from "./image.js";
 
@@ -128,6 +128,84 @@ describe("FluxKleinImageProvider — unit (no worker)", () => {
       p.generate({ prompt: "x", width: 64, height: 64 }),
     ).rejects.toBeInstanceOf(ImageGenerationError);
   });
+
+  it(
+    "fails loud with a fix hint when the flux health check exits non-zero",
+    async () => {
+      // `false` (POSIX builtin) exits 1 on every arg, so --check fails
+      // deterministically without depending on a specific path like
+      // /bin/false (not present on macOS).
+      const p = new FluxKleinImageProvider({
+        pythonBin: "false",
+        jobTimeoutMs: 10_000,
+      });
+      const err = await p
+        .generate({ prompt: "x", width: 64, height: 64 })
+        .catch((e: unknown) => e);
+      expect(err).toBeInstanceOf(ImageGenerationError);
+      const message = (err as Error).message;
+      expect(message).toMatch(/flux service not ready/);
+      expect(message).toMatch(/exited with code 1/);
+      expect(message).toMatch(/uv sync/);
+      expect(message).toMatch(/flux_worker\.py --check/);
+    },
+    15_000,
+  );
+
+  it(
+    "fails loud with a fix hint when uv itself is missing",
+    async () => {
+      // Distinct from the above: spawnSync returns res.error (ENOENT)
+      // rather than res.status !== 0. Verifies both arms of the
+      // health check independently.
+      const p = new FluxKleinImageProvider({
+        pythonBin: "this-binary-does-not-exist-anywhere-12345",
+        jobTimeoutMs: 10_000,
+      });
+      const err = await p
+        .generate({ prompt: "x", width: 64, height: 64 })
+        .catch((e: unknown) => e);
+      expect(err).toBeInstanceOf(ImageGenerationError);
+      const message = (err as Error).message;
+      expect(message).toMatch(/flux service not ready/);
+      expect(message).toMatch(/failed to spawn/);
+    },
+    15_000,
+  );
+});
+
+describe("FluxKleinImageProvider — FLUX2_SKIP_HEALTH_CHECK=1 bypass", () => {
+  // Scoped env var via beforeAll/afterAll so this test never races with
+  // the health-check tests above (which assume the env var is unset).
+  let prev: string | undefined;
+  beforeAll(() => {
+    prev = process.env["FLUX2_SKIP_HEALTH_CHECK"];
+    process.env["FLUX2_SKIP_HEALTH_CHECK"] = "1";
+  });
+  afterAll(() => {
+    if (prev === undefined) delete process.env["FLUX2_SKIP_HEALTH_CHECK"];
+    else process.env["FLUX2_SKIP_HEALTH_CHECK"] = prev;
+  });
+
+  it(
+    "bypasses the health check so a broken python env does not fail the pre-flight",
+    async () => {
+      // Contract: with the bypass, the failure must not be the
+      // "flux service not ready" message that the health check
+      // would have produced. Proves the bypass is honored even
+      // when the env is broken.
+      const p = new FluxKleinImageProvider({
+        pythonBin: "this-binary-does-not-exist-anywhere-12345",
+        jobTimeoutMs: 3_000,
+      });
+      const err = await p
+        .generate({ prompt: "x", width: 64, height: 64 })
+        .catch((e: unknown) => e);
+      expect(err).toBeInstanceOf(ImageGenerationError);
+      expect((err as Error).message).not.toMatch(/flux service not ready/);
+    },
+    10_000,
+  );
 });
 
 d("FluxKleinImageProvider — lora-config.yaml end-to-end (selftest)", () => {

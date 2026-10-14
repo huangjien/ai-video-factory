@@ -181,7 +181,7 @@ values fall back to `paper-light` (the v0.4.3 default) at render time and
 See `docs/ARCHITECTURE.md` — maps each design-doc section to the package and
 file that implements it, plus the v0.2+ roadmap.
 
-## Local Image Generation (v0.5.2 — FLUX.2 Klein 4B + style anchor)
+## Local Image Generation (v0.5.3 — flux is the default)
 
 `--image-provider flux` runs **FLUX.2-klein-4B** (Black Forest Labs,
 Apache-2.0) locally on Apple Silicon via a Python sidecar
@@ -196,8 +196,16 @@ uv sync && uv run python flux_worker.py --download
 
 # Then use it anywhere images are generated
 video make my-project --image-provider flux     # scene visuals, 1920×1080
+# v0.5.3+: `video make` defaults to flux when the local service is
+# ready. Pass `--image-provider minimax|mock|none` to override.
 video thumbnail my-project --provider flux      # 1280×720 thumbnails
 ```
+
+Pre-flight: `FluxKleinImageProvider` runs `uv run python
+flux_worker.py --check` once per render. If the local flux service
+isn't ready (uv missing, python env not synced, weights not
+downloaded), the render fails loud with a fix hint instead of a
+traceback. Bypass with `FLUX2_SKIP_HEALTH_CHECK=1` for CI.
 
 LoRA style adapters (startup-time, human-chosen). Two surfaces —
 checked-in config (preferred) or env override:

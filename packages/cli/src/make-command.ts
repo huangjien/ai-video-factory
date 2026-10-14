@@ -28,6 +28,8 @@ export interface MakeOptions {
   loraConfigPath?: string;
   /** Legacy: LoRA adapters as "path[:scale][,path2[:scale2]]". */
   lora?: string;
+  /** v0.5.2 (T6.2): flux style-anchor across all scenes from scene 1. */
+  referenceStyleAnchor?: boolean;
 }
 
 export async function runMakeCli(opts: MakeOptions): Promise<number> {
@@ -127,6 +129,10 @@ program
     "--lora <spec>",
     'legacy: LoRA adapters for the flux provider, "path[:scale][,path2[:scale2]]"',
   )
+  .option(
+    "--reference-style-anchor",
+    "v0.5.2 (T6.2): for --image-provider flux, generate scene 1 first and condition every subsequent scene on it (style anchor for visual consistency). Off by default.",
+  )
   .action(
     async (
       project: string,
@@ -140,6 +146,7 @@ program
         dryRun?: boolean;
         loraConfig?: string;
         lora?: string;
+        referenceStyleAnchor?: boolean;
       },
     ) => {
       process.exitCode = await runMakeCli({
@@ -159,6 +166,9 @@ program
           ? { loraConfigPath: opts.loraConfig }
           : {}),
         ...(opts.lora !== undefined ? { lora: opts.lora } : {}),
+        ...(opts.referenceStyleAnchor !== undefined
+          ? { referenceStyleAnchor: opts.referenceStyleAnchor }
+          : {}),
       });
     },
   );

@@ -61,6 +61,12 @@ export interface MakeOptions {
   loraConfigPath?: string;
   /** Legacy: LoRA adapters as "path[:scale][,path2[:scale2]]". */
   lora?: string;
+  /**
+   * v0.5.2 (T6.2): for the flux provider, generate scene 1 first, then
+   * condition every subsequent scene on that image (style anchor).
+   * Off by default — preserves the current per-scene-independent render.
+   */
+  referenceStyleAnchor?: boolean;
   /** Local music library for real BGM — a directory containing
    * `{tag}.wav` (or any .wav whose name contains the tag). Without it
    * the audio-assets step writes a mock silent placeholder. */
@@ -167,6 +173,7 @@ export async function runMake(
           opts.imageProvider ?? (opts.fake ? "none" : "minimax"),
         loraConfigPath: opts.loraConfigPath,
         lora: opts.lora,
+        referenceStyleAnchor: opts.referenceStyleAnchor,
       }),
     );
 
@@ -318,6 +325,7 @@ async function generateSceneVisuals(
     provider: "minimax" | "flux" | "mock" | "none";
     loraConfigPath?: string | undefined;
     lora?: string | undefined;
+    referenceStyleAnchor?: boolean | undefined;
   },
 ): Promise<string[]> {
   if (opts.provider === "none") return [];
@@ -357,6 +365,7 @@ async function generateSceneVisuals(
 
   const outputs: string[] = [];
   const generatedImages: string[] = [];
+  let styleAnchor: string | undefined;
   // Scenes rendered by their own visual families (svg/canvas/excalidraw
   // components, or already ImageBackground) never consume the generated
   // JPG — skip them so image quota is spent only where it lands on screen.
@@ -405,10 +414,22 @@ async function generateSceneVisuals(
         prompt: promptForImage,
         width: reqWidth,
         height: reqHeight,
+        // Style anchor: after the first successful generation, every
+        // subsequent scene conditions on it (flux-only — other providers
+        // ignore the field per the ImageRequest contract). Doc §T6.2.
+        ...(styleAnchor && opts.referenceStyleAnchor
+          ? { referenceImage: styleAnchor }
+          : {}),
       });
       await writeFile(imagePath, result.bytes);
       outputs.push(`assets/images/scene_${i + 1}.jpg`);
       generatedImages.push(imagePath);
+      if (styleAnchor === undefined && opts.referenceStyleAnchor) {
+        styleAnchor = imagePath;
+        outputs.push(
+          `style anchor: scene_${i + 1}.jpg will condition scenes 2..N`,
+        );
+      }
     } catch (err) {
       // Non-fatal: scene falls back to AnimatedIllustration.
       outputs.push(

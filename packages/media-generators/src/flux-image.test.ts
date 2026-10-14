@@ -229,6 +229,97 @@ d("FluxKleinImageProvider — lora-config.yaml end-to-end (selftest)", () => {
   }, 60_000);
 });
 
+d("referenceImage — image-to-image protocol field (selftest)", () => {
+  const tempDirs: string[] = [];
+  afterEach(() => {
+    for (const d of tempDirs) rmSync(d, { recursive: true, force: true });
+    tempDirs.length = 0;
+  });
+
+  function spawnSelftestSendOne(job: object): Promise<{
+    ready: Record<string, unknown>;
+    response: Record<string, unknown>;
+    stderr: string;
+  }> {
+    return new Promise((resolve, reject) => {
+      const proc = spawn(
+        "uv",
+        ["run", "python", "flux_worker.py", "--selftest", "--out-dir", path.join(tmpdir(), "flux-ref-" + Math.random())],
+        { cwd: pythonDir, stdio: ["pipe", "pipe", "pipe"] },
+      );
+      const stderr: string[] = [];
+      proc.stderr.on("data", (b: Buffer) => stderr.push(b.toString("utf8")));
+      const rl = createInterface({ input: proc.stdout });
+      let ready: Record<string, unknown> | null = null;
+      const timer = setTimeout(() => {
+        proc.kill("SIGKILL");
+        reject(new Error("worker did not respond in 30s"));
+      }, 30_000);
+      rl.on("line", (line) => {
+        let msg: Record<string, unknown>;
+        try {
+          msg = JSON.parse(line);
+        } catch {
+          return;
+        }
+        if (msg["event"] === "ready" && ready === null) {
+          ready = msg;
+          proc.stdin?.write(JSON.stringify(job) + "\n");
+          return;
+        }
+        if (ready !== null && typeof msg["id"] === "number") {
+          clearTimeout(timer);
+          proc.stdin?.end();
+          proc.kill("SIGTERM");
+          resolve({ ready, response: msg, stderr: stderr.join("") });
+        }
+      });
+      proc.on("error", reject);
+    });
+  }
+
+  it("accepts a readable reference image and returns a JPEG", async () => {
+    // Spawn Python to write a valid PNG (no PNG encoder in this test file).
+    const { writeFileSync, mkdirSync } = await import("node:fs");
+    const dir = mkdtempSync(path.join(tmpdir(), "flux-ref-img-"));
+    tempDirs.push(dir);
+    const refPath = path.join(dir, "ref.png");
+    execSync(
+      `uv run --no-sync python -c "from PIL import Image; Image.new('RGB',(32,32),(120,180,90)).save('${refPath}','PNG')"`,
+      { cwd: pythonDir, stdio: "ignore" },
+    );
+    const r = await spawnSelftestSendOne({
+      id: 1,
+      prompt: "reference test",
+      width: 96,
+      height: 64,
+      steps: 4,
+      seed: 7,
+      referenceImage: refPath,
+    });
+    expect(r.response["ok"]).toBe(true);
+    expect(typeof r.response["file"]).toBe("string");
+    const { readFileSync } = await import("node:fs");
+    const buf = readFileSync(r.response["file"] as string);
+    expect(buf[0]).toBe(0xff);
+    expect(buf[1]).toBe(0xd8);
+  }, 90_000);
+
+  it("rejects with ImageGenerationError when the reference file is unreadable", async () => {
+    const r = await spawnSelftestSendOne({
+      id: 2,
+      prompt: "missing ref",
+      width: 64,
+      height: 64,
+      steps: 4,
+      seed: 7,
+      referenceImage: "/definitely/does/not/exist.png",
+    });
+    expect(r.response["ok"]).toBe(false);
+    expect(typeof r.response["error"]).toBe("string");
+  }, 60_000);
+});
+
 d("--check-model — verifies the worker picks the right defaults from a checkpoint's model_index.json (no safetensors)", () => {
   function runCheckModel(repoId: string): Promise<Record<string, unknown>> {
     return new Promise((resolve, reject) => {

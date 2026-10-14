@@ -121,12 +121,20 @@ Full schema, precedence, and license-sidecar rules:
 ## Protocol
 
 One JSON object per line. Requests carry `id / prompt / width / height /
-steps / guidance / seed / format`; responses echo `id` with either
-`{ok: true, file, width, height, seed, ms}` or `{ok: false, error}`.
+steps / guidance / seed / format`; the optional `referenceImage` field
+(v0.5.2, T6.2) is an absolute path to a PNG/JPEG that conditions the
+generation (`Flux2KleinPipeline(image=...)`). Responses echo `id` with
+either `{ok: true, file, width, height, seed, ms}` or `{ok: false, error}`.
 A `{"event": "ready", …}` line is emitted once the pipeline is loaded.
 The worker exits cleanly when stdin closes. Dimensions are snapped up to
 multiples of 16 (FLUX.2 VAE alignment) and the decoded image is fitted
 to the exact requested box with Pillow.
+
+The make pipeline opts into image-to-image via
+`video make --image-provider flux --reference-style-anchor` (off by
+default): scene 1 is generated first, then every subsequent scene
+conditions on that image. Use this for visual consistency across a
+video; leave it off when each scene should look independent.
 
 `--selftest` serves deterministic hash-derived gradient JPEGs through the
 same protocol without loading torch — it is what the TypeScript tests run

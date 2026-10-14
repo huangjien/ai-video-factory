@@ -10,6 +10,14 @@ export interface ImageRequest {
   prompt: string;
   width: number;
   height: number;
+  /**
+   * Optional reference image (image-to-image). v0.5.2 (T6.2). When set,
+   * providers that support it (FluxKleinImageProvider) condition the
+   * generation on this image — e.g. for style-anchored consistency
+   * across a video. The path is absolute; the provider's temp dir is
+   * the natural place. Providers that don't support it ignore the field.
+   */
+  referenceImage?: string;
 }
 
 export interface ImageResult {

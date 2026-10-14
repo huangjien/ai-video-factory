@@ -253,6 +253,23 @@ FLUX2_OFFLOAD=full FLUX2_TEXT_ENCODER_QUANT=int8 video make big-project --image-
   measurable diffusion quality loss. `int4` is blocked on MPS
   (Apple's `mslk` framework isn't distributable). Doc §T6.3.
 
+### Style anchor — image-to-image across scenes
+
+`--reference-style-anchor` (v0.5.2, doc §T6.2) generates scene 1 first
+and conditions every subsequent scene on it. Off by default — each
+scene looks independent. On, the whole video shares the scene-1 look:
+
+```bash
+video make my-project --image-provider flux --reference-style-anchor
+```
+
+Same path is followed for the LoRA flow above. The reference
+conditioning is implemented in the same `Flux2KleinPipeline` (4B
+accepts `image=`; the 9B KV variant is gated and not used). Per-image
+latency rises for the Qwen3 vision encoder pass on the reference;
+realistic for 512–768px references; 1024px references slow things
+materially.
+
 ### Choosing a model
 
 The worker auto-detects `is_distilled` from the checkpoint's

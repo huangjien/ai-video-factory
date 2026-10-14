@@ -143,6 +143,7 @@ export class FluxKleinImageProvider implements ImageProvider {
         guidance: this.opts.guidance,
         seed: this.opts.seed,
         format: "jpg",
+        ...(req.referenceImage ? { referenceImage: req.referenceImage } : {}),
       }) + "\n",
     );
     try {

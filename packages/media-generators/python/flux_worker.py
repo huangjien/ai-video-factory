@@ -16,7 +16,8 @@ Modes:
 
 Protocol (one JSON object per line, responses on stdout, logs on stderr):
   request : {"id":1,"prompt":"...","width":1920,"height":1080,
-             "steps":8,"guidance":4.0,"seed":123,"format":"jpg"}
+             "steps":8,"guidance":4.0,"seed":123,"format":"jpg",
+             "referenceImage":"/abs/path/to/ref.png"  (v0.5.2 T6.2, optional)}
   response: {"id":1,"ok":true,"file":"/tmp/.../00000001_123.jpg",
              "width":1920,"height":1080,"seed":123,"ms":4521.0}
   error   : {"id":1,"ok":false,"error":"..."}
@@ -460,12 +461,26 @@ def run_daemon(out_dir: str, selftest: bool) -> int:
             seed = int(seed)
 
             gen_w, gen_h = snap_up(width), snap_up(height)
+            reference_path = job.get("referenceImage")
+            if reference_path is not None and not isinstance(reference_path, str):
+                raise ValueError("referenceImage must be a string path")
             if selftest:
+                if reference_path:
+                    # Validate the reference file is a readable image
+                    # so the TS provider can't pass garbage undetected.
+                    from PIL import Image as PILImage
+                    with PILImage.open(reference_path) as ref:
+                        ref.load()
                 image = build_selftest_image(prompt, gen_w, gen_h)
             else:
                 import torch
                 from PIL import Image as PILImage
                 from PIL import ImageOps
+
+                ref_image = None
+                if reference_path:
+                    ref_image = PILImage.open(reference_path).convert("RGB")
+                    log(f"job {jid}: conditioning on reference {reference_path} ({ref_image.size})")
 
                 kwargs: dict = {
                     "prompt": prompt,
@@ -476,6 +491,8 @@ def run_daemon(out_dir: str, selftest: bool) -> int:
                         seed
                     ),
                 }
+                if ref_image is not None:
+                    kwargs["image"] = ref_image
                 if not distilled:
                     kwargs["guidance_scale"] = guidance
                 image = pipe(**kwargs).images[0]

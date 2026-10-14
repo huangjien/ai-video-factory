@@ -9,6 +9,7 @@
  * Rule: this file must never own business logic — it formats strings
  * only. Each command stays responsible for its own copy.
  */
+import { VERSION } from "./version.js";
 
 export const MARK_OK = "✓"; // ran / approved
 export const MARK_FAIL = "✗"; // failed / rejected / invalidated
@@ -31,7 +32,7 @@ export function channelHeader(name: string, state: string): string {
 }
 
 export function brandBannerLine(): string {
-  return `A I   V I D E O   F A C T O R Y   ·   v0.4`;
+  return `A I   V I D E O   F A C T O R Y   ·   v${VERSION}`;
 }
 
 /**

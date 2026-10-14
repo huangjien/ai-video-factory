@@ -29,6 +29,7 @@ import { registerRetrospect } from "./retrospect-command.js";
 import { buildBanner } from "./minimal-api.js";
 
 const VERSION = "0.5.3";
+export { VERSION };
 const program = new Command();
 
 program.name("video").description("AI Video Factory — turn a topic into a finished 1080p MP4.").version(VERSION);

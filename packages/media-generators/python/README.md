@@ -38,6 +38,9 @@ video make <project> --image-provider flux          # scene visuals at 1920×108
 video thumbnail <project> --provider flux           # 1280×720 thumbnails
 # Both auto-resolve a lora-config.yaml from <projectRoot> then <repoRoot>
 # (see the LoRA section below). Override with --lora-config <path>.
+
+# Push 9B + LoRA under the 24 GB ceiling on M4:
+FLUX2_OFFLOAD=full FLUX2_TEXT_ENCODER_QUANT=int8 video make big-project --image-provider flux
 ```
 
 Standalone smoke (JSON line on stdin, response line on stdout):
@@ -110,6 +113,7 @@ Full schema, precedence, and license-sidecar rules:
 | `FLUX2_DEVICE` | `auto` | `auto` → MPS when available, else CPU |
 | `FLUX2_DTYPE` | `bfloat16` on MPS | `bfloat16` / `float16` / `float32` |
 | `FLUX2_OFFLOAD` | `auto` | MPS group-offload: `auto` streams the text encoder, `full` also block-offloads the transformer (9B models), `off` disables |
+| `FLUX2_TEXT_ENCODER_QUANT` | `off` | `int8` quantizes the Qwen3 text encoder's `nn.Linear` weights to int8 (40% memory reduction on MPS, no measurable diffusion quality loss). `off` keeps bf16. Use with 9B + LoRA when `FLUX2_OFFLOAD=full` isn't enough. |
 | `FLUX2_LORA` | — | adapter[:scale] entries, comma-separated (legacy one-shot) |
 | `FLUX2_LORA_CONFIG` | — | absolute path to a `lora-config.yaml` (overrides `FLUX2_LORA` when set) |
 | `FLUX2_HF_HOME` | `<repo>/models/hf` (set by the TS provider) | HF cache root |

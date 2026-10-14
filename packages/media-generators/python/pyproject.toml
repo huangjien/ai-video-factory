@@ -12,6 +12,10 @@ dependencies = [
     "safetensors>=0.5",
     "pillow>=11.0",
     "huggingface_hub>=0.34",
+    # Optional int8 weight-only quantization for the text encoder
+    # (FLUX2_TEXT_ENCODER_QUANT=int8). See T6.3 in
+    # docs/v0.5-local-image-generation-plan.md.
+    "torchao>=0.18",
 ]
 
 [dependency-groups]

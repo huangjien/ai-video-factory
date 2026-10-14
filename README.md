@@ -233,8 +233,25 @@ group offloading to fit 24 GB unified memory, snaps dimensions to the
  image prompts still go through the v0.4 LLM expansion; failures are
  non-fatal (scene falls back to `AnimatedIllustration`). Knobs:
  `FLUX2_MODEL / FLUX2_STEPS / FLUX2_GUIDANCE / FLUX2_DEVICE / FLUX2_DTYPE /
- FLUX2_OFFLOAD / FLUX2_LORA / FLUX2_LORA_CONFIG / FLUX2_HF_HOME` — full
- table in `packages/media-generators/python/README.md`.
+ FLUX2_OFFLOAD / FLUX2_LORA / FLUX2_LORA_CONFIG / FLUX2_TEXT_ENCODER_QUANT /
+ FLUX2_HF_HOME` — full table in `packages/media-generators/python/README.md`.
+
+### Memory pressure knobs
+
+For 9B variants or large LoRA stacks that push past the 24 GB M4
+ceiling, two knobs compound:
+
+```bash
+FLUX2_OFFLOAD=full FLUX2_TEXT_ENCODER_QUANT=int8 video make big-project --image-provider flux
+```
+
+- `FLUX2_OFFLOAD=full` block-offloads the transformer so only one
+  block is resident on MPS at a time (text encoder is always
+  offloaded via group-offloading by default).
+- `FLUX2_TEXT_ENCODER_QUANT=int8` shrinks the Qwen3 text encoder
+  ~40% (8.1 GB → 4.9 GB on the 4B encoder, verified) with no
+  measurable diffusion quality loss. `int4` is blocked on MPS
+  (Apple's `mslk` framework isn't distributable). Doc §T6.3.
 
 ### Choosing a model
 

@@ -1,11 +1,11 @@
-# Architecture — AI Video Agent (v0.5.2: local image gen)
+# Architecture — AI Video Agent (v0.5.3: local image gen)
 
 The design source is `docs/ai-video-agent-development-plan-v0.2.md`; the
 traceable task plan is `docs/ai-video-agent-design-and-tasks-v0.2.md`;
 the v0.1 codebase mapping lives in `docs/architecture-v01-map.md`.
 The local image generation subsystem added in v0.5 is specified in
 `docs/v0.5-local-image-generation-plan.md`. This document describes
-the system AS BUILT — v0.5.2 (T1–T6.2 all shipped).
+the system AS BUILT — v0.5.3 (T1–T6.2 all shipped).
 
 ## Principles (plan §29 + v0.5 plan §65)
 
@@ -37,6 +37,33 @@ the system AS BUILT — v0.5.2 (T1–T6.2 all shipped).
 
 ## The pipeline
 
+For end users — the full command flow. Everything between the two 🚪
+gates is also driven by a single `video make` (see below).
+
+```mermaid
+flowchart TD
+    videoNew["video new<br/>(create the project)"] --> videoDraft["video draft<br/>(LLM writes the article)"]
+    videoNew -.->|"optional"| videoResearch["video research"]
+    videoResearch --> videoScript["video script"]
+    videoDraft --> humanFiles["article.md ⭐ + audio-config.yaml ⭐<br/>(the two human-edit files)"]
+    videoScript -.-> videoStoryboard
+    humanFiles --> videoStoryboard["video storyboard"]
+    videoStoryboard --> gate1["video approve storyboard<br/>🚪 human gate 1"]
+    gate1 -->|"approved"| videoMotion["video motion"]
+    videoMotion --> videoAudio["video audio"]
+    videoAudio --> videoExcalidraw["video excalidraw<br/>(diagram assets)"]
+    videoExcalidraw --> videoReview["video review"]
+    videoReview --> videoPreview["video preview<br/>(QA report + contact sheet)"]
+    videoPreview --> gate2["video approve review<br/>🚪 human gate 2"]
+    gate2 -->|"approved"| videoFinal["video final<br/>(final QA gate)"]
+    videoFinal --> finalApproved["FINAL_APPROVED"]
+    finalApproved --> videoYoutube["video youtube"]
+    finalApproved --> videoThumbnail["video thumbnail"]
+    finalApproved --> videoShorts["video shorts"]
+    gate1 -.->|"one command"| videoMake["video make<br/>(tts · assets · preview · mix)"]
+    videoMake -.-> gate2
+```
+
 ```text
 video new → (research → script →) storyboard → approve storyboard (GATE)
       → motion → audio → excalidraw (assets) → review
@@ -57,7 +84,69 @@ scene. With `--reference-style-anchor` (v0.5.2), scene 1 is
 generated first and scenes 2..N condition on it via the 4B
 pipeline's `image=` argument.
 
+The flux round trip, as a diagram (why image generation never
+touches Node):
+
+```mermaid
+flowchart LR
+    cfg["lora-config.yaml ⭐ + brand.yaml ⭐<br/>(human-decision files)"] -->|"resolved config"| provider
+    subgraph nodeSide["Node — @video/media-generators"]
+        provider["FluxKleinImageProvider<br/>(pre-flight health check, v0.5.3)"]
+    end
+    subgraph pySide["Python sidecar — uv run flux_worker.py"]
+        worker["JSONL stdio daemon"]
+        pipe["Flux2KleinPipeline (diffusers)<br/>kept warm across the render"]
+        worker --> pipe
+    end
+    provider -->|"JSONL job per scene"| worker
+    worker -->|"JPEG bytes"| provider
+    provider -.->|"scene 1 result becomes the anchor"| anchor["scene-001.jpg"]
+    anchor -.->|"--reference-style-anchor:<br/>scenes 2…N pass it as image="| pipe
+```
+
 ## Packages (plan §32 aliases in parentheses; v0.5.2 additions marked)
+
+How the packages fit together — decide, then generate, then render,
+then check:
+
+```mermaid
+flowchart TD
+    cli["@video/cli — all verbs · stage guards"]
+    wf["@video/workflow — 10-state machine<br/>checkpoints · scene versions · run records"]
+
+    subgraph decideG["1 · decide — LLM agents write structured specs"]
+        agentPkgs["@video/agent-storyboard · research · script ·<br/>review · youtube (per-role provider routing)"]
+        motionPkg["@video/motion — motion heuristics · planSceneMotion"]
+    end
+
+    vdsl["@video/vdsl — zod validation + deterministic compiler<br/>→ vdsl.yaml + RenderPlan"]
+
+    subgraph assetsG["2 · generate — narration + visuals"]
+        mediaGenPkg["@video/media-generators — images<br/>(mock · minimax · flux)"]
+        audioPkgs["@video/tts · audio-assets · audio-mix<br/>(voice · BGM · SFX · ducking mix)"]
+        mediaPkg["@video/media — CJK captions · ffprobe · duration sync"]
+        pySidecar["packages/media-generators/python<br/>flux_worker.py — spawned via uv run"]
+    end
+
+    subgraph renderG["3 · render"]
+        componentsPkg["@video/video-components — scene components<br/>+ captions/watermark/intro chrome"]
+        rendererPkg["@video/video-renderer (Remotion) —<br/>per-scene MP4 cache → concatScenes"]
+    end
+
+    qaPkg["@video/qa — render report · contact sheet · export gate"]
+
+    cli --> wf
+    wf --> agentPkgs
+    agentPkgs --> vdsl
+    motionPkg --> vdsl
+    vdsl --> renderG
+    assetsG --> renderG
+    mediaGenPkg -.- pySidecar
+    rendererPkg --> qaPkg
+```
+
+The table below is the detailed reference (§32 aliases in
+parentheses; v0.5.2 additions marked):
 
 | Package | §32 alias | Role |
 |---|---|---|
@@ -67,7 +156,7 @@ pipeline's `image=` argument.
 | `@video/video-components` | renderer | 24 scene components in `REGISTRY` incl. `SvgScene` (whiteboard/diagram + camera) and `DoodleScene` (canvas hand-drawn + beat-sync); chrome overlays (`CaptionsOverlay`, `BrandWatermark`, `BrandIntro`); 9 `style.theme` palettes; 5 intro gradients; animation/easing/doodle/excalidraw logic. |
 | `@video/video-renderer` | remotion | scene-isolated Remotion rendering (`renderSceneToVideo`, `concatScenes`), draft mode, studio workspace generator |
 | `@video/media` | assets | CJK caption wrap, ffprobe, duration sync (`syncSceneDurations`), scene-timing reader |
-| `@video/media-generators` *(v0.5)* | images | `ImageProvider` + `VideoProvider` abstractions; `MockImageProvider`, `MiniMaxImageProvider`, `FluxKleinImageProvider` (v0.5; local FLUX.2 Klein 4B via Python sidecar), `MiniMaxVideoProvider`. `lora-config.yaml` loader + `resolveLoraConfigPath`. |
+| `@video/media-generators` *(v0.5)* | images | `ImageProvider` + `VideoProvider` abstractions; `MockImageProvider`, `MiniMaxImageProvider`, `FluxKleinImageProvider` (v0.5; **default since v0.5.3**; local FLUX.2 Klein 4B via Python sidecar), `MiniMaxVideoProvider`. `lora-config.yaml` loader + `resolveLoraConfigPath`. |
 | `@video/tts`, `@video/audio-assets`, `@video/audio-mix` | audio | Edge TTS (+word timestamps), BGM/SFX providers, ducking/fades mix engine |
 | `@video/qa` | qa | render report (duration/fps/resolution/audio/black-frames/assets/scene-audio-sync/captions/boundaries), contact sheet, export gate |
 | `@video/workflow` | (agent state) | 10-state machine, checkpoints + invalidation, scene version store, run records |

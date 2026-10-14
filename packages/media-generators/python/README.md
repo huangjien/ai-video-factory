@@ -47,7 +47,11 @@ Standalone smoke (JSON line on stdin, response line on stdout):
 
 ```bash
 printf '{"id":1,"prompt":"a red cube on snow","width":832,"height":480,"steps":8,"seed":42}\n' \
-  | uv run python flux_worker.py --out-dir /tmp/out
+  | FLUX2_HF_HOME="$(git rev-parse --show-toplevel)/models/hf" uv run python flux_worker.py --out-dir /tmp/out
+
+# Always set FLUX2_HF_HOME for standalone runs. Without it the worker
+# writes to the global ~/.cache/huggingface and silently re-downloads
+# the full ~15 GB of weights as a second copy.
 ```
 
 **Picking a model.** The worker auto-detects `is_distilled` from each

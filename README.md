@@ -181,7 +181,7 @@ values fall back to `paper-light` (the v0.4.3 default) at render time and
 See `docs/ARCHITECTURE.md` — maps each design-doc section to the package and
 file that implements it, plus the v0.2+ roadmap.
 
-## Local Image Generation (v0.5 — FLUX.2 Klein 4B)
+## Local Image Generation (v0.5.2 — FLUX.2 Klein 4B + style anchor)
 
 `--image-provider flux` runs **FLUX.2-klein-4B** (Black Forest Labs,
 Apache-2.0) locally on Apple Silicon via a Python sidecar

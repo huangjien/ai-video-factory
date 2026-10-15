@@ -18,7 +18,7 @@ import {
   runScoredDraft,
   type ParsedArticle,
 } from "@video/draft";
-import { callAudioPlan, type AudioConfig } from "@video/audio-plan";
+import { callAudioPlan, renderAudioConfig, type AudioConfig } from "@video/audio-plan";
 import { resolveProjectDir } from "./project-path.js";
 
 export interface DraftOptions {
@@ -36,6 +36,12 @@ export interface DraftOptions {
   noWeb?: boolean;
   /** Skip the merged audio-plan step (article.md only). */
   noAudioPlan?: boolean;
+  /** v0.7 (video-ask/1): BGM track tag stamped into a freshly written
+   *  audio-config.yaml (`none` → bgm: null). Only the bgm key is
+   *  overridden — voice and SFX stay as the audio-plan LLM chose. An
+   *  existing audio-config.yaml wins (hand edits are a human
+   *  checkpoint): the answer is not applied and a warning is printed. */
+  bgm?: string;
   /** v0.4 (T8): override the storyboard visual theme. Stamped into the
    *  article frontmatter so articleToStoryboardYaml emits
    *  `style.theme: <theme>` instead of the hardcoded "dark-tech". */
@@ -77,7 +83,7 @@ export async function writeAudioConfigIfAbsent(
   article: ParsedArticle,
   provider: Provider,
   fallback: Provider | null,
-  opts: { skip?: boolean } = {},
+  opts: { skip?: boolean; bgm?: string } = {},
 ): Promise<AudioPlanStep> {
   const outPath = path.join(projectRoot, "audio-config.yaml");
   if (opts.skip) {
@@ -92,8 +98,18 @@ export async function writeAudioConfigIfAbsent(
       provider,
       fallback,
     );
-    await writeFile(outPath, yaml, "utf8");
-    return { status: "written", config, tokens: usage };
+    // v0.7 (--bgm): stamp the answered tag over the audio-plan LLM's
+    // pick for the `bgm:` key ONLY (voice and sfx stay LLM-chosen);
+    // `none` → bgm: null. Re-rendered with the package's own
+    // serializer so every other line (incl. fade keys) is untouched.
+    let outYaml = yaml;
+    let outConfig = config;
+    if (opts.bgm !== undefined) {
+      outConfig = { ...config, bgm: opts.bgm === "none" ? null : opts.bgm };
+      outYaml = renderAudioConfig(outConfig);
+    }
+    await writeFile(outPath, outYaml, "utf8");
+    return { status: "written", config: outConfig, tokens: usage };
   } catch (err) {
     return { status: "failed", error: (err as Error).message };
   }
@@ -289,7 +305,10 @@ export async function runDraft(opts: DraftOptions): Promise<number> {
       parsedArticle,
       provider,
       fallback,
-      { skip: opts.noAudioPlan === true },
+      {
+        skip: opts.noAudioPlan === true,
+        ...(opts.bgm !== undefined ? { bgm: opts.bgm } : {}),
+      },
     );
     if (step.status === "written") {
       const sfxCount = Object.keys(step.config.sfx ?? {}).length;
@@ -302,6 +321,13 @@ export async function runDraft(opts: DraftOptions): Promise<number> {
       console.log(
         `  audio-config.yaml exists — kept (hand edits win); re-run \`video audio-plan\` to regenerate`,
       );
+      // v0.7 (--bgm): the answer cannot be applied to a kept config —
+      // say so instead of silently dropping it (spec §6, verbatim).
+      if (opts.bgm !== undefined) {
+        console.error(
+          `bgm answer not applied — audio-config.yaml kept; run 'video audio-plan' to regenerate`,
+        );
+      }
       audioPlanHint = `edit article.md / audio-config.yaml, then \`video make ${opts.topic}\``;
     } else if (step.status === "skipped") {
       audioPlanHint = `edit article.md to refine the narrative, then \`video audio-plan <topic>\``;
@@ -332,6 +358,10 @@ program
     (v) => parseInt(v, 10),
   )
   .option("--audience <text>", "target audience (default: developers)")
+  .option(
+    "--bgm <tag>",
+    "v0.7: BGM track tag stamped into audio-config.yaml — calm | epic | guofeng | liubang-xiaodiao | fanzhuan-march | none (default: audio-plan LLM picks, usually calm)",
+  )
   .option(
     "--from <file>",
     "path to a file containing pre-existing content to revise",
@@ -376,6 +406,7 @@ program
         lang?: "zh-CN" | "en-US";
         duration?: number;
         audience?: string;
+        bgm?: string;
         from?: string;
         file?: string;
         audioPlan?: boolean;
@@ -394,6 +425,7 @@ program
         ...(opts.lang !== undefined ? { lang: opts.lang } : {}),
         ...(opts.duration !== undefined ? { duration: opts.duration } : {}),
         ...(opts.audience !== undefined ? { audience: opts.audience } : {}),
+        ...(opts.bgm !== undefined ? { bgm: opts.bgm } : {}),
         ...(opts.from !== undefined ? { from: opts.from } : {}),
         ...(opts.file !== undefined ? { ideaFile: opts.file } : {}),
         noAudioPlan: opts.audioPlan === false,

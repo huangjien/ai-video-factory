@@ -1,6 +1,14 @@
 import { spawn, spawnSync, type ChildProcess } from "node:child_process";
 import { createInterface } from "node:readline";
-import { existsSync } from "node:fs";
+import {
+  closeSync,
+  existsSync,
+  openSync,
+  readFileSync,
+  unlinkSync,
+  writeFileSync,
+  writeSync,
+} from "node:fs";
 import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -78,6 +86,17 @@ function resolvePythonDir(): string {
   return path.resolve(here, "..", "python");
 }
 
+function isPidAlive(pid: number): boolean {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (err) {
+    // ESRCH = no such process (dead). EPERM = exists but owned by
+    // another user — treat as alive so we never collide with it.
+    return (err as NodeJS.ErrnoException).code === "EPERM";
+  }
+}
+
 function resolveRepoRoot(): string {
   const here = path.dirname(fileURLToPath(import.meta.url));
   return path.resolve(here, "..", "..", "..");
@@ -95,6 +114,8 @@ export class FluxKleinImageProvider implements ImageProvider {
   private readonly stderrTail: string[] = [];
   private workerPromise: Promise<ChildProcess> | null = null;
   private healthChecked = false;
+  private lockHeld = false;
+  private readonly lockPath = path.join(tmpdir(), "flux-klein.lock");
   private pending = new Map<number, PendingJob>();
   private nextId = 0;
 
@@ -171,6 +192,7 @@ export class FluxKleinImageProvider implements ImageProvider {
       () => undefined,
     );
     this.workerPromise = null;
+    this.releaseLock();
   }
 
   private ensureWorker(): Promise<ChildProcess> {
@@ -219,6 +241,63 @@ export class FluxKleinImageProvider implements ImageProvider {
     }
   }
 
+  /**
+   * One flux pipeline at a time on this machine. Two concurrent
+   * ~22 GB bf16 stacks on 24 GB unified memory swap-thrash the whole
+   * laptop (verified 2026-10-14: a parallel thumbnail run collided
+   * with a make run and pushed 9.4 GB into encrypted swap). The lock
+   * is a pid-stamped file in tmpdir (cleared by reboot); a stale lock
+   * whose pid is dead is stolen. Escape hatch: FLUX2_ALLOW_CONCURRENT=1.
+   * Selftest workers never load the model and skip the lock.
+   */
+  private acquireLock(): void {
+    if (this.opts.selftest || process.env["FLUX2_ALLOW_CONCURRENT"] === "1") {
+      return;
+    }
+    try {
+      const fd = openSync(this.lockPath, "wx");
+      writeSync(fd, String(process.pid));
+      closeSync(fd);
+      this.lockHeld = true;
+      return;
+    } catch (err) {
+      if ((err as NodeJS.ErrnoException).code !== "EEXIST") throw err;
+    }
+    let holder = Number.NaN;
+    try {
+      holder = Number.parseInt(readFileSync(this.lockPath, "utf8").trim(), 10);
+    } catch {
+      // unreadable lock — treat as stale and steal below
+    }
+    if (Number.isInteger(holder) && isPidAlive(holder)) {
+      // A live holder blocks — including our own pid: that means another
+      // provider instance in this process is mid-flight. (A same-pid lock
+      // from a dead predecessor that reused the pid is vanishingly rare;
+      // FLUX2_ALLOW_CONCURRENT=1 is the escape.)
+      throw new ImageGenerationError(
+        `another flux generation is running (pid ${holder}) — two full pipelines swap-thrash this machine; ` +
+          `wait for it to finish, or set FLUX2_ALLOW_CONCURRENT=1 to override`,
+        this.name,
+      );
+    }
+    try {
+      writeFileSync(this.lockPath, String(process.pid));
+      this.lockHeld = true;
+    } catch {
+      // lock dir unwritable — proceed unlocked rather than fail the render
+    }
+  }
+
+  private releaseLock(): void {
+    if (!this.lockHeld) return;
+    try {
+      unlinkSync(this.lockPath);
+    } catch {
+      // already gone (reboot/cleanup) — fine
+    }
+    this.lockHeld = false;
+  }
+
   private preflightAndSpawn(): Promise<ChildProcess> {
     const pythonDir = resolvePythonDir();
     if (!existsSync(path.join(pythonDir, "flux_worker.py"))) {
@@ -228,6 +307,7 @@ export class FluxKleinImageProvider implements ImageProvider {
       );
     }
     this.runHealthCheck(pythonDir);
+    this.acquireLock();
     return this.spawnWorker();
   }
 
@@ -350,6 +430,7 @@ export class FluxKleinImageProvider implements ImageProvider {
     });
     process.once("exit", () => {
       proc.kill("SIGTERM");
+      this.releaseLock();
     });
 
     try {

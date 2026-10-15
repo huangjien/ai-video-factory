@@ -41,10 +41,13 @@ Environment knobs (read at startup):
                   (auto: text encoder streams via group offloading;
                    full: also block-offload the transformer; off: none)
   FLUX2_TEXT_ENCODER_QUANT
-                  off | int8 — int8 weight-only quant on the text encoder
-                  (Qwen3-4B: 8.1 GB → 4.9 GB on MPS, no quality loss).
-                  int4 needs Apple's private mslk framework and is not
-                  wired up. Doc §T6.3.
+                  off | int8 (default int8 since v0.5.4) — int8 weight-only
+                  quant on the text encoder (Qwen3-4B: 8.1 GB → 4.9 GB on
+                  MPS, no measurable diffusion quality loss). Two
+                  concurrent unquantized pipelines swap-thrash a 24 GB
+                  machine; the int8 default keeps a single pipeline well
+                  under the ceiling. int4 needs Apple's private mslk
+                  framework and is not wired up. Doc §T6.3.
   FLUX2_LORA      comma-separated adapter[:scale] entries
   FLUX2_LORA_CONFIG  absolute path to a lora-config.yaml (overrides
                     FLUX2_LORA when set; sources resolve relative to the
@@ -374,7 +377,7 @@ def run_daemon(out_dir: str, selftest: bool) -> int:
 
     pipe = None
     distilled = False
-    quant_tag = os.environ.get("FLUX2_TEXT_ENCODER_QUANT", "off")
+    quant_tag = os.environ.get("FLUX2_TEXT_ENCODER_QUANT", "int8")
     if selftest:
         log("selftest mode — torch model NOT loaded, mock images only")
         if lora_entries:

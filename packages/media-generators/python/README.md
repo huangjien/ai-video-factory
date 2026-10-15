@@ -117,7 +117,7 @@ Full schema, precedence, and license-sidecar rules:
 | `FLUX2_DEVICE` | `auto` | `auto` → MPS when available, else CPU |
 | `FLUX2_DTYPE` | `bfloat16` on MPS | `bfloat16` / `float16` / `float32` |
 | `FLUX2_OFFLOAD` | `auto` | MPS group-offload: `auto` streams the text encoder, `full` also block-offloads the transformer (9B models), `off` disables |
-| `FLUX2_TEXT_ENCODER_QUANT` | `off` | `int8` quantizes the Qwen3 text encoder's `nn.Linear` weights to int8 (40% memory reduction on MPS, no measurable diffusion quality loss). `off` keeps bf16. Use with 9B + LoRA when `FLUX2_OFFLOAD=full` isn't enough. |
+| `FLUX2_TEXT_ENCODER_QUANT` | `int8` (since v0.5.4) | `int8` quantizes the Qwen3 text encoder's `nn.Linear` weights (40% memory reduction on MPS, no measurable diffusion quality loss). `off` keeps bf16. The int8 default keeps a single pipeline well under the 24 GB ceiling; two *unquantized* concurrent pipelines swap-thrash the machine — the TS provider also takes a single-flight lock (bypass: `FLUX2_ALLOW_CONCURRENT=1`). |
 | `FLUX2_LORA` | — | adapter[:scale] entries, comma-separated (legacy one-shot) |
 | `FLUX2_LORA_CONFIG` | — | absolute path to a `lora-config.yaml` (overrides `FLUX2_LORA` when set) |
 | `FLUX2_HF_HOME` | `<repo>/models/hf` (set by the TS provider) | HF cache root |

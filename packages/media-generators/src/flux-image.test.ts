@@ -1,10 +1,18 @@
-import { execSync, spawn } from "node:child_process";
+import { execSync, spawn, spawnSync } from "node:child_process";
 import { createInterface } from "node:readline";
 import { mkdirSync, writeFileSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { describe, expect, it, afterEach, beforeAll, afterAll } from "vitest";
+import {
+  describe,
+  expect,
+  it,
+  afterEach,
+  beforeEach,
+  beforeAll,
+  afterAll,
+} from "vitest";
 import { FluxKleinImageProvider } from "./flux-image.js";
 import { ImageGenerationError } from "./image.js";
 
@@ -208,6 +216,122 @@ describe("FluxKleinImageProvider — FLUX2_SKIP_HEALTH_CHECK=1 bypass", () => {
   );
 });
 
+describe("FluxKleinImageProvider — single-flight lock (one flux pipeline at a time)", () => {
+  // The lock lives AFTER the health check in the preflight, so these tests
+  // skip the health check (bad pythonBin would otherwise fail pre-lock)
+  // and clean the lock file around every case — the bypass test above can
+  // leak a live-pid lock into tmpdir.
+  const lockPath = path.join(tmpdir(), "flux-klein.lock");
+  let prevSkip: string | undefined;
+  beforeAll(() => {
+    prevSkip = process.env["FLUX2_SKIP_HEALTH_CHECK"];
+    process.env["FLUX2_SKIP_HEALTH_CHECK"] = "1";
+  });
+  afterAll(() => {
+    if (prevSkip === undefined) delete process.env["FLUX2_SKIP_HEALTH_CHECK"];
+    else process.env["FLUX2_SKIP_HEALTH_CHECK"] = prevSkip;
+  });
+  beforeEach(() => rmSync(lockPath, { force: true }));
+  afterEach(() => rmSync(lockPath, { force: true }));
+
+  function badBinProvider(): FluxKleinImageProvider {
+    return new FluxKleinImageProvider({
+      pythonBin: "this-binary-does-not-exist-anywhere-12345",
+      jobTimeoutMs: 3_000,
+    });
+  }
+
+  it("a second concurrent provider fails with a lock error naming the holder", async () => {
+    const a = badBinProvider();
+    const errA = await a
+      .generate({ prompt: "x", width: 64, height: 64 })
+      .catch((e: unknown) => e);
+    // a passed the lock (first holder), then failed at spawn.
+    expect((errA as Error).message).toMatch(/worker failed to spawn/);
+
+    const b = badBinProvider();
+    const errB = await b
+      .generate({ prompt: "x", width: 64, height: 64 })
+      .catch((e: unknown) => e);
+    expect(errB).toBeInstanceOf(ImageGenerationError);
+    expect((errB as Error).message).toMatch(
+      /another flux generation is running \(pid \d+\)/,
+    );
+
+    a.dispose();
+    const c = badBinProvider();
+    const errC = await c
+      .generate({ prompt: "x", width: 64, height: 64 })
+      .catch((e: unknown) => e);
+    // Lock released → c proceeds past the lock and fails at spawn.
+    expect((errC as Error).message).toMatch(/worker failed to spawn/);
+  }, 15_000);
+
+  it("steals a stale lock whose pid is dead", async () => {
+    const dead = spawnSync("true");
+    expect(dead.pid).toBeTruthy();
+    writeFileSync(lockPath, String(dead.pid));
+    const p = badBinProvider();
+    const err = await p
+      .generate({ prompt: "x", width: 64, height: 64 })
+      .catch((e: unknown) => e);
+    expect((err as Error).message).toMatch(/worker failed to spawn/);
+  }, 10_000);
+
+  it("selftest workers never take the lock", async () => {
+    writeFileSync(lockPath, String(process.pid)); // live holder: us
+    const p = new FluxKleinImageProvider({
+      selftest: true,
+      readyTimeoutMs: 30_000,
+      jobTimeoutMs: 15_000,
+    });
+    try {
+      const r = await p.generate({ prompt: "x", width: 64, height: 64 });
+      expect(r.contentType).toBe("image/jpeg");
+    } finally {
+      p.dispose();
+    }
+  }, 60_000);
+});
+
+describe("FluxKleinImageProvider — FLUX2_ALLOW_CONCURRENT=1 lock bypass", () => {
+  const lockPath = path.join(tmpdir(), "flux-klein.lock");
+  let prevSkip: string | undefined;
+  let prevConc: string | undefined;
+  beforeAll(() => {
+    prevSkip = process.env["FLUX2_SKIP_HEALTH_CHECK"];
+    prevConc = process.env["FLUX2_ALLOW_CONCURRENT"];
+    process.env["FLUX2_SKIP_HEALTH_CHECK"] = "1";
+    process.env["FLUX2_ALLOW_CONCURRENT"] = "1";
+  });
+  afterAll(() => {
+    if (prevSkip === undefined) delete process.env["FLUX2_SKIP_HEALTH_CHECK"];
+    else process.env["FLUX2_SKIP_HEALTH_CHECK"] = prevSkip;
+    if (prevConc === undefined) delete process.env["FLUX2_ALLOW_CONCURRENT"];
+    else process.env["FLUX2_ALLOW_CONCURRENT"] = prevConc;
+  });
+  beforeEach(() => rmSync(lockPath, { force: true }));
+  afterEach(() => rmSync(lockPath, { force: true }));
+
+  it("two providers both proceed past the lock when the override is set", async () => {
+    const a = new FluxKleinImageProvider({
+      pythonBin: "this-binary-does-not-exist-anywhere-12345",
+      jobTimeoutMs: 3_000,
+    });
+    const b = new FluxKleinImageProvider({
+      pythonBin: "this-binary-does-not-exist-anywhere-12345",
+      jobTimeoutMs: 3_000,
+    });
+    const [errA, errB] = await Promise.all([
+      a.generate({ prompt: "x", width: 64, height: 64 }).catch((e) => e),
+      b.generate({ prompt: "x", width: 64, height: 64 }).catch((e) => e),
+    ]);
+    // Both reached the spawn (no lock error on either).
+    expect((errA as Error).message).toMatch(/worker failed to spawn/);
+    expect((errB as Error).message).toMatch(/worker failed to spawn/);
+  }, 15_000);
+});
+
 d("FluxKleinImageProvider — lora-config.yaml end-to-end (selftest)", () => {
   const tempDirs: string[] = [];
   afterEach(() => {
@@ -279,6 +403,9 @@ d("FluxKleinImageProvider — lora-config.yaml end-to-end (selftest)", () => {
       expect.stringMatching(/loras[\\/]ink-style\.safetensors:0\.7/),
       "org/some-lora:1",
     ]);
+    // v0.5.4: int8 text-encoder quant is the default (memory safety on
+    // 24 GB machines). The ready event surfaces the effective mode.
+    expect(ready["text_encoder_quant"]).toBe("int8");
   }, 60_000);
 
   it("reads scale and licence sidecar and propagates the resolved absolute path", async () => {

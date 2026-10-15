@@ -27,7 +27,17 @@ const DRAFT_JSON = {
 let server: Server;
 let baseUrl: string;
 let projectsRoot: string;
-let savedEnv: { key: string | undefined; base: string | undefined };
+let savedEnv: Record<string, string | undefined> = {};
+
+/** Env keys the v0.7 agent-ask gate keys on. This suite pins "today's
+ * path" (pre-ask behavior), but the vitest process itself runs inside
+ * zcode — save/strip them like agent-ask.test.ts does. */
+const AGENT_ENV_KEYS = [
+  "ZCODE_APP_VERSION",
+  "CLAUDECODE",
+  "VIDEO_ASK_ENV",
+  "VIDEO_ASK",
+] as const;
 
 beforeAll(async () => {
   server = createServer((_req, res) => {
@@ -43,9 +53,13 @@ beforeAll(async () => {
   await new Promise<void>((r) => server.listen(0, "127.0.0.1", () => r()));
   baseUrl = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
   savedEnv = {
-    key: process.env["GLM_API_KEY"],
-    base: process.env["GLM_BASE_URL"],
+    GLM_API_KEY: process.env["GLM_API_KEY"],
+    GLM_BASE_URL: process.env["GLM_BASE_URL"],
   };
+  for (const k of AGENT_ENV_KEYS) {
+    savedEnv[k] = process.env[k];
+    delete process.env[k];
+  }
   process.env["GLM_API_KEY"] = "test-key";
   process.env["GLM_BASE_URL"] = baseUrl;
 

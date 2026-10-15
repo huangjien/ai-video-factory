@@ -15,6 +15,52 @@ video research → script → storyboard → audio (TTS) → audio-asset (BGM+SF
        video review                          → Content/Visual/Technical review YAMLs
 ```
 
+## v0.7 — Agent-Aware Draft Questions (video-ask/1)
+
+`video draft` no longer burns a full scored draft on silent defaults
+when it runs inside an agent harness. When the CLI detects an agent
+in the environment and one or more style knobs were left unspecified,
+it prints a machine-readable question set to stdout
+(`protocol: "video-ask/1"`) and exits 2 — before any provider is
+constructed or any file written, so nothing is spent. The presenting
+agent relays the questions through its native question UI and re-runs
+the command with explicit flags.
+
+### What changed
+
+- **Auto-detect agent harnesses, emit a machine-readable question
+  set** (`video draft`): zcode (`ZCODE_APP_VERSION`) and Claude Code
+  (`CLAUDECODE`) are detected out of the box; any other harness can
+  be declared via `VIDEO_ASK_ENV=VAR,VAR=VALUE,…` (user-extendable
+  comma list, no code change). Exit codes: `0` ran · `1` failure
+  (unchanged) · `2` questions pending — run not started, nothing
+  spent. On exit 2 stdout is pure JSON (jq-parseable); human-readable
+  hints go to stderr.
+- **Explicit flags always win — fully-specified runs are
+  byte-identical**: questions are only ever emitted for knobs the
+  caller did not pass, so replay scripts and agent-launched sub-runs
+  never see a surprise exit 2. Unattended sub-runs pass `--no-ask`;
+  headless cron/launchd shells set `VIDEO_ASK=off`.
+- **New `--bgm <tag|none>` flag on `video draft`**: stamps the
+  answered tag into a **fresh** `audio-config.yaml` as `bgm: <tag>`
+  (`none` → `bgm: null`), overriding the audio-plan LLM's pick for
+  the `bgm:` key only — voice and SFX stay LLM-chosen. An existing
+  `audio-config.yaml` wins with a warning (hand edits are never
+  overwritten); `--no-audio-plan` drops the `bgm` question entirely.
+- **`--ask` / `--no-ask` overrides + `VIDEO_ASK=off` / `force`
+  env**: `--no-ask` and `VIDEO_ASK=off` suppress the protocol;
+  `--ask` and `VIDEO_ASK=force` force questions even with no harness
+  detected; the default is auto (ask iff agent detected AND ≥1 knob
+  unspecified). Unknown `VIDEO_ASK` values warn on stderr and behave
+  as auto.
+- **Question set = `lang` / `duration` / `image_style` / `style` /
+  `bgm`**, each with a default and a recommended value that the
+  presenting agent highlights (and may replace with a topic-aware
+  pick, stating the reason). Only unspecified knobs are asked;
+  `audience`, `model`, and the review-gate knobs stay flag-only.
+
+Full contract: `docs/v0.7-agent-ask-protocol-plan.md`.
+
 ## v0.6.0 — Laya decision layer (advisory, default off)
 
 **Date:** 2026-10-14 · **Design:** `docs/v0.6-laya-decision-integration-plan.md`
@@ -198,8 +244,8 @@ frontmatter `theme: <name>` field carries through unchanged. New docs:
   zh-CN mirror.
 
 - Test additions (`packages/video-components/src/theme-registry.test.ts`):
-3 new cases — assert the 4 v0.4.2 names exist, `resolveTheme` finds
-them, and `terminal-vintage` uses JetBrains Mono everywhere.
+  3 new cases — assert the 4 v0.4.2 names exist, `resolveTheme` finds
+  them, and `terminal-vintage` uses JetBrains Mono everywhere.
 
 ## v0.4.4 — cosmetic UX redesign (creator / playback feel)
 
@@ -212,10 +258,11 @@ or the acceptance gate.** Storyboards keep their current theme unless
 its cosmetic + operator-UX follow-through.
 
 **User-facing CLI surface:**
+
 - New `packages/cli/src/ui.ts` — shared glyph vocabulary (`✓ ✗ ! ▷ ⏭ ● ○`)
-  + `brandBannerLine()` + `channelHeader(name, state)` helpers.
+  - `brandBannerLine()` + `channelHeader(name, state)` helpers.
 - 8 commands now open with `brandBannerLine()` + `channelHeader(project,
-  "stage · verdict · provider")`: `status`, `make`, `new`, `qa`, `youtube`,
+"stage · verdict · provider")`: `status`, `make`, `new`, `qa`, `youtube`,
   `retrospect`, `review`, `validate`. Inline `\u2713`/`\u2717` glyphs
   replaced with `MARK_OK`/`MARK_FAIL`.
 - New `video theme` verb (`packages/cli/src/theme-command.ts` + tests):
@@ -233,6 +280,7 @@ its cosmetic + operator-UX follow-through.
   doc that must move in lockstep with the BANNER.
 
 **Video output surface:**
+
 - New `ai-red` palette (`#0F0F0F` player dark / `#FF0000` signature red /
   `#FFFFFF` text) registered as `style.theme: ai-red` (renamed from
   an exploratory `youtube-red` to avoid the trademark).
@@ -244,6 +292,7 @@ its cosmetic + operator-UX follow-through.
   depend on font fallback.
 
 **Source-of-truth updates:**
+
 - `packages/video-components/src/theme.ts` — `aiRedTheme` exported and
   registered in `THEMES` (now 9 entries).
 - `packages/video-components/src/components/BrandOverlay.tsx` —
@@ -252,7 +301,7 @@ its cosmetic + operator-UX follow-through.
   inline SVG.
 - `packages/cli/src/ui.ts` (new) — shared glyph + header helpers.
 - `packages/cli/src/{index,status,make,new,qa,youtube,retrospect,review,
-  validate,theme}-command.ts` — banner + ui markers.
+validate,theme}-command.ts` — banner + ui markers.
 - `packages/cli/src/{theme,validate}-command.test.ts` — new + extended
   test coverage (16 new test cases: 13 for `theme`, 3 for the validate
   hint).
@@ -262,11 +311,13 @@ its cosmetic + operator-UX follow-through.
   checks still catch accidental removals.
 
 **Tests:**
+
 - `pnpm test` → **92 / 92 files, 653 / 653 tests pass**.
 - `npm run acceptance` → **11 / 11 §62.4 checks pass** (render exists,
   no external AI providers, state FINAL_APPROVED, status exits 0).
 
 **Docs synced in this release:**
+
 - `README.md` — `video theme` row added to the minimal-API table; new
   "Theme presets" subsection with 9-row table; cross-reference to
   `video theme` for inspection.
@@ -300,6 +351,7 @@ promoted on both fresh and idempotent paths. Guarded by a vitest
 regression test (`packages/make/src/style-anchor.test.ts`).
 
 **User-facing CLI surface:**
+
 - `video make <p> --image-provider flux --reference-style-anchor` —
   style anchor mode (off by default).
 - `video make <p> --image-provider flux --reference-style-anchor --anchor-scene <N>` —
@@ -308,6 +360,7 @@ regression test (`packages/make/src/style-anchor.test.ts`).
   `--lora` (covered under v0.5.1, but threaded through here).
 
 **Source-of-truth updates:**
+
 - `packages/media-generators/src/image.ts` — `ImageRequest` gains
   optional `referenceImage?: string` (backwards-compatible: providers
   that don't support it ignore the field).
@@ -324,6 +377,7 @@ regression test (`packages/make/src/style-anchor.test.ts`).
   `--anchor-scene <n>` options (with positive-integer parser).
 
 **Tests:**
+
 - 4 new vitest cases in `style-anchor.test.ts` (fresh run, idempotent
   regression, anchorScene=3, anchorScene > count warning).
 - 2 new vitest cases in `flux-image.test.ts` (reference-image happy
@@ -331,6 +385,7 @@ regression test (`packages/make/src/style-anchor.test.ts`).
 - `pnpm build` clean; 233 / 233 tests green.
 
 **Docs synced in this release:**
+
 - `docs/v0.5-local-image-generation-plan.md` §T6.2 marked shipped
   with the real-pipeline evidence (per-pixel RMS diff p95 = 225/255
   between t2i and i2i at 512×512, 4 steps on the 4B pipeline).
@@ -354,6 +409,7 @@ and the 4B base (50 steps, guidance honored) variants before
 committing to a multi-GB download.
 
 **User-facing CLI surface:**
+
 - `video make <p> --lora-config <path>` — explicit lora-config.yaml
   path (overrides the auto-resolved file).
 - `video make <p> --lora <spec>` — legacy "path[:scale][,…]" string
@@ -363,6 +419,7 @@ committing to a multi-GB download.
   `--lora` overrides as `video make`.
 
 **Source-of-truth updates:**
+
 - `packages/media-generators/src/lora-config.ts` — `lora-config.yaml`
   loader + `resolveLoraConfigPath` with project-→-root-→-env
   precedence. Source resolution distinguishes HF repo ids from local
@@ -384,6 +441,7 @@ committing to a multi-GB download.
   step/guidance defaults.
 
 **Tests:**
+
 - 8 new vitest cases in `lora-config.test.ts` (empty config, source
   resolution, scale+license, sidecar enforcement, malformed YAML,
   precedence ordering for `resolveLoraConfigPath`).
@@ -399,6 +457,7 @@ committing to a multi-GB download.
   there).
 
 **Docs synced in this release:**
+
 - `docs/v0.5-local-image-generation-plan.md` §T5 and §T6.1 marked
   shipped with the verification evidence.
 - `README.md` — new "LoRA style adapters" section under "Local
@@ -427,24 +486,26 @@ load 27.5 s, first image 81 s incl. shader warmup, valid JPEG at
 exact requested dimensions).
 
 **User-facing CLI surface:**
+
 - `video make <p> --image-provider flux` — scene visuals at
   1920×1080 from the local model.
 - `video thumbnail <p> --provider flux` — 1280×720 thumbnails.
 - New Python sidecar under `packages/media-generators/python/`:
   `uv sync` to install deps; `uv run python flux_worker.py
-  --download` to fetch weights; `uv run python flux_worker.py
-  --check` to verify MPS.
+--download` to fetch weights; `uv run python flux_worker.py
+--check` to verify MPS.
 
 **Source-of-truth updates (this is a long list — v0.5 was a real
 milestone):**
+
 - `packages/media-generators/python/pyproject.toml` — uv-managed
   Python 3.12 env (lockfile committed): torch, diffusers,
   transformers, accelerate, peft, safetensors, pillow,
   huggingface_hub. (torchao added in v0.5.2.)
 - `packages/media-generators/python/flux_worker.py` — JSONL daemon
-  + `--check` / `--download` / `--selftest` / `--check-model`
-  modes; VAE-align dim snapping + Pillow fit; MPS group-offload
-  memory strategy; per-job error isolation.
+  - `--check` / `--download` / `--selftest` / `--check-model`
+    modes; VAE-align dim snapping + Pillow fit; MPS group-offload
+    memory strategy; per-job error isolation.
 - `packages/media-generators/src/image.ts` — `ImageProvider` contract
   unchanged (since v0.2).
 - `packages/media-generators/src/flux-image.ts` — `FluxKleinImageProvider`
@@ -465,6 +526,7 @@ milestone):**
   to ignores so the Python venv's bundled JS doesn't get linted.
 
 **Tests:**
+
 - New `packages/media-generators/src/flux-image.test.ts` — 6
   initial cases (provider name, empty-prompt guard, JPEG magic
   bytes, determinism, worker-error propagation, missing-sidecar
@@ -477,6 +539,7 @@ milestone):**
   pre-v0.5 baseline of 187).
 
 **Docs synced in this release:**
+
 - New `docs/v0.5-local-image-generation-plan.md` — the design
   doc for v0.5. Two human-edit files (`article.md`,
   `audio-config.yaml`) remain the only files a user must hand-edit.
@@ -493,7 +556,7 @@ Two product calls in one release:
 
 1. **`flux` is now the default image provider** for `video make`.
    `packages/make/src/index.ts:181` — `provider: opts.imageProvider ??
-   (opts.fake ? "none" : "flux")` (was `minimax`). The `mock` provider
+(opts.fake ? "none" : "flux")` (was `minimax`). The `mock` provider
    was the only other default-flip change this would conflict with;
    `--fake` keeps its existing "none" path. `video thumbnail` is
    intentionally untouched — its `mock` default is the right answer
@@ -504,7 +567,7 @@ Two product calls in one release:
 
 2. **Pre-flight health check** before the first scene image
    generation. `FluxKleinImageProvider` runs `uv run python
-   flux_worker.py --check` once per provider instance; on
+flux_worker.py --check` once per provider instance; on
    failure, throws `ImageGenerationError` with the actionable
    fix hint: "Fix: cd packages/media-generators/python && uv sync
    && uv run python flux_worker.py --check". This catches the
@@ -522,6 +585,7 @@ timeout. The bypass test exercises this path; the fix is two
 lines + a comment.
 
 **User-facing CLI surface:**
+
 - `video make <p>` — now generates images via the local
   FLUX.2 Klein 4B by default (no flag required). If the local
   flux service is not ready, the render fails loud with the fix
@@ -531,6 +595,7 @@ lines + a comment.
   are already verified).
 
 **Source-of-truth updates:**
+
 - `packages/make/src/index.ts:181` — default image provider
   flipped from `minimax` to `flux` (gated on `!fake`).
 - `packages/media-generators/src/flux-image.ts`:
@@ -540,12 +605,13 @@ lines + a comment.
   instance (memoized via `healthChecked`); result is a
   synchronous throw with a clear error message. Bypass via
   `FLUX2_SKIP_HEALTH_CHECK=1`. Also adds a `proc.once("error",
-  ...)` handler to the async `spawn` so ENOENT doesn't hang
+...)` handler to the async `spawn` so ENOENT doesn't hang
   the ready handshake.
 - `packages/cli/src/index.ts` — `VERSION = "0.5.3"` (BANNER
   displays "v0.5").
 
 **Tests:**
+
 - 3 new vitest cases in `flux-image.test.ts`:
   - health check exits non-zero → `ImageGenerationError` with
     the fix hint + "exited with code 1" + the `uv sync` command
@@ -558,6 +624,7 @@ lines + a comment.
 - 236 / 236 tests green.
 
 **Docs synced in this release:**
+
 - `docs/v0.5-local-image-generation-plan.md` §T7 marked
   shipped.
 - `README.md` — `video make` snippet now implies flux as the
@@ -584,6 +651,7 @@ disagreement. Tech-focused users who prefer `dark-tech` add one line
 to their article frontmatter.
 
 **Source-of-truth defaults updated:**
+
 - `packages/video-components/src/theme.ts` — `resolveTheme()` returns
   `paperLightTheme` for both undefined input and unknown names.
 - `packages/video-components/src/components/Background.tsx` — default
@@ -599,6 +667,7 @@ to their article frontmatter.
   `video storyboard` reflects the new default.
 
 **Tests:**
+
 - `theme-registry.test.ts` — `resolveTheme(undefined)`, `null`, `""`,
   and a typo all now resolve to `paperLightTheme`. Explicit
   `resolveTheme("dark-tech")` still returns `darkTechTheme`. Renamed
@@ -609,6 +678,7 @@ to their article frontmatter.
   supply an explicit theme name (the bulk of the suite) are unchanged.
 
 **Docs:**
+
 - `docs/INSTALLATION_AND_USAGE.md` §"Available themes (v0.4.3)" —
   intro + 8-row table now lead with `paper-light` as the new default.
 - `docs/INSTALLATION_AND_USAGE.zh-CN.md` §"可用主题（v0.4.3）" —
@@ -741,24 +811,25 @@ to their article frontmatter.
 
 ## How the tags map to branches
 
-| Tag      | Branch(es)                                             | Merged in commit(s)  |
-| -------- | ------------------------------------------------------ | -------------------- |
-| `v0.2`   | `feat/video-agent-v01`                                 | merge commit on main |
-| `v0.3`   | `feat/v0.3-advanced-media` + `feat/v0.3-minimax-video` | merge commit on main |
-| `v0.3.3` | `feat/v0.3-audio-assets`                               | merge commit on main |
-| `v0.3.4` | `feat/v0.3-audio-mix`                                  | merge commit on main |
-| `v0.3.5` | `feat/v0.3-sfx-cues-and-fade`                          | merge commit on main |
-| `v0.3.6` | `fix/v0.3.6-fake-image-default`                         | merge commit on main |
-| `v0.3.7` | `feat/v0.3.7-make-audio-dirs`                            | merge commit on main |
-| `v0.3.8` | `feat/v0.3.8-project-arg-resolution`                     | combined commit tagged `v0.3.9` |
-| `v0.3.9` | `feat/v0.3.9-draft-merges-audio-plan`                    | merge commit on main |
-| `v0.3.10` | `feat/v0.3.10-draft-idea-file`                            | merge commit on main |
-| `v0.3.11` | `chore/v0.3.11-drop-legacy-traces`                        | merge commit on main |
-| `v0.5`   | (no separate branch — v0.5 landed on main)             | `a674437` (+ `d438666` lint config) |
-| `v0.5.1` | (no separate branch — T5+T6.1 landed on main)          | `a674437` … (cumulative) |
-| `v0.5.2` | (no separate branch — T6.2 + T6.3 + fix landed on main)| `3da7ff2`, `7d97608`, `638ac88`, `2170a4c` |
-| `v0.5.3` | (no separate branch — flux default + pre-flight landed on main) | TBD in commit message |
-| `v0.6.0` | (no separate branch — laya advisory layer landed on main) | TBD in commit message |
+| Tag       | Branch(es)                                                      | Merged in commit(s)                        |
+| --------- | --------------------------------------------------------------- | ------------------------------------------ |
+| `v0.2`    | `feat/video-agent-v01`                                          | merge commit on main                       |
+| `v0.3`    | `feat/v0.3-advanced-media` + `feat/v0.3-minimax-video`          | merge commit on main                       |
+| `v0.3.3`  | `feat/v0.3-audio-assets`                                        | merge commit on main                       |
+| `v0.3.4`  | `feat/v0.3-audio-mix`                                           | merge commit on main                       |
+| `v0.3.5`  | `feat/v0.3-sfx-cues-and-fade`                                   | merge commit on main                       |
+| `v0.3.6`  | `fix/v0.3.6-fake-image-default`                                 | merge commit on main                       |
+| `v0.3.7`  | `feat/v0.3.7-make-audio-dirs`                                   | merge commit on main                       |
+| `v0.3.8`  | `feat/v0.3.8-project-arg-resolution`                            | combined commit tagged `v0.3.9`            |
+| `v0.3.9`  | `feat/v0.3.9-draft-merges-audio-plan`                           | merge commit on main                       |
+| `v0.3.10` | `feat/v0.3.10-draft-idea-file`                                  | merge commit on main                       |
+| `v0.3.11` | `chore/v0.3.11-drop-legacy-traces`                              | merge commit on main                       |
+| `v0.5`    | (no separate branch — v0.5 landed on main)                      | `a674437` (+ `d438666` lint config)        |
+| `v0.5.1`  | (no separate branch — T5+T6.1 landed on main)                   | `a674437` … (cumulative)                   |
+| `v0.5.2`  | (no separate branch — T6.2 + T6.3 + fix landed on main)         | `3da7ff2`, `7d97608`, `638ac88`, `2170a4c` |
+| `v0.5.3`  | (no separate branch — flux default + pre-flight landed on main) | TBD in commit message                      |
+| `v0.6.0`  | (no separate branch — laya advisory layer landed on main)       | `c3d6691`                                  |
+| `v0.7`    | `v0.7-agent-ask`                                                | merge commit on main                       |
 
 All release tags are on `origin` and pushed.
 

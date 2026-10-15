@@ -300,11 +300,11 @@ zod 严格模式——未知字段一律拒绝；校验错误带 YAML 行号）�
 时长单位是秒，编译器按 `Math.round(duration × fps)` 转换为帧。
 
 ```yaml
-schema_version: "0.2"   # 省略时默认 "0.2"；"0.1" 仍然有效
+schema_version: "0.2" # 省略时默认 "0.2"；"0.1" 仍然有效
 
 project:
   id: demo
-  language: zh-CN        # zh-CN | en-US
+  language: zh-CN # zh-CN | en-US
   fps: 30
   width: 1920
   height: 1080
@@ -312,10 +312,10 @@ project:
 style:
   theme: dark-tech
 
-assets:                  # 0.2：可选的项目级素材清单
+assets: # 0.2：可选的项目级素材清单
   - id: asset-logo
-    type: svg            # svg|png|jpg|webp|excalidraw|canvas|audio|video|font
-    source: generated    # generated|user|external
+    type: svg # svg|png|jpg|webp|excalidraw|canvas|audio|video|font
+    source: generated # generated|user|external
     path: assets/svg/logo.svg
 
 scenes:
@@ -323,26 +323,26 @@ scenes:
     duration: 8
     narration:
       text: "AI Agent 为什么需要 Memory？"
-      audio: assets/audio/scene-01.wav   # 可选；video audio 流程会挂载
+      audio: assets/audio/scene-01.wav # 可选；video audio 流程会挂载
     visual:
       component: SvgScene
-      renderer: svg      # remotion（默认）| svg | canvas | excalidraw
-      props: { … }       # 按 REGISTRY 中该组件的 props schema 校验
-    animation:           # v0.1 入场模型（仍然有效）
+      renderer: svg # remotion（默认）| svg | canvas | excalidraw
+      props: { … } # 按 REGISTRY 中该组件的 props schema 校验
+    animation: # v0.1 入场模型（仍然有效）
       entrance: fade
       emphasis: none
       exit: none
-    animations:          # 0.2 时间线模型（场景内相对时间）
+    animations: # 0.2 时间线模型（场景内相对时间）
       - id: draw-arrow
         target: arrow-1
-        type: draw       # draw|write|fade|move|scale|rotate|highlight|morph|camera
+        type: draw # draw|write|fade|move|scale|rotate|highlight|morph|camera
         start: 1.2
         duration: 0.8
-        easing: easeInOut   # linear|easeIn|easeOut|easeInOut（含同义词）
+        easing: easeInOut # linear|easeIn|easeOut|easeInOut（含同义词）
     captions:
       source: narration
     transition:
-      in: fade           # fade|cut（含同义词）；默认 fade
+      in: fade # fade|cut（含同义词）；默认 fade
       out: fade
 ```
 
@@ -360,12 +360,12 @@ scenes:
 
 ### 渲染器家族（visual.renderer）
 
-| renderer | 组件 | 说明 |
-| --- | --- | --- |
-| `remotion` | REGISTRY 中任意经典组件 | 默认 |
-| `svg` | `SvgScene` | 白板/示意图，draw-on 描画 + target 驱动运镜 |
-| `canvas` | `DoodleScene` | 手写墨迹笔画，种子化抖动，`bpm` 对齐节拍 |
-| `excalidraw` | — | 仅素材生成器（`video excalidraw`），不是渲染路径 |
+| renderer     | 组件                    | 说明                                             |
+| ------------ | ----------------------- | ------------------------------------------------ |
+| `remotion`   | REGISTRY 中任意经典组件 | 默认                                             |
+| `svg`        | `SvgScene`              | 白板/示意图，draw-on 描画 + target 驱动运镜      |
+| `canvas`     | `DoodleScene`           | 手写墨迹笔画，种子化抖动，`bpm` 对齐节拍         |
+| `excalidraw` | —                       | 仅素材生成器（`video excalidraw`），不是渲染路径 |
 
 未接线的 renderer/组件组合会在渲染时响亮报错。
 
@@ -379,17 +379,17 @@ scenes:
 块里。运行 `video theme` 看带色块的索引；`video theme <name>` 查看
 单个主题的完整配色；`video theme --cwd <root>` 解析某个项目当前的主题。
 
-| `style.theme`       | 背景色       | 强调色      | 适用风格                                          |
-| ------------------ | ---------- | --------- | --------------------------------------------- |
-| `paper-light`      | 米白         | 橙          | **v0.4.3 默认**——手绘讲解、明亮办公；与 `DoodleScene` 配对极佳 |
-| `dark-tech`        | 深蓝         | 蓝          | v0.4.2 及更早版本的默认；科技向内容                         |
-| `ocean-deep`       | 深海蓝       | 蓝绿         | 平静/技术向、监控主题                                  |
-| `dusk-warm`        | 紫罗兰       | 珊瑚         | 故事驱动、偏柔和的品牌                                  |
-| `forest-moss`      | 翡翠绿        | 黄绿         | 可持续、户外、植物讲解                                   |
-| `sunset-pop`       | 近黑         | 鲜黄         | 充满活力的消费/娱乐内容                                  |
-| `terminal-vintage` | 深灰         | 荧光绿       | 开发者教程、复古/极客怀旧（全角色使用 JetBrains Mono）             |
-| `paper-cream`      | 浅米色        | 深橙         | 产品/食品/家庭向内容                                  |
-| `ai-red`           | 播放台深色     | 红 `#FF0000` | 创作者/播放台触感——与 `channel-banner` 开场过渡配对极佳       |
+| `style.theme`      | 背景色     | 强调色       | 适用风格                                                       |
+| ------------------ | ---------- | ------------ | -------------------------------------------------------------- |
+| `paper-light`      | 米白       | 橙           | **v0.4.3 默认**——手绘讲解、明亮办公；与 `DoodleScene` 配对极佳 |
+| `dark-tech`        | 深蓝       | 蓝           | v0.4.2 及更早版本的默认；科技向内容                            |
+| `ocean-deep`       | 深海蓝     | 蓝绿         | 平静/技术向、监控主题                                          |
+| `dusk-warm`        | 紫罗兰     | 珊瑚         | 故事驱动、偏柔和的品牌                                         |
+| `forest-moss`      | 翡翠绿     | 黄绿         | 可持续、户外、植物讲解                                         |
+| `sunset-pop`       | 近黑       | 鲜黄         | 充满活力的消费/娱乐内容                                        |
+| `terminal-vintage` | 深灰       | 荧光绿       | 开发者教程、复古/极客怀旧（全角色使用 JetBrains Mono）         |
+| `paper-cream`      | 浅米色     | 深橙         | 产品/食品/家庭向内容                                           |
+| `ai-red`           | 播放台深色 | 红 `#FF0000` | 创作者/播放台触感——与 `channel-banner` 开场过渡配对极佳        |
 
 完整 token 集（7 种颜色 + 4 种字体角色 + 间距 + 缓动 + 字体）锁在
 `packages/video-components/src/theme.ts` 里；想新增自定义配色需要
@@ -530,16 +530,15 @@ node packages/cli/dist/index.js validate \
 
 错误信息包含文件、行号、字段和具体原因。
 
-
 ## 7. 编辑、迭代与恢复
 
 ### 7.1 三道人工门（由工作流状态强制，不是聊天式"请确认"）
 
-| 门 | 命令 | 拦住什么 |
-| --- | --- | --- |
+| 门         | 命令                       | 拦住什么                                                                             |
+| ---------- | -------------------------- | ------------------------------------------------------------------------------------ |
 | Storyboard | `video approve storyboard` | 未批准时 `video preview` / `video make` 渲染步拒绝执行（`--force` 可绕过，但会记录） |
-| Review | `video approve review` | 未批准时 `video final` 拒绝执行 |
-| Final | `video final`（QA 门） | QA 报告里的**错误级**发现会拦截导出（`--force` 可绕过，记录在案） |
+| Review     | `video approve review`     | 未批准时 `video final` 拒绝执行                                                      |
+| Final      | `video final`（QA 门）     | QA 报告里的**错误级**发现会拦截导出（`--force` 可绕过，记录在案）                    |
 
 改完文件重跑前，注意**阶段守卫（stage guard）**：生成器命令
 （`research` / `script` / `storyboard` / `audio` / `motion`）拒绝覆盖
@@ -614,7 +613,6 @@ video studio <slug> [--port 3000]    # 在 Remotion Studio 中打开项目
 - 想让 `video draft` 出来的内容去噪 → 直接编辑 `article.md`
 - 想做像素级的视觉控制 → 手工编辑 `storyboard.yaml` 后跑 `video make`
   （**不要**再跑 `video draft`，否则会覆盖）
-
 
 ## 8. 可选 AI 工作流
 
@@ -695,6 +693,8 @@ video draft "AI Agent Memory" --model glm --lang zh-CN --duration 60 --audience 
 video draft "AI Agent Memory" --from draft-outline.md   # 基于已有大纲改写
 video draft "AI Agent Memory" --file my-idea.md         # 用你的原始想法做种子（观点保留）
 video draft "AI Agent Memory" --no-audio-plan          # 仅写 article.md
+video draft "AI Agent Memory" --bgm guofeng            # 把 bgm: guofeng 写进新生的 audio-config.yaml
+video draft "AI Agent Memory" --no-ask                 # 永不提问——直接用默认值跑（见下文）
 
 # 2. 🚪 人工门：读完 article.md 后批准 storyboard
 video approve storyboard --cwd projects/ai-agent-memory
@@ -702,6 +702,70 @@ video approve storyboard --cwd projects/ai-agent-memory
 # 3. 渲染 mp4 —— TTS → 音频资源 → 渲染 → 混音（每次渲染附 QA 报告）
 video make ai-agent-memory
 ```
+
+### 编程代理问题协议（`video-ask/1`）
+
+在编程代理环境（zcode、Claude Code 等）里跑 `video draft` 时，CLI 不再
+对没指定的样式旋钮默默套默认值。只要检测到 agent 环境且有样式旋钮未指定，
+CLI 会把一份机器可读的问题集写到 stdout，然后以退出码 **2** 结束——运行
+没有开始，一次 LLM 调用都没花。agent 通过自己的问题 UI 把问题转述给用户
+（高亮推荐项），拿到答案后带显式 flag 重跑。
+
+`video draft` 新增 flag：
+
+| Flag                | 一行说明                                                                                                                                           |
+| ------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `--ask`             | 强制走代理问题协议，即使没有检测到 agent 环境                                                                                                      |
+| `--no-ask`          | 永不提问——直接用默认值跑（无人值守子跑的正确选择）                                                                                                 |
+| `--bgm <tag\|none>` | 把 BGM tag 写进新生的 `audio-config.yaml`：`calm`、`epic`、`guofeng`、`liubang-xiaodiao`、`fanzhuan-march`、`none`（默认：由 audio-plan LLM 自选） |
+
+**何时触发**——auto 模式仅在检测到 agent 环境**且**至少一个样式旋钮
+未指定时才提问。探测器：`ZCODE_APP_VERSION` → zcode，`CLAUDECODE` →
+Claude Code；其他 harness 可用 `VIDEO_ASK_ENV=VAR,VAR=VALUE,…` 声明
+（`VAR` 按存在匹配，`VAR=VALUE` 按精确值匹配）。优先级（先命中先生效）：
+
+| 覆盖项                       | 效果                                      |
+| ---------------------------- | ----------------------------------------- |
+| `--no-ask` / `VIDEO_ASK=off` | 永不提问——正常跑                          |
+| `--ask` / `VIDEO_ASK=force`  | 总是提问（即使没检测到 harness）          |
+| 都不设                       | auto：检测到 agent 且 ≥1 个旋钮未指定才问 |
+
+未知的 `VIDEO_ASK` 值会在 stderr 上警告一次，并按 auto 处理。
+
+**退出码**：`0` 正常跑完 · `1` 失败（不变） · `2` 问题待回答——运行
+没有开始。退出码 2 时 stdout 是纯 JSON（信封 `protocol: "video-ask/1"`，
+可直接用 `jq` 解析）；所有人类可读提示走 stderr，例如
+`agent-ask: 5 question(s) pending (exit 2 — run not started, nothing spent)`。
+
+**五个问题**——只问未指定的旋钮，顺序固定。`audience`、`model` 和评审门
+旋钮保持纯 flag 高级选项，故意不问：
+
+| id            | flag            | 类型   | 默认          | 推荐              | 为什么问                                         |
+| ------------- | --------------- | ------ | ------------- | ----------------- | ------------------------------------------------ |
+| `lang`        | `--lang`        | choice | `zh-CN`       | **`zh-CN`**       | 语言猜错会烧掉一次完整评分草稿（约 4× 单次草稿） |
+| `duration`    | `--duration`    | number | `180`         | **`180`**         | 场景数量随它伸缩                                 |
+| `image_style` | `--image-style` | choice | `flat-vector` | **`flat-vector`** | 品味选择，渲染后不可回退                         |
+| `style`       | `--style`       | choice | `paper-light` | **`paper-light`** | 主题影响每一场                                   |
+| `bgm`         | `--bgm`         | choice | `calm`        | **`calm`**        | 情绪不对 = make 阶段付费重渲染                   |
+
+展示问题的 agent 可以在主题明显需要时用更贴题的选项替换推荐值（例如
+鸿门宴这类历史题材 → `liubang-xiaodiao` + `editorial`），并在问题文本里
+说明理由。
+
+**`--bgm` 语义**——回答的 tag 会写进**新生的** `audio-config.yaml` 的
+`bgm: <tag>`（`none` → `bgm: null`），只覆盖 audio-plan LLM 本来会选的
+`bgm:` 键——voice 和 SFX 仍由 LLM 自选。**已存在**的 `audio-config.yaml`
+优先（手工编辑永远不会被覆盖）：CLI 会打印
+`bgm answer not applied — audio-config.yaml kept; run 'video audio-plan' to regenerate`
+而不是覆盖文件。`--no-audio-plan` 会直接去掉 `bgm` 问题——CLI 不问它
+用不上的东西。自由 tag 端到端仍然合法（未知 tag 退化为 mood 文本）；
+问题里只提供 5 个已知 tag + `none`。
+
+无人值守子跑（agent 启动的脚本）应传 `--no-ask`；headless 的
+cron/launchd shell 应设 `VIDEO_ASK=off`。
+
+完整契约（JSON 信封、快照测试的字段顺序、agent 侧展示规则）见
+[docs/v0.7-agent-ask-protocol-plan.md](./v0.7-agent-ask-protocol-plan.md)。
 
 ### 完整 agent 流水线（细粒度，含 v0.2 新动词）
 
@@ -766,7 +830,6 @@ projects/<slug>/audio-config.yaml     # 人类编辑：voice / bgm / sfx / fades
 
 人类编辑完两个文件后，跑 `video make <slug>` 即出一份发布 mp4。
 
-
 ### YouTube 元数据
 
 不是 `video make` 的一部分，需要时单独调：
@@ -826,7 +889,7 @@ voice: zh-CN-XiaoxiaoNeural
 bgm: "calm"
 bgm_fade_in_sec: 1.5
 bgm_fade_out_sec: 2
-pause_between_sentences_sec: 1     # 在每个句号 / 问号 / 感叹号之后停 1 秒
+pause_between_sentences_sec: 1 # 在每个句号 / 问号 / 感叹号之后停 1 秒
 sfx: {}
 ```
 
@@ -846,10 +909,10 @@ sfx: {}
 `audio-config.yaml` 里的 `voice:`；想改全局默认，改
 `packages/make/src/index.ts` 的 `ZH_VOICE` / `EN_VOICE` 常量并重新构建。
 
-| 语言 | 默认（男声） | 女声备选 | 其它男声备选 |
-| --- | --- | --- | --- |
-| `zh-CN` | `zh-CN-YunjianNeural`（纪录片风格） | `zh-CN-XiaoxiaoNeural` | `zh-CN-YunxiNeural`（温暖）、`zh-CN-YunyangNeural`（新闻） |
-| `en-US` | `en-US-ChristopherNeural`（平静旁白） | `en-US-AriaNeural` | `en-US-GuyNeural`、`en-US-EricNeural` |
+| 语言    | 默认（男声）                          | 女声备选               | 其它男声备选                                               |
+| ------- | ------------------------------------- | ---------------------- | ---------------------------------------------------------- |
+| `zh-CN` | `zh-CN-YunjianNeural`（纪录片风格）   | `zh-CN-XiaoxiaoNeural` | `zh-CN-YunxiNeural`（温暖）、`zh-CN-YunyangNeural`（新闻） |
+| `en-US` | `en-US-ChristopherNeural`（平静旁白） | `en-US-AriaNeural`     | `en-US-GuyNeural`、`en-US-EricNeural`                      |
 
 任何 Edge TTS 支持的 voice ID 都可以用 — 直接写到 `audio-config.yaml`
 的 `voice:` 字段即可。除非显式覆盖，文章一直使用默认男声。
@@ -859,7 +922,6 @@ sfx: {}
 Edge TTS 不收取直接 API 费，但商业再分发和长期生产使用应先确认服务
 条款。需要正式授权的生产服务时，可通过 `@video/tts` 的 `TTSProvider`
 接口替换（例如 MiniMax TTS / ElevenLabs）。
-
 
 ## 10. 项目文件和可追溯性
 
@@ -998,7 +1060,6 @@ CI 场景下想让 `video audio-plan` 保持原有的报错行为：
 ```bash
 video audio-plan <project> --strict
 ```
-
 
 ### Remotion 无法找到端口
 
@@ -1219,7 +1280,6 @@ video shorts "$TOPIC"
 最终发布件是 `projects/$TOPIC/output/final-mixed.mp4`，加上
 `projects/$TOPIC/youtube/` 下的 YouTube 包。
 
-
 ## 13. 用验收脚本验证
 
 跑完上面流程后，`npm run acceptance` 会在 `projects/benchmark-v01/`
@@ -1236,11 +1296,11 @@ npm run acceptance
 `examples/` 下有三个提交进仓库的完整示例，覆盖 v0.2 的全部新能力，
 不依赖任何 API key，可直接复制渲染：
 
-| 示例 | 时长 | 演示什么 |
-| --- | --- | --- |
-| `examples/mcp-explainer` | 45 秒 | 完整流水线：SvgScene 图表 draw-on、显式 `animations[]`、DoodleScene 手绘、时长同步、场景版本、QA 报告/门、Excalidraw 素材生成 |
-| `examples/ai-concept` | 60 秒 | 手绘 canvas + 节拍同步（100 BPM 网格） |
-| `examples/devops-architecture` | 90 秒 | 图表、target 驱动运镜（camera）、cut/fade 转场、时间线编排、Excalidraw |
+| 示例                           | 时长  | 演示什么                                                                                                                      |
+| ------------------------------ | ----- | ----------------------------------------------------------------------------------------------------------------------------- |
+| `examples/mcp-explainer`       | 45 秒 | 完整流水线：SvgScene 图表 draw-on、显式 `animations[]`、DoodleScene 手绘、时长同步、场景版本、QA 报告/门、Excalidraw 素材生成 |
+| `examples/ai-concept`          | 60 秒 | 手绘 canvas + 节拍同步（100 BPM 网格）                                                                                        |
+| `examples/devops-architecture` | 90 秒 | 图表、target 驱动运镜（camera）、cut/fade 转场、时间线编排、Excalidraw                                                        |
 
 以 MCP Explainer 为例（完整序列见其 `README.md`）：
 

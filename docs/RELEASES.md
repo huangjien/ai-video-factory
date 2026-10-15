@@ -43,9 +43,10 @@ the command with explicit flags.
 
 - **Auto-detect agent harnesses, emit a machine-readable question
   set** (`video draft`): zcode (`ZCODE_APP_VERSION`), Claude Code
-  (`CLAUDECODE`), oh-my-pi (`OMP_CODING_AGENT_DIR`) and pi
-  (`PI_CODING_AGENT_DIR`, the deprecated fallback oh-my-pi still
-  honors) are detected out of the box; OpenCode exports no stable
+  (`CLAUDECODE`), oh-my-openagent (`OMO_CODING_AGENT_DIR` — verified in
+  the installed 5.1.30 source), oh-my-pi (`OMP_CODING_AGENT_DIR`) and
+  pi-fork sessions (`PI_CODING_AGENT_DIR`; plain pi sets no marker)
+  are detected out of the box; OpenCode exports no stable
   child-process marker and any other harness can be declared via
   `VIDEO_ASK_ENV=VAR,VAR=VALUE,…` (user-extendable comma list, no
   code change). Exit codes: `0` ran · `1` failure

@@ -26,3 +26,9 @@ projects/*
 projects/benchmark-v01/scenes/
 projects/benchmark-v01/qa/
 projects/benchmark-v01/output/
+
+# Local tooling noise + benchmark run outputs (canonical fixture only —
+# see the projects/benchmark-v01/ block above).
+__pycache__/
+projects/benchmark-v01/runs/
+projects/benchmark-v01/youtube/

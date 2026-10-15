@@ -78,10 +78,18 @@ describe("detectAgentEnv", () => {
     });
   });
 
+  it("detects oh-my-openagent via OMO_CODING_AGENT_DIR (verified in installed 5.1.30 source, A6)", () => {
+    expect(detectAgentEnv({ OMO_CODING_AGENT_DIR: "/home/u/.omp" })).toEqual({
+      harness: "oh-my-openagent",
+      via: "OMO_CODING_AGENT_DIR",
+    });
+  });
+
   it("detects oh-my-pi via OMP_CODING_AGENT_DIR (documented-upstream row, A6)", () => {
-    expect(
-      detectAgentEnv({ OMP_CODING_AGENT_DIR: "/home/u/.omp" }),
-    ).toEqual({ harness: "oh-my-pi", via: "OMP_CODING_AGENT_DIR" });
+    expect(detectAgentEnv({ OMP_CODING_AGENT_DIR: "/home/u/.omp" })).toEqual({
+      harness: "oh-my-pi",
+      via: "OMP_CODING_AGENT_DIR",
+    });
   });
 
   it("detects pi via the deprecated-fallback PI_CODING_AGENT_DIR (A6)", () => {
@@ -109,19 +117,26 @@ describe("detectAgentEnv", () => {
   });
 
   it("VIDEO_ASK_ENV matches on presence", () => {
-    expect(detectAgentEnv({ VIDEO_ASK_ENV: "AGENTX", AGENTX: "anything" })).toEqual({
+    expect(
+      detectAgentEnv({ VIDEO_ASK_ENV: "AGENTX", AGENTX: "anything" }),
+    ).toEqual({
       harness: "env",
       via: "VIDEO_ASK_ENV",
     });
   });
 
   it("VIDEO_ASK_ENV matches VAR=VALUE exactly", () => {
+    expect(detectAgentEnv({ VIDEO_ASK_ENV: "AGENTX=1", AGENTX: "1" })).toEqual({
+      harness: "env",
+      via: "VIDEO_ASK_ENV",
+    });
     expect(
-      detectAgentEnv({ VIDEO_ASK_ENV: "AGENTX=1", AGENTX: "1" }),
-    ).toEqual({ harness: "env", via: "VIDEO_ASK_ENV" });
-    expect(detectAgentEnv({ VIDEO_ASK_ENV: "AGENTX=1", AGENTX: "2" })).toBeNull();
+      detectAgentEnv({ VIDEO_ASK_ENV: "AGENTX=1", AGENTX: "2" }),
+    ).toBeNull();
     // Partial match is not exact.
-    expect(detectAgentEnv({ VIDEO_ASK_ENV: "AGENTX=1", AGENTX: "1x" })).toBeNull();
+    expect(
+      detectAgentEnv({ VIDEO_ASK_ENV: "AGENTX=1", AGENTX: "1x" }),
+    ).toBeNull();
     expect(detectAgentEnv({ VIDEO_ASK_ENV: "AGENTX=1" })).toBeNull();
   });
 
@@ -133,7 +148,10 @@ describe("detectAgentEnv", () => {
 
   it("the table is consulted before VIDEO_ASK_ENV", () => {
     expect(
-      detectAgentEnv({ VIDEO_ASK_ENV: "ZCODE_APP_VERSION", ZCODE_APP_VERSION: "9" }),
+      detectAgentEnv({
+        VIDEO_ASK_ENV: "ZCODE_APP_VERSION",
+        ZCODE_APP_VERSION: "9",
+      }),
     ).toEqual({ harness: "zcode", via: "ZCODE_APP_VERSION" });
   });
 });
@@ -192,7 +210,9 @@ describe("DRAFT_QUESTIONS", () => {
   });
 
   it("duration question matches the §5 contract", () => {
-    const duration = DRAFT_QUESTIONS.find((q) => q.id === "duration") as AskQuestion;
+    const duration = DRAFT_QUESTIONS.find(
+      (q) => q.id === "duration",
+    ) as AskQuestion;
     expect(duration.flag).toBe("--duration");
     expect(duration.type).toBe("number");
     expect(duration.suggestions).toEqual([60, 90, 120, 180, 300]);
@@ -222,36 +242,21 @@ describe("questionsFor", () => {
   });
 
   it("drops each knob passed explicitly", () => {
-    expect(questionsFor({ topic: "t", lang: "en-US" }).map((q) => q.id)).toEqual([
-      "duration",
-      "image_style",
-      "style",
-      "bgm",
-    ]);
-    expect(questionsFor({ topic: "t", duration: 90 }).map((q) => q.id)).toEqual([
-      "lang",
-      "image_style",
-      "style",
-      "bgm",
-    ]);
-    expect(questionsFor({ topic: "t", imageStyle: "editorial" }).map((q) => q.id)).toEqual([
-      "lang",
-      "duration",
-      "style",
-      "bgm",
-    ]);
-    expect(questionsFor({ topic: "t", style: "dark-tech" }).map((q) => q.id)).toEqual([
-      "lang",
-      "duration",
-      "image_style",
-      "bgm",
-    ]);
-    expect(questionsFor({ topic: "t", bgm: "guofeng" }).map((q) => q.id)).toEqual([
-      "lang",
-      "duration",
-      "image_style",
-      "style",
-    ]);
+    expect(
+      questionsFor({ topic: "t", lang: "en-US" }).map((q) => q.id),
+    ).toEqual(["duration", "image_style", "style", "bgm"]);
+    expect(questionsFor({ topic: "t", duration: 90 }).map((q) => q.id)).toEqual(
+      ["lang", "image_style", "style", "bgm"],
+    );
+    expect(
+      questionsFor({ topic: "t", imageStyle: "editorial" }).map((q) => q.id),
+    ).toEqual(["lang", "duration", "style", "bgm"]);
+    expect(
+      questionsFor({ topic: "t", style: "dark-tech" }).map((q) => q.id),
+    ).toEqual(["lang", "duration", "image_style", "bgm"]);
+    expect(
+      questionsFor({ topic: "t", bgm: "guofeng" }).map((q) => q.id),
+    ).toEqual(["lang", "duration", "image_style", "style"]);
   });
 
   it("all five explicit → empty set", () => {
@@ -288,13 +293,17 @@ describe("resolveAskTrigger", () => {
   });
 
   it("--no-ask → off (beats everything)", () => {
-    expect(resolveAskTrigger({ noAsk: true, ask: true }, { VIDEO_ASK: "force" })).toEqual({
+    expect(
+      resolveAskTrigger({ noAsk: true, ask: true }, { VIDEO_ASK: "force" }),
+    ).toEqual({
       mode: "off",
     });
   });
 
   it("VIDEO_ASK=off → off", () => {
-    expect(resolveAskTrigger({}, { VIDEO_ASK: "off" })).toEqual({ mode: "off" });
+    expect(resolveAskTrigger({}, { VIDEO_ASK: "off" })).toEqual({
+      mode: "off",
+    });
   });
 
   it("--ask → force even without detection", () => {
@@ -302,19 +311,25 @@ describe("resolveAskTrigger", () => {
   });
 
   it("VIDEO_ASK=force → force", () => {
-    expect(resolveAskTrigger({}, { VIDEO_ASK: "force" })).toEqual({ mode: "force" });
+    expect(resolveAskTrigger({}, { VIDEO_ASK: "force" })).toEqual({
+      mode: "force",
+    });
   });
 
   it("unknown VIDEO_ASK value → stderr warning + auto", () => {
     const err = vi.spyOn(console, "error").mockImplementation(() => {});
-    expect(resolveAskTrigger({}, { VIDEO_ASK: "yes" })).toEqual({ mode: "auto" });
+    expect(resolveAskTrigger({}, { VIDEO_ASK: "yes" })).toEqual({
+      mode: "auto",
+    });
     expect(err).toHaveBeenCalledTimes(1);
     expect(err.mock.calls[0]?.[0]).toContain("VIDEO_ASK");
     expect(err.mock.calls[0]?.[0]).toContain("yes");
   });
 
   it("VIDEO_ASK=off wins over --ask (spec order: --no-ask, then off)", () => {
-    expect(resolveAskTrigger({ ask: true }, { VIDEO_ASK: "off" })).toEqual({ mode: "off" });
+    expect(resolveAskTrigger({ ask: true }, { VIDEO_ASK: "off" })).toEqual({
+      mode: "off",
+    });
   });
 });
 
@@ -361,8 +376,15 @@ describe("emitQuestionsDoc", () => {
       protocol: string;
       command: string[];
       detected: string;
-      questions: { id: string; flag: string; type: string; question: string;
-        default: string | number; recommended: string | number; why: string }[];
+      questions: {
+        id: string;
+        flag: string;
+        type: string;
+        question: string;
+        default: string | number;
+        recommended: string | number;
+        why: string;
+      }[];
       resolved: Record<string, string | number>;
     };
     expect(Object.keys(envelope)).toEqual([
@@ -410,7 +432,9 @@ describe("emitQuestionsDoc", () => {
       { topic: "t", lang: "en-US", audience: "ops", duration: 90 },
       ["draft", "t"],
     );
-    const envelope = JSON.parse(cap.stdout) as { resolved: Record<string, unknown> };
+    const envelope = JSON.parse(cap.stdout) as {
+      resolved: Record<string, unknown>;
+    };
     expect(envelope.resolved).toEqual({
       lang: "en-US",
       duration: 90,
@@ -423,7 +447,12 @@ describe("emitQuestionsDoc", () => {
 
   it("command echo strips leading node/script paths", async () => {
     const cap = capture();
-    await emitQuestionsDoc(baseOpts(), ["/usr/local/bin/video", "draft", "x y", "--ask"]);
+    await emitQuestionsDoc(baseOpts(), [
+      "/usr/local/bin/video",
+      "draft",
+      "x y",
+      "--ask",
+    ]);
     const envelope = JSON.parse(cap.stdout) as { command: string[] };
     expect(envelope.command).toEqual(["draft", "x y", "--ask"]);
   });
@@ -501,7 +530,9 @@ describe("maybeAgentAsk", () => {
   it("--no-ask under agent env → null, no output", async () => {
     vi.stubEnv("CLAUDECODE", "1");
     const cap = capture();
-    expect(await maybeAgentAsk({ topic: "t", noAsk: true }, ["draft", "t"])).toBeNull();
+    expect(
+      await maybeAgentAsk({ topic: "t", noAsk: true }, ["draft", "t"]),
+    ).toBeNull();
     expect(cap.stdout).toBe("");
     expect(cap.stderr).toEqual([]);
   });
@@ -544,7 +575,9 @@ describe("maybeAgentAsk", () => {
       ),
     ).toBeNull();
     expect(cap.stdout).toBe("");
-    expect(cap.stderr).toEqual(["agent-ask: nothing to ask — all knobs explicit"]);
+    expect(cap.stderr).toEqual([
+      "agent-ask: nothing to ask — all knobs explicit",
+    ]);
   });
 
   it("unknown VIDEO_ASK + agent env → treated as auto (asks)", async () => {

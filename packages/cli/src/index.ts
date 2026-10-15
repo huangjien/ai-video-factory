@@ -28,12 +28,15 @@ import { registerFinal } from "./render-command.js";
 import { registerRetrospect } from "./retrospect-command.js";
 import { registerLaya } from "./laya-command.js";
 import { buildBanner } from "./minimal-api.js";
+import { VERSION } from "./version.js";
 
-const VERSION = "0.6.0";
 export { VERSION };
 const program = new Command();
 
-program.name("video").description("AI Video Factory — turn a topic into a finished 1080p MP4.").version(VERSION);
+program
+  .name("video")
+  .description("AI Video Factory — turn a topic into a finished 1080p MP4.")
+  .version(VERSION);
 
 /** Banner + README/doc tables are generated from minimal-api.ts + theme.ts
  *  (single source) — run `pnpm run docs:commands` after adding a verb or

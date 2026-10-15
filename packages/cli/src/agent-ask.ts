@@ -34,18 +34,24 @@ export interface AgentDetection {
 }
 
 /** Harness detectors, most specific first. First match wins.
- *  A6 (2026-10-15): pi/oh-my-pi rows are DOCUMENTED-UPSTREAM, not
- *  live-probed — oh-my-pi is migrating `PI_` → `OMP_` prefixes and keeps
- *  `PI_` as a deprecated fallback (can1357/oh-my-pi #8804 + its
- *  docs/environment-variables.md); plain pi's self-identification marker
- *  is still an open upstream issue (earendil-works/pi #2868), so the
- *  coding-agent-dir vars are the practical signal. opencode has NO stable
- *  child-process marker (its `OPENCODE_*` vars are user config overrides
- *  — false-positive risk; server URL not exported, anomalyco/opencode
- *  #9099) → deliberately deferred to VIDEO_ASK_ENV. */
+ *  A6 (2026-10-15, verified against the locally installed packages):
+ *  - oh-my-openagent 5.1.30 (`~/.omp`) resolves its agent home from
+ *    AGENT_DIR_ENV_NAMES = [`OMO_CODING_AGENT_DIR`, `SENPI_CODING_AGENT_DIR`,
+ *    `PI_CODING_AGENT_DIR`] — OMO_ is its own prefix.
+ *  - oh-my-pi (can1357 fork) migrates `PI_` → `OMP_` and keeps `PI_` as a
+ *    deprecated fallback (#8804). Not installed locally — docs only.
+ *  - plain pi (@earendil-works/pi-coding-agent 1.1.0, verified by grepping
+ *    the installed bundle) sets NO self-identification marker; its #2868
+ *    is still open. The PI_ row only fires for fork users; pi sessions
+ *    are detectable via the OMO_ row when launched through
+ *    oh-my-openagent, else VIDEO_ASK_ENV.
+ *  - opencode has NO stable child-process marker (`OPENCODE_*` are user
+ *    config overrides — false-positive risk; server URL not exported,
+ *    anomalyco/opencode #9099) → deliberately deferred to VIDEO_ASK_ENV. */
 const DETECTORS: readonly AgentDetection[] = [
   { harness: "zcode", via: "ZCODE_APP_VERSION" },
   { harness: "claude-code", via: "CLAUDECODE" },
+  { harness: "oh-my-openagent", via: "OMO_CODING_AGENT_DIR" },
   { harness: "oh-my-pi", via: "OMP_CODING_AGENT_DIR" },
   { harness: "pi", via: "PI_CODING_AGENT_DIR" },
 ];

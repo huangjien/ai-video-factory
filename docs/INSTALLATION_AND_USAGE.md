@@ -839,9 +839,10 @@ humans in a terminal see the same lines.
 **When it fires** — auto mode asks only when an agent harness is
 detected **and** at least one style knob was left unspecified.
 Detectors: `ZCODE_APP_VERSION` → zcode, `CLAUDECODE` → Claude Code,
-`OMP_CODING_AGENT_DIR` → oh-my-pi, `PI_CODING_AGENT_DIR` → pi
-(documented upstream; oh-my-pi keeps the `PI_` name as a deprecated
-fallback). OpenCode exports no stable child-process marker, so declare
+`OMO_CODING_AGENT_DIR` → oh-my-openagent, `OMP_CODING_AGENT_DIR` →
+oh-my-pi, `PI_CODING_AGENT_DIR` → oh-my-pi/pi-fork sessions (plain pi
+sets no marker — declare it via `VIDEO_ASK_ENV`). OpenCode exports no
+stable child-process marker, so declare
 it — or any other harness — with
 `VIDEO_ASK_ENV=VAR,VAR=VALUE,…` (matches on presence, or exact value
 with `VAR=VALUE`). Precedence, first match wins:

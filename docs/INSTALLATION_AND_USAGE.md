@@ -830,6 +830,12 @@ New flags on `video draft`:
 | `--no-ask`          | never ask — accept the defaults (right choice for unattended sub-runs)                                                                                         |
 | `--bgm <tag\|none>` | BGM tag stamped into a fresh `audio-config.yaml`: `calm`, `epic`, `guofeng`, `liubang-xiaodiao`, `fanzhuan-march`, `none` (default: the audio-plan LLM's pick) |
 
+**Live progress (v0.7.1)** — `video make` and `video draft` print
+step/scene progress and heartbeats to **stderr** while running
+(stdout stays clean for artifacts): `✓ [3/23] tts scene_03  4s`,
+`⏳ generate-visuals … 95s`. Agents polling background output and
+humans in a terminal see the same lines.
+
 **When it fires** — auto mode asks only when an agent harness is
 detected **and** at least one style knob was left unspecified.
 Detectors: `ZCODE_APP_VERSION` → zcode, `CLAUDECODE` → Claude Code,

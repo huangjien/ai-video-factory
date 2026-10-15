@@ -664,11 +664,11 @@ export LAYA_MIN_CONFIDENCE=0.6                 # on 模式下的生效阈值
 各接入点（设计与晋升门槛见
 `docs/v0.6-laya-decision-integration-plan.md`）：
 
-| 接入点 | 命令 | Laya 回答的问题 | `on` 模式下的效果 |
-|---|---|---|---|
-| motion 预筛 | `video motion` | 确定性基线是否足够？ | 基线足够时跳过云端 motion agent |
-| 视觉组件辅助 | `video draft` / `video make` | 关键词规则未命中时的组件选择 | 覆盖兜底默认组件 |
-| QA 分诊 | `video qa` / `preview` / `final` | 对渲染报告给出 pass/review/block | 写入 `qa/render-report.json` 的 `advisory.laya` + 联络表角标 |
+| 接入点       | 命令                             | Laya 回答的问题                  | `on` 模式下的效果                                            |
+| ------------ | -------------------------------- | -------------------------------- | ------------------------------------------------------------ |
+| motion 预筛  | `video motion`                   | 确定性基线是否足够？             | 基线足够时跳过云端 motion agent                              |
+| 视觉组件辅助 | `video draft` / `video make`     | 关键词规则未命中时的组件选择     | 覆盖兜底默认组件                                             |
+| QA 分诊      | `video qa` / `preview` / `final` | 对渲染报告给出 pass/review/block | 写入 `qa/render-report.json` 的 `advisory.laya` + 联络表角标 |
 
 每次咨询都追加到项目目录的 `laya-decisions.jsonl`（审计 +
 shadow 评估语料）。诊断命令：
@@ -718,6 +718,11 @@ CLI 会把一份机器可读的问题集写到 stdout，然后以退出码 **2**
 | `--ask`             | 强制走代理问题协议，即使没有检测到 agent 环境                                                                                                      |
 | `--no-ask`          | 永不提问——直接用默认值跑（无人值守子跑的正确选择）                                                                                                 |
 | `--bgm <tag\|none>` | 把 BGM tag 写进新生的 `audio-config.yaml`：`calm`、`epic`、`guofeng`、`liubang-xiaodiao`、`fanzhuan-march`、`none`（默认：由 audio-plan LLM 自选） |
+
+**实时进度（v0.7.1）**——`video make` 和 `video draft` 运行时把
+步骤/场景进度和心跳打到 **stderr**（stdout 保持干净）：形如
+`✓ [3/23] tts scene_03  4s`、`⏳ generate-visuals … 95s`。轮询后台
+输出的 agent 和终端前的人看到的是同一份输出。
 
 **何时触发**——auto 模式仅在检测到 agent 环境**且**至少一个样式旋钮
 未指定时才提问。探测器：`ZCODE_APP_VERSION` → zcode，`CLAUDECODE` →

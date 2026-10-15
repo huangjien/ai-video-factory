@@ -43,6 +43,13 @@ export async function runMakeCli(opts: MakeOptions): Promise<number> {
   }
   const projectRoot = resolvedProject.root;
 
+  // Banner BEFORE the run: the first live progress lines arrive with
+  // project context, and watchers (agents polling output) know which
+  // project is producing them.
+  console.log(brandBannerLine());
+  console.log(`▷ ${opts.project}  ·  make`);
+  console.log("");
+
   const report = await runMake({
     // video-progress/1: live step/scene/heartbeat lines on stderr; the
     // final report table below stays the authoritative summary.
@@ -62,9 +69,6 @@ export async function runMakeCli(opts: MakeOptions): Promise<number> {
 
   // Pretty-print the report. Marks come from the shared ui module so the
   // operator reads the same vocabulary across `video status / make / qa`.
-  console.log(brandBannerLine());
-  console.log(`▷ ${opts.project}  ·  make`);
-  console.log("");
   for (const s of report.steps) {
     const tag =
       s.status === "ran"

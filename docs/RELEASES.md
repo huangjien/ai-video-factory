@@ -15,6 +15,19 @@ video research → script → storyboard → audio (TTS) → audio-asset (BGM+SF
        video review                          → Content/Visual/Technical review YAMLs
 ```
 
+## v0.7.1 — Live Pipeline Progress (video-progress/1)
+
+Long runs stop being silent. `video make` and `video draft` now print
+live progress to **stderr** (stdout stays artifact-clean): step starts
+(`▷ tts`), per-scene items with position and elapsed time
+(`✓ [3/23] tts scene_03  4s`), and a heartbeat for any single call
+longer than 30 s (`⏳ generate-visuals … 95s`, repeating every 20 s) —
+a 20–40 min make run is no longer indistinguishable from a hang, for
+agents polling background output and humans alike. The final report
+table is unchanged; emission is structured events
+(`ProgressEvent`/`heartbeat` from `@video/make`), defaulting to
+silence for library callers.
+
 ## v0.7 — Agent-Aware Draft Questions (video-ask/1)
 
 `video draft` no longer burns a full scored draft on silent defaults
@@ -78,6 +91,7 @@ degrade-to-current-behavior (`decide()` never throws — null on any
 failure), shadow first (`LAYA_MODE=off|shadow|on`, default **off**).
 
 **New — `@video/llm`:**
+
 - `packages/llm/src/laya.ts` — `LayaClient` (memoized `/health`
   pre-flight, 503+`Retry-After` retry-once, `min_confidence` gate that
   protects ACTING in mode=on; shadow records raw answers for the §7
@@ -87,9 +101,10 @@ failure), shadow first (`LAYA_MODE=off|shadow|on`, default **off**).
 - `packages/llm/src/laya-shadow.ts` — `laya-decisions.jsonl` sidecar
   (append/read/summarize); every consult is recorded with
   `{surface, mode, state_sha256, answers, latency_ms, acted, expected,
-  agreed}`
+agreed}`
 
 **Surfaces (each independent, all behind the mode flag):**
+
 - **D1 motion pre-screen** (`video motion`) — per scene Laya answers
   baseline_ok/refine; in `on` mode baseline_ok scenes skip the cloud
   `callMotionAgent` call (skip count printed; expected yield on a
@@ -98,7 +113,7 @@ failure), shadow first (`LAYA_MODE=off|shadow|on`, default **off**).
   the REGEX FALL-THROUGH branch may consult Laya for the scene
   component; matched keyword rules stay deterministic; results are
   REGISTRY-validated and applied via `articleToStoryboardYaml(article,
-  {visualOverrides})` (the mapper stays pure/sync).
+{visualOverrides})` (the mapper stays pure/sync).
 - **D3 QA triage** (`video qa` / `preview` / `final` / `make`) — the
   finished render report is triaged pass/review/block; in `on` mode the
   verdict rides as `report.advisory.laya` + a caption on the contact

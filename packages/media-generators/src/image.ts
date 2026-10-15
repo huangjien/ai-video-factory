@@ -18,6 +18,18 @@ export interface ImageRequest {
    * the natural place. Providers that don't support it ignore the field.
    */
   referenceImage?: string;
+  /**
+   * Text drawn onto the image AFTER generation. Keeps the generation
+   * prompt text-free (diffusion garbles written text, especially CJK)
+   * while callers still get labeled images. v0.5.4: honored by
+   * FluxKleinImageProvider (Pillow draw in the worker); providers
+   * without post-render text support ignore the field.
+   */
+  textOverlay?: {
+    text: string;
+    /** Band the text is centered in. Default "bottom". */
+    position?: "top" | "center" | "bottom";
+  };
 }
 
 export interface ImageResult {

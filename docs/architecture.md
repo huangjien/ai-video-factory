@@ -1,11 +1,12 @@
-# Architecture — AI Video Agent (v0.5.3: local image gen)
+# Architecture — AI Video Agent (v0.6.0: local image gen + decision layer)
 
 The design source is `docs/ai-video-agent-development-plan-v0.2.md`; the
 traceable task plan is `docs/ai-video-agent-design-and-tasks-v0.2.md`;
 the v0.1 codebase mapping lives in `docs/architecture-v01-map.md`.
 The local image generation subsystem added in v0.5 is specified in
 `docs/v0.5-local-image-generation-plan.md`. This document describes
-the system AS BUILT — v0.5.3 (T1–T6.2 all shipped).
+the system AS BUILT — v0.6.0 (T1–T6.2 all shipped; v0.6 Laya decision
+layer shipped with `LAYA_MODE` default off).
 
 ## Principles (plan §29 + v0.5 plan §65)
 
@@ -34,6 +35,13 @@ the system AS BUILT — v0.5.3 (T1–T6.2 all shipped).
    keeps one warm pipeline across a render. This is the same
    pattern used for any model that has a Python-native ecosystem
    (diffusers / peft / torchao) — never a Node binding.
+7. **Local decisions are advisory** (v0.6) — the Laya decision-model
+   sidecar (bounded `choice`/`score`/`noul` answers, NOT a chat
+   model) may pre-screen, annotate, and log, but never replaces a
+   human gate, never drives a workflow transition, and degrades to
+   exactly the pre-v0.6 behavior on any failure
+   (`LAYA_MODE=off|shadow|on`, default off; plan:
+   `docs/v0.6-laya-decision-integration-plan.md`).
 
 ## The pipeline
 
@@ -150,6 +158,7 @@ parentheses; v0.5.2 additions marked):
 
 | Package | §32 alias | Role |
 |---|---|---|
+| `@video/llm` | llm | chat providers (GLM, MiniMax) with per-role routing + bounded retry/fallback; v0.6 `LayaClient` (advisory bounded decisions from the local laya-serve sidecar, `LAYA_MODE=off\|shadow\|on`) + the `laya-decisions.jsonl` sidecar writer |
 | `@video/vdsl` | schema | VDSL 0.1/0.2 zod schema, validator (line-numbered errors), deterministic compiler → `vdsl/vdsl.yaml` + `RenderPlan` |
 | `@video/motion` | motion | IartSkillAdapter, motion heuristics, deterministic `planSceneMotion`, Motion Agent (`callMotionAgent`) |
 | `@video/agent-storyboard`, `@video/research`, `@video/script`, `@video/review`, `@video/youtube` | agent | LLM agents (per-role provider routing incl. `motion`, transient retry, quota fallback) |

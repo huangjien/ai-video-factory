@@ -181,6 +181,57 @@ const RULES: ClusterRule[] = [
 
 const DEFAULT_COMPONENT: ComponentName = "AnimatedIllustration";
 
+/** The fall-through component, exported so the v0.6 Laya assist
+ * (laya-assist.ts) can detect "no regex rule matched" without changing
+ * this module's pure, deterministic contract. */
+export const DEFAULT_VISUAL_COMPONENT: ComponentName = DEFAULT_COMPONENT;
+
+const COMPONENT_NAMES: readonly ComponentName[] = [
+  "Title",
+  "AnimatedIllustration",
+  "Callout",
+  "FlowChart",
+  "Comparison",
+  "Terminal",
+  "Timeline",
+  "SvgScene",
+  "DoodleScene",
+  "QuoteBlock",
+  "StatGrid",
+  "BarChart",
+  "Leaderboard",
+  "Checklist",
+  "BigIdea",
+  "PyramidDiagram",
+  "VennDiagram",
+  "CycleDiagram",
+];
+
+/** Components the Laya assist may pick (v0.6 plan D2): everything except
+ * Title (first-scene-only) and DoodleScene (never auto-selected — user
+ * request 2026-10-03). */
+export const LAYA_VISUAL_COMPONENTS: readonly ComponentName[] = COMPONENT_NAMES.filter(
+  (c) => c !== "Title" && c !== "DoodleScene",
+);
+
+/** What the Laya assist returns per scene: the chosen component plus the
+ * telemetry the `laya-decisions.jsonl` row needs. */
+export interface VisualAssistResult {
+  component: ComponentName;
+  latencyMs?: number;
+  routingModel?: string;
+  confidence?: number;
+}
+
+/** Async consult for fall-through scenes. Returns null = "no decision —
+ * keep the default". Implemented in laya-assist.ts (network glue lives
+ * OUTSIDE this module so the classifier stays pure). */
+export type VisualAssist = (input: {
+  visual: string;
+  narrationExcerpt: string;
+  sceneIndex: number;
+}) => Promise<VisualAssistResult | null>;
+
 /** Pick a VDSL component for one scene.
  *
  *  @param visual    The article's `visual:` direction text.

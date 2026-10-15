@@ -15,7 +15,7 @@ import {
 import { promisify } from "node:util";
 import os from "node:os";
 import path from "node:path";
-import { parseArticleWithRecovery, articleToStoryboardYaml, expandScenePrompt, type ParsedArticle } from "@video/draft";
+import { parseArticleWithRecovery, articleToStoryboardYaml, expandScenePrompt, resolveImageStyle, runLayaVisualAssist, stylePromptSuffix, type ParsedArticle } from "@video/draft";
 import { MiniMaxProvider } from "@video/llm";
 import { parse as parseYaml, stringify as yamlStringify } from "yaml";
 import {
@@ -272,6 +272,9 @@ function failStep(report: MakeReport, name: string, message: string): void {
  * always sees the up-to-date scene list. Only rewrites when the
  * article's scene IDs differ from the storyboard's (preserves
  * hand-edited component/props on matching scenes).
+ *
+ * v0.6: when LAYA_MODE is on/shadow, fall-through visual components may
+ * be consulted (runLayaVisualAssist; shadow logs only, on overrides).
  */
 async function syncStoryboardFromArticle(
   projectRoot: string,
@@ -283,13 +286,20 @@ async function syncStoryboardFromArticle(
     "storyboard.yaml",
   );
   if (!existsSync(storyboardPath)) {
+    const laya = await runLayaVisualAssist(article, projectRoot);
     await mkdir(path.dirname(storyboardPath), { recursive: true });
     await writeFile(
       storyboardPath,
-      articleToStoryboardYaml(article),
+      articleToStoryboardYaml(
+        article,
+        laya.overrides ? { visualOverrides: laya.overrides } : undefined,
+      ),
       "utf8",
     );
-    return ["storyboard.yaml: created from article.md"];
+    return [
+      "storyboard.yaml: created from article.md",
+      ...(laya.summary ? [laya.summary] : []),
+    ];
   }
 
   const yamlText = readFileSync(storyboardPath, "utf8");
@@ -310,8 +320,19 @@ async function syncStoryboardFromArticle(
 
   if (idsMatch) return [];
 
-  await writeFile(storyboardPath, articleToStoryboardYaml(article), "utf8");
-  return [`storyboard.yaml: ${articleIds.length} scenes synced from article.md`];
+  const laya = await runLayaVisualAssist(article, projectRoot);
+  await writeFile(
+    storyboardPath,
+    articleToStoryboardYaml(
+      article,
+      laya.overrides ? { visualOverrides: laya.overrides } : undefined,
+    ),
+    "utf8",
+  );
+  return [
+    `storyboard.yaml: ${articleIds.length} scenes synced from article.md`,
+    ...(laya.summary ? [laya.summary] : []),
+  ];
 }
 
 /**
@@ -362,12 +383,17 @@ export async function generateSceneVisuals(
       ...(explicitConfig ? { loraConfigPath: explicitConfig } : {}),
       ...(discoveredConfig ? { loraConfigPath: discoveredConfig } : {}),
       ...(explicitLora ? { lora: explicitLora } : {}),
+      forwardStderr: process.env["FLUX2_QUIET"] === undefined,
     });
   } else {
     provider = new MockImageProvider();
   }
   const reqWidth = isMock ? 64 : 1920;
   const reqHeight = isMock ? 36 : 1080;
+
+  // v0.6: image-style preset from article.md frontmatter (`image_style:`),
+  // defaulting to flat-vector. Shapes prompt expansion + the fallback line.
+  const imageStyle = resolveImageStyle(article.frontmatter.image_style);
 
   // v0.4 (T3): MiniMax image path needs an LLM to rewrite the prompt.
   // Mock path passes null and skips expansion entirely.
@@ -418,14 +444,17 @@ export async function generateSceneVisuals(
           expansionProvider,
           projectRoot,
           i + 1,
+          { style: imageStyle },
         );
         promptForImage = prompt;
         outputs.push(
-          `assets/images/scene_${i + 1}.prompt.txt (LLM-expanded)`,
+          `assets/images/scene_${i + 1}.prompt.txt (LLM-expanded, style=${imageStyle})`,
         );
       } catch (err) {
         // Fall back to the raw visual line so a provider hiccup doesn't
-        // stall the whole render. The sidecar isn't written in that case.
+        // stall the whole render. The style suffix still applies — the
+        // image model must see the style contract on every path.
+        promptForImage = `${visual}\n${stylePromptSuffix(imageStyle)}`;
         outputs.push(
           `scene_${i + 1}: prompt expansion failed, using raw visual — ${(err as Error).message.slice(0, 60)}`,
         );

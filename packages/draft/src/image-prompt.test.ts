@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import type { ChatRequest, ChatResponse, Provider } from "@video/llm";
 import { expandScenePrompt } from "./image-prompt.js";
+import { stylePromptSuffix } from "./image-style.js";
 
 function fakeProvider(respond: (req: ChatRequest) => string): Provider & { calls: ChatRequest[] } {
   const calls: ChatRequest[] = [];
@@ -75,10 +76,13 @@ describe("expandScenePrompt", () => {
     expect(r.prompt).toContain("different visual");
   });
 
-  it("truncates provider output to 400 chars", async () => {
+  it("truncates provider output to 400 chars, then appends the style suffix", async () => {
     const provider = fakeProvider(() => "y".repeat(600));
     const r = await expandScenePrompt({ ...SCENE, visual: "third visual" }, provider, dir, 3);
-    expect(r.prompt.length).toBe(400);
+    // v0.6: generated part ≤ 400 + "\n" + flat-vector (default) suffix.
+    expect(r.prompt).toBe(
+      "y".repeat(400) + "\n" + stylePromptSuffix("flat-vector"),
+    );
   });
 
   it("a corrupt cache entry is ignored and re-expanded", async () => {
@@ -94,6 +98,8 @@ describe("expandScenePrompt", () => {
     }
     const r = await expandScenePrompt(scene, fakeProvider(() => "recovered prompt"), dir, 4);
     expect(r.cacheHit).toBe(false);
-    expect(r.prompt).toBe("recovered prompt");
+    expect(r.prompt).toBe(
+      "recovered prompt" + "\n" + stylePromptSuffix("flat-vector"),
+    );
   });
 });

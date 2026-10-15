@@ -15,6 +15,8 @@ import {
   callDraft,
   parseArticleWithRecovery,
   renderArticleReviewYaml,
+  resolveImageStyle,
+  runLayaVisualAssist,
   runScoredDraft,
   type ParsedArticle,
 } from "@video/draft";
@@ -40,6 +42,10 @@ export interface DraftOptions {
    *  article frontmatter so articleToStoryboardYaml emits
    *  `style.theme: <theme>` instead of the hardcoded "dark-tech". */
   style?: string;
+  /** v0.6: image-style preset for FLUX scene visuals — written into the
+   *  article.md frontmatter (`image_style:`) so `video make` picks it
+   *  up. flat-vector (default) | editorial | whiteboard. */
+  imageStyle?: string;
   /** v0.4 (T1): when true, the auto-generated storyboard omits the
    *  `captions: { source: narration }` block (render-time caption
    *  overlay is skipped). */
@@ -60,6 +66,23 @@ function providerInstance(name: string): Provider {
   if (name === "glm") return new GLMProvider();
   if (name === "minimax") return new MiniMaxProvider();
   throw new Error(`unsupported provider: ${name}`);
+}
+
+/** Insert `key: value` into the article's frontmatter block (replace in
+ *  place when the key exists). No-op when there is no frontmatter. */
+export function stampFrontmatterKey(
+  markdown: string,
+  key: string,
+  value: string,
+): string {
+  if (!markdown.startsWith("---")) return markdown;
+  const end = markdown.indexOf("\n---", 3);
+  if (end === -1) return markdown;
+  const head = markdown.slice(0, end);
+  const rest = markdown.slice(end);
+  const re = new RegExp(`^${key}:.*$`, "m");
+  if (re.test(head)) return head.replace(re, `${key}: ${value}`) + rest;
+  return `${head}\n${key}: ${value}${rest}`;
 }
 
 export type AudioPlanStep =
@@ -240,7 +263,17 @@ export async function runDraft(opts: DraftOptions): Promise<number> {
 
   const articlePath = path.join(projectRoot, "article.md");
   await mkdir(path.dirname(articlePath), { recursive: true });
-  await writeFile(articlePath, markdown, "utf8");
+  // v0.6: `--image-style` is written INTO article.md frontmatter — the
+  // human-editable single source `video make` reads. (Unlike --style,
+  // which only affects this run's storyboard write.)
+  const imageStyle = resolveImageStyle(opts.imageStyle);
+  await writeFile(
+    articlePath,
+    opts.imageStyle !== undefined
+      ? stampFrontmatterKey(markdown, "image_style", imageStyle)
+      : markdown,
+    "utf8",
+  );
 
   let parsedArticle: ParsedArticle | null = null;
   try {
@@ -267,7 +300,20 @@ export async function runDraft(opts: DraftOptions): Promise<number> {
         ...(opts.noCaptions === true ? { no_captions: true } : {}),
       };
     }
-    await writeFile(storyboardPath, articleToStoryboardYaml(article), "utf8");
+    // v0.6 D2: when LAYA_MODE is on/shadow, consult Laya for fall-through
+    // visual components (shadow logs only; on may override the default).
+    const layaVisual = await runLayaVisualAssist(article, projectRoot);
+    if (layaVisual.summary) console.log(`  ${layaVisual.summary}`);
+    await writeFile(
+      storyboardPath,
+      articleToStoryboardYaml(
+        article,
+        layaVisual.overrides
+          ? { visualOverrides: layaVisual.overrides }
+          : undefined,
+      ),
+      "utf8",
+    );
   } catch (err) {
     console.error(
       `  ! could not refresh storyboard.yaml from article.md: ${(err as Error).message}`,
@@ -349,6 +395,10 @@ program
     "v0.4: visual theme written into storyboard.style.theme (default: paper-light)",
   )
   .option(
+    "--image-style <style>",
+    "v0.6: FLUX scene-image preset — flat-vector | editorial | whiteboard (default: flat-vector); written into article.md frontmatter",
+  )
+  .option(
     "--no-captions",
     "v0.4: skip the caption overlay (no captions: block in the generated storyboard)",
   )
@@ -380,6 +430,7 @@ program
         file?: string;
         audioPlan?: boolean;
         style?: string;
+        imageStyle?: string;
         captions?: boolean;
         review?: boolean;
         minScore?: number;
@@ -398,6 +449,9 @@ program
         ...(opts.file !== undefined ? { ideaFile: opts.file } : {}),
         noAudioPlan: opts.audioPlan === false,
         ...(opts.style !== undefined ? { style: opts.style } : {}),
+        ...(opts.imageStyle !== undefined
+          ? { imageStyle: opts.imageStyle }
+          : {}),
         noCaptions: opts.captions === false,
         noReview: opts.review === false,
         ...(opts.minScore !== undefined ? { minScore: opts.minScore } : {}),

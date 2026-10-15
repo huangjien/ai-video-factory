@@ -126,6 +126,64 @@ d("FluxKleinImageProvider — JSONL protocol against the selftest worker", () =>
   );
 });
 
+d("textOverlay — Pillow text pass after generation (selftest)", () => {
+  it(
+    "draws overlay text and changes the output bytes (provider end-to-end)",
+    async () => {
+      // Same provider-level seed → identical selftest image; the overlay
+      // is the only difference, so differing bytes prove the Pillow pass ran.
+      const base = {
+        prompt: "overlay twin test",
+        width: 96,
+        height: 64,
+      } as const;
+      const plain = new FluxKleinImageProvider({ ...selftestOpts, seed: 11 });
+      const withText = new FluxKleinImageProvider({
+        ...selftestOpts,
+        seed: 11,
+      });
+      try {
+        const a = await plain.generate({ ...base });
+        const b = await withText.generate({
+          ...base,
+          textOverlay: { text: "AI 视频工厂", position: "center" },
+        });
+        expect(b.contentType).toBe("image/jpeg");
+        expect(
+          Buffer.compare(Buffer.from(a.bytes), Buffer.from(b.bytes)),
+        ).not.toBe(0);
+      } finally {
+        plain.dispose();
+        withText.dispose();
+      }
+    },
+    90_000,
+  );
+
+  it(
+    "rejects an invalid textOverlay.position with a per-job error",
+    async () => {
+      const p = new FluxKleinImageProvider(selftestOpts);
+      try {
+        await expect(
+          p.generate({
+            prompt: "bad position",
+            width: 96,
+            height: 64,
+            textOverlay: {
+              text: "x",
+              position: "middle" as "top",
+            },
+          }),
+        ).rejects.toMatchObject({ name: "ImageGenerationError" });
+      } finally {
+        p.dispose();
+      }
+    },
+    60_000,
+  );
+});
+
 describe("FluxKleinImageProvider — unit (no worker)", () => {
   it("rejects when the python sidecar is missing", async () => {
     const p = new FluxKleinImageProvider({

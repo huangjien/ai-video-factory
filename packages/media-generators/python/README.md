@@ -134,6 +134,16 @@ The worker exits cleanly when stdin closes. Dimensions are snapped up to
 multiples of 16 (FLUX.2 VAE alignment) and the decoded image is fitted
 to the exact requested box with Pillow.
 
+**Text overlay (v0.5.4).** The optional `textOverlay` field —
+`{"text": "标题", "position": "top|center|bottom", "fontPx": 72}` — draws
+text on the finished image with Pillow (CJK-capable font via the
+`FLUX2_FONT` env override, else the first system CJK font found; white
+fill, black stroke, centered, auto-wrapped). Generation prompts must stay
+text-free — diffusion garbles written text, especially CJK — and every
+written label belongs in this post-generation pass. This is how
+`video thumbnail` puts the video title on the art: the image model makes
+a pure picture, Pillow writes the words.
+
 The make pipeline opts into image-to-image via
 `video make --image-provider flux --reference-style-anchor` (off by
 default): scene 1 is generated first, then every subsequent scene

@@ -392,6 +392,9 @@ importers:
 
   packages/qa:
     dependencies:
+      '@video/llm':
+        specifier: workspace:*
+        version: link:../llm
       '@video/media':
         specifier: workspace:*
         version: link:../media

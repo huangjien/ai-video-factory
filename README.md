@@ -122,6 +122,7 @@ do).
 | `video retrospect <project>`        | **v0.4** ask the LLM for 3 concrete edits to `article.md` based on the latest runs + QA report (writes `projects/<slug>/retrospect.md`); `--dry-run` shows the input without calling the LLM                                                                                                                                   |
 | `video status <project>`            | shows current workflow checkpoint + **v0.4** the latest QA finding count next to the gate                                                                                                                                                                                                                                      |
 | `video theme [name] / --cwd <root>` | **v0.4** palette inspector — list every theme, print one theme's full token set, or resolve `style.theme` from a project's storyboard                                                                                                                                                                                          |
+| `video laya health / ask / eval`    | **v0.6** local decision-model diagnostics — probe the Laya sidecar (/health), run one bounded-decision consult with raw probabilities, and score the project's `laya-decisions.jsonl` against the §7 promotion gates; advisory only, `LAYA_MODE=off` by default                                                                |
 
 <!-- END: minimal-api-table -->
 
@@ -198,7 +199,7 @@ uv sync && uv run python flux_worker.py --download
 video make my-project --image-provider flux     # scene visuals, 1920×1080
 # v0.5.3+: `video make` defaults to flux when the local service is
 # ready. Pass `--image-provider minimax|mock|none` to override.
-video thumbnail my-project --provider flux      # 1280×720 thumbnails
+video thumbnail my-project --provider flux      # 1280×720 thumbnails — title text drawn by Pillow (from youtube/title.txt), never by the image model; --no-text skips it
 ```
 
 Pre-flight: `FluxKleinImageProvider` runs `uv run python
@@ -237,12 +238,13 @@ enforced when declared, and the worker keeps the pipeline warm
 The worker keeps the pipeline warm across a whole render (model load ≈
 28 s on M4; scene images ≈ 1–3 min each), streams the text encoder via
 group offloading to fit 24 GB unified memory, snaps dimensions to the
- FLUX.2 VAE alignment and Pillow-fits to the exact requested box. Scene
- image prompts still go through the v0.4 LLM expansion; failures are
- non-fatal (scene falls back to `AnimatedIllustration`). Knobs:
- `FLUX2_MODEL / FLUX2_STEPS / FLUX2_GUIDANCE / FLUX2_DEVICE / FLUX2_DTYPE /
- FLUX2_OFFLOAD / FLUX2_LORA / FLUX2_LORA_CONFIG / FLUX2_TEXT_ENCODER_QUANT /
- FLUX2_HF_HOME` — full table in `packages/media-generators/python/README.md`.
+FLUX.2 VAE alignment and Pillow-fits to the exact requested box. Scene
+image prompts still go through the v0.4 LLM expansion; failures are
+non-fatal (scene falls back to `AnimatedIllustration`). Knobs:
+`FLUX2_MODEL / FLUX2_STEPS / FLUX2_GUIDANCE / FLUX2_DEVICE / FLUX2_DTYPE /
+FLUX2_OFFLOAD / FLUX2_LORA / FLUX2_LORA_CONFIG / FLUX2_TEXT_ENCODER_QUANT /
+FLUX2_HF_HOME / FLUX2_QUIET` (silence live step-progress logs) — full table
+in `packages/media-generators/python/README.md`.
 
 ### Memory pressure knobs
 

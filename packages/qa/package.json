@@ -15,6 +15,7 @@
   },
   "dependencies": {
     "@video/media": "workspace:*",
-    "@video/vdsl": "workspace:*"
+    "@video/vdsl": "workspace:*",
+    "@video/llm": "workspace:*"
   }
 }

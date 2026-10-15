@@ -45,6 +45,11 @@ export const MINIMAL_API_COMMANDS: readonly MinimalApiCommand[] = [
     purpose:
       "**v0.4** palette inspector — list every theme, print one theme's full token set, or resolve `style.theme` from a project's storyboard",
   },
+  {
+    invocation: "video laya health / ask / eval",
+    purpose:
+      "**v0.6** local decision-model diagnostics — probe the Laya sidecar (/health), run one bounded-decision consult with raw probabilities, and score the project's `laya-decisions.jsonl` against the §7 promotion gates; advisory only, `LAYA_MODE=off` by default",
+  },
 ];
 
 /** Verbs wired for back-compat but outside the recommended path — shown in
@@ -64,6 +69,7 @@ export const ADVANCED_VERBS: readonly string[] = [
   "review",
   "validate",
   "scene",
+  "laya",
 ];
 
 function wrapWords(text: string, maxWidth: number, continuationIndent = 0): string[] {

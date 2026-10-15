@@ -5,6 +5,13 @@ import path from "node:path";
 import { promisify } from "node:util";
 import type { RenderPlan } from "@video/vdsl";
 import {
+  appendLayaDecision,
+  LayaClient,
+  resolveLayaConfig,
+  stateSha256,
+  type LayaMode,
+} from "@video/llm";
+import {
   checkCaptions,
   checkSceneAudioSync,
   checkSceneBoundaries,
@@ -111,11 +118,13 @@ export async function detectBlackFrames(
   return segments;
 }
 
-/** Tile N evenly-spaced frames into one PNG (plan §28 contact sheet). */
+/** Tile N evenly-spaced frames into one PNG (plan §28 contact sheet).
+ * `caption` (v0.6) is drawn as a bottom overlay when a system font is
+ * available; no font → no caption, sheet unchanged. */
 export async function makeContactSheet(
   file: string,
   outPath: string,
-  opts: { frames?: number; thumbWidth?: number } = {},
+  opts: { frames?: number; thumbWidth?: number; caption?: string } = {},
 ): Promise<void> {
   const info = await probeVideo(file);
   const frames = Math.min(
@@ -125,17 +134,39 @@ export async function makeContactSheet(
   const cols = Math.ceil(Math.sqrt(frames));
   const rows = Math.ceil(frames / cols);
   const thumbWidth = opts.thumbWidth ?? 320;
+  const vf = contactSheetFilter(frames / info.duration, thumbWidth, cols, rows, opts.caption);
   await mkdir(path.dirname(outPath), { recursive: true });
-  await execFileAsync("ffmpeg", [
-    "-y",
-    "-i",
-    file,
-    "-vf",
-    `fps=${frames / info.duration},scale=${thumbWidth}:-1,tile=${cols}x${rows}`,
-    "-frames:v",
-    "1",
-    outPath,
-  ]);
+  await execFileAsync("ffmpeg", ["-y", "-i", file, "-vf", vf, "-frames:v", "1", outPath]);
+}
+
+/** Pure filter-string builder (unit-testable without ffmpeg). */
+export function contactSheetFilter(
+  fps: number,
+  thumbWidth: number,
+  cols: number,
+  rows: number,
+  caption?: string,
+): string {
+  const base = `fps=${fps},scale=${thumbWidth}:-1,tile=${cols}x${rows}`;
+  const font = caption ? firstSystemFont() : null;
+  if (!caption || !font) return base;
+  const escaped = caption.replace(/\\/g, "\\\\").replace(/'/g, "\\'").replace(/:/g, "\\:");
+  return (
+    base +
+    `,drawtext=fontfile='${font}':text='${escaped}':x=8:y=h-th-8:fontsize=20:fontcolor=white:box=1:boxcolor=black@0.6:boxborderw=6`
+  );
+}
+
+const FONT_CANDIDATES = [
+  "/System/Library/Fonts/Helvetica.ttc", // macOS
+  "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", // Linux
+];
+
+function firstSystemFont(): string | null {
+  for (const f of FONT_CANDIDATES) {
+    if (existsSync(f)) return f;
+  }
+  return null;
 }
 
 export interface QaFinding {
@@ -151,6 +182,11 @@ export interface RenderReport {
   generatedAt: string;
   ok: boolean;
   findings: QaFinding[];
+  /** v0.6 D3: Laya's advisory triage. Present ONLY in LAYA_MODE=on —
+   * shadow logs to the sidecar and never mutates the report, and the
+   * export gate NEVER reads this field (v0.6 plan §1 rule 1: advisory
+   * only, human gates stay human). */
+  advisory?: { laya?: QaLayaTriage };
   checks: {
     duration: { expectedSec: number; actualSec: number; ok: boolean };
     fps: { expected: number; actual: number; ok: boolean };
@@ -165,6 +201,14 @@ export interface RenderReport {
     captions: import("./checks.js").CaptionChecks;
     sceneBoundaries: import("./checks.js").BoundaryChecks;
   };
+}
+
+/** Laya's "where should a human look first" hint for the QA report. */
+export interface QaLayaTriage {
+  verdict: "pass" | "review" | "block";
+  confidence: number;
+  routingModel: string;
+  latencyMs: number;
 }
 
 export interface RenderReportOptions {
@@ -301,22 +345,153 @@ export async function buildRenderReport(
 }
 
 /** Write qa/render-report.json + qa/contact-sheet.png under projectRoot.
- * Returns the report; throws on ffmpeg failure (callers decide loudly). */
+ * Returns the report; throws on ffmpeg failure (callers decide loudly).
+ *
+ * v0.6 D3: when LAYA_MODE is on/shadow the finished report is ALSO
+ * triaged by the Laya sidecar. shadow → one `laya-decisions.jsonl` row,
+ * report untouched. on → the verdict rides along as
+ * `report.advisory.laya` and is captioned on the contact sheet. The
+ * export gate never reads the advisory (human gates stay human). */
 export async function writeQaArtifacts(
   projectRoot: string,
   plan: RenderPlan,
   videoPath: string,
+  opts: { layaMode?: LayaMode } = {},
 ): Promise<RenderReport> {
   const qaDir = path.join(projectRoot, "qa");
   const report = await buildRenderReport(plan, videoPath);
+
+  const layaCfg = resolveLayaConfig();
+  const mode = opts.layaMode ?? layaCfg.mode;
+  if (mode !== "off") {
+    const client = new LayaClient({ resolvedConfig: layaCfg });
+    const triage = await triageReportWithLaya(client, report);
+    const expected = deterministicTriageVerdict(report);
+    try {
+      await appendLayaDecision(path.join(projectRoot, "laya-decisions.jsonl"), {
+        ts: new Date().toISOString(),
+        surface: "triage",
+        mode,
+        state_sha256: stateSha256(buildTriageState(report)),
+        questions: {
+          triage: {
+            type: "choice",
+            instructions: QA_TRIAGE_INSTRUCTIONS,
+            criteria: ["pass", "review", "block"],
+          },
+        },
+        answers: triage
+          ? {
+              triage: {
+                type: "choice" as const,
+                value: triage.verdict,
+                confidence: triage.confidence,
+                routingModel: triage.routingModel,
+              },
+            }
+          : null,
+        routing_model: triage?.routingModel ?? null,
+        latency_ms: triage?.latencyMs ?? null,
+        acted: mode === "on" && triage !== null,
+        expected,
+        ...(triage ? { agreed: triage.verdict === expected } : {}),
+      });
+    } catch {
+      // Telemetry must never break the QA write.
+    }
+    if (mode === "on" && triage) {
+      report.advisory = { laya: triage };
+    }
+  }
+
   await mkdir(qaDir, { recursive: true });
   await writeFile(
     path.join(qaDir, "render-report.json"),
     JSON.stringify(report, null, 2),
     "utf8",
   );
-  await makeContactSheet(videoPath, path.join(qaDir, "contact-sheet.png"));
+  const caption =
+    report.advisory?.laya
+      ? `laya: ${report.advisory.laya.verdict} (conf ${report.advisory.laya.confidence.toFixed(2)})`
+      : undefined;
+  await makeContactSheet(videoPath, path.join(qaDir, "contact-sheet.png"), {
+    ...(caption !== undefined ? { caption } : {}),
+  });
   return report;
+}
+
+export const QA_TRIAGE_INSTRUCTIONS =
+  "A rendered video's QA report summary is given. " +
+  "pass = nothing beyond the normal human gate; " +
+  "review = flag for closer human review at the review checkpoint; " +
+  "block = serious defects, recommend a re-render before review.";
+
+/** Compact state string for the triage consult (≤ ~2k chars). */
+export function buildTriageState(report: RenderReport): string {
+  const c = report.checks;
+  const errorCount = report.findings.filter((f) => f.level === "error").length;
+  const warnCount = report.findings.filter((f) => f.level === "warn").length;
+  const worst = report.findings
+    .slice(0, 5)
+    .map((f) => `- [${f.level}] ${f.check}: ${f.message}`)
+    .join("\n");
+  return [
+    `QA verdict ok=${report.ok}`,
+    `errors=${errorCount} warnings=${warnCount}`,
+    `duration ${c.duration.actualSec}s vs plan ${c.duration.expectedSec}s ok=${c.duration.ok}`,
+    `fps ${c.fps.actual} ok=${c.fps.ok}`,
+    `resolution ${c.resolution.actual} ok=${c.resolution.ok}`,
+    `audio present=${c.audio.hasAudio} ok=${c.audio.ok}`,
+    `black frames: ${c.blackFrames.length} segment(s)`,
+    `missing assets: ${c.assets.missing.length}`,
+    `scene audio sync ok=${c.sceneAudioSync.ok}`,
+    `captions ok=${c.captions.ok}`,
+    `scene boundaries ok=${c.sceneBoundaries.ok}`,
+    worst ? `top findings:\n${worst}` : "no findings",
+  ].join("\n");
+}
+
+/** What today's deterministic gate logic would say (the shadow baseline):
+ * error findings → block, warn-only → review, clean → pass. */
+export function deterministicTriageVerdict(
+  report: Pick<RenderReport, "ok" | "findings">,
+): "pass" | "review" | "block" {
+  if (report.findings.some((f) => f.level === "error")) return "block";
+  if (report.findings.some((f) => f.level === "warn")) return "review";
+  return "pass";
+}
+
+/** Ask Laya to triage a finished report. Null = no usable answer. */
+export async function triageReportWithLaya(
+  client: LayaClient,
+  report: RenderReport,
+): Promise<QaLayaTriage | null> {
+  let decision: Awaited<ReturnType<LayaClient["decide"]>>;
+  try {
+    decision = await client.decide(buildTriageState(report), {
+      triage: {
+        type: "choice",
+        instructions: QA_TRIAGE_INSTRUCTIONS,
+        criteria: ["pass", "review", "block"],
+      },
+    });
+  } catch {
+    return null; // decide() is never-throwing by contract; belt and braces
+  }
+  const answer = decision?.answers["triage"];
+  if (decision === null || decision === undefined || answer === undefined) {
+    return null;
+  }
+  const v = answer.value;
+  const verdict =
+    v === "pass" || v === "review" || v === "block" ? v : null;
+  if (verdict === null) return null;
+  return {
+    verdict,
+    confidence: answer.confidence,
+    routingModel: answer.routingModel,
+    latencyMs: decision.latencyMs,
+  };
 }
 
 // Re-exports from the extended-checks module (T6.1) so consumers import

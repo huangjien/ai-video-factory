@@ -26,9 +26,10 @@ import { registerStudio } from "./studio-command.js";
 import { registerScene } from "./scene-command.js";
 import { registerFinal } from "./render-command.js";
 import { registerRetrospect } from "./retrospect-command.js";
+import { registerLaya } from "./laya-command.js";
 import { buildBanner } from "./minimal-api.js";
 
-const VERSION = "0.5.3";
+const VERSION = "0.6.0";
 export { VERSION };
 const program = new Command();
 
@@ -69,6 +70,7 @@ for (const register of [
   registerScene,
   registerFinal,
   registerRetrospect,
+  registerLaya,
 ]) {
   register(program);
 }

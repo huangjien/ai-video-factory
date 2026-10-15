@@ -6,8 +6,13 @@ import { execSync } from "node:child_process";
 import path from "node:path";
 import {
   GLMProvider,
+  LayaClient,
   loadProviderConfig,
   MiniMaxProvider,
+  appendLayaDecision,
+  resolveLayaConfig,
+  stateSha256,
+  type LayaMode,
   type Provider,
 } from "@video/llm";
 import { validateStoryboard } from "@video/vdsl";
@@ -92,6 +97,80 @@ function specEquals(existing: unknown, planned: unknown): boolean {
   return JSON.stringify(existing ?? null) === JSON.stringify(planned ?? null);
 }
 
+// ─── v0.6 D1: Laya motion pre-screen (docs/v0.6-laya-decision-integration-plan.md §5) ───
+// Per scene, Laya answers "is the deterministic baseline good enough, or
+// does this scene need the cloud motion agent?" — on-mode skips the cloud
+// call for baseline_ok scenes; shadow logs what WOULD have been skipped.
+
+const LAYA_MOTION_QID = "needs_llm";
+
+function buildMotionLayaState(input: {
+  sceneId: string;
+  component: string;
+  durationSec: number;
+  index: number;
+  narration?: string | undefined;
+  bpm?: number | undefined;
+  baseline: MotionSpec;
+}): string {
+  return [
+    `scene: ${input.sceneId} (index ${input.index})`,
+    `component: ${input.component}`,
+    `duration: ${input.durationSec}s`,
+    ...(input.bpm !== undefined ? [`beat grid: ${input.bpm} BPM`] : []),
+    ...(input.narration
+      ? [`narration excerpt: ${input.narration.slice(0, 300)}`]
+      : []),
+    `deterministic baseline spec: ${JSON.stringify(input.baseline).slice(0, 500)}`,
+  ].join("\n");
+}
+
+interface LayaMotionAnswer {
+  answer: "baseline_ok" | "refine";
+  confidence: number;
+  routingModel: string;
+  latencyMs: number;
+  state: string;
+}
+
+async function askLayaMotion(
+  client: LayaClient,
+  state: string,
+): Promise<LayaMotionAnswer | null> {
+  let decision: Awaited<ReturnType<LayaClient["decide"]>>;
+  try {
+    decision = await client.decide(state, {
+      [LAYA_MOTION_QID]: {
+        type: "choice",
+        instructions:
+          "A scene's motion was planned by deterministic heuristics (the baseline). " +
+          "baseline_ok = the baseline is good enough for this scene, no LLM refinement needed. " +
+          "refine = the scene is complex enough to benefit from the LLM motion agent.",
+        criteria: ["baseline_ok", "refine"],
+      },
+    });
+  } catch {
+    return null; // decide() is never-throwing by contract; belt and braces
+  }
+  const answer = decision?.answers[LAYA_MOTION_QID];
+  const v = answer?.value;
+  if (
+    decision === undefined ||
+    decision === null ||
+    answer === undefined ||
+    (v !== "baseline_ok" && v !== "refine")
+  ) {
+    return null;
+  }
+  return {
+    answer: v,
+    confidence: answer.confidence,
+    routingModel: answer.routingModel,
+    latencyMs: decision.latencyMs,
+    state,
+  };
+}
+
 export interface MotionOptions {
   project: string;
   cwd?: string | undefined;
@@ -171,6 +250,15 @@ export async function runMotion(opts: MotionOptions): Promise<number> {
   const tokens = { input: 0, output: 0 };
   let lastMessages: { role: string; content: string }[] = [];
 
+  // v0.6 D1 pre-screen setup (--baseline skips the agent entirely, so
+  // there is nothing to pre-screen there).
+  const layaCfg = resolveLayaConfig();
+  const layaMode: LayaMode = opts.baseline === true ? "off" : layaCfg.mode;
+  const layaClient =
+    layaMode !== "off" ? new LayaClient({ resolvedConfig: layaCfg }) : null;
+  const layaSidecar = path.join(root, "laya-decisions.jsonl");
+  let layaSkipped = 0;
+
   for (let i = 0; i < targets.length; i++) {
     const scene = targets[i]!;
     const baseline = planSceneMotion({
@@ -185,7 +273,30 @@ export async function runMotion(opts: MotionOptions): Promise<number> {
     });
 
     let spec = baseline;
-    if (!opts.baseline) {
+
+    // v0.6 D1: ask Laya whether the baseline suffices (mode-aware).
+    const layaAsk =
+      layaClient !== null
+        ? await askLayaMotion(
+            layaClient,
+            buildMotionLayaState({
+              sceneId: scene.id,
+              component: scene.visual.component,
+              durationSec: scene.duration,
+              index: i,
+              ...(scene.narration?.text !== undefined
+                ? { narration: scene.narration.text }
+                : {}),
+              ...(opts.bpm !== undefined ? { bpm: opts.bpm } : {}),
+              baseline,
+            }),
+          )
+        : null;
+
+    const skipAgent =
+      layaAsk !== null && layaAsk.answer === "baseline_ok" && layaMode === "on";
+
+    if (!opts.baseline && !skipAgent) {
       try {
         const result = await callMotionAgent(
           {
@@ -215,6 +326,58 @@ export async function runMotion(opts: MotionOptions): Promise<number> {
         console.warn(
           `  scene ${scene.id}: agent failed → deterministic baseline (${(err as Error).message})`,
         );
+      }
+    } else if (skipAgent) {
+      layaSkipped += 1;
+      console.log(`  scene ${scene.id}: laya → baseline (agent skipped)`);
+    }
+
+    if (layaMode !== "off") {
+      // Shadow proxy for "was the cloud call wasted": agent spec identical
+      // to baseline ⇒ baseline_ok was right. No agent call (skip/agent
+      // failure) ⇒ no expected, no agreement score.
+      const scored = !opts.baseline && !skipAgent;
+      const expected = scored
+        ? specEquals(baseline.animations, spec.animations) &&
+          specEquals(baseline.transition, spec.transition)
+          ? "baseline_ok"
+          : "refine"
+        : null;
+      try {
+        await appendLayaDecision(layaSidecar, {
+          ts: new Date().toISOString(),
+          surface: "motion",
+          mode: layaMode,
+          state_sha256: stateSha256(layaAsk?.state ?? scene.id),
+          questions: {
+            [LAYA_MOTION_QID]: {
+              type: "choice",
+              instructions: "baseline_ok or refine?",
+              criteria: ["baseline_ok", "refine"],
+            },
+          },
+          answers: layaAsk
+            ? {
+                [LAYA_MOTION_QID]: {
+                  type: "choice" as const,
+                  value: layaAsk.answer,
+                  confidence: layaAsk.confidence,
+                  routingModel: layaAsk.routingModel,
+                },
+              }
+            : null,
+          routing_model: layaAsk?.routingModel ?? null,
+          latency_ms: layaAsk?.latencyMs ?? null,
+          acted: layaMode === "on" && layaAsk !== null,
+          ...(expected !== null && layaAsk !== null
+            ? {
+                expected,
+                agreed: layaAsk.answer === expected,
+              }
+            : {}),
+        });
+      } catch {
+        // Telemetry must never break the motion pass.
       }
     }
 
@@ -276,7 +439,7 @@ export async function runMotion(opts: MotionOptions): Promise<number> {
   });
 
   console.log(
-    `✓ motion planned for ${changed}/${targets.length} scene(s)${changed > 0 ? ` — next: \`video preview\`, then \`video scene list\` to review versions` : ""}`,
+    `✓ motion planned for ${changed}/${targets.length} scene(s)${changed > 0 ? ` — next: \`video preview\`, then \`video scene list\` to review versions` : ""}${layaSkipped > 0 ? `\n  laya: skipped ${layaSkipped} cloud call(s) (mode=${layaMode})` : ""}`,
   );
   return 0;
 }

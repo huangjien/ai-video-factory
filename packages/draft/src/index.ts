@@ -37,14 +37,36 @@ export {
 } from "./article-review.js";
 export {
   pickVisualComponent,
+  DEFAULT_VISUAL_COMPONENT,
+  LAYA_VISUAL_COMPONENTS,
   type ComponentChoice,
   type ComponentName,
+  type VisualAssist,
+  type VisualAssistResult,
 } from "./visual-classifier.js";
+export {
+  askLayaVisual,
+  buildVisualAssistState,
+  resolveVisualOverrides,
+  runLayaVisualAssist,
+  LAYA_VISUAL_QID,
+  type LayaVisualAssistOutcome,
+  type VisualOverridesResult,
+} from "./laya-assist.js";
 export {
   expandScenePrompt,
   type ScenePromptInput,
   type ExpandedPrompt,
 } from "./image-prompt.js";
+export {
+  DEFAULT_IMAGE_STYLE,
+  IMAGE_STYLES,
+  IMAGE_STYLE_PRESETS,
+  resolveImageStyle,
+  stylePromptSuffix,
+  styleSystemBlock,
+  type ImageStyle,
+} from "./image-style.js";
 export {
   VISUAL_BUILDERS,
   type BuildInput,

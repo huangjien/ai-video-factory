@@ -58,6 +58,10 @@ export interface FluxKleinImageProviderOptions {
   pythonArgs?: string[] | undefined;
   /** Serve deterministic mock images without loading the model (tests). */
   selftest?: boolean | undefined;
+  /** Live-forward worker stderr (step progress, load logs) to this
+   * process's stderr so long generations don't look hung. Default off
+   * (tests stay quiet); the CLI turns it on for flux runs. */
+  forwardStderr?: boolean | undefined;
   /** Grace for cold start (model load). Default 20 min. */
   readyTimeoutMs?: number | undefined;
   /** Per-image budget. Default 10 min. */
@@ -166,6 +170,7 @@ export class FluxKleinImageProvider implements ImageProvider {
         seed: this.opts.seed,
         format: "jpg",
         ...(req.referenceImage ? { referenceImage: req.referenceImage } : {}),
+        ...(req.textOverlay ? { textOverlay: req.textOverlay } : {}),
       }) + "\n",
     );
     try {
@@ -423,6 +428,7 @@ export class FluxKleinImageProvider implements ImageProvider {
       for (const line of lines) {
         this.stderrTail.push(line);
         if (this.stderrTail.length > 15) this.stderrTail.shift();
+        if (this.opts.forwardStderr) process.stderr.write(`[flux] ${line}\n`);
       }
     });
     proc.stdin?.on("error", () => {

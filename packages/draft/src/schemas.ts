@@ -27,6 +27,11 @@ export const ArticleFrontmatterSchema = z
      *  `captions: { source: narration }` block so the renderer skips
      *  the caption overlay. Default false (captions on). */
     no_captions: z.boolean().optional(),
+    /** v0.6: image-style preset for FLUX scene visuals. Deliberately a
+     *  plain string (article.md is human-edited — a typo must not brick
+     *  parsing); resolveImageStyle coerces unknown values to
+     *  flat-vector at the use site. */
+    image_style: z.string().optional(),
   })
   .passthrough();
 export type ArticleFrontmatter = z.infer<typeof ArticleFrontmatterSchema>;
@@ -68,8 +73,18 @@ export interface ParsedArticle {
  *    unless `frontmatter.no_captions === true` (T1 --no-captions).
  *  - The visual component is chosen by `pickVisualComponent` (T2) so
  *    the LLM's "vary visuals" instructions actually take effect.
+ *
+ * v0.6: `opts.visualOverrides` (scene index → component) lets the Laya
+ * assist (laya-assist.ts) replace FALL-THROUGH component choices. The
+ * function itself stays pure and synchronous — overrides must be
+ * resolved before calling. An override with no VISUAL_BUILDER is
+ * ignored (defensive; laya-assist already validates against the
+ * component list).
  */
-export function articleToStoryboardYaml(article: ParsedArticle): string {
+export function articleToStoryboardYaml(
+  article: ParsedArticle,
+  opts: { visualOverrides?: ReadonlyMap<number, string> } = {},
+): string {
   const f = article.frontmatter;
   const theme = f.theme ?? "paper-light";
   const lines: string[] = [
@@ -101,8 +116,13 @@ export function articleToStoryboardYaml(article: ParsedArticle): string {
   article.scenes.forEach((s, i) => {
     const id = `scene-${String(i + 1).padStart(2, "0")}`;
     const isFirst = i === 0;
-    const choice = pickVisualComponent(s.visual ?? "", isFirst);
-    const component = choice.component;
+    const overrideKey = opts.visualOverrides?.get(i);
+    const override =
+      overrideKey !== undefined && VISUAL_BUILDERS[overrideKey] !== undefined
+        ? overrideKey
+        : null;
+    const component =
+      override ?? pickVisualComponent(s.visual ?? "", isFirst).component;
     const sectionIdx =
       sections.length === 0
         ? 0

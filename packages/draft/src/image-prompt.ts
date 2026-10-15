@@ -3,6 +3,13 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import path from "node:path";
 import type { ChatMessage, Provider } from "@video/llm";
+import {
+  DEFAULT_IMAGE_STYLE,
+  stylePromptSuffix,
+  styleSystemBlock,
+  resolveImageStyle,
+  type ImageStyle,
+} from "./image-style.js";
 
 /**
  * v0.4 (T3) — image-prompt expansion for the MiniMax image provider.
@@ -42,23 +49,33 @@ Subject · environment · lighting · composition · style. Under 400 characters
 
 Hard rules:
 - NEVER include text, subtitles, watermarks, logos, captions, titles, or brand names in the image.
+- Text and labels are overlaid programmatically AFTER generation — describe only imagery, never written words.
 - NEVER include abstract phrases like "interesting visuals", "dramatic background", or "modern technology".
 - Output ONLY the prompt text. No markdown, no code fence.`;
 
 /** Expand a single scene's visual direction into a real image prompt.
- *  Cheap LLM call; cached on disk; idempotent. */
+ *  Cheap LLM call; cached on disk; idempotent.
+ *
+ *  v0.6: `opts.style` (from article frontmatter `image_style:`) injects
+ *  an image-style preset — composition rules into the system prompt and
+ *  a verbatim style contract into the final prompt. The style is part
+ *  of the cache key: switching styles re-expands. */
 export async function expandScenePrompt(
   scene: ScenePromptInput,
   provider: Provider,
   projectRoot: string,
   sceneNumber: number,
+  opts: { style?: ImageStyle } = {},
 ): Promise<ExpandedPrompt> {
+  const style = opts.style !== undefined ? resolveImageStyle(opts.style) : DEFAULT_IMAGE_STYLE;
   const cacheKey = createHash("sha256");
   cacheKey.update(scene.visual ?? "");
   cacheKey.update("|");
   cacheKey.update(scene.caption ?? "");
   cacheKey.update("|");
   cacheKey.update((scene.narration ?? "").slice(0, 200));
+  cacheKey.update("|");
+  cacheKey.update(style);
   const key = cacheKey.digest("hex").slice(0, 16);
 
   const cachePath = path.join(
@@ -97,12 +114,19 @@ export async function expandScenePrompt(
     "\nRewrite the visual direction into a 2-3 sentence image prompt. Subject · environment · lighting · composition · style. Under 400 characters.",
   );
   const messages: ChatMessage[] = [
-    { role: "system", content: SYSTEM_PROMPT },
+    {
+      role: "system",
+      content: `${SYSTEM_PROMPT}\n\n${styleSystemBlock(style)}`,
+    },
     { role: "user", content: parts.join("\n") },
   ];
 
   const res = await provider.chat({ messages, temperature: 0.4 });
-  const prompt = res.content.trim().slice(0, 400);
+  // The verbatim style contract rides along even if the LLM drifts —
+  // the image model always sees it. (Trim to 400 BEFORE the suffix so
+  // the generated part keeps the size budget; the suffix is fixed.)
+  const prompt =
+    `${res.content.trim().slice(0, 400)}\n${stylePromptSuffix(style)}`;
   const model = "expanded-via-llm";
 
   await mkdir(path.dirname(cachePath), { recursive: true });

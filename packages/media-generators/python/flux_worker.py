@@ -17,7 +17,10 @@ Modes:
 Protocol (one JSON object per line, responses on stdout, logs on stderr):
   request : {"id":1,"prompt":"...","width":1920,"height":1080,
              "steps":8,"guidance":4.0,"seed":123,"format":"jpg",
-             "referenceImage":"/abs/path/to/ref.png"  (v0.5.2 T6.2, optional)}
+             "referenceImage":"/abs/path/to/ref.png"  (v0.5.2 T6.2, optional),
+             "textOverlay":{"text":"标题","position":"top|center|bottom"}
+                  (optional — Pillow draws the text AFTER generation;
+                   prompts must stay text-free, diffusion garbles text)}
   response: {"id":1,"ok":true,"file":"/tmp/.../00000001_123.jpg",
              "width":1920,"height":1080,"seed":123,"ms":4521.0}
   error   : {"id":1,"ok":false,"error":"..."}
@@ -53,6 +56,8 @@ Environment knobs (read at startup):
                     FLUX2_LORA when set; sources resolve relative to the
                     config file's directory)
   FLUX2_HF_HOME   HF cache root (set before hub import)
+  FLUX2_FONT      font file for textOverlay (default: first CJK-capable
+                  system font found — PingFang / Hiragino / Noto CJK / msyh)
 """
 from __future__ import annotations
 
@@ -81,6 +86,97 @@ def log(msg: str) -> None:
     sys.stderr.write(f"[flux-worker {time.strftime('%H:%M:%S')}] {msg}\n")
     sys.stderr.flush()
 
+
+OVERLAY_POSITIONS = ("top", "center", "bottom")
+
+
+def _resolve_font(px: int):
+    """CJK-capable font for text overlays: FLUX2_FONT override, then
+    common system fonts, then Pillow's sized default."""
+    from PIL import ImageFont
+
+    candidates = []
+    env_font = os.environ.get("FLUX2_FONT")
+    if env_font:
+        candidates.append(env_font)
+    candidates += [
+        "/System/Library/Fonts/PingFang.ttc",  # macOS
+        "/System/Library/Fonts/Hiragino Sans GB.ttc",  # macOS
+        "/System/Library/Fonts/STHeiti Light.ttc",  # macOS (older)
+        "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",  # linux
+        "/usr/share/fonts/noto-cjk/NotoSansCJK-Regular.ttc",
+        "C:\\Windows\\Fonts\\msyh.ttc",  # windows
+    ]
+    for cand in candidates:
+        if os.path.exists(cand):
+            try:
+                return ImageFont.truetype(cand, px)
+            except Exception:
+                continue
+    try:
+        return ImageFont.load_default(px)  # Pillow >= 10.1
+    except TypeError:
+        return ImageFont.load_default()
+
+
+def _wrap_text(draw, text: str, font, max_width: int) -> list[str]:
+    """Greedy char-level wrap — CJK breaks anywhere; latin words may
+    overflow one char at a time rather than hyphenate. Fine for titles."""
+    lines: list[str] = []
+    cur = ""
+    for ch in text:
+        if not cur or draw.textlength(cur + ch, font=font) <= max_width:
+            cur += ch
+        else:
+            lines.append(cur)
+            cur = ch
+    if cur:
+        lines.append(cur)
+    return lines
+
+
+def apply_text_overlay(image, overlay: dict):
+    """Draw text on the image after generation (Pillow, not diffusion —
+    diffusion garbles written text, especially CJK). Returns the image."""
+    from PIL import ImageDraw
+
+    text = str(overlay.get("text", "")).strip()
+    if not text:
+        return image
+    position = overlay.get("position", "bottom")
+    if position not in OVERLAY_POSITIONS:
+        raise ValueError(
+            f"textOverlay.position must be one of {OVERLAY_POSITIONS}"
+        )
+    w, h = image.size
+    requested = int(overlay.get("fontPx", 0) or 0)
+    font_px = max(18, requested or round(h * 0.11))
+    font = _resolve_font(font_px)
+    draw = ImageDraw.Draw(image)
+    margin = round(w * 0.05)
+    lines = _wrap_text(draw, text, font, w - 2 * margin)
+    line_h = round(font_px * 1.25)
+    total_h = line_h * len(lines)
+    y = (
+        margin
+        if position == "top"
+        else (h - total_h) // 2
+        if position == "center"
+        else h - margin - total_h
+    )
+    stroke = max(1, font_px // 14)
+    for line in lines:
+        line_w = draw.textlength(line, font=font)
+        draw.text(
+            ((w - line_w) // 2, y),
+            line,
+            font=font,
+            fill=(255, 255, 255),
+            stroke_width=stroke,
+            stroke_fill=(0, 0, 0),
+        )
+        y += line_h
+    return image
 
 def emit(obj: dict) -> None:
     sys.stdout.write(json.dumps(obj, ensure_ascii=False) + "\n")
@@ -467,6 +563,11 @@ def run_daemon(out_dir: str, selftest: bool) -> int:
             reference_path = job.get("referenceImage")
             if reference_path is not None and not isinstance(reference_path, str):
                 raise ValueError("referenceImage must be a string path")
+            overlay = job.get("textOverlay")
+            if overlay is not None and not isinstance(overlay, dict):
+                raise ValueError("textOverlay must be an object {text, position?}")
+            if overlay is not None:
+                overlay = {**overlay, "text": str(overlay.get("text", ""))}
             if selftest:
                 if reference_path:
                     # Validate the reference file is a readable image
@@ -498,6 +599,16 @@ def run_daemon(out_dir: str, selftest: bool) -> int:
                     kwargs["image"] = ref_image
                 if not distilled:
                     kwargs["guidance_scale"] = guidance
+
+                def _step_cb(pipe_, i, t, cb_kwargs, _jid=jid, _total=steps):
+                    # Heartbeat so long generations don't look hung: log
+                    # every step for fast (distilled) runs, every 5th for
+                    # the 50-step base path. Goes to stderr only.
+                    if _total <= 10 or (i + 1) % 5 == 0 or (i + 1) == _total:
+                        log(f"job {_jid}: step {i + 1}/{_total}")
+                    return cb_kwargs
+
+                log(f"job {jid}: encoding prompt ({steps} steps) …")
                 image = pipe(**kwargs).images[0]
                 # Fit the VAE-aligned canvas onto the exact requested box.
                 image = ImageOps.fit(
@@ -505,7 +616,9 @@ def run_daemon(out_dir: str, selftest: bool) -> int:
                     (width, height),
                     method=PILImage.Resampling.LANCZOS,
                 )
-
+            if overlay is not None:
+                # Pillow text pass AFTER generation — never diffusion text.
+                image = apply_text_overlay(image, overlay)
             ext = "jpg" if fmt == "jpg" else "png"
             out_path = os.path.join(out_dir, f"{jid:08d}_{seed}.{ext}")
             if fmt == "jpg":

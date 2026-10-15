@@ -650,6 +650,37 @@ video storyboard "topic" --model glm --lang en-US
 非配额类错误（例如 HTTP 400 输入不合法）**不会**触发降级，因为同样的
 输入在 fallback 上也是同样的错，会直接报错。
 
+### 本地决策层（v0.6，可选）：Laya
+
+如果本机运行着 [Laya](https://huggingface.co/convaiinnovations/laya)
+决策模型服务（默认 `http://127.0.0.1:8019`），流水线可以向它咨询
+**有界决策**（choice/score + 概率）——它不是对话模型，永远不生成正文。
+Laya 只提供建议：不替代任何人工门，任何失败都会降级回原路径。
+
+```bash
+export LAYA_MODE=shadow   # off（默认）| shadow（只记录）| on（生效）
+export LAYA_URL=http://127.0.0.1:8019          # 可选
+export LAYA_MIN_CONFIDENCE=0.6                 # on 模式下的生效阈值
+```
+
+各接入点（设计与晋升门槛见
+`docs/v0.6-laya-decision-integration-plan.md`）：
+
+| 接入点 | 命令 | Laya 回答的问题 | `on` 模式下的效果 |
+|---|---|---|---|
+| motion 预筛 | `video motion` | 确定性基线是否足够？ | 基线足够时跳过云端 motion agent |
+| 视觉组件辅助 | `video draft` / `video make` | 关键词规则未命中时的组件选择 | 覆盖兜底默认组件 |
+| QA 分诊 | `video qa` / `preview` / `final` | 对渲染报告给出 pass/review/block | 写入 `qa/render-report.json` 的 `advisory.laya` + 联络表角标 |
+
+每次咨询都追加到项目目录的 `laya-decisions.jsonl`（审计 +
+shadow 评估语料）。诊断命令：
+
+```bash
+video laya health                  # 探活 + 打印生效配置
+video laya ask < json-file         # 单次原始咨询（显示概率）
+video laya eval <project>          # shadow 一致率 vs §7 晋升门槛
+```
+
 ### 推荐：`video draft`（合并 audio-plan）+ 批准 + `video make`
 
 新版 AI 工作流只有这几步 — 全部内聚到两个人类可编辑的产物：

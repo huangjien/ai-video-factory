@@ -735,6 +735,39 @@ A non-quota error from the primary (e.g. HTTP 400 invalid payload) is
 **not** retried with the fallback — it surfaces immediately, because
 the fallback provider would return the same error on the same input.
 
+### Local decision layer (v0.6, optional): Laya
+
+If the [Laya](https://huggingface.co/convaiinnovations/laya)
+decision-model service is running locally (default
+`http://127.0.0.1:8019`), the pipeline can consult it for BOUNDED
+decisions — never for generated text. Laya is advisory only: it never
+replaces a human gate, and every failure degrades to the normal code
+path.
+
+```bash
+export LAYA_MODE=shadow   # off (default) | shadow (log only) | on (act)
+export LAYA_URL=http://127.0.0.1:8019          # optional
+export LAYA_MIN_CONFIDENCE=0.6                 # acting threshold (on mode)
+```
+
+What each surface does (design + promotion gates:
+`docs/v0.6-laya-decision-integration-plan.md`):
+
+| Surface           | Command                          | Laya's question                                           | In `on` mode                                                                          |
+| ----------------- | -------------------------------- | --------------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| motion pre-screen | `video motion`                   | "is the deterministic baseline good enough?"              | baseline-ok scenes skip the cloud motion agent                                        |
+| visual assist     | `video draft` / `video make`     | component choice for scenes where no keyword rule matched | overrides the fall-through default                                                    |
+| QA triage         | `video qa` / `preview` / `final` | pass / review / block on the render report                | verdict appears as `advisory.laya` in `qa/render-report.json` + contact-sheet caption |
+
+Every consult is appended to `laya-decisions.jsonl` in the project
+directory (audit trail + shadow-evaluation corpus). Diagnostics:
+
+```bash
+video laya health                  # probe the service + resolved config
+video laya ask < json-file         # one raw consult (shows probabilities)
+video laya eval <project>          # shadow-agreement vs §7 promotion gates
+```
+
 ### Recommended: `video draft` (merged audio-plan) + approve + `video make`
 
 The AI workflow collapses to a few steps producing the two human-edit

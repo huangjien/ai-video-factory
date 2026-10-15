@@ -44,6 +44,71 @@ import {
 
 const execFileAsync = promisify(execFile);
 
+/**
+ * `video-progress/1` — live pipeline progress events (v0.7.1 plan).
+ *
+ * Emission is pure: events carry data, never print. The CLI owns the
+ * stderr formatting (`formatProgressEvent` in `packages/cli/src/ui.ts`);
+ * library callers pass `onEvent` to observe, or nothing to stay silent.
+ */
+export type ProgressEventKind =
+  | "start"
+  | "done"
+  | "fail"
+  | "heartbeat";
+
+export interface ProgressEvent {
+  kind: ProgressEventKind;
+  /** Step name ("tts") or item label ("tts scene_03"). */
+  label: string;
+  /** Whole-call seconds — set on done/fail/heartbeat. */
+  elapsedSec?: number;
+  /** 1-based position within a scene loop, when known. */
+  index?: number;
+  total?: number;
+  message?: string;
+}
+
+export type ProgressEmit = (e: ProgressEvent) => void;
+
+export const noopEmit: ProgressEmit = () => {};
+
+/** Elapsed whole seconds since `t0`. */
+function elapsedSinceSec(t0: number): number {
+  return Math.round((Date.now() - t0) / 1000);
+}
+
+/**
+ * Run `run()`, emitting `heartbeat` events through `emit` while it
+ * waits: first beat once the call has lasted `afterSec` (default 30),
+ * then every `everySec` (default 20). Beats stop when the promise
+ * settles. This is the "time to time" signal that keeps a long single
+ * call (FLUX frame, render, LLM draft) distinguishable from a hang.
+ */
+export function heartbeat<T>(
+  label: string,
+  run: () => Promise<T>,
+  emit: ProgressEmit = noopEmit,
+  opts: { everySec?: number; afterSec?: number } = {},
+): Promise<T> {
+  const everyMs = (opts.everySec ?? 20) * 1000;
+  const afterMs = (opts.afterSec ?? 30) * 1000;
+  const t0 = Date.now();
+  let nextBeatMs = afterMs;
+  const timer = setInterval(() => {
+    const elapsedMs = Date.now() - t0;
+    if (elapsedMs >= nextBeatMs) {
+      nextBeatMs += everyMs;
+      emit({
+        kind: "heartbeat",
+        label,
+        elapsedSec: elapsedSinceSec(t0),
+      });
+    }
+  }, everyMs);
+  return run().finally(() => clearInterval(timer));
+}
+
 export interface MakeOptions {
   projectRoot: string;
   /** Use offline fake provider (no Edge-TTS network call). */
@@ -84,6 +149,10 @@ export interface MakeOptions {
   /** BGM generation backend: "auto" (default) uses MiniMax music
    * generation when MINIMAX_API_KEY is set, else silent mock. */
   musicProvider?: "auto" | "minimax" | "mock";
+  /** v0.7.1 (video-progress/1): live progress events (step start/done,
+   * per-scene items, heartbeats). Default noop — the CLI passes a
+   * stderr printer. */
+  onEvent?: ProgressEmit;
 }
 
 export interface MakeStep {
@@ -132,6 +201,11 @@ export async function runMake(
   const dryRun = opts.dryRun === true;
   const report: MakeReport = { steps: [], outputFiles: [] };
 
+  // video-progress/1: one stderr-bound event sink shared by every step.
+  const emit = opts.onEvent ?? noopEmit;
+  const step = (name: string, run: () => Promise<string[]>) =>
+    runStep(report, name, idempotent, dryRun, run, emit);
+
   // 0. Inputs must exist.
   const articlePath = path.join(opts.projectRoot, "article.md");
   const audioConfigPath = path.join(opts.projectRoot, "audio-config.yaml");
@@ -167,7 +241,7 @@ export async function runMake(
   ) as AudioConfigShape;
 
   try {
-    await runStep(report, "sync-storyboard", idempotent, dryRun, () =>
+    await step("sync-storyboard", () =>
       syncStoryboardFromArticle(opts.projectRoot, article),
     );
 
@@ -175,7 +249,7 @@ export async function runMake(
     //    Produces assets/images/scene_N.jpg used by ImageBackground.
     //    `--fake` defaults to "none" so scenes stay as AnimatedIllustration
     //    — mock placeholders are too small to be useful backgrounds.
-    await runStep(report, "generate-visuals", idempotent, dryRun, () =>
+    await step("generate-visuals", () =>
       generateSceneVisuals(opts.projectRoot, article, {
         provider:
           opts.imageProvider ?? (opts.fake ? "none" : "flux"),
@@ -183,33 +257,35 @@ export async function runMake(
         lora: opts.lora,
         referenceStyleAnchor: opts.referenceStyleAnchor,
         anchorScene: opts.anchorScene,
+        onEvent: emit,
       }),
     );
 
     // 1b. TTS scenes — narrate each scene's voice-over text.
-    await runStep(report, "tts", idempotent, dryRun, () =>
+    await step("tts", () =>
       runTts(
         opts.projectRoot,
         article,
         audioConfig,
         { fake: opts.fake === true },
         deps.mp3ToWav,
+        emit,
       ),
     );
 
     // 1b. Resync storyboard.yaml durations to actual TTS lengths.
-    await runStep(report, "sync-durations", idempotent, dryRun, () =>
+    await step("sync-durations", () =>
       syncSceneDurations(opts.projectRoot),
     );
 
     // 1c. Captions SRT from the duration-synced storyboard — cue times
     // match the rendered video, not the LLM's duration estimates (§16).
-    await runStep(report, "captions", idempotent, dryRun, () =>
+    await step("captions", () =>
       writeCaptionsSrt(opts.projectRoot, article.frontmatter.language),
     );
 
     // 2. Materialize declared BGM/SFX assets.
-    await runStep(report, "audio-assets", idempotent, dryRun, () =>
+    await step("audio-assets", () =>
       runAudioAssets(opts.projectRoot, audioConfig, {
         ...(opts.bgmDir !== undefined ? { bgmDir: opts.bgmDir } : {}),
         ...(opts.sfxDir !== undefined ? { sfxDir: opts.sfxDir } : {}),
@@ -220,12 +296,12 @@ export async function runMake(
     );
 
     // 3. Render preview (compile article → VDSL → mp4).
-    await runStep(report, "render-preview", idempotent, dryRun, () =>
+    await step("render-preview", () =>
       (deps.renderPreview ?? runRenderPreview)(opts.projectRoot, article),
     );
 
     // 4. Mix narration + BGM + SFX cues.
-    await runStep(report, "mix", idempotent, dryRun, () =>
+    await step("mix", () =>
       (deps.mix ?? runMix)(opts.projectRoot, audioConfig),
     );
   } catch {
@@ -245,15 +321,25 @@ async function runStep(
   idempotent: boolean,
   dryRun: boolean,
   run: () => Promise<string[]>,
+  emit: ProgressEmit = noopEmit,
 ): Promise<void> {
   if (dryRun) {
     report.steps.push({ name, status: "would-run" });
     return;
   }
+  const t0 = Date.now();
+  emit({ kind: "start", label: name });
   try {
-    const outputs = await run();
+    const outputs = await heartbeat(name, run, emit);
+    emit({ kind: "done", label: name, elapsedSec: elapsedSinceSec(t0) });
     report.steps.push({ name, status: "ran", outputs });
   } catch (err) {
+    emit({
+      kind: "fail",
+      label: name,
+      elapsedSec: elapsedSinceSec(t0),
+      message: (err as Error).message,
+    });
     report.steps.push({
       name,
       status: "fail",
@@ -357,6 +443,7 @@ export async function generateSceneVisuals(
     lora?: string | undefined;
     referenceStyleAnchor?: boolean | undefined;
     anchorScene?: number | undefined;
+    onEvent?: ProgressEmit | undefined;
   },
 ): Promise<string[]> {
   if (opts.provider === "none") return [];
@@ -412,6 +499,8 @@ export async function generateSceneVisuals(
       `referenceStyleAnchor: anchorScene=${anchorScene} > scene count (${article.scenes.length}); no scenes will be conditioned`,
     );
   }
+  const emit = opts.onEvent ?? noopEmit;
+  const total = article.scenes.length;
   for (let i = 0; i < article.scenes.length; i++) {
     const scene = article.scenes[i]!;
     const visual = scene.visual ?? "";
@@ -431,6 +520,10 @@ export async function generateSceneVisuals(
       continue;
     }
 
+    const itemLabel = `image scene_${i + 1}`;
+    const itemAt = { index: i + 1, total };
+    const itemT0 = Date.now();
+    emit({ kind: "start", label: itemLabel, ...itemAt });
     let promptForImage = visual;
     if (expansionProvider) {
       try {
@@ -462,18 +555,27 @@ export async function generateSceneVisuals(
     }
 
     try {
-      const result = await provider.generate({
-        prompt: promptForImage,
-        width: reqWidth,
-        height: reqHeight,
+      const result = await heartbeat(itemLabel, () =>
+        provider.generate({
+          prompt: promptForImage,
+          width: reqWidth,
+          height: reqHeight,
       // Style anchor: every later scene conditions on the anchor scene's
       // image (flux-only; other providers ignore the field per the
       // ImageRequest contract). Doc §T6.2.
-        ...(styleAnchor
-          ? { referenceImage: styleAnchor }
-          : {}),
-      });
+          ...(styleAnchor
+            ? { referenceImage: styleAnchor }
+            : {}),
+        }),
+        emit,
+      );
       await writeFile(imagePath, result.bytes);
+      emit({
+        kind: "done",
+        label: itemLabel,
+        ...itemAt,
+        elapsedSec: elapsedSinceSec(itemT0),
+      });
       outputs.push(`assets/images/scene_${i + 1}.jpg`);
       generatedImages.push(imagePath);
       if (
@@ -488,6 +590,13 @@ export async function generateSceneVisuals(
       }
     } catch (err) {
       // Non-fatal: scene falls back to AnimatedIllustration.
+      emit({
+        kind: "fail",
+        label: itemLabel,
+        ...itemAt,
+        elapsedSec: elapsedSinceSec(itemT0),
+        message: (err as Error).message,
+      });
       outputs.push(
         `scene_${i + 1}: image gen failed — ${(err as Error).message.slice(0, 60)}`,
       );
@@ -639,6 +748,7 @@ async function runTts(
   audioConfig: AudioConfigShape,
   opts: { fake?: boolean },
   convertMp3: (mp3Bytes: Uint8Array, minDurationSec: number) => Promise<Uint8Array> = mp3ToWav,
+  onEvent: ProgressEmit = noopEmit,
 ): Promise<string[]> {
   const provider: TTSProvider = opts.fake
     ? new FakeTTSProvider({ sampleBytes: 256 })
@@ -654,7 +764,8 @@ async function runTts(
   await mkdir(audioDir, { recursive: true });
 
   const outputs: string[] = [];
-  for (const scene of article.scenes) {
+  const total = article.scenes.length;
+  for (const [idx, scene] of article.scenes.entries()) {
     const wavPath = path.join(audioDir, `${scene.id}.wav`);
     // Cache key: the narration TEXT (hashed), voice, and pause option —
     // not file existence. An existence check silently kept stale WAVs
@@ -666,11 +777,35 @@ async function runTts(
     if (meta !== null && meta.cacheKey === cacheKey && existsSync(wavPath)) {
       continue;
     }
-    const result = await provider.synthesize({
-      text: scene.narration,
-      voice,
-      language: article.frontmatter.language,
-      ...(pause !== undefined ? { pauseBetweenSentencesSec: pause } : {}),
+    const itemLabel = `tts ${scene.id}`;
+    const itemAt = { index: idx + 1, total };
+    const itemT0 = Date.now();
+    onEvent({ kind: "start", label: itemLabel, ...itemAt });
+    let result;
+    try {
+      result = await heartbeat(itemLabel, () =>
+        provider.synthesize({
+          text: scene.narration,
+          voice,
+          language: article.frontmatter.language,
+          ...(pause !== undefined ? { pauseBetweenSentencesSec: pause } : {}),
+        }),
+      onEvent);
+    } catch (err) {
+      onEvent({
+        kind: "fail",
+        label: itemLabel,
+        ...itemAt,
+        elapsedSec: elapsedSinceSec(itemT0),
+        message: (err as Error).message,
+      });
+      throw err;
+    }
+    onEvent({
+      kind: "done",
+      label: itemLabel,
+      ...itemAt,
+      elapsedSec: elapsedSinceSec(itemT0),
     });
     // Same WAV/MP3 detection as @video/cli runAudio.
     const isWav =

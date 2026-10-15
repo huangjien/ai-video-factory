@@ -1,0 +1,19 @@
+run_id: thumbnail-2026-10-15T06:49:46Z-790
+stage: thumbnail
+status: succeeded
+actor: tool
+tool: flux-klein
+input_commit: 56d981482649e85ab1f3adb1a1b911165a232b7a
+input_files:
+  - youtube/thumbnail-prompt.txt
+output_files:
+  - youtube/thumbnail.jpg
+created_at: 2026-10-15T06:49:46.304Z
+duration_ms: 0
+provider: flux-klein
+model: 1280x720
+prompt_hash: sha256:c2c67f96df9a961b0ed4820ba1ab9a539b320eabcd69a5effd973c03059866e5
+tokens:
+  input: 0
+  output: 0
+estimated_cost_usd: 0

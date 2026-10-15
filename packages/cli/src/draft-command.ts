@@ -18,7 +18,11 @@ import {
   runScoredDraft,
   type ParsedArticle,
 } from "@video/draft";
-import { callAudioPlan, renderAudioConfig, type AudioConfig } from "@video/audio-plan";
+import {
+  callAudioPlan,
+  renderAudioConfig,
+  type AudioConfig,
+} from "@video/audio-plan";
 import { resolveProjectDir } from "./project-path.js";
 import { maybeAgentAsk } from "./agent-ask.js";
 
@@ -82,7 +86,11 @@ function providerInstance(name: string): Provider {
 }
 
 export type AudioPlanStep =
-  | { status: "written"; config: AudioConfig; tokens: { input: number; output: number } }
+  | {
+      status: "written";
+      config: AudioConfig;
+      tokens: { input: number; output: number };
+    }
   | { status: "skipped"; reason: string }
   | { status: "failed"; error: string };
 
@@ -134,7 +142,9 @@ export async function runDraft(opts: DraftOptions): Promise<number> {
   // missing when their flags are already wrong).
   if (opts.ideaFile !== undefined && opts.from !== undefined) {
     console.error(`--file and --from are mutually exclusive:`);
-    console.error(`  --file <path>  your raw idea (polished, opinions preserved)`);
+    console.error(
+      `  --file <path>  your raw idea (polished, opinions preserved)`,
+    );
     console.error(`  --from <path>  an existing article to revise`);
     return 1;
   }
@@ -166,14 +176,18 @@ export async function runDraft(opts: DraftOptions): Promise<number> {
   // provider and writes no file (spec §4). null = run normally.
   const askExit = await maybeAgentAsk(opts, process.argv);
   if (askExit !== null) {
-    process.exitCode = askExit;
+    // No process.exitCode here: callers get the code from the return
+    // value (the commander action assigns it; a sticky write here would
+    // leak the exit code into unrelated library callers' processes).
     return askExit;
   }
 
   const resolvedProject = resolveProjectDir(opts.topic, opts.cwd);
   if (!resolvedProject.ok) {
     console.error(resolvedProject.message);
-    console.error(`hint: scaffold it with \`video new <topic>\` first, then re-run`);
+    console.error(
+      `hint: scaffold it with \`video new <topic>\` first, then re-run`,
+    );
     return 1;
   }
   const projectRoot = resolvedProject.root;
@@ -195,9 +209,7 @@ export async function runDraft(opts: DraftOptions): Promise<number> {
   const duration = opts.duration ?? 180;
   const audience = opts.audience ?? "developers";
 
-  let webContext:
-    | { url: string; title: string; snippet: string }[]
-    | undefined;
+  let webContext: { url: string; title: string; snippet: string }[] | undefined;
   if (!opts.noWeb) {
     try {
       webContext = await new MiniMaxWebSearch().search(opts.topic);
@@ -220,11 +232,11 @@ export async function runDraft(opts: DraftOptions): Promise<number> {
   let usage: { input: number; output: number };
   let servedBy: string;
   if (opts.noReview === true) {
-    ({ markdown, usage, providerName: servedBy } = await callDraft(
-      draftInput,
-      provider,
-      fallback,
-    ));
+    ({
+      markdown,
+      usage,
+      providerName: servedBy,
+    } = await callDraft(draftInput, provider, fallback));
   } else {
     const minScore = opts.minScore ?? 25;
     const maxAttempts = opts.maxAttempts ?? 3;
@@ -292,7 +304,11 @@ export async function runDraft(opts: DraftOptions): Promise<number> {
         `  (edit the narrations in article.md, or re-run with --from to revise)`,
       );
     }
-    const storyboardPath = path.join(projectRoot, "storyboard", "storyboard.yaml");
+    const storyboardPath = path.join(
+      projectRoot,
+      "storyboard",
+      "storyboard.yaml",
+    );
     // v0.4 (T1 + T8): stamp CLI-supplied knobs onto the parsed article
     // before handing it to the storyboard mapper. We only mutate the
     // in-memory copy; the article.md on disk stays as the LLM wrote it
@@ -355,7 +371,9 @@ export async function runDraft(opts: DraftOptions): Promise<number> {
       audioPlanHint = `edit article.md to refine the narrative, then \`video audio-plan <topic>\``;
     } else {
       console.error(`  ! audio-plan step failed: ${step.error.slice(0, 120)}`);
-      console.error(`  (article.md was written; run \`video audio-plan\` separately)`);
+      console.error(
+        `  (article.md was written; run \`video audio-plan\` separately)`,
+      );
       audioPlanHint = `edit article.md to refine the narrative, then \`video audio-plan <topic>\``;
     }
   }
@@ -363,122 +381,134 @@ export async function runDraft(opts: DraftOptions): Promise<number> {
   return 0;
 }
 
+/** Commander's parse result for the `draft` options — the opts object
+ *  handed to the action. Note commander never produces a `noAsk` key:
+ *  `--no-ask` arrives folded into `ask: false`. */
+export interface DraftCliOpts {
+  cwd?: string;
+  model?: "minimax" | "glm";
+  web?: boolean;
+  lang?: "zh-CN" | "en-US";
+  duration?: number;
+  audience?: string;
+  bgm?: string;
+  from?: string;
+  file?: string;
+  audioPlan?: boolean;
+  imageStyle?: string;
+  style?: string;
+  captions?: boolean;
+  review?: boolean;
+  minScore?: number;
+  maxAttempts?: number;
+  ask?: boolean;
+}
+
+/** Map the commander parse result onto runDraft's DraftOptions (topic
+ *  comes separately from the positional argument). Pure so the
+ *  `--ask`/`--no-ask` folding is testable at parse level — before, the
+ *  real CLI was the only place this mapping ran (spec §4 precedence,
+ *  §8 rule 6). */
+export function draftCliOptsToDraftOptions(
+  opts: DraftCliOpts,
+): Omit<DraftOptions, "topic"> {
+  return {
+    ...(opts.cwd !== undefined ? { cwd: opts.cwd } : {}),
+    ...(opts.model !== undefined ? { model: opts.model } : {}),
+    noWeb: opts.web === false,
+    ...(opts.lang !== undefined ? { lang: opts.lang } : {}),
+    ...(opts.duration !== undefined ? { duration: opts.duration } : {}),
+    ...(opts.audience !== undefined ? { audience: opts.audience } : {}),
+    ...(opts.bgm !== undefined ? { bgm: opts.bgm } : {}),
+    ...(opts.from !== undefined ? { from: opts.from } : {}),
+    ...(opts.file !== undefined ? { ideaFile: opts.file } : {}),
+    noAudioPlan: opts.audioPlan === false,
+    ...(opts.imageStyle !== undefined ? { imageStyle: opts.imageStyle } : {}),
+    ...(opts.style !== undefined ? { style: opts.style } : {}),
+    noCaptions: opts.captions === false,
+    noReview: opts.review === false,
+    ...(opts.minScore !== undefined ? { minScore: opts.minScore } : {}),
+    ...(opts.maxAttempts !== undefined
+      ? { maxAttempts: opts.maxAttempts }
+      : {}),
+    // commander folds `--ask`/`--no-ask` into a single `ask` boolean
+    // (never a `noAsk` key): `false` means the user passed `--no-ask`
+    // and must reach the gate as `noAsk` (spec §4 precedence — no-ask
+    // beats --ask and VIDEO_ASK).
+    ...(opts.ask === true ? { ask: true } : {}),
+    ...(opts.ask === false ? { noAsk: true } : {}),
+  };
+}
+
 export function registerDraft(program: Command): void {
-program
-  .command("draft")
-  .argument(
-    "<topic>",
-    "topic — used as project slug (slugify the topic for the directory name)",
-  )
-  .option("--cwd <dir>", "base directory for the project")
-  .option("--model <provider>", "model provider: minimax|glm (default: glm)")
-  .option("--no-web", "disable MiniMax web search (use LLM knowledge only)")
-  .option("--lang <lang>", "language: zh-CN|en-US (default zh-CN)")
-  .option(
-    "--duration <seconds>",
-    "total duration target in seconds (default: 180)",
-    (v) => parseInt(v, 10),
-  )
-  .option("--audience <text>", "target audience (default: developers)")
-  .option(
-    "--bgm <tag>",
-    "v0.7: BGM track tag stamped into audio-config.yaml — calm | epic | guofeng | liubang-xiaodiao | fanzhuan-march | none (default: audio-plan LLM picks, usually calm)",
-  )
-  .option(
-    "--from <file>",
-    "path to a file containing pre-existing content to revise",
-  )
-  .option(
-    "--file <path>",
-    "path to a text/markdown file holding your raw idea — polished into the article, opinions preserved",
-  )
-  .option(
-    "--no-audio-plan",
-    "skip the merged audio-plan step (write article.md only)",
-  )
-  .option(
-    "--image-style <preset>",
-    "v0.7: FLUX scene-image preset (flat-vector|editorial|whiteboard; default: flat-vector)",
-  )
-  .option(
-    "--style <theme>",
-    "v0.4: visual theme written into storyboard.style.theme (default: paper-light)",
-  )
-  .option(
-    "--no-captions",
-    "v0.4: skip the caption overlay (no captions: block in the generated storyboard)",
-  )
-  .option(
-    "--no-review",
-    "skip the article quality gate (default: judge rates attractive/interesting/useful, drafts below 25/30 are regenerated)",
-  )
-  .option(
-    "--min-score <n>",
-    "article quality bar of 30 (default: 25)",
-    (v) => parseInt(v, 10),
-  )
-  .option(
-    "--max-attempts <n>",
-    "total draft attempts in the quality loop (default: 3)",
-    (v) => parseInt(v, 10),
-  )
-  .option(
-    "--ask",
-    "v0.7: emit clarifying questions instead of silent defaults (auto-fires when an agent harness is detected)",
-  )
-  .option(
-    "--no-ask",
-    "v0.7: never ask questions — accept defaults even under an agent harness",
-  )
-  .action(
-    async (
-      topic: string,
-      opts: {
-        cwd?: string;
-        model?: "minimax" | "glm";
-        web?: boolean;
-        lang?: "zh-CN" | "en-US";
-        duration?: number;
-        audience?: string;
-        bgm?: string;
-        from?: string;
-        file?: string;
-        audioPlan?: boolean;
-        imageStyle?: string;
-        style?: string;
-        captions?: boolean;
-        review?: boolean;
-        minScore?: number;
-        maxAttempts?: number;
-        ask?: boolean;
-        noAsk?: boolean;
-      },
-    ) => {
+  program
+    .command("draft")
+    .argument(
+      "<topic>",
+      "topic — used as project slug (slugify the topic for the directory name)",
+    )
+    .option("--cwd <dir>", "base directory for the project")
+    .option("--model <provider>", "model provider: minimax|glm (default: glm)")
+    .option("--no-web", "disable MiniMax web search (use LLM knowledge only)")
+    .option("--lang <lang>", "language: zh-CN|en-US (default zh-CN)")
+    .option(
+      "--duration <seconds>",
+      "total duration target in seconds (default: 180)",
+      (v) => parseInt(v, 10),
+    )
+    .option("--audience <text>", "target audience (default: developers)")
+    .option(
+      "--bgm <tag>",
+      "v0.7: BGM track tag stamped into audio-config.yaml — calm | epic | guofeng | liubang-xiaodiao | fanzhuan-march | none (default: audio-plan LLM picks, usually calm)",
+    )
+    .option(
+      "--from <file>",
+      "path to a file containing pre-existing content to revise",
+    )
+    .option(
+      "--file <path>",
+      "path to a text/markdown file holding your raw idea — polished into the article, opinions preserved",
+    )
+    .option(
+      "--no-audio-plan",
+      "skip the merged audio-plan step (write article.md only)",
+    )
+    .option(
+      "--image-style <preset>",
+      "v0.7: FLUX scene-image preset (flat-vector|editorial|whiteboard; default: flat-vector)",
+    )
+    .option(
+      "--style <theme>",
+      "v0.4: visual theme written into storyboard.style.theme (default: paper-light)",
+    )
+    .option(
+      "--no-captions",
+      "v0.4: skip the caption overlay (no captions: block in the generated storyboard)",
+    )
+    .option(
+      "--no-review",
+      "skip the article quality gate (default: judge rates attractive/interesting/useful, drafts below 25/30 are regenerated)",
+    )
+    .option("--min-score <n>", "article quality bar of 30 (default: 25)", (v) =>
+      parseInt(v, 10),
+    )
+    .option(
+      "--max-attempts <n>",
+      "total draft attempts in the quality loop (default: 3)",
+      (v) => parseInt(v, 10),
+    )
+    .option(
+      "--ask",
+      "v0.7: emit clarifying questions instead of silent defaults (auto-fires when an agent harness is detected)",
+    )
+    .option(
+      "--no-ask",
+      "v0.7: never ask questions — accept defaults even under an agent harness",
+    )
+    .action(async (topic: string, opts: DraftCliOpts) => {
       process.exitCode = await runDraft({
         topic,
-        ...(opts.cwd !== undefined ? { cwd: opts.cwd } : {}),
-        ...(opts.model !== undefined ? { model: opts.model } : {}),
-        noWeb: opts.web === false,
-        ...(opts.lang !== undefined ? { lang: opts.lang } : {}),
-        ...(opts.duration !== undefined ? { duration: opts.duration } : {}),
-        ...(opts.audience !== undefined ? { audience: opts.audience } : {}),
-        ...(opts.bgm !== undefined ? { bgm: opts.bgm } : {}),
-        ...(opts.from !== undefined ? { from: opts.from } : {}),
-        ...(opts.file !== undefined ? { ideaFile: opts.file } : {}),
-        noAudioPlan: opts.audioPlan === false,
-        ...(opts.imageStyle !== undefined
-          ? { imageStyle: opts.imageStyle }
-          : {}),
-        ...(opts.style !== undefined ? { style: opts.style } : {}),
-        noCaptions: opts.captions === false,
-        noReview: opts.review === false,
-        ...(opts.minScore !== undefined ? { minScore: opts.minScore } : {}),
-        ...(opts.maxAttempts !== undefined
-          ? { maxAttempts: opts.maxAttempts }
-          : {}),
-        ...(opts.ask === true ? { ask: true } : {}),
-        ...(opts.noAsk === true ? { noAsk: true } : {}),
+        ...draftCliOptsToDraftOptions(opts),
       });
-    },
-  );
+    });
 }

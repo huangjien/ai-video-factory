@@ -1,9 +1,29 @@
-import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  afterAll,
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest";
 import { Command } from "commander";
-import { mkdir, mkdtemp, readdir, rm, writeFile } from "node:fs/promises";
+import {
+  mkdir,
+  mkdtemp,
+  readdir,
+  rm,
+  writeFile,
+  readFile,
+} from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { runDraft, registerDraft } from "./draft-command.js";
+import { renderAudioConfig, type AudioConfig } from "@video/audio-plan";
+import {
+  runDraft,
+  registerDraft,
+  draftCliOptsToDraftOptions,
+} from "./draft-command.js";
 
 /**
  * runDraft-level tests for the `video-ask/1` ask gate (v0.7 plan §11
@@ -36,8 +56,14 @@ const DRAFT_JSON = {
 
 const chatMock = vi.hoisted(() => vi.fn());
 const searchMock = vi.hoisted(() => vi.fn(async () => []));
+const callAudioPlanMock = vi.hoisted(() => vi.fn());
 /** Provider-construction log — the gate test asserts it stays empty. */
 const constructed = vi.hoisted(() => [] as string[]);
+
+vi.mock("@video/audio-plan", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@video/audio-plan")>();
+  return { ...actual, callAudioPlan: callAudioPlanMock };
+});
 
 vi.mock("@video/research", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@video/research")>();
@@ -119,6 +145,19 @@ beforeEach(() => {
     usage: { input: 5, output: 7 },
   }));
   searchMock.mockClear();
+  // Fixed audio-plan answer (same trick as bgm-stamp.test.ts) so the
+  // knob-explicit test can exercise the real --bgm stamping path.
+  const audioPlanConfig: AudioConfig = {
+    voice: "zh-CN-YunjianNeural",
+    bgm: "calm",
+    sfx: {},
+  };
+  callAudioPlanMock.mockReset();
+  callAudioPlanMock.mockResolvedValue({
+    config: audioPlanConfig,
+    yaml: renderAudioConfig(audioPlanConfig),
+    usage: { input: 3, output: 4 },
+  });
   constructed.length = 0;
   tempRoots = [];
 });
@@ -226,9 +265,11 @@ describe("runDraft ask gate — proceed paths", () => {
     const root = await scaffoldProject("ask-explicit");
     tempRoots.push(root);
     process.env["ZCODE_APP_VERSION"] = "1";
-    // bgm has no flag until A3 (--bgm); --no-audio-plan drops its
-    // question (spec §6), so lang/duration/image_style/style cover
-    // every askable knob here.
+    // All five askable knobs (lang, duration, image_style, style, bgm)
+    // are explicit → questionsFor() is empty, the gate stays silent and
+    // the run proceeds. bgm flows down the real audio-plan path: the
+    // answer is stamped into audio-config.yaml (spec §11 items 2 + 6 in
+    // one run — gate suppression and stamping coexist).
     await expectProceed(
       {
         topic: "ask-explicit",
@@ -237,11 +278,16 @@ describe("runDraft ask gate — proceed paths", () => {
         duration: 90,
         imageStyle: "editorial",
         style: "dark-tech",
-        noAudioPlan: true,
+        bgm: "guofeng",
         noReview: true,
       },
       root,
     );
+    const audioConfig = await readFile(
+      path.join(root, "projects", "ask-explicit", "audio-config.yaml"),
+      "utf8",
+    );
+    expect(audioConfig).toContain('bgm: "guofeng"');
   });
 
   it("human env + no flags → proceeds down today's path (§11 item 5 baseline)", async () => {
@@ -266,5 +312,40 @@ describe("registerDraft ask flags", () => {
     const longs = (draft?.options ?? []).map((o) => o.long);
     expect(longs).toContain("--ask");
     expect(longs).toContain("--no-ask");
+  });
+});
+
+// ─── §4 / §8 rule 6: commander opts → DraftOptions mapping (parse level) ────
+
+describe("draftCliOptsToDraftOptions — --ask/--no-ask folding", () => {
+  it("--no-ask: commander folds it into ask:false; the mapping turns that into noAsk", () => {
+    // Parse-level proof that commander never produces a `noAsk` key —
+    // `--no-ask` reaches the action as `{ ask: false }`. Asserting that
+    // reality first keeps the mapping honest: a `opts.noAsk === true`
+    // branch is dead code and `--no-ask` would be silently ignored.
+    const program = new Command();
+    registerDraft(program);
+    const draft = program.commands.find((c) => c.name() === "draft");
+    if (!draft) throw new Error("draft command not registered");
+    draft.parseOptions(["e2e-check", "--no-ask"]);
+    const cli = draft.opts() as Parameters<
+      typeof draftCliOptsToDraftOptions
+    >[0];
+    // The fold itself: `ask === false`, and NO `noAsk` key exists.
+    expect(cli.ask).toBe(false);
+    expect("noAsk" in cli).toBe(false);
+
+    const mapped = draftCliOptsToDraftOptions({ ask: false });
+    expect(mapped).toMatchObject({ noAsk: true });
+    expect(mapped.ask).toBeUndefined();
+  });
+
+  it("--ask stays ask:true; no flag → neither key (gate stays auto)", () => {
+    const forced = draftCliOptsToDraftOptions({ ask: true });
+    expect(forced).toMatchObject({ ask: true });
+    expect("noAsk" in forced).toBe(false);
+    const bare = draftCliOptsToDraftOptions({});
+    expect("ask" in bare).toBe(false);
+    expect("noAsk" in bare).toBe(false);
   });
 });

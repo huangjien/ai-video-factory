@@ -1,4 +1,4 @@
-import { THEMES, THEME_NAMES, THEME_META } from "@video/video-components";
+import { THEME_NAMES, THEME_META } from "@video/video-components";
 import type { DraftOptions } from "./draft-command.js";
 
 /**
@@ -16,17 +16,12 @@ import type { DraftOptions } from "./draft-command.js";
  */
 
 /**
- * The knobs this module asks about (`ask`, `noAsk`, `imageStyle`, `bgm`)
- * land on `DraftOptions` in tickets A2/A3. Until then they are declared
- * here as an intersection so A1 compiles and tests run standalone; once
- * A2/A3 add the fields, real `DraftOptions` remains assignable.
+ * Alias kept for the ask module's public surface: DraftOptions already
+ * carries every knob the questions read (`ask`, `noAsk`, `imageStyle`,
+ * `bgm` landed via tickets A2/A3) plus the run's other options. This
+ * module reads only those fields — never mutate options here (§9: pure).
  */
-export type AskOpts = DraftOptions & {
-  ask?: boolean;
-  noAsk?: boolean;
-  imageStyle?: string;
-  bgm?: string;
-};
+export type AskOpts = DraftOptions;
 
 // ─── Detection (§7) ──────────────────────────────────────────────────────────
 
@@ -61,7 +56,8 @@ export function detectAgentEnv(
       if (!entry) continue;
       const eq = entry.indexOf("=");
       if (eq === -1) {
-        if (env[entry] !== undefined) return { harness: "env", via: "VIDEO_ASK_ENV" };
+        if (env[entry] !== undefined)
+          return { harness: "env", via: "VIDEO_ASK_ENV" };
       } else if (env[entry.slice(0, eq)] === entry.slice(eq + 1)) {
         return { harness: "env", via: "VIDEO_ASK_ENV" };
       }
@@ -99,9 +95,11 @@ export interface AskQuestion {
  * no drift — adding a theme extends the question without a code change).
  * Notes come from `THEME_META[name].bestFor`, else the bare theme key.
  */
-const STYLE_CHOICES: readonly { value: string; note: string }[] = THEME_NAMES.map(
-  (name) => ({ value: name, note: THEME_META[name]?.bestFor ?? name }),
-);
+const STYLE_CHOICES: readonly { value: string; note: string }[] =
+  THEME_NAMES.map((name) => ({
+    value: name,
+    note: THEME_META[name]?.bestFor ?? name,
+  }));
 
 /**
  * FLUX scene-image presets. The plan (§2) points at `IMAGE_STYLES` in
@@ -110,7 +108,10 @@ const STYLE_CHOICES: readonly { value: string; note: string }[] = THEME_NAMES.ma
  * Derive from the registry once it lands.
  */
 const IMAGE_STYLE_CHOICES: readonly { value: string; note: string }[] = [
-  { value: "flat-vector", note: "clean geometry; best cross-scene consistency" },
+  {
+    value: "flat-vector",
+    note: "clean geometry; best cross-scene consistency",
+  },
   { value: "editorial", note: "visual metaphor; history/abstract topics" },
   { value: "whiteboard", note: "marker sketch; pairs with draw-on animations" },
 ];
@@ -125,8 +126,14 @@ const BGM_CHOICES: readonly { value: string; note: string }[] = [
   { value: "calm", note: "piano + strings, restrained; safe for any topic" },
   { value: "epic", note: "massed strings + timpani; dramatic topics" },
   { value: "guofeng", note: "Chinese folk orchestra; history/culture topics" },
-  { value: "liubang-xiaodiao", note: "Han-dynasty folk motif; strong period flavor" },
-  { value: "fanzhuan-march", note: "tension-building march; twist/reversal narratives" },
+  {
+    value: "liubang-xiaodiao",
+    note: "Han-dynasty folk motif; strong period flavor",
+  },
+  {
+    value: "fanzhuan-march",
+    note: "tension-building march; twist/reversal narratives",
+  },
   { value: "none", note: "no BGM (bgm: null)" },
 ];
 
@@ -259,7 +266,9 @@ export async function emitQuestionsDoc(
       flag: q.flag,
       type: q.type,
       question: q.question,
-      ...(q.suggestions ? { suggestions: q.suggestions } : { choices: q.choices }),
+      ...(q.suggestions
+        ? { suggestions: q.suggestions }
+        : { choices: q.choices }),
       default: q.default,
       recommended: q.recommended,
       why: q.why,

@@ -1,33 +1,28 @@
 import { execFile } from "node:child_process";
 import { createHash } from "node:crypto";
-import {
-  mkdir,
-  writeFile,
-  readFile,
-  readdir,
-  stat,
-} from "node:fs/promises";
-import {
-  existsSync,
-  readFileSync,
-  writeFileSync,
-} from "node:fs";
+import { mkdir, writeFile, readFile, readdir, stat } from "node:fs/promises";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { promisify } from "node:util";
 import os from "node:os";
 import path from "node:path";
-import { parseArticleWithRecovery, articleToStoryboardYaml, expandScenePrompt, resolveImageStyle, runLayaVisualAssist, stylePromptSuffix, type ParsedArticle } from "@video/draft";
+import {
+  parseArticleWithRecovery,
+  articleToStoryboardYaml,
+  expandScenePrompt,
+  resolveImageStyle,
+  runLayaVisualAssist,
+  stylePromptSuffix,
+  type ParsedArticle,
+} from "@video/draft";
 import { MiniMaxProvider } from "@video/llm";
 import { parse as parseYaml, stringify as yamlStringify } from "yaml";
+import { FakeTTSProvider, EdgeTTSProvider, type TTSProvider } from "@video/tts";
 import {
-  FakeTTSProvider,
-  EdgeTTSProvider,
-  type TTSProvider,
-} from "@video/tts";
-import { readSceneTimings, syncSceneDurations, probeAudioDuration } from "@video/media";
-import {
-  planBgmWindows,
-  renderBgmTimeline,
-} from "@video/audio-mix";
+  readSceneTimings,
+  syncSceneDurations,
+  probeAudioDuration,
+} from "@video/media";
+import { planBgmWindows, renderBgmTimeline } from "@video/audio-mix";
 import {
   FileBasedAudioAssetProvider,
   MiniMaxMusicProvider,
@@ -51,11 +46,7 @@ const execFileAsync = promisify(execFile);
  * stderr formatting (`formatProgressEvent` in `packages/cli/src/ui.ts`);
  * library callers pass `onEvent` to observe, or nothing to stay silent.
  */
-export type ProgressEventKind =
-  | "start"
-  | "done"
-  | "fail"
-  | "heartbeat";
+export type ProgressEventKind = "start" | "done" | "fail" | "heartbeat";
 
 export interface ProgressEvent {
   kind: ProgressEventKind;
@@ -177,10 +168,7 @@ export interface MakeDeps {
     projectRoot: string,
     article: ParsedArticle,
   ) => Promise<string[]>;
-  mix?: (
-    projectRoot: string,
-    config: AudioConfigShape,
-  ) => Promise<string[]>;
+  mix?: (projectRoot: string, config: AudioConfigShape) => Promise<string[]>;
   mp3ToWav?: (
     mp3Bytes: Uint8Array,
     minDurationSec: number,
@@ -214,7 +202,11 @@ export async function runMake(
     return report;
   }
   if (!existsSync(audioConfigPath)) {
-    failStep(report, "inputs", `audio-config.yaml not found at ${audioConfigPath}`);
+    failStep(
+      report,
+      "inputs",
+      `audio-config.yaml not found at ${audioConfigPath}`,
+    );
     return report;
   }
 
@@ -233,7 +225,11 @@ export async function runMake(
       });
     }
   } catch (err) {
-    failStep(report, "inputs", `failed to parse article.md: ${(err as Error).message}`);
+    failStep(
+      report,
+      "inputs",
+      `failed to parse article.md: ${(err as Error).message}`,
+    );
     return report;
   }
   const audioConfig = parseYaml(
@@ -251,8 +247,7 @@ export async function runMake(
     //    — mock placeholders are too small to be useful backgrounds.
     await step("generate-visuals", () =>
       generateSceneVisuals(opts.projectRoot, article, {
-        provider:
-          opts.imageProvider ?? (opts.fake ? "none" : "flux"),
+        provider: opts.imageProvider ?? (opts.fake ? "none" : "flux"),
         loraConfigPath: opts.loraConfigPath,
         lora: opts.lora,
         referenceStyleAnchor: opts.referenceStyleAnchor,
@@ -274,9 +269,7 @@ export async function runMake(
     );
 
     // 1b. Resync storyboard.yaml durations to actual TTS lengths.
-    await step("sync-durations", () =>
-      syncSceneDurations(opts.projectRoot),
-    );
+    await step("sync-durations", () => syncSceneDurations(opts.projectRoot));
 
     // 1c. Captions SRT from the duration-synced storyboard — cue times
     // match the rendered video, not the LLM's duration estimates (§16).
@@ -398,7 +391,9 @@ async function syncStoryboardFromArticle(
     parsed = { scenes: [] };
   }
 
-  const articleIds = article.scenes.map((_, i) => `scene-${String(i + 1).padStart(2, "0")}`);
+  const articleIds = article.scenes.map(
+    (_, i) => `scene-${String(i + 1).padStart(2, "0")}`,
+  );
   const storyboardIds = (parsed.scenes ?? []).map((s) => s.id ?? "");
   const idsMatch =
     articleIds.length === storyboardIds.length &&
@@ -555,18 +550,18 @@ export async function generateSceneVisuals(
     }
 
     try {
-      const result = await heartbeat(itemLabel, () =>
-        provider.generate({
-          prompt: promptForImage,
-          width: reqWidth,
-          height: reqHeight,
-      // Style anchor: every later scene conditions on the anchor scene's
-      // image (flux-only; other providers ignore the field per the
-      // ImageRequest contract). Doc §T6.2.
-          ...(styleAnchor
-            ? { referenceImage: styleAnchor }
-            : {}),
-        }),
+      const result = await heartbeat(
+        itemLabel,
+        () =>
+          provider.generate({
+            prompt: promptForImage,
+            width: reqWidth,
+            height: reqHeight,
+            // Style anchor: every later scene conditions on the anchor scene's
+            // image (flux-only; other providers ignore the field per the
+            // ImageRequest contract). Doc §T6.2.
+            ...(styleAnchor ? { referenceImage: styleAnchor } : {}),
+          }),
         emit,
       );
       await writeFile(imagePath, result.bytes);
@@ -630,9 +625,7 @@ function selfRenderedSceneNumbers(projectRoot: string): Set<number> {
     "storyboard.yaml",
   );
   try {
-    const parsed = parseYaml(
-      readFileSync(storyboardPath, "utf8"),
-    ) as {
+    const parsed = parseYaml(readFileSync(storyboardPath, "utf8")) as {
       scenes?: { id?: string; visual?: { component?: string } }[];
     };
     const out = new Set<number>();
@@ -747,7 +740,10 @@ async function runTts(
   article: ParsedArticle,
   audioConfig: AudioConfigShape,
   opts: { fake?: boolean },
-  convertMp3: (mp3Bytes: Uint8Array, minDurationSec: number) => Promise<Uint8Array> = mp3ToWav,
+  convertMp3: (
+    mp3Bytes: Uint8Array,
+    minDurationSec: number,
+  ) => Promise<Uint8Array> = mp3ToWav,
   onEvent: ProgressEmit = noopEmit,
 ): Promise<string[]> {
   const provider: TTSProvider = opts.fake
@@ -783,14 +779,17 @@ async function runTts(
     onEvent({ kind: "start", label: itemLabel, ...itemAt });
     let result;
     try {
-      result = await heartbeat(itemLabel, () =>
-        provider.synthesize({
-          text: scene.narration,
-          voice,
-          language: article.frontmatter.language,
-          ...(pause !== undefined ? { pauseBetweenSentencesSec: pause } : {}),
-        }),
-      onEvent);
+      result = await heartbeat(
+        itemLabel,
+        () =>
+          provider.synthesize({
+            text: scene.narration,
+            voice,
+            language: article.frontmatter.language,
+            ...(pause !== undefined ? { pauseBetweenSentencesSec: pause } : {}),
+          }),
+        onEvent,
+      );
     } catch (err) {
       onEvent({
         kind: "fail",
@@ -818,7 +817,10 @@ async function runTts(
       ? result.audio
       : await convertMp3(result.audio, scene.duration);
     await writeFile(wavPath, wavBytes);
-    await writeTtsMeta(wavPath, { cacheKey, synthesizedAt: new Date().toISOString() });
+    await writeTtsMeta(wavPath, {
+      cacheKey,
+      synthesizedAt: new Date().toISOString(),
+    });
     outputs.push(`assets/audio/${scene.id}.wav`);
   }
 
@@ -866,7 +868,9 @@ function formatSrtTime(sec: number): string {
   // Decompose from rounded total ms — per-field rounding can emit
   // invalid SRT like 00:00:59,1000.
   const totalMs = Math.round(sec * 1000);
-  const h = Math.floor(totalMs / 3_600_000).toString().padStart(2, "0");
+  const h = Math.floor(totalMs / 3_600_000)
+    .toString()
+    .padStart(2, "0");
   const m = (Math.floor(totalMs / 60_000) % 60).toString().padStart(2, "0");
   const s = (Math.floor(totalMs / 1000) % 60).toString().padStart(2, "0");
   const ms = (totalMs % 1000).toString().padStart(3, "0");
@@ -994,14 +998,15 @@ async function runMix(
   const workspaceRoot = path.dirname(path.dirname(projectRoot));
   // Translate audio-config.yaml → video mix CLI flags rather than
   // duplicating the existing pipeline.
-  const mixArgs: string[] = [
-    "node",
-    "packages/cli/dist/index.js",
-    "mix",
-    slug,
-  ];
+  const mixArgs: string[] = ["node", "packages/cli/dist/index.js", "mix", slug];
   if (config.bgm && typeof config.bgm === "string") {
-    const bgmAbs = path.join(projectRoot, "assets", "audio-assets", "bgm", `${config.bgm}.wav`);
+    const bgmAbs = path.join(
+      projectRoot,
+      "assets",
+      "audio-assets",
+      "bgm",
+      `${config.bgm}.wav`,
+    );
     mixArgs.push("--bgm", bgmAbs);
   }
   if (config.bgm_tracks && config.bgm_tracks.length > 0) {
@@ -1010,23 +1015,25 @@ async function runMix(
     // path — the ducker and master fades in mix.ts apply unchanged.
     const wsRoot = workspaceRootFor(projectRoot);
     const total = await totalNarrationSeconds(projectRoot);
-    const windows = planBgmWindows(
-      config.bgm_tracks,
-      total,
-      (track) => {
-        if (!isTrackPath(track)) {
-          return path.join(projectRoot, "assets", "audio-assets", "bgm", `${track}.wav`);
-        }
-        // Path tracks: project-relative first, then workspace root —
-        // shared brand audio lives in <ws>/assets/brand/.
-        const inProject = path.resolve(projectRoot, track);
-        if (existsSync(inProject)) return inProject;
-        if (wsRoot && existsSync(path.resolve(wsRoot, track))) {
-          return path.resolve(wsRoot, track);
-        }
-        return inProject; // missing → ffmpeg fails loudly downstream
-      },
-    );
+    const windows = planBgmWindows(config.bgm_tracks, total, (track) => {
+      if (!isTrackPath(track)) {
+        return path.join(
+          projectRoot,
+          "assets",
+          "audio-assets",
+          "bgm",
+          `${track}.wav`,
+        );
+      }
+      // Path tracks: project-relative first, then workspace root —
+      // shared brand audio lives in <ws>/assets/brand/.
+      const inProject = path.resolve(projectRoot, track);
+      if (existsSync(inProject)) return inProject;
+      if (wsRoot && existsSync(path.resolve(wsRoot, track))) {
+        return path.resolve(wsRoot, track);
+      }
+      return inProject; // missing → ffmpeg fails loudly downstream
+    });
     const timelinePath = await renderBgmTimeline(
       windows,
       path.join(projectRoot, "assets", "audio-assets", "bgm", "_timeline.wav"),
@@ -1082,10 +1089,7 @@ async function totalNarrationSeconds(projectRoot: string): Promise<number> {
   return total;
 }
 
-async function runCli(
-  args: string[],
-  opts: { cwd: string },
-): Promise<void> {
+async function runCli(args: string[], opts: { cwd: string }): Promise<void> {
   const { spawn } = await import("node:child_process");
   await new Promise<void>((resolve, reject) => {
     const proc = spawn(args[0] ?? "node", args.slice(1), {
@@ -1103,12 +1107,20 @@ async function runCli(
 
 async function collectOutputs(projectRoot: string): Promise<string[]> {
   const out: string[] = [];
-  for (const dir of ["assets/audio", "captions", "assets/audio-assets", "output"]) {
+  for (const dir of [
+    "assets/audio",
+    "captions",
+    "assets/audio-assets",
+    "output",
+  ]) {
     const fullDir = path.join(projectRoot, dir);
     if (!existsSync(fullDir)) continue;
     // Shallow listing only — full recursive scan adds noise to the report.
     try {
-      const entries = await readFile(path.join(fullDir, ".placeholder"), "utf8").catch(() => "");
+      const entries = await readFile(
+        path.join(fullDir, ".placeholder"),
+        "utf8",
+      ).catch(() => "");
       if (entries) out.push(`${dir}/<contents>`);
     } catch {
       // ignore
@@ -1138,9 +1150,9 @@ async function mp3ToWav(
   mp3Bytes: Uint8Array,
   minDurationSec: number,
 ): Promise<Uint8Array> {
-  const dir = await (await import("node:fs/promises")).mkdtemp(
-    path.join(os.tmpdir(), "video-make-tts-"),
-  );
+  const dir = await (
+    await import("node:fs/promises")
+  ).mkdtemp(path.join(os.tmpdir(), "video-make-tts-"));
   try {
     const inPath = path.join(dir, "in.mp3");
     const outPath = path.join(dir, "out.wav");
@@ -1159,7 +1171,9 @@ async function mp3ToWav(
     ]);
     return await readFile(outPath);
   } finally {
-    await (await import("node:fs/promises")).rm(dir, {
+    await (
+      await import("node:fs/promises")
+    ).rm(dir, {
       recursive: true,
       force: true,
     });

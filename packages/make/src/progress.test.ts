@@ -220,12 +220,10 @@ describe("heartbeat", () => {
       const gate = new Promise<void>((r) => {
         release = r;
       });
-      const run = heartbeat(
-        "slow-call",
-        () => gate,
-        emit,
-        { everySec: 0.05, afterSec: 0.1 },
-      );
+      const run = heartbeat("slow-call", () => gate, emit, {
+        everySec: 0.05,
+        afterSec: 0.1,
+      });
       await vi.advanceTimersByTimeAsync(200);
       const beatsSoFar = events.filter((e) => e.kind === "heartbeat").length;
       expect(beatsSoFar).toBeGreaterThanOrEqual(2);

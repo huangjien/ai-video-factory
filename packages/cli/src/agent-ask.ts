@@ -1,3 +1,5 @@
+import { MUSIC_PROMPTS } from "@video/audio-assets";
+import { IMAGE_STYLES } from "@video/draft";
 import { THEME_NAMES, THEME_META } from "@video/video-components";
 import type { DraftOptions } from "./draft-command.js";
 
@@ -5,10 +7,11 @@ import type { DraftOptions } from "./draft-command.js";
  * `video-ask/1` — agent-aware draft questions (v0.7 plan, ticket A1).
  *
  * Design source: `docs/v0.7-agent-ask-protocol-plan.md` (binding). This
- * module is PURE: no fs, no provider imports, no I/O beyond the two
- * stdout/stderr emitters at the bottom. All environment reads go through
- * an `env` parameter (defaulting to `process.env`) so tests inject fake
- * environments.
+ * module is PURE: no fs, no I/O beyond the two stdout/stderr emitters at
+ * the bottom. Registry imports (`IMAGE_STYLES`, `MUSIC_PROMPTS`,
+ * `THEME_NAMES`) are plain data — no provider is ever constructed. All
+ * environment reads go through an `env` parameter (defaulting to
+ * `process.env`) so tests inject fake environments.
  *
  * The only draft-command import is type-only, which keeps the runtime
  * module graph acyclic — draft-command (A2/A3) imports this module for
@@ -102,38 +105,42 @@ const STYLE_CHOICES: readonly { value: string; note: string }[] =
   }));
 
 /**
- * FLUX scene-image presets. The plan (§2) points at `IMAGE_STYLES` in
- * @video/draft; that registry does not exist on this branch yet, so the
- * three presets are the §5 envelope's own list (the binding contract).
- * Derive from the registry once it lands.
+ * FLUX scene-image presets — values derive from `IMAGE_STYLES`
+ * (@video/draft, landed with v0.6) so a new preset extends the question
+ * without a code change. Notes are the §5 envelope's presentation copy,
+ * keyed by value; an unnoted preset falls back to its key.
  */
-const IMAGE_STYLE_CHOICES: readonly { value: string; note: string }[] = [
-  {
-    value: "flat-vector",
-    note: "clean geometry; best cross-scene consistency",
-  },
-  { value: "editorial", note: "visual metaphor; history/abstract topics" },
-  { value: "whiteboard", note: "marker sketch; pairs with draw-on animations" },
-];
+const IMAGE_STYLE_NOTES: Record<string, string> = {
+  "flat-vector": "clean geometry; best cross-scene consistency",
+  editorial: "visual metaphor; history/abstract topics",
+  whiteboard: "marker sketch; pairs with draw-on animations",
+};
+
+const IMAGE_STYLE_CHOICES: readonly { value: string; note: string }[] =
+  IMAGE_STYLES.map((value) => ({
+    value,
+    note: IMAGE_STYLE_NOTES[value] ?? value,
+  }));
 
 /**
- * The 5 known BGM tags — a mirror of the `MUSIC_PROMPTS` keys
- * (packages/audio-assets/src/minimax-music.ts). Inlined because the
- * audio-assets barrel also exports provider classes and this module must
- * stay provider-free (§10 A1). Notes verbatim from the §5 envelope.
+ * Known BGM tags — keys of `MUSIC_PROMPTS`
+ * (packages/audio-assets/src/minimax-music.ts), so a new prompt preset
+ * extends the question without a code change. `none` (→ `bgm: null`) is
+ * appended last. Notes are the §5 envelope's presentation copy.
  */
+const BGM_NOTES: Record<string, string> = {
+  calm: "piano + strings, restrained; safe for any topic",
+  epic: "massed strings + timpani; dramatic topics",
+  guofeng: "Chinese folk orchestra; history/culture topics",
+  "liubang-xiaodiao": "Han-dynasty folk motif; strong period flavor",
+  "fanzhuan-march": "tension-building march; twist/reversal narratives",
+};
+
 const BGM_CHOICES: readonly { value: string; note: string }[] = [
-  { value: "calm", note: "piano + strings, restrained; safe for any topic" },
-  { value: "epic", note: "massed strings + timpani; dramatic topics" },
-  { value: "guofeng", note: "Chinese folk orchestra; history/culture topics" },
-  {
-    value: "liubang-xiaodiao",
-    note: "Han-dynasty folk motif; strong period flavor",
-  },
-  {
-    value: "fanzhuan-march",
-    note: "tension-building march; twist/reversal narratives",
-  },
+  ...Object.keys(MUSIC_PROMPTS).map((tag) => ({
+    value: tag,
+    note: BGM_NOTES[tag] ?? tag,
+  })),
   { value: "none", note: "no BGM (bgm: null)" },
 ];
 

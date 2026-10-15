@@ -20,6 +20,7 @@ import {
 } from "@video/draft";
 import { callAudioPlan, type AudioConfig } from "@video/audio-plan";
 import { resolveProjectDir } from "./project-path.js";
+import { maybeAgentAsk } from "./agent-ask.js";
 
 export interface DraftOptions {
   topic: string;
@@ -40,6 +41,18 @@ export interface DraftOptions {
    *  article frontmatter so articleToStoryboardYaml emits
    *  `style.theme: <theme>` instead of the hardcoded "dark-tech". */
   style?: string;
+  /** v0.7 (video-ask/1): FLUX scene-image preset passed explicitly
+   *  (flat-vector | editorial | whiteboard). Counts as a specified knob
+   *  for the agent-ask gate; see docs/v0.7-agent-ask-protocol-plan.md
+   *  §5–§6. */
+  imageStyle?: string;
+  /** v0.7 (video-ask/1): force the agent-ask gate — emit the
+   *  video-ask/1 question envelope and exit 2 even when no agent
+   *  harness is detected. See docs/v0.7-agent-ask-protocol-plan.md §4. */
+  ask?: boolean;
+  /** v0.7 (video-ask/1): never ask — accept silent defaults even under
+   *  an agent harness. Beats --ask and VIDEO_ASK (spec §4 precedence). */
+  noAsk?: boolean;
   /** v0.4 (T1): when true, the auto-generated storyboard omits the
    *  `captions: { source: narration }` block (render-time caption
    *  overlay is skipped). */
@@ -130,6 +143,15 @@ export async function runDraft(opts: DraftOptions): Promise<number> {
       console.error(`--file is empty: ${ideaPath}`);
       return 1;
     }
+  }
+
+  // v0.7 (video-ask/1): the ask gate sits before provider config /
+  // project resolution / web search, so the exit-2 path constructs no
+  // provider and writes no file (spec §4). null = run normally.
+  const askExit = await maybeAgentAsk(opts, process.argv);
+  if (askExit !== null) {
+    process.exitCode = askExit;
+    return askExit;
   }
 
   const resolvedProject = resolveProjectDir(opts.topic, opts.cwd);
@@ -345,6 +367,10 @@ program
     "skip the merged audio-plan step (write article.md only)",
   )
   .option(
+    "--image-style <preset>",
+    "v0.7: FLUX scene-image preset (flat-vector|editorial|whiteboard; default: flat-vector)",
+  )
+  .option(
     "--style <theme>",
     "v0.4: visual theme written into storyboard.style.theme (default: paper-light)",
   )
@@ -366,6 +392,14 @@ program
     "total draft attempts in the quality loop (default: 3)",
     (v) => parseInt(v, 10),
   )
+  .option(
+    "--ask",
+    "v0.7: emit clarifying questions instead of silent defaults (auto-fires when an agent harness is detected)",
+  )
+  .option(
+    "--no-ask",
+    "v0.7: never ask questions — accept defaults even under an agent harness",
+  )
   .action(
     async (
       topic: string,
@@ -379,11 +413,14 @@ program
         from?: string;
         file?: string;
         audioPlan?: boolean;
+        imageStyle?: string;
         style?: string;
         captions?: boolean;
         review?: boolean;
         minScore?: number;
         maxAttempts?: number;
+        ask?: boolean;
+        noAsk?: boolean;
       },
     ) => {
       process.exitCode = await runDraft({
@@ -397,6 +434,9 @@ program
         ...(opts.from !== undefined ? { from: opts.from } : {}),
         ...(opts.file !== undefined ? { ideaFile: opts.file } : {}),
         noAudioPlan: opts.audioPlan === false,
+        ...(opts.imageStyle !== undefined
+          ? { imageStyle: opts.imageStyle }
+          : {}),
         ...(opts.style !== undefined ? { style: opts.style } : {}),
         noCaptions: opts.captions === false,
         noReview: opts.review === false,
@@ -404,6 +444,8 @@ program
         ...(opts.maxAttempts !== undefined
           ? { maxAttempts: opts.maxAttempts }
           : {}),
+        ...(opts.ask === true ? { ask: true } : {}),
+        ...(opts.noAsk === true ? { noAsk: true } : {}),
       });
     },
   );

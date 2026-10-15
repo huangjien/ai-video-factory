@@ -237,10 +237,10 @@ enforced when declared, and the worker keeps the pipeline warm
 The worker keeps the pipeline warm across a whole render (model load ≈
 28 s on M4; scene images ≈ 1–3 min each), streams the text encoder via
 group offloading to fit 24 GB unified memory, snaps dimensions to the
- FLUX.2 VAE alignment and Pillow-fits to the exact requested box. Scene
- image prompts still go through the v0.4 LLM expansion; failures are
- non-fatal (scene falls back to `AnimatedIllustration`). Knobs:
- `FLUX2_MODEL / FLUX2_STEPS / FLUX2_GUIDANCE / FLUX2_DEVICE / FLUX2_DTYPE /
+FLUX.2 VAE alignment and Pillow-fits to the exact requested box. Scene
+image prompts still go through the v0.4 LLM expansion; failures are
+non-fatal (scene falls back to `AnimatedIllustration`). Knobs:
+`FLUX2_MODEL / FLUX2_STEPS / FLUX2_GUIDANCE / FLUX2_DEVICE / FLUX2_DTYPE /
  FLUX2_OFFLOAD / FLUX2_LORA / FLUX2_LORA_CONFIG / FLUX2_TEXT_ENCODER_QUANT /
  FLUX2_HF_HOME` — full table in `packages/media-generators/python/README.md`.
 

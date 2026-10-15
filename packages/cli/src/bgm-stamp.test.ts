@@ -192,7 +192,17 @@ describe("runDraft — --bgm with an existing audio-config.yaml (§11 item 7)", 
 
   let server: Server;
   let baseUrl: string;
-  let savedEnv: { key: string | undefined; base: string | undefined };
+  let savedEnv: Record<string, string | undefined> = {};
+
+  /** Agent-ask gate keys: this suite pins the proceed path, but the
+   *  vitest process runs inside zcode — strip them like
+   *  draft-command.test.ts / agent-ask.test.ts do. */
+  const AGENT_ENV_KEYS = [
+    "ZCODE_APP_VERSION",
+    "CLAUDECODE",
+    "VIDEO_ASK_ENV",
+    "VIDEO_ASK",
+  ] as const;
 
   beforeAll(async () => {
     server = createServer((_req, res) => {
@@ -208,9 +218,13 @@ describe("runDraft — --bgm with an existing audio-config.yaml (§11 item 7)", 
     await new Promise<void>((r) => server.listen(0, "127.0.0.1", () => r()));
     baseUrl = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
     savedEnv = {
-      key: process.env["GLM_API_KEY"],
-      base: process.env["GLM_BASE_URL"],
+      GLM_API_KEY: process.env["GLM_API_KEY"],
+      GLM_BASE_URL: process.env["GLM_BASE_URL"],
     };
+    for (const k of AGENT_ENV_KEYS) {
+      savedEnv[k] = process.env[k];
+      delete process.env[k];
+    }
     process.env["GLM_API_KEY"] = "test-key";
     process.env["GLM_BASE_URL"] = baseUrl;
   });

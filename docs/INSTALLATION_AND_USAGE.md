@@ -751,6 +751,8 @@ video draft "AI Agent Memory" --model glm --lang zh-CN --duration 60 --audience 
 video draft "AI Agent Memory" --from outline.md   # revise an existing outline
 video draft "AI Agent Memory" --file my-idea.md   # polish YOUR idea; opinions preserved
 video draft "AI Agent Memory" --no-audio-plan     # article.md only
+video draft "AI Agent Memory" --bgm guofeng       # stamp bgm: guofeng into the FRESH audio-config.yaml
+video draft "AI Agent Memory" --no-ask            # never ask questions — accept the defaults (see below)
 
 # Quality gate (on by default): after drafting, an LLM judge rates the
 # article attractive / interesting / useful — 0-10 each, 30 total.
@@ -777,6 +779,80 @@ projects/<slug>/audio-config.yaml    # human edits: voice / bgm / sfx / fades
 After human edits to these two files (and re-approval when article.md
 changed), `video make <slug>` produces the publishable mp4 in a single
 command.
+
+### Agent question protocol (`video-ask/1`)
+
+Inside an agent harness (zcode, Claude Code, …), `video draft` no
+longer burns a full scored draft on silent defaults. When style knobs
+were left unspecified, the CLI prints a machine-readable question set
+to stdout and exits **2** — the run has not started and nothing has
+been spent. The agent relays the questions through its own question
+UI (recommended option highlighted) and re-runs with explicit flags.
+
+New flags on `video draft`:
+
+| Flag                | One-line help                                                                                                                                                  |
+| ------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `--ask`             | force the agent question protocol, even with no agent harness detected                                                                                         |
+| `--no-ask`          | never ask — accept the defaults (right choice for unattended sub-runs)                                                                                         |
+| `--bgm <tag\|none>` | BGM tag stamped into a fresh `audio-config.yaml`: `calm`, `epic`, `guofeng`, `liubang-xiaodiao`, `fanzhuan-march`, `none` (default: the audio-plan LLM's pick) |
+
+**When it fires** — auto mode asks only when an agent harness is
+detected **and** at least one style knob was left unspecified.
+Detectors: `ZCODE_APP_VERSION` → zcode, `CLAUDECODE` → Claude Code;
+any other harness can be declared with
+`VIDEO_ASK_ENV=VAR,VAR=VALUE,…` (matches on presence, or exact value
+with `VAR=VALUE`). Precedence, first match wins:
+
+| Override                     | Effect                                               |
+| ---------------------------- | ---------------------------------------------------- |
+| `--no-ask` / `VIDEO_ASK=off` | never ask — normal run                               |
+| `--ask` / `VIDEO_ASK=force`  | always ask (even with no harness detected)           |
+| neither                      | auto: ask iff agent detected AND ≥1 knob unspecified |
+
+An unknown `VIDEO_ASK` value warns on stderr and behaves as auto.
+
+**Exit codes**: `0` ran · `1` failure (unchanged) · `2` questions
+pending — the run did not start. On exit 2 stdout is pure JSON
+(envelope `protocol: "video-ask/1"`, parseable with `jq`); all
+human-readable hints go to stderr, e.g.
+`agent-ask: 5 question(s) pending (exit 2 — run not started, nothing spent)`.
+
+**The five questions** — only unspecified knobs are asked, in this
+order. `audience`, `model`, and the review-gate knobs stay flag-only
+power knobs:
+
+| id            | flag            | type   | default       | recommended       | why                                                      |
+| ------------- | --------------- | ------ | ------------- | ----------------- | -------------------------------------------------------- |
+| `lang`        | `--lang`        | choice | `zh-CN`       | **`zh-CN`**       | wrong language burns a full scored draft (~4× one draft) |
+| `duration`    | `--duration`    | number | `180`         | **`180`**         | scene count scales with it                               |
+| `image_style` | `--image-style` | choice | `flat-vector` | **`flat-vector`** | taste call, unrecoverable post-render                    |
+| `style`       | `--style`       | choice | `paper-light` | **`paper-light`** | theme changes every scene                                |
+| `bgm`         | `--bgm`         | choice | `calm`        | **`calm`**        | wrong mood = paid re-render at make time                 |
+
+The presenting agent may replace a recommendation with a topic-aware
+pick when the topic clearly demands it (e.g. a Han-dynasty history
+topic → `liubang-xiaodiao` + `editorial`) and states the reason in
+the question text.
+
+**`--bgm` semantics** — the answered tag is stamped into a **fresh**
+`audio-config.yaml` as `bgm: <tag>` (`none` → `bgm: null`),
+overriding only the `bgm:` key the audio-plan LLM would otherwise
+pick — voice and SFX stay LLM-chosen. An **existing**
+`audio-config.yaml` wins (hand edits are never overwritten): the CLI
+prints
+`bgm answer not applied — audio-config.yaml kept; run 'video audio-plan' to regenerate`
+instead. `--no-audio-plan` drops the `bgm` question entirely — the
+CLI never asks what it cannot apply. Free-form tags stay legal
+end-to-end (unknown tags degrade to mood text); the question offers
+only the 5 known tags + `none`.
+
+Unattended sub-runs (scripts an agent launches) should pass
+`--no-ask`; headless cron/launchd shells should set `VIDEO_ASK=off`.
+
+The full contract (JSON envelope, snapshot-tested field order,
+agent-side presentation rules) lives in
+[docs/v0.7-agent-ask-protocol-plan.md](./v0.7-agent-ask-protocol-plan.md).
 
 ### The full agent pipeline (fine-grained, incl. the v0.2 verbs)
 

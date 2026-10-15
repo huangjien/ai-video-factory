@@ -1,0 +1,162 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`emitQuestionsDoc > emits the full video-ask/1 envelope (snapshot) 1`] = `
+{
+  "command": [
+    "draft",
+    "鸿门宴",
+  ],
+  "detected": "zcode (ZCODE_APP_VERSION)",
+  "protocol": "video-ask/1",
+  "questions": [
+    {
+      "choices": [
+        {
+          "note": "Chinese narration (repo default)",
+          "value": "zh-CN",
+        },
+        {
+          "note": "English narration",
+          "value": "en-US",
+        },
+      ],
+      "default": "zh-CN",
+      "flag": "--lang",
+      "id": "lang",
+      "question": "Narration language?",
+      "recommended": "zh-CN",
+      "type": "choice",
+      "why": "zh-CN is the silent default; a wrong guess costs a full regen (~4× one draft)",
+    },
+    {
+      "default": 180,
+      "flag": "--duration",
+      "id": "duration",
+      "question": "Target length in seconds?",
+      "recommended": 180,
+      "suggestions": [
+        60,
+        90,
+        120,
+        180,
+        300,
+      ],
+      "type": "number",
+      "why": "storyboard scene count scales with duration",
+    },
+    {
+      "choices": [
+        {
+          "note": "clean geometry; best cross-scene consistency",
+          "value": "flat-vector",
+        },
+        {
+          "note": "visual metaphor; history/abstract topics",
+          "value": "editorial",
+        },
+        {
+          "note": "marker sketch; pairs with draw-on animations",
+          "value": "whiteboard",
+        },
+      ],
+      "default": "flat-vector",
+      "flag": "--image-style",
+      "id": "image_style",
+      "question": "FLUX scene-image preset?",
+      "recommended": "flat-vector",
+      "type": "choice",
+      "why": "editorial vs flat-vector is a taste call; neither is recoverable post-render",
+    },
+    {
+      "choices": [
+        {
+          "note": "tech explainers (default prior to v0.4.3)",
+          "value": "dark-tech",
+        },
+        {
+          "note": "hand-drawn / bright office / pairs with \`DoodleScene\`",
+          "value": "paper-light",
+        },
+        {
+          "note": "calm/technical, monitoring topics",
+          "value": "ocean-deep",
+        },
+        {
+          "note": "story-led, soft brand",
+          "value": "dusk-warm",
+        },
+        {
+          "note": "sustainability / outdoor / botanical",
+          "value": "forest-moss",
+        },
+        {
+          "note": "energetic consumer / entertainment",
+          "value": "sunset-pop",
+        },
+        {
+          "note": "dev tutorials, retro/hacker nostalgia (JetBrains Mono throughout)",
+          "value": "terminal-vintage",
+        },
+        {
+          "note": "product / food / family-friendly",
+          "value": "paper-cream",
+        },
+        {
+          "note": "creator/playback feel — pairs with the \`channel-banner\` intro gradient",
+          "value": "ai-red",
+        },
+      ],
+      "default": "paper-light",
+      "flag": "--style",
+      "id": "style",
+      "question": "Storyboard visual theme?",
+      "recommended": "paper-light",
+      "type": "choice",
+      "why": "theme changes every scene",
+    },
+    {
+      "choices": [
+        {
+          "note": "piano + strings, restrained; safe for any topic",
+          "value": "calm",
+        },
+        {
+          "note": "massed strings + timpani; dramatic topics",
+          "value": "epic",
+        },
+        {
+          "note": "Chinese folk orchestra; history/culture topics",
+          "value": "guofeng",
+        },
+        {
+          "note": "Han-dynasty folk motif; strong period flavor",
+          "value": "liubang-xiaodiao",
+        },
+        {
+          "note": "tension-building march; twist/reversal narratives",
+          "value": "fanzhuan-march",
+        },
+        {
+          "note": "no BGM (bgm: null)",
+          "value": "none",
+        },
+      ],
+      "default": "calm",
+      "flag": "--bgm",
+      "id": "bgm",
+      "question": "Background music track?",
+      "recommended": "calm",
+      "type": "choice",
+      "why": "BGM is generated per tag at make time; wrong mood is a paid re-render",
+    },
+  ],
+  "resolved": {
+    "audience": "developers",
+    "bgm": "calm",
+    "duration": 180,
+    "image_style": "flat-vector",
+    "lang": "zh-CN",
+    "style": "paper-light",
+  },
+}
+`;

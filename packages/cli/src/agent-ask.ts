@@ -33,10 +33,21 @@ export interface AgentDetection {
   via: string;
 }
 
-/** Harness detectors, most specific first. First match wins. */
+/** Harness detectors, most specific first. First match wins.
+ *  A6 (2026-10-15): pi/oh-my-pi rows are DOCUMENTED-UPSTREAM, not
+ *  live-probed — oh-my-pi is migrating `PI_` → `OMP_` prefixes and keeps
+ *  `PI_` as a deprecated fallback (can1357/oh-my-pi #8804 + its
+ *  docs/environment-variables.md); plain pi's self-identification marker
+ *  is still an open upstream issue (earendil-works/pi #2868), so the
+ *  coding-agent-dir vars are the practical signal. opencode has NO stable
+ *  child-process marker (its `OPENCODE_*` vars are user config overrides
+ *  — false-positive risk; server URL not exported, anomalyco/opencode
+ *  #9099) → deliberately deferred to VIDEO_ASK_ENV. */
 const DETECTORS: readonly AgentDetection[] = [
   { harness: "zcode", via: "ZCODE_APP_VERSION" },
   { harness: "claude-code", via: "CLAUDECODE" },
+  { harness: "oh-my-pi", via: "OMP_CODING_AGENT_DIR" },
+  { harness: "pi", via: "PI_CODING_AGENT_DIR" },
 ];
 
 /**

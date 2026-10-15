@@ -721,8 +721,11 @@ CLI 会把一份机器可读的问题集写到 stdout，然后以退出码 **2**
 
 **何时触发**——auto 模式仅在检测到 agent 环境**且**至少一个样式旋钮
 未指定时才提问。探测器：`ZCODE_APP_VERSION` → zcode，`CLAUDECODE` →
-Claude Code；其他 harness 可用 `VIDEO_ASK_ENV=VAR,VAR=VALUE,…` 声明
-（`VAR` 按存在匹配，`VAR=VALUE` 按精确值匹配）。优先级（先命中先生效）：
+Claude Code，`OMP_CODING_AGENT_DIR` → oh-my-pi，`PI_CODING_AGENT_DIR`
+→ pi（上游文档确认；oh-my-pi 保留 `PI_` 旧名作为弃用回退）。OpenCode
+没有稳定的子进程标记变量，请用 `VIDEO_ASK_ENV=VAR,VAR=VALUE,…` 声明
+它或其他 harness（`VAR` 按存在匹配，`VAR=VALUE` 按精确值匹配）。
+优先级（先命中先生效）：
 
 | 覆盖项                       | 效果                                      |
 | ---------------------------- | ----------------------------------------- |

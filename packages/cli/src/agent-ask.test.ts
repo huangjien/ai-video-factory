@@ -78,6 +78,23 @@ describe("detectAgentEnv", () => {
     });
   });
 
+  it("detects oh-my-pi via OMP_CODING_AGENT_DIR (documented-upstream row, A6)", () => {
+    expect(
+      detectAgentEnv({ OMP_CODING_AGENT_DIR: "/home/u/.omp" }),
+    ).toEqual({ harness: "oh-my-pi", via: "OMP_CODING_AGENT_DIR" });
+  });
+
+  it("detects pi via the deprecated-fallback PI_CODING_AGENT_DIR (A6)", () => {
+    expect(detectAgentEnv({ PI_CODING_AGENT_DIR: "/home/u/.pi" })).toEqual({
+      harness: "pi",
+      via: "PI_CODING_AGENT_DIR",
+    });
+  });
+
+  it("does not fire on opencode config overrides (no stable marker — deferred to VIDEO_ASK_ENV)", () => {
+    expect(detectAgentEnv({ OPENCODE_API_KEY: "x" })).toBeNull();
+  });
+
   it("first table match wins", () => {
     const det = detectAgentEnv({
       ZCODE_APP_VERSION: "3.15.3",

@@ -29,10 +29,13 @@ the command with explicit flags.
 ### What changed
 
 - **Auto-detect agent harnesses, emit a machine-readable question
-  set** (`video draft`): zcode (`ZCODE_APP_VERSION`) and Claude Code
-  (`CLAUDECODE`) are detected out of the box; any other harness can
-  be declared via `VIDEO_ASK_ENV=VAR,VAR=VALUE,…` (user-extendable
-  comma list, no code change). Exit codes: `0` ran · `1` failure
+  set** (`video draft`): zcode (`ZCODE_APP_VERSION`), Claude Code
+  (`CLAUDECODE`), oh-my-pi (`OMP_CODING_AGENT_DIR`) and pi
+  (`PI_CODING_AGENT_DIR`, the deprecated fallback oh-my-pi still
+  honors) are detected out of the box; OpenCode exports no stable
+  child-process marker and any other harness can be declared via
+  `VIDEO_ASK_ENV=VAR,VAR=VALUE,…` (user-extendable comma list, no
+  code change). Exit codes: `0` ran · `1` failure
   (unchanged) · `2` questions pending — run not started, nothing
   spent. On exit 2 stdout is pure JSON (jq-parseable); human-readable
   hints go to stderr.

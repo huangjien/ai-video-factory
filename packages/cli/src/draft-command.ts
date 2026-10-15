@@ -26,6 +26,7 @@ import {
   type AudioConfig,
 } from "@video/audio-plan";
 import { resolveProjectDir } from "./project-path.js";
+import { withProgress } from "./ui.js";
 import { maybeAgentAsk } from "./agent-ask.js";
 
 export interface DraftOptions {
@@ -135,10 +136,12 @@ export async function writeAudioConfigIfAbsent(
     return { status: "skipped", reason: "exists" };
   }
   try {
-    const { config, yaml, usage } = await callAudioPlan(
-      { article, language: article.frontmatter.language },
-      provider,
-      fallback,
+    const { config, yaml, usage } = await withProgress("audio-plan", () =>
+      callAudioPlan(
+        { article, language: article.frontmatter.language },
+        provider,
+        fallback,
+      ),
     );
     // v0.7 (--bgm): stamp the answered tag over the audio-plan LLM's
     // pick for the `bgm:` key ONLY (voice and sfx stay LLM-chosen);
@@ -233,7 +236,9 @@ export async function runDraft(opts: DraftOptions): Promise<number> {
   let webContext: { url: string; title: string; snippet: string }[] | undefined;
   if (!opts.noWeb) {
     try {
-      webContext = await new MiniMaxWebSearch().search(opts.topic);
+      webContext = await withProgress("web search", () =>
+        new MiniMaxWebSearch().search(opts.topic),
+      );
     } catch {
       webContext = undefined;
     }
@@ -257,32 +262,39 @@ export async function runDraft(opts: DraftOptions): Promise<number> {
       markdown,
       usage,
       providerName: servedBy,
-    } = await callDraft(draftInput, provider, fallback));
+    } = await withProgress(`drafting article (${chosenName})`, () =>
+      callDraft(draftInput, provider, fallback),
+    ));
   } else {
     const minScore = opts.minScore ?? 25;
     const maxAttempts = opts.maxAttempts ?? 3;
-    const result = await runScoredDraft(draftInput, provider, fallback, {
-      minScore,
-      maxAttempts,
-      onAttempt: (a, total) => {
-        if (a.score) {
-          const s = a.score;
-          const verdict = a.passing
-            ? "✓ above bar"
-            : a.attempt < total
-              ? `→ below ${minScore}, regenerating with judge feedback`
-              : `→ still below ${minScore} after ${total} attempts`;
-          console.log(
-            `  review ${a.attempt}/${total}: attractive=${s.attractive} interesting=${s.interesting} useful=${s.useful} → ${s.total}/30  ${verdict}`,
-          );
-        } else {
-          console.error(
-            `  ! article judge failed (attempt ${a.attempt}): ${(a.scoreError ?? "").slice(0, 140)}`,
-          );
-          console.error("  (keeping this draft unreviewed)");
-        }
+    const result = await withProgress(
+      `drafting article (${chosenName}, judged)`,
+      async () => {
+        return await runScoredDraft(draftInput, provider, fallback, {
+          minScore,
+          maxAttempts,
+          onAttempt: (a, total) => {
+            if (a.score) {
+              const s = a.score;
+              const verdict = a.passing
+                ? "✓ above bar"
+                : a.attempt < total
+                  ? `→ below ${minScore}, regenerating with judge feedback`
+                  : `→ still below ${minScore} after ${total} attempts`;
+              console.log(
+                `  review ${a.attempt}/${total}: attractive=${s.attractive} interesting=${s.interesting} useful=${s.useful} → ${s.total}/30  ${verdict}`,
+              );
+            } else {
+              console.error(
+                `  ! article judge failed (attempt ${a.attempt}): ${(a.scoreError ?? "").slice(0, 140)}`,
+              );
+              console.error("  (keeping this draft unreviewed)");
+            }
+          },
+        });
       },
-    });
+    );
     markdown = result.markdown;
     usage = result.usage;
     servedBy = result.providerName;
@@ -354,7 +366,9 @@ export async function runDraft(opts: DraftOptions): Promise<number> {
     }
     // v0.6 D2: when LAYA_MODE is on/shadow, consult Laya for fall-through
     // visual components (shadow logs only; on may override the default).
-    const layaVisual = await runLayaVisualAssist(article, projectRoot);
+    const layaVisual = await withProgress("laya visual assist", () =>
+      runLayaVisualAssist(article, projectRoot),
+    );
     if (layaVisual.summary) console.log(`  ${layaVisual.summary}`);
     await writeFile(
       storyboardPath,

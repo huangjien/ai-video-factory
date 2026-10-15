@@ -8,6 +8,7 @@ import {
   MARK_RUN,
   MARK_SKIP,
   brandBannerLine,
+  formatProgressEvent,
 } from "./ui.js";
 
 export interface MakeOptions {
@@ -43,6 +44,9 @@ export async function runMakeCli(opts: MakeOptions): Promise<number> {
   const projectRoot = resolvedProject.root;
 
   const report = await runMake({
+    // video-progress/1: live step/scene/heartbeat lines on stderr; the
+    // final report table below stays the authoritative summary.
+    onEvent: (e) => console.error(formatProgressEvent(e)),
     projectRoot,
     ...(opts.fake !== undefined ? { fake: opts.fake } : {}),
     ...(opts.dryRun !== undefined ? { dryRun: opts.dryRun } : {}),
@@ -86,107 +90,108 @@ export async function runMakeCli(opts: MakeOptions): Promise<number> {
 }
 
 export function registerMake(program: Command): void {
-program
-  .command("make")
-  .argument(
-    "<project>",
-    "project: topic, folder name, path, or unique prefix (defaults to cwd-discovered single project)",
-  )
-  .option("--cwd <dir>", "base directory for the project")
-  .option(
-    "--fake",
-    "use FakeTTSProvider (no Edge-TTS network call) — produces silent placeholder WAVs",
-  )
-  .option(
-    "--image-provider <provider>",
-    "image provider for scene visuals: minimax (real AI), flux (local FLUX.2 Klein 4B, no quota), mock, none (default: flux since v0.5.3; --fake implies none)",
-  )
-  .option(
-    "--bgm-dir <dir>",
-    "local BGM library dir — the bgm tag from audio-config.yaml resolves to {tag}.wav inside it (default: mock silent placeholder)",
-  )
-  .option(
-    "--sfx-dir <dir>",
-    "local SFX library dir — sfx cue tags resolve to {tag}.wav inside it (default: mock silent placeholder)",
-  )
-  .option(
-    "--music-provider <mode>",
-    "BGM generation: auto (MiniMax music gen when MINIMAX_API_KEY set, else mock) | minimax | mock",
-    (v) => {
-      if (v !== "auto" && v !== "minimax" && v !== "mock") {
-        throw new Error(`--music-provider must be auto|minimax|mock, got: ${v}`);
-      }
-      return v as "auto" | "minimax" | "mock";
-    },
-  )
-  .option(
-    "--dry-run",
-    "log which steps would run without executing them",
-  )
-  .option(
-    "--lora-config <path>",
-    "absolute path to a lora-config.yaml for the flux image provider (overrides <projectRoot>/lora-config.yaml and <repo>/lora-config.yaml)",
-  )
-  .option(
-    "--lora <spec>",
-    'legacy: LoRA adapters for the flux provider, "path[:scale][,path2[:scale2]]"',
-  )
-  .option(
-    "--reference-style-anchor",
-    "v0.5.2 (T6.2): for --image-provider flux, generate scene 1 first and condition every subsequent scene on it (style anchor for visual consistency). Off by default.",
-  )
-  .option(
-    "--anchor-scene <n>",
-    "1-based scene number to use as the style anchor (default 1; with --reference-style-anchor). Useful when the first scenes are titles and the first real visual is later.",
-    (v) => {
-      const n = parseInt(v, 10);
-      if (!Number.isInteger(n) || n < 1) {
-        throw new Error(`--anchor-scene must be a positive integer, got: ${v}`);
-      }
-      return n;
-    },
-  )
-  .action(
-    async (
-      project: string,
-      opts: {
-        cwd?: string;
-        fake?: boolean;
-        imageProvider?: "minimax" | "flux" | "mock" | "none";
-        bgmDir?: string;
-        sfxDir?: string;
-        musicProvider?: "auto" | "minimax" | "mock";
-        dryRun?: boolean;
-        loraConfig?: string;
-        lora?: string;
-        referenceStyleAnchor?: boolean;
-        anchorScene?: number;
+  program
+    .command("make")
+    .argument(
+      "<project>",
+      "project: topic, folder name, path, or unique prefix (defaults to cwd-discovered single project)",
+    )
+    .option("--cwd <dir>", "base directory for the project")
+    .option(
+      "--fake",
+      "use FakeTTSProvider (no Edge-TTS network call) — produces silent placeholder WAVs",
+    )
+    .option(
+      "--image-provider <provider>",
+      "image provider for scene visuals: minimax (real AI), flux (local FLUX.2 Klein 4B, no quota), mock, none (default: flux since v0.5.3; --fake implies none)",
+    )
+    .option(
+      "--bgm-dir <dir>",
+      "local BGM library dir — the bgm tag from audio-config.yaml resolves to {tag}.wav inside it (default: mock silent placeholder)",
+    )
+    .option(
+      "--sfx-dir <dir>",
+      "local SFX library dir — sfx cue tags resolve to {tag}.wav inside it (default: mock silent placeholder)",
+    )
+    .option(
+      "--music-provider <mode>",
+      "BGM generation: auto (MiniMax music gen when MINIMAX_API_KEY set, else mock) | minimax | mock",
+      (v) => {
+        if (v !== "auto" && v !== "minimax" && v !== "mock") {
+          throw new Error(
+            `--music-provider must be auto|minimax|mock, got: ${v}`,
+          );
+        }
+        return v as "auto" | "minimax" | "mock";
       },
-    ) => {
-      process.exitCode = await runMakeCli({
-        project,
-        ...(opts.cwd !== undefined ? { cwd: opts.cwd } : {}),
-        ...(opts.fake !== undefined ? { fake: opts.fake } : {}),
-        ...(opts.imageProvider !== undefined
-          ? { imageProvider: opts.imageProvider }
-          : {}),
-        ...(opts.bgmDir !== undefined ? { bgmDir: opts.bgmDir } : {}),
-        ...(opts.sfxDir !== undefined ? { sfxDir: opts.sfxDir } : {}),
-        ...(opts.musicProvider !== undefined
-          ? { musicProvider: opts.musicProvider }
-          : {}),
-        ...(opts.dryRun !== undefined ? { dryRun: opts.dryRun } : {}),
-        ...(opts.loraConfig !== undefined
-          ? { loraConfigPath: opts.loraConfig }
-          : {}),
-        ...(opts.lora !== undefined ? { lora: opts.lora } : {}),
-        ...(opts.referenceStyleAnchor !== undefined
-          ? { referenceStyleAnchor: opts.referenceStyleAnchor }
-          : {}),
-        ...(opts.anchorScene !== undefined
-          ? { anchorScene: opts.anchorScene }
-          : {}),
-      });
-    },
-  );
+    )
+    .option("--dry-run", "log which steps would run without executing them")
+    .option(
+      "--lora-config <path>",
+      "absolute path to a lora-config.yaml for the flux image provider (overrides <projectRoot>/lora-config.yaml and <repo>/lora-config.yaml)",
+    )
+    .option(
+      "--lora <spec>",
+      'legacy: LoRA adapters for the flux provider, "path[:scale][,path2[:scale2]]"',
+    )
+    .option(
+      "--reference-style-anchor",
+      "v0.5.2 (T6.2): for --image-provider flux, generate scene 1 first and condition every subsequent scene on it (style anchor for visual consistency). Off by default.",
+    )
+    .option(
+      "--anchor-scene <n>",
+      "1-based scene number to use as the style anchor (default 1; with --reference-style-anchor). Useful when the first scenes are titles and the first real visual is later.",
+      (v) => {
+        const n = parseInt(v, 10);
+        if (!Number.isInteger(n) || n < 1) {
+          throw new Error(
+            `--anchor-scene must be a positive integer, got: ${v}`,
+          );
+        }
+        return n;
+      },
+    )
+    .action(
+      async (
+        project: string,
+        opts: {
+          cwd?: string;
+          fake?: boolean;
+          imageProvider?: "minimax" | "flux" | "mock" | "none";
+          bgmDir?: string;
+          sfxDir?: string;
+          musicProvider?: "auto" | "minimax" | "mock";
+          dryRun?: boolean;
+          loraConfig?: string;
+          lora?: string;
+          referenceStyleAnchor?: boolean;
+          anchorScene?: number;
+        },
+      ) => {
+        process.exitCode = await runMakeCli({
+          project,
+          ...(opts.cwd !== undefined ? { cwd: opts.cwd } : {}),
+          ...(opts.fake !== undefined ? { fake: opts.fake } : {}),
+          ...(opts.imageProvider !== undefined
+            ? { imageProvider: opts.imageProvider }
+            : {}),
+          ...(opts.bgmDir !== undefined ? { bgmDir: opts.bgmDir } : {}),
+          ...(opts.sfxDir !== undefined ? { sfxDir: opts.sfxDir } : {}),
+          ...(opts.musicProvider !== undefined
+            ? { musicProvider: opts.musicProvider }
+            : {}),
+          ...(opts.dryRun !== undefined ? { dryRun: opts.dryRun } : {}),
+          ...(opts.loraConfig !== undefined
+            ? { loraConfigPath: opts.loraConfig }
+            : {}),
+          ...(opts.lora !== undefined ? { lora: opts.lora } : {}),
+          ...(opts.referenceStyleAnchor !== undefined
+            ? { referenceStyleAnchor: opts.referenceStyleAnchor }
+            : {}),
+          ...(opts.anchorScene !== undefined
+            ? { anchorScene: opts.anchorScene }
+            : {}),
+        });
+      },
+    );
 }

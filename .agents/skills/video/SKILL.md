@@ -155,7 +155,20 @@ Rules:
 1. On `video draft` exit 2: parse stdout as JSON; dispatch on `protocol === "video-ask/1"`.
 2. Present the **recommended option first, labeled "(Recommended)"**; render each choice's `note` as its description. Never bury the recommendation.
 3. The agent may replace the static recommendation with a topic-aware pick when the topic clearly demands it (e.g. 鸿门宴 → `liubang-xiaodiao` + `editorial`) and MUST state the reason in the question text. The CLI stays deterministic; the agent, which knows the topic, owns the final highlight.
-4. 5 questions exceed the 4-per-call limit of zcode-style question UIs → present in two batches: narration (`lang`, `duration`, `bgm`), then look-and-feel (`image_style`, `style`).
+4. **Render as a clickable UI whenever the harness has one — never as prose tables.**
+   - **OpenCode ≥1.19**: relay ALL questions through the native `question` tool
+     (one call, up to 6 questions — no batching needed). Map each video-ask
+     question to `{header: <id>, question: <question>, options: choices.map(c =>
+     ({label: c.value, description: c.note}))}`; put the recommended value
+     FIRST with its description prefixed `(Recommended) — `. For `duration`
+     (number type), offer the `suggestions` as options. Execution pauses
+     until the user clicks; map answers → flags, re-run. Requires
+     `permission.question: "allow"` in opencode.json (set 2026-10-15) and
+     the TUI client.
+   - **zcode-style UIs (4-question limit)**: present in two batches —
+     narration (`lang`, `duration`, `bgm`), then look-and-feel
+     (`image_style`, `style`).
+   - Text-table fallback is a LAST resort when no question UI exists at all.
 5. Map answers → flags, re-run with the same topic. All knobs explicit → no second ask (normal run).
 6. Unattended sub-runs (scripts the agent launches that call draft internally) pass `--no-ask`; headless cron/launchd shells set `VIDEO_ASK=off`.
 

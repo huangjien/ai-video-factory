@@ -56,7 +56,9 @@ export interface DraftOptions {
   style?: string;
   /** v0.6: image-style preset for generated scene visuals — written into the
    *  article.md frontmatter (`image_style:`) so `video make` picks it
-   *  up. flat-vector (default) | editorial | whiteboard. Also a
+   *  up. flat-vector (default), photoreal, watercolor, ink-wash, clay-3d,
+   *  manga, genki-anime, medieval, editorial, whiteboard, isometric,
+   *  paper-cut. Also a
    *  video-ask/1 knob (v0.7): passing it explicitly marks the
    *  image_style question as specified for the agent-ask gate
    *  (docs/v0.7-agent-ask-protocol-plan.md §5–§6). */
@@ -612,7 +614,7 @@ export function registerDraft(program: Command): void {
     )
     .option(
       "--image-style <style>",
-      "v0.6: scene-image style preset — flat-vector | editorial | whiteboard (default: flat-vector); written into article.md frontmatter (v0.7: also an agent-ask knob, video-ask/1)",
+      "scene-image style preset — flat-vector | photoreal | watercolor | ink-wash | clay-3d | manga | genki-anime | medieval | editorial | whiteboard | isometric | paper-cut (default: flat-vector); see video prompts show image-styles.yaml for use cases",
     )
     .option(
       "--image-provider <provider>",

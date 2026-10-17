@@ -51,12 +51,48 @@ exports[`emitQuestionsDoc > emits the full video-ask/1 envelope (snapshot) 1`] =
           "value": "flat-vector",
         },
         {
+          "note": "strong subject fidelity; people, products, real settings",
+          "value": "photoreal",
+        },
+        {
+          "note": "painterly landscapes; foreground people stay readable",
+          "value": "watercolor",
+        },
+        {
+          "note": "poetic atmosphere; figures remain clearly visible",
+          "value": "ink-wash",
+        },
+        {
+          "note": "playful stop-motion; stylized people and objects",
+          "value": "clay-3d",
+        },
+        {
+          "note": "dramatic ink and screentone; action and character scenes",
+          "value": "manga",
+        },
+        {
+          "note": "bright 2D character scenes; upbeat explainers",
+          "value": "genki-anime",
+        },
+        {
+          "note": "period history; illuminated look without lettering",
+          "value": "medieval",
+        },
+        {
           "note": "visual metaphor; history/abstract topics",
           "value": "editorial",
         },
         {
           "note": "marker sketch; pairs with draw-on animations",
           "value": "whiteboard",
+        },
+        {
+          "note": "fixed axonometric view; systems and processes",
+          "value": "isometric",
+        },
+        {
+          "note": "layered tactile collage; narrative scenes",
+          "value": "paper-cut",
         },
       ],
       "default": "flat-vector",
@@ -65,7 +101,7 @@ exports[`emitQuestionsDoc > emits the full video-ask/1 envelope (snapshot) 1`] =
       "question": "Scene-image style preset?",
       "recommended": "flat-vector",
       "type": "choice",
-      "why": "editorial vs flat-vector is a taste call; neither is recoverable post-render",
+      "why": "style is a taste call and cannot be changed after rendering",
     },
     {
       "choices": [

@@ -21,6 +21,16 @@ export interface BuildInput {
    *  section index when the article has fewer sections than scenes).
    *  Null when the article has no numbered sections. */
   section: { heading: string; body: string } | null;
+  /** The article's declared language (e.g. "zh-CN" / "en-US"). Used only to
+   *  localize the builders' fallback labels. */
+  language?: string | undefined;
+}
+
+/** Localize a fallback label. The builders were otherwise language-blind: an
+ *  en-US article that gave a component no explicit stage names still got
+ *  Chinese ones ("中间处理", "左"/"右"), which then burned onto the screen. */
+function loc(language: string | undefined, zh: string, en: string): string {
+  return (language ?? "zh-CN").toLowerCase().startsWith("en") ? en : zh;
 }
 
 /** Each builder returns the per-component `props` block as a plain
@@ -46,7 +56,8 @@ function stripDirectionPrefix(direction: string): string {
   return direction.slice(idx + 1).trim();
 }
 
-const buildTitle: VisualPropsBuilder = (scene) => {
+const buildTitle: VisualPropsBuilder = (scene, input) => {
+  const language = input.language;
   const props: Record<string, unknown> = {
     text: scene.caption,
   };
@@ -64,6 +75,7 @@ const buildTitle: VisualPropsBuilder = (scene) => {
 // FlowChart — process / network / pipeline diagrams.
 // ---------------------------------------------------------------------------
 const buildFlowChart: VisualPropsBuilder = (scene, input) => {
+  const language = input.language;
   const nodes = extractNodes(scene, input);
   const direction =
     /纵向|->.*-?>|top[- ]?down|垂直/.test(scene.visual ?? "") ||
@@ -82,6 +94,7 @@ const buildFlowChart: VisualPropsBuilder = (scene, input) => {
  *  section body. Splits on the most common list separators used by the
  *  LLM (commas, full-stops, Chinese enumeration punctuation). */
 function extractNodes(scene: ArticleScene, input: BuildInput): string[] {
+  const language = input.language;
   const caption = scene.caption ?? "";
   const narration = (scene.narration ?? "").trim();
   const sectionBody = input.section?.body ?? "";
@@ -119,20 +132,21 @@ function extractNodes(scene: ArticleScene, input: BuildInput): string[] {
 
   // 4) Fallback: 3 generic step nodes from the caption.
   if (caption.length > 0) {
-    return [caption, "中间处理", "结果"];
+    return [caption, loc(language, "中间处理", "Processing"), loc(language, "结果", "Result")];
   }
   // 5) Last resort — empty caption: synthesise placeholder nodes from
   // the section heading so the FlowChart isn't empty.
   if (input.section?.heading) {
-    return [input.section.heading, "细节展开", "结果"];
+    return [input.section.heading, loc(language, "细节展开", "Detail"), loc(language, "结果", "Result")];
   }
-  return ["开始", "过程", "结果"];
+  return [loc(language, "开始", "Start"), loc(language, "过程", "In progress"), loc(language, "结果", "Result")];
 }
 
 // ---------------------------------------------------------------------------
 // Terminal — code / command listings.
 // ---------------------------------------------------------------------------
 const buildTerminal: VisualPropsBuilder = (scene, input) => {
+  const language = input.language;
   const lines = extractTerminalLines(scene, input);
   const title =
     (scene.caption ?? "").trim().slice(0, 30) ||
@@ -203,7 +217,8 @@ function extractTerminalLines(
 // Callout — info / warning / success / data / formula / quote cards.
 // ---------------------------------------------------------------------------
 type CalloutKind = "info" | "warning" | "success";
-const buildCallout: VisualPropsBuilder = (scene) => {
+const buildCallout: VisualPropsBuilder = (scene, input) => {
+  const language = input.language;
   const kind = deriveCalloutKind(scene);
   const narration = (scene.narration ?? "").trim();
   const firstSentence = narration.split(/[。.!?！？\n]/)[0]?.trim() ?? "";
@@ -229,10 +244,11 @@ function deriveCalloutKind(scene: ArticleScene): CalloutKind {
 // Comparison — left/right paired cards.
 // ---------------------------------------------------------------------------
 const buildComparison: VisualPropsBuilder = (scene, input) => {
+  const language = input.language;
   const sectionBody = input.section?.body ?? "";
   const narration = (scene.narration ?? "").trim();
   const blob = `${scene.caption ?? ""}\n${narration}\n${sectionBody}`;
-  const split = splitLeftRight(blob);
+  const split = splitLeftRight(blob, input.language);
   return {
     text: scene.caption,
     visual: scene.visual,
@@ -244,7 +260,7 @@ const buildComparison: VisualPropsBuilder = (scene, input) => {
 /** Split the narration / section into two buckets by the most common
  *  contrast tokens (对/比/左/右/vs/versus/while/instead). Falls back to
  *  sentence halves. */
-function splitLeftRight(blob: string): {
+function splitLeftRight(blob: string, language: string | undefined): {
   left: { title: string; items: string[] };
   right: { title: string; items: string[] };
 } {
@@ -277,8 +293,8 @@ function splitLeftRight(blob: string): {
   );
   if (headings.length >= 2) {
     return {
-      left: { title: headings[0] ?? "左", items: extractBullets(blob, 0) },
-      right: { title: headings[1] ?? "右", items: extractBullets(blob, 1) },
+      left: { title: headings[0] ?? loc(language, "左", "Left"), items: extractBullets(blob, 0) },
+      right: { title: headings[1] ?? loc(language, "右", "Right"), items: extractBullets(blob, 1) },
     };
   }
 
@@ -287,8 +303,8 @@ function splitLeftRight(blob: string): {
   const colonSplit = cap.split(/[:：—\-]/);
   if (colonSplit.length === 2) {
     return {
-      left: { title: truncate(colonSplit[0] ?? "左", 18), items: [] },
-      right: { title: truncate(colonSplit[1] ?? "右", 18), items: [] },
+      left: { title: truncate(colonSplit[0] ?? loc(language, "左", "Left"), 18), items: [] },
+      right: { title: truncate(colonSplit[1] ?? loc(language, "右", "Right"), 18), items: [] },
     };
   }
 
@@ -300,11 +316,11 @@ function splitLeftRight(blob: string): {
   const half = Math.max(1, Math.floor(sentences.length / 2));
   return {
     left: {
-      title: "左",
+      title: loc(language, "左", "Left"),
       items: sentences.slice(0, half).slice(0, 4),
     },
     right: {
-      title: "右",
+      title: loc(language, "右", "Right"),
       items: sentences.slice(half).slice(0, 4),
     },
   };
@@ -332,6 +348,7 @@ function extractBullets(blob: string, headingIdx: number): string[] {
 // Timeline — events laid out left-to-right.
 // ---------------------------------------------------------------------------
 const buildTimeline: VisualPropsBuilder = (scene, input) => {
+  const language = input.language;
   const events = extractTimelineEvents(scene, input);
   return {
     text: scene.caption,
@@ -346,6 +363,7 @@ function extractTimelineEvents(
   scene: ArticleScene,
   input: BuildInput,
 ): { label: string; description?: string }[] {
+  const language = input.language;
   const blob = `${scene.caption ?? ""}\n${scene.narration ?? ""}\n${input.section?.body ?? ""}`;
   const events: { label: string; description?: string }[] = [];
 
@@ -375,10 +393,10 @@ function extractTimelineEvents(
   // 3) Fallback: 4-step generic timeline.
   if (events.length === 0) {
     return [
-      { label: "开始" },
-      { label: "发展" },
-      { label: "转折" },
-      { label: "现在" },
+      { label: loc(language, "开始", "Start") },
+      { label: loc(language, "发展", "Growth") },
+      { label: loc(language, "转折", "Turn") },
+      { label: loc(language, "现在", "Now") },
     ];
   }
   return events;
@@ -388,7 +406,8 @@ function extractTimelineEvents(
 // AnimatedIllustration — generic animated shapes. Preserves the previous
 // behaviour: caption + visual line for keyword-based shape picking.
 // ---------------------------------------------------------------------------
-const buildIllustration: VisualPropsBuilder = (scene) => {
+const buildIllustration: VisualPropsBuilder = (scene, input) => {
+  const language = input.language;
   return {
     text: scene.caption,
     visual: scene.visual,
@@ -404,6 +423,7 @@ const CANVAS_W = 1920;
 const CANVAS_H = 1080;
 
 const buildSvgScene: VisualPropsBuilder = (scene, input) => {
+  const language = input.language;
   const labels = extractNodes(scene, input);
   const items = (labels.length > 0 ? labels : [scene.caption || scene.visual || "主题"])
     .slice(0, 5)
@@ -445,7 +465,8 @@ function seedOf(text: string): number {
   return Math.abs(h);
 }
 
-const buildDoodleScene: VisualPropsBuilder = (scene) => {
+const buildDoodleScene: VisualPropsBuilder = (scene, input) => {
+  const language = input.language;
   const seed = seedOf(`${scene.caption ?? ""}|${scene.visual ?? ""}`);
   const strokes = [0, 1, 2, 3].map((i) => ({
     id: `doodle-${i}`,
@@ -461,6 +482,7 @@ const buildDoodleScene: VisualPropsBuilder = (scene) => {
 // QuoteBlock — quote card with attribution.
 // ---------------------------------------------------------------------------
 const buildQuoteBlock: VisualPropsBuilder = (scene, input) => {
+  const language = input.language;
   const narration = (scene.narration ?? "").trim();
   const firstSentence = narration.split(/[。.!?！？\n]/)[0]?.trim() ?? "";
   const quote = firstSentence || (scene.caption ?? "") || "……";
@@ -476,6 +498,7 @@ const buildQuoteBlock: VisualPropsBuilder = (scene, input) => {
 // unit (% / 倍 / 亿 / x) and a short preceding label token.
 // ---------------------------------------------------------------------------
 const buildStatGrid: VisualPropsBuilder = (scene, input) => {
+  const language = input.language;
   const blob = `${scene.narration ?? ""}\n${input.section?.body ?? ""}\n${scene.caption ?? ""}`;
   const stats: { value: string; label: string }[] = [];
   const re =
@@ -489,7 +512,7 @@ const buildStatGrid: VisualPropsBuilder = (scene, input) => {
   }
   if (stats.length === 0) {
     return {
-      stats: [{ value: "100%", label: scene.caption || input.section?.heading || "关键数据" }],
+      stats: [{ value: "100%", label: scene.caption || input.section?.heading || loc(language, "关键数据", "Key metric") }],
     };
   }
   return { stats };
@@ -499,6 +522,7 @@ const buildStatGrid: VisualPropsBuilder = (scene, input) => {
 // BarChart — labeled percentage pairs become horizontal bars.
 // ---------------------------------------------------------------------------
 const buildBarChart: VisualPropsBuilder = (scene, input) => {
+  const language = input.language;
   const blob = `${scene.caption ?? ""}\n${scene.narration ?? ""}\n${input.section?.body ?? ""}`;
   const bars: { label: string; value: number; display: string }[] = [];
   const re =
@@ -519,7 +543,7 @@ const buildBarChart: VisualPropsBuilder = (scene, input) => {
       .filter((s) => s.length >= 2)
       .slice(0, 4);
     const ramp = [90, 70, 50, 30];
-    const labels = parts.length >= 2 ? parts : ["高", "中", "低"];
+    const labels = parts.length >= 2 ? parts : [loc(language, "高", "High"), loc(language, "中", "Mid"), loc(language, "低", "Low")];
     return {
       bars: labels.map((label, i) => ({
         label,
@@ -535,6 +559,7 @@ const buildBarChart: VisualPropsBuilder = (scene, input) => {
 // Leaderboard — ranked entries from numbered list lines.
 // ---------------------------------------------------------------------------
 const buildLeaderboard: VisualPropsBuilder = (scene, input) => {
+  const language = input.language;
   const blob = `${input.section?.body ?? ""}\n${scene.narration ?? ""}`;
   const entries: { name: string; score?: string }[] = [];
   const lineRe =
@@ -546,7 +571,7 @@ const buildLeaderboard: VisualPropsBuilder = (scene, input) => {
     entries.push({ name });
   }
   if (entries.length < 2) {
-    const medal = ["冠军", "亚军", "季军"];
+    const medal = [loc(language, "冠军", "1st"), loc(language, "亚军", "2nd"), loc(language, "季军", "3rd")];
     return {
       entries: medal.slice(0, 3).map((name) => ({ name })),
     };
@@ -558,6 +583,7 @@ const buildLeaderboard: VisualPropsBuilder = (scene, input) => {
 // Checklist — bullets become check rows.
 // ---------------------------------------------------------------------------
 const buildChecklist: VisualPropsBuilder = (scene, input) => {
+  const language = input.language;
   const sectionBody = input.section?.body ?? "";
   const items: { text: string }[] = [];
   for (const line of sectionBody.split("\n")) {
@@ -579,7 +605,7 @@ const buildChecklist: VisualPropsBuilder = (scene, input) => {
     }
   }
   if (items.length === 0) {
-    return { items: [{ text: scene.caption || "确认要点" }] };
+    return { items: [{ text: scene.caption || loc(language, "确认要点", "Confirm") }] };
   }
   return { items };
 };
@@ -587,32 +613,35 @@ const buildChecklist: VisualPropsBuilder = (scene, input) => {
 // ---------------------------------------------------------------------------
 // BigIdea — full-screen statement; kicker picks the scene's language.
 // ---------------------------------------------------------------------------
-const buildBigIdea: VisualPropsBuilder = (scene) => {
+const buildBigIdea: VisualPropsBuilder = (scene, input) => {
+  const language = input.language;
   const caption = (scene.caption ?? "").trim();
   const narration = (scene.narration ?? "").trim();
   const text =
     caption.length >= 6
       ? caption
-      : narration.split(/[。.!?！？\n]/)[0]?.trim() || caption || "核心观点";
+      : narration.split(/[。.!?！？\n]/)[0]?.trim() || caption || loc(language, "核心观点", "KEY IDEA");
   const zh = /[\u4e00-\u9fa5]/.test(`${caption}${narration}`);
-  return { text, kicker: zh ? "核心观点" : "KEY IDEA" };
+  return { text, kicker: zh ? loc(language, "核心观点", "KEY IDEA") : "KEY IDEA" };
 };
 
 // ---------------------------------------------------------------------------
 // PyramidDiagram — bullet list becomes levels, top-first.
 // ---------------------------------------------------------------------------
 const buildPyramidDiagram: VisualPropsBuilder = (scene, input) => {
+  const language = input.language;
   const nodes = extractNodes(scene, input).slice(0, 5);
   if (nodes.length >= 2) {
     return { levels: nodes.map((t) => t.replace(/[.。;；,，、]+$/, "").slice(0, 16)) };
   }
-  return { levels: ["顶层结论", "方法路径", "基础事实"] };
+  return { levels: [loc(language, "顶层结论", "Top line"), loc(language, "方法路径", "Method"), loc(language, "基础事实", "Grounds")] };
 };
 
 // ---------------------------------------------------------------------------
 // VennDiagram — 2-3 set names from conjunction-split caption.
 // ---------------------------------------------------------------------------
-const buildVennDiagram: VisualPropsBuilder = (scene) => {
+const buildVennDiagram: VisualPropsBuilder = (scene, input) => {
+  const language = input.language;
   const cap = (scene.caption ?? "").trim();
   const parts = cap
     .split(/[、，,；;与和及]/)
@@ -628,18 +657,19 @@ const buildVennDiagram: VisualPropsBuilder = (scene) => {
       .filter((s) => s.length >= 2 && s.length <= 12),
   ).slice(0, 3);
   if (nParts.length >= 2) return { sets: nParts };
-  return { sets: ["概念A", "概念B"] };
+  return { sets: [loc(language, "概念A", "Concept A"), loc(language, "概念B", "Concept B")] };
 };
 
 // ---------------------------------------------------------------------------
 // CycleDiagram — loop stages reuse the FlowChart node extractor.
 // ---------------------------------------------------------------------------
 const buildCycleDiagram: VisualPropsBuilder = (scene, input) => {
+  const language = input.language;
   const nodes = extractNodes(scene, input).slice(0, 6);
   const stages =
     nodes.length >= 3
       ? nodes.map((t) => t.replace(/[.。;；,，、]+$/, "").slice(0, 8))
-      : ["计划", "执行", "检查", "改进"].slice(0, Math.max(3, nodes.length));
+      : [loc(language, "计划", "Plan"), loc(language, "执行", "Execute"), loc(language, "检查", "Check"), loc(language, "改进", "Improve")].slice(0, Math.max(3, nodes.length));
   return { stages, title: (scene.caption ?? "").slice(0, 12) || undefined };
 };
 

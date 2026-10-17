@@ -763,6 +763,28 @@ oh-my-pi，`PI_CODING_AGENT_DIR` → oh-my-pi/pi-fork 会话（原版 pi
 鸿门宴这类历史题材 → `liubang-xiaodiao` + `editorial`），并在问题文本里
 说明理由。
 
+**场景图片风格**——用 `--image-style <名称>` 或 `article.md` 中的
+`image_style:` 选择。默认是 `flat-vector`。这些预设针对 MiniMax
+`image-01` 调整；Image-01 对比中，主体保真度优先时 photoreal 最强，
+部分绘画风格需要明确要求人物成为视觉焦点。
+
+| 风格 | 适用场景 |
+| --- | --- |
+| `flat-vector` | 干净的编辑插画、图解和跨场景风格统一的科普视频。 |
+| `photoreal` | 主体必须清楚可辨的人物、产品和真实场景。 |
+| `watercolor` | 水彩风景和自然主题；人物是核心时会强调前景人物。 |
+| `ink-wash` | 有诗意的历史或文化氛围，同时保留清晰可读的人物。 |
+| `clay-3d` | 适合轻松概念和物体故事的黏土定格质感；提示会要求明确塑造面部。 |
+| `manga` | 戏剧性人物或动作场景，使用墨线和网点，不生成漫画框或文字。 |
+| `genki-anime` | 明亮、轻快、由鲜明角色带领的科普场景。 |
+| `medieval` | 中世纪历史场景，采用彩饰手抄本风格但不生成书写文字。 |
+| `editorial` | 用一个视觉隐喻表达抽象观点或历史主题。 |
+| `whiteboard` | 教学场景，稀疏马克笔线稿并为逐笔绘制动画留白。 |
+| `isometric` | 用统一轴测视角展示系统、建筑和流程。 |
+| `paper-cut` | 由层叠纸片构成的手作叙事场景。 |
+
+完整提示词规则可运行 `video prompts show image-styles.yaml` 查看。
+
 **`--bgm` 语义**——回答的 tag 会写进**新生的** `audio-config.yaml` 的
 `bgm: <tag>`（`none` → `bgm: null`），只覆盖 audio-plan LLM 本来会选的
 `bgm:` 键——voice 和 SFX 仍由 LLM 自选。**已存在**的 `audio-config.yaml`

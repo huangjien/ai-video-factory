@@ -31,3 +31,95 @@ whiteboard:
     - Generous white space. This is a BACKGROUND for draw-on animations, so keep elements sparse and spatially separated so animated overlays have somewhere to land.
     - Leave breathing room — the lower third and the outer edges stay quiet because caption and title overlays land there.
   promptSuffix: whiteboard marker sketch, hand-drawn black ink line art with one blue accent color, doodle arrows and boxes, clean white background, slightly imperfect marker linework, large white space, no shading, no fills, quiet lower third, no text, no labels, no letters
+isometric:
+  systemBlock: |-
+    Style: ISOMETRIC ILLUSTRATION (systems mode).
+    - Show the scene as a clear axonometric miniature: fixed 30-degree camera, vertical edges stay vertical, parallel edges stay parallel, and there is no perspective convergence.
+    - Locked palette: deep navy #20304A, muted teal #73A99B, warm amber #E8A33D, and off-white #F4F1EA. Reuse these colors in every scene; amber marks the key element.
+    - Build a compact, legible system from a few distinct objects, platforms, or connected spaces. Keep object scale and camera angle consistent across scenes.
+    - Use clean illustrated surfaces with restrained edge detail. No photorealism, gradients, labels, or decorative micro-detail.
+    - Separate foreground, subject, and background by height and overlap. Keep connections and spatial relationships easy to read at 1080p.
+    - Use soft, consistent upper-left lighting with short, subtle contact shadows. Avoid dramatic perspective or deep cast shadows.
+    - Leave breathing room — the lower third and the outer edges stay quiet because caption and title overlays land there.
+  promptSuffix: isometric illustration, fixed 30-degree axonometric camera, vertical edges, parallel lines with no perspective convergence, consistent object scale, clean illustrated surfaces, limited palette of deep navy muted teal warm amber and off-white, amber focal accent, compact layered system, soft upper-left light, short contact shadows, quiet lower third, no text, no labels, no letters
+paper-cut:
+  systemBlock: |-
+    Style: PAPER-CUT COLLAGE (tactile narrative mode).
+    - Build the scene from layered pieces of cut and torn paper. Show crisp cut edges, slight paper fiber, and shallow overlaps; avoid looking like painted brushwork or flat vector art.
+    - Locked palette: warm cream #F2E9D8, muted sage #82977B, dusty rose #C98272, and deep plum #493A4B. Reuse these colors across every scene; use dusty rose only for the key accent.
+    - Reduce the scene to a few bold silhouettes and large paper shapes. Use scale and overlap to create depth while keeping the main idea immediately readable.
+    - Light the paper evenly from the upper left. Use soft, shallow layer shadows only; no glossy surfaces, gradients, or photorealism.
+    - Keep people and recurring objects visually consistent in silhouette, scale, and paper material across scenes.
+    - Let the paper layers carry the visual metaphor without adding printed marks, writing, or tiny decorative details.
+    - Leave breathing room — the lower third and the outer edges stay quiet because caption and title overlays land there.
+  promptSuffix: layered paper-cut collage, cut and torn paper edges, subtle paper fibers, shallow overlapping layers and soft upper-left shadows, bold simplified silhouettes, locked palette of warm cream muted sage dusty rose and deep plum, dusty rose focal accent, tactile handmade surfaces, quiet lower third, no text, no letters, no labels, no handwriting
+photoreal:
+  systemBlock: |-
+    Style: PHOTOREALISTIC CINEMATIC STILL (subject-fidelity mode).
+    - Render the named subject as a believable photograph with recognizable anatomy, materials, and fine subject detail. Keep the primary subject large and sharply readable; do not reduce a person to a distant scale marker.
+    - Use a controlled photographic palette: natural subject and skin tones, deep neutral shadows, warm highlights, and a restrained teal accent. Keep the grade consistent across scenes without recoloring the subject unnaturally.
+    - Choose a camera distance that makes the key person or object fill the frame enough to read at 1080p. Use one clear focal plane and realistic lens depth of field.
+    - Use physically plausible light from one named direction. Keep shadows and reflections natural and subordinate to the subject.
+    - Show one coherent photographic moment. No collage, illustration, 3D render, artificial text, logos, watermarks, or decorative graphic overlays.
+    - Leave breathing room — the lower third and the outer edges stay quiet because caption and title overlays land there.
+  promptSuffix: photorealistic cinematic still, recognizable realistic subject with fine material detail, prominent sharply readable focal subject, natural skin and material colors, controlled deep neutral shadows warm highlights and restrained teal accent, realistic lens depth of field, physically plausible directional light, quiet lower third, no text, no letters, no logos, no watermark
+watercolor:
+  systemBlock: |-
+    Style: WATERCOLOR ILLUSTRATION (landscape-led painterly mode).
+    - Use transparent watercolor washes, soft pigment blooms, and visible paper grain. Preserve the edges of the main subject; do not let the entire scene dissolve into loose landscape texture.
+    - Locked palette: cobalt blue #416D9B, warm ochre #D29B53, muted green #71866B, and paper white #F5F1E8. Reuse these colors across scenes.
+    - When a person is central to the narration, make that person the primary foreground subject, large enough to read clearly, with a visible face, pose, and gesture. Landscape and atmosphere support the figure instead of shrinking it.
+    - When the landscape itself is the subject, let broad washes carry the scene and keep any people secondary.
+    - Use one soft, named light direction and three clear depth layers. Avoid tiny distant figures, vague silhouettes, hard vector geometry, and photorealism.
+    - Leave breathing room — the lower third and the outer edges stay quiet because caption and title overlays land there.
+  promptSuffix: watercolor illustration, transparent pigment washes, subtle paper grain, preserved readable foreground subject, cobalt blue warm ochre and muted green palette, soft directional light, atmospheric landscape kept secondary when a person is central, quiet lower third, no text, no letters, no labels, no handwriting
+ink-wash:
+  systemBlock: |-
+    Style: INK-WASH PAINTING (poetic brushwork mode).
+    - Build the image from expressive black ink contours and controlled gray washes on warm rice paper. Use a small cinnabar-red accent only on the key detail.
+    - Locked palette: black ink #202020, mist gray #AAA79F, rice-paper cream #F2EBDD, and cinnabar #A84032. Keep the same palette in every scene.
+    - Keep the main person, animal, or object at a readable foreground or middle-ground scale. Give it a clear silhouette and visible gesture; do not turn a central person into a tiny distant traveler.
+    - Use open negative space and a few deliberate brush marks. Let mist and landscape frame the focal subject instead of competing with it.
+    - Use one quiet light direction and simple layered depth. Avoid calligraphy, seals, writing, decorative marks, or photorealistic detail.
+    - Leave breathing room — the lower third and the outer edges stay quiet because caption and title overlays land there.
+  promptSuffix: expressive ink-wash painting, black brush contours and controlled gray washes on warm rice paper, readable foreground subject with clear silhouette and gesture, misty landscape kept subordinate, restrained cinnabar accent, generous negative space, quiet lower third, no text, no letters, no calligraphy, no seals
+clay-3d:
+  systemBlock: |-
+    Style: CLAY 3D STOP-MOTION (soft handcrafted mode).
+    - Model the scene as a tactile clay stop-motion set with visible fingerprints, gently imperfect edges, and soft matte surfaces. Keep forms sculpted and dimensional, not melted or amorphous.
+    - Locked palette: warm cream #F1E5D2, muted teal #65968B, coral #D97862, and deep navy #29374A. Reuse these colors across scenes; coral marks the focal accent.
+    - Give every person a readable face with distinct eyes, nose, mouth, and head shape. Keep hands, clothing, and limbs separated and clearly shaped; avoid featureless blobs.
+    - Keep the main subject large enough to read at 1080p, with a simple pose and clear silhouette. Use a small set with consistent scale and material.
+    - Use soft studio light from one named direction and shallow, natural contact shadows. No glossy plastic, photorealism, text, or props made from letters.
+    - Leave breathing room — the lower third and the outer edges stay quiet because caption and title overlays land there.
+  promptSuffix: handcrafted clay stop-motion scene, matte sculpted clay with subtle fingerprints, dimensional forms with readable faces and separated hands and limbs, clear subject silhouette, locked palette of warm cream muted teal coral and deep navy, soft directional studio light, shallow contact shadows, quiet lower third, no text, no letters, no labels
+manga:
+  systemBlock: |-
+    Style: MANGA INK AND SCREENTONE (dramatic panel-free mode).
+    - Use confident black ink linework, expressive but controlled hatching, and printed screentone texture. Present one full-frame scene, not a page or comic panel layout.
+    - Locked palette: ink black #171717, paper white #F4F1E8, cool gray #9B9B9B, and one muted crimson accent #A74343. Keep the same palette across scenes.
+    - Make the main character or object large and immediately readable, with a clear face, pose, and silhouette. Use screentone to support form, not obscure it.
+    - Keep the composition cinematic and uncluttered, with no speed-line clutter behind the caption area.
+    - The image is an opaque full-bleed illustration: never show transparency, a checkerboard, panels, speech balloons, captions, sound effects, page borders, or lettering.
+    - Leave breathing room — the lower third and the outer edges stay quiet because caption and title overlays land there.
+  promptSuffix: manga ink illustration with controlled screentone, expressive black linework, one opaque full-frame scene, readable prominent character and clear pose, limited black white gray and muted crimson palette, no panel layout, no speech balloons, no captions, no sound effects, no page border, no checkerboard, no transparency, quiet lower third, no text, no letters
+genki-anime:
+  systemBlock: |-
+    Style: GENKI ANIME (bright character-led mode).
+    - Use polished 2D anime illustration, clean expressive linework, confident cel shading, and lively color. Keep the look graphic and designed rather than photorealistic or 3D.
+    - Locked palette: clear sky blue #59A6D6, sunny yellow #F0C64C, coral #E77D69, and warm white #F7F2E8. Reuse these colors across scenes.
+    - Make the central person clearly recognizable with readable eyes, face, pose, and hands. Use a bold silhouette and a close or medium shot when a person carries the scene.
+    - Keep recurring people consistent in hair, clothing, proportions, and color accents. Use energetic expressions without exaggerated distortion.
+    - Use a simple background and clean directional light. No speech bubbles, title cards, logos, UI, text, or decorative symbols.
+    - Leave breathing room — the lower third and the outer edges stay quiet because caption and title overlays land there.
+  promptSuffix: bright 2D anime illustration, confident cel shading and clean expressive linework, prominent readable character with clear face and pose, consistent character design, locked palette of sky blue sunny yellow coral and warm white, lively but uncluttered composition, quiet lower third, no text, no letters, no speech bubbles, no logos, no symbols
+medieval:
+  systemBlock: |-
+    Style: MEDIEVAL ILLUMINATION (period-history illustration mode).
+    - Use the jewel-like color, flattened perspective, decorative natural motifs, and precise figures of a medieval illuminated miniature, while depicting a scene rather than a manuscript page.
+    - Locked palette: parchment cream #E8D9B5, ultramarine #294C8A, burgundy #8E3542, and antique gold #C49A45. Reuse these colors in every scene.
+    - Keep the people and central action large enough to read clearly. Use period clothing, tools, buildings, and materials appropriate to the supplied setting; do not substitute generic fantasy armor.
+    - Use fine ornamental detail only around the scene edges and keep it sparse near captions. Avoid page layouts, borders, columns, and blank scrolls.
+    - Do not render Latin, pseudo-Latin, runes, letters, numbers, seals, or inscriptions. No writing-like marks anywhere in the image.
+    - Leave breathing room — the lower third and the outer edges stay quiet because caption and title overlays land there.
+  promptSuffix: medieval illuminated miniature illustration, flattened perspective, jewel-like ultramarine burgundy parchment cream and antique gold palette, historically grounded clothing and materials, prominent readable figures and action, sparse ornamental detail, no manuscript page, no border, no Latin, no pseudo-writing, no letters, no numbers, quiet lower third, no text

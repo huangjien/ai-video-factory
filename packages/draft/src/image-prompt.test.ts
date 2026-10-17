@@ -100,8 +100,10 @@ describe("expandScenePrompt", () => {
       3,
     );
     // v0.6: generated part ≤ budget + "\n" + flat-vector (default) suffix.
+    // v0.10.2: the budget is 1400 — the labelled format measures longer than
+    // the paragraph it replaced; the cap is a runaway guard, not a target.
     expect(r.prompt).toBe(
-      "y".repeat(700) + "\n" + stylePromptSuffix("flat-vector"),
+      "y".repeat(1400) + "\n" + stylePromptSuffix("flat-vector"),
     );
   });
 
@@ -314,10 +316,10 @@ describe("setting participates in the brief cache identity", () => {
     expect(again.cacheHit).toBe(true);
   });
 
-  it("revision is bumped past 2 so era-blind briefs are never reused", () => {
-    // v3 is the era-anchoring change. Without the bump, every brief already
-    // cached by a v2 expander would outlive the fix.
-    expect(IMAGE_PROMPT_REVISION).toBe("3");
+  it("revision is bumped so paragraph-era briefs are never reused", () => {
+    // v3 = era anchoring, v4 = the six labelled output lines. Without each
+    // bump, briefs cached by the previous expander wording outlive the change.
+    expect(IMAGE_PROMPT_REVISION).toBe("4");
   });
 });
 
@@ -343,5 +345,66 @@ describe("the expander prompt itself demands era, appearance and dress", () => {
 
   it("says never to leave a historical person unanchored", () => {
     expect(system).toMatch(/Never leave a historical person unanchored/);
+  });
+});
+
+// v0.10.2: the brief is six labelled lines, not a paragraph. The labels are
+// part of the output the image model and the auditable .prompt.txt sidecar
+// both consume.
+describe("the expander prompt demands the six labelled lines", () => {
+  const system = buildScenePromptMessages(TANG_SCENE)[0]?.content ?? "";
+
+  it("names every label, in order", () => {
+    const labels = [
+      "1. Subject:",
+      "2. Scene:",
+      "3. Composition:",
+      "4. Lighting:",
+      "5. Style:",
+      "6. Constraints:",
+    ];
+    for (const label of labels) {
+      expect(system).toContain(label);
+    }
+    // Order matters: the labels define the output structure.
+    const positions = labels.map((l) => system.indexOf(l));
+    expect(positions).toEqual([...positions].sort((a, b) => a - b));
+  });
+
+  it("asks for subject size in frame and three depth layers", () => {
+    expect(system).toMatch(/how much of the frame it occupies/);
+    expect(system).toMatch(/foreground, middle ground, background/);
+  });
+
+  it("asks for materials and texture, not praise", () => {
+    expect(system).toMatch(/name the material/);
+    expect(system).toMatch(/rough ink edges, dry-brush texture/);
+    expect(system).toContain('"Beautiful illustration" is not a style.');
+  });
+
+  it("carries the practical exclusions", () => {
+    expect(system).toMatch(/no extra\s+people in the background/);
+    expect(system).toMatch(/no cropped hands/);
+    expect(system).toMatch(/face stays unobstructed/);
+    expect(system).toMatch(/no modern buildings, vehicles or electrical/);
+  });
+
+  it("forbids the paragraph form it used to ask for", () => {
+    expect(system).not.toContain("One paragraph");
+    expect(system).toMatch(/Exactly six labelled lines/);
+  });
+
+  it("the worked example is itself six labelled lines", () => {
+    const example = system.slice(system.indexOf("EXAMPLE"));
+    for (const label of [
+      "1. Subject:",
+      "2. Scene:",
+      "3. Composition:",
+      "4. Lighting:",
+      "5. Style:",
+      "6. Constraints:",
+    ]) {
+      expect(example).toContain(label);
+    }
   });
 });

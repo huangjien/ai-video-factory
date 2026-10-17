@@ -37,7 +37,14 @@ import {
  *  structure needs room for six parts; 400 clipped mid-sentence and left
  *  the constraints — the overlay zone and the exclusions — unwritten.
  *  The style suffix is appended after this budget, not counted in it. */
-const MAX_BRIEF_CHARS = 700;
+// 1400 (v0.10.2): a hard cap, not a target — the prompt asks for 500-1000
+// characters. The labelled six-line format measures longer than the paragraph
+// it replaced (labels ~65 chars, plus era/appearance/dress anchoring and the
+// three-layer depth guidance), and on three 玄武门 scenes a 1100 cap still
+// sliced every brief inside Constraints. The cap exists so a runaway response
+// cannot crowd out the style suffix; it is not a model limit, and the suffix
+// is not counted against it.
+const MAX_BRIEF_CHARS = 1400;
 
 /** Bumped whenever the expander prompt, this module's instruction text, or
  *  the stripping rules change in a way that should invalidate briefs already
@@ -45,7 +52,10 @@ const MAX_BRIEF_CHARS = 700;
  *  image cache in @video/make — a brief written by an older expander no
  *  longer describes the image that was generated from it.
  *  v2 — fixed the structure prompt; strips reasoning blocks before slicing. */
-export const IMAGE_PROMPT_REVISION = "3";
+// v4 — six labelled output lines (Subject/Scene/Composition/Lighting/Style/
+// Constraints) + materials guidance. v3 was the era anchoring; briefs written
+// as a single paragraph must not survive the format change.
+export const IMAGE_PROMPT_REVISION = "4";
 
 /** Remove the reasoning scaffold that reasoning-enabled chat models emit
  *  ahead of their answer (`<think>…</think>`, an unterminated `<think>`,

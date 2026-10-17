@@ -16,7 +16,7 @@ expects:
 provenance:
   source: projects/玄武门 human review 2026-10-18 — frames with Western race and dress in a Tang video; differential probe on this scene showed a 1000-year drift (late Ming, 1620) when the setting is absent
 recorded:
-  prompt_hash: sha256:f5c02df1322dc4d1bee02be00cf6ffcf15e78467ae7f04a44685ff1b6308ca0d
+  prompt_hash: sha256:e8ad34eac8e43c69d340c159e89df999dda4ea5b29af89f2b9a6fc904bc882fd
   scores:
     era-and-region-named: 9
     period-dress-specific: 8

@@ -571,3 +571,42 @@ describe("buildCycleDiagram (v0.4.2)", () => {
     expect(stages.length).toBeGreaterThanOrEqual(3);
   });
 });
+
+describe("fallback labels follow the article language", () => {
+  // An en-US video whose components had no explicit stage names used to get
+  // Chinese ones ("中间处理", "左"/"右") burned onto the screen.
+  const empty = scene({ id: "scene_1", duration: 8, caption: "Runs", visual: "" });
+
+  it("emits English FlowChart nodes for en-US", () => {
+    const props = VISUAL_BUILDERS.FlowChart!(empty, {
+      section: null,
+      language: "en-US",
+    });
+    expect(props.nodes).not.toContain("中间处理");
+  });
+
+  it("emits English Comparison titles for en-US", () => {
+    const props = VISUAL_BUILDERS.Comparison!(empty, {
+      section: null,
+      language: "en-US",
+    });
+    const json = JSON.stringify(props);
+    expect(json).not.toMatch(/[一-鿿]/);
+  });
+
+  it("keeps the Chinese defaults for zh-CN", () => {
+    const props = VISUAL_BUILDERS.FlowChart!(
+      scene({ id: "scene_2", duration: 8, caption: "流程" }),
+      { section: null, language: "zh-CN" },
+    );
+    expect(JSON.stringify(props)).toMatch(/[一-鿿]/);
+  });
+
+  it("defaults to Chinese when no language is supplied", () => {
+    const props = VISUAL_BUILDERS.FlowChart!(
+      scene({ id: "scene_3", duration: 8, caption: "流程" }),
+      { section: null },
+    );
+    expect(JSON.stringify(props)).toMatch(/[一-鿿]/);
+  });
+});

@@ -880,6 +880,29 @@ pick when the topic clearly demands it (e.g. a Han-dynasty history
 topic → `liubang-xiaodiao` + `editorial`) and states the reason in
 the question text.
 
+**Scene-image styles** — choose with `--image-style <name>` or
+`image_style:` in `article.md`. `flat-vector` is the default. These presets
+are tuned for MiniMax `image-01`; the Image-01 comparisons found photoreal
+strongest when subject fidelity matters, while some painterly styles need
+the figure called out as the focal subject.
+
+| Style | Best for |
+| --- | --- |
+| `flat-vector` | Clean editorial diagrams and consistent explainer scenes. |
+| `photoreal` | People, products, and real settings where the subject must read clearly. |
+| `watercolor` | Painterly landscapes and nature; prompts keep a central person in the foreground. |
+| `ink-wash` | Poetic historical or cultural atmosphere when a readable figure still matters. |
+| `clay-3d` | Playful concepts and objects with a handmade stop-motion feel. Faces are explicitly shaped to avoid featureless figures. |
+| `manga` | Dramatic character or action scenes with ink and screentone, without comic lettering or panels. |
+| `genki-anime` | Bright, upbeat explainers led by a recognizable recurring character. |
+| `medieval` | Period-history scenes with an illuminated-miniature look and no manuscript lettering. |
+| `editorial` | Abstract ideas and history told through one visual metaphor. |
+| `whiteboard` | Teaching scenes with sparse marker line art and space for draw-on overlays. |
+| `isometric` | Systems, architecture, and processes shown from a consistent axonometric view. |
+| `paper-cut` | Tactile narrative scenes built from layered paper shapes. |
+
+Inspect the full prompt contracts with `video prompts show image-styles.yaml`.
+
 **`--bgm` semantics** — the answered tag is stamped into a **fresh**
 `audio-config.yaml` as `bgm: <tag>` (`none` → `bgm: null`),
 overriding only the `bgm:` key the audio-plan LLM would otherwise

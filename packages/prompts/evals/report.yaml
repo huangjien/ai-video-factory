@@ -4,57 +4,29 @@ cases:
     agent: draft
     prompt_hash: sha256:60af87a18c34b950eec588c56b1f63207113136c0d24d50bb70cbec504da355d
     structural: pass
-    judged: pass
-    scores:
-      claim-grounding: 5
-    total: 5
-    comment: Numeric ranges are individually plausible for urban China, but both citations are placeholder example.com URLs offering no real grounding, and the lifetime total (5万–8万) is arithmetically inconsistent with the script's own first-year (3千–8千) and annual (2千–5千) figures, which yield roughly 2.5万–9.8万.
+    judged: skipped
   - case: history-topic-opens-with-tension
     agent: draft
     prompt_hash: sha256:6cb9721df846d28191732497afb7d6e34c10b17c3ad57bdc7af56b3f8b6c4adb
     structural: pass
-    judged: pass
-    scores:
-      hook-tension: 7
-      scene-count-fits-duration: 9
-    total: 16
-    comment: The hook names the stakes (an empire's 300-year fate decided in hours) but delivers it as a flat declarative announcement that spoils the outcome instead of building suspense.
+    judged: skipped
   - case: user-idea-seed-preserved
     agent: draft
     prompt_hash: sha256:4499c0ccb703e5daac7929c47bade0c17db840acd3d4966ad271fabad2b4a521
     structural: pass
-    judged: pass
-    scores:
-      idea-fidelity: 8
-      hook-tension: 7
-    total: 15
-    comment: Content stays tightly on-thesis (sour = under-extraction → grind/channeling fixes) with scenes that map one-to-one to sections and durations summing exactly to 120s, but scene visuals are generic label-style briefs that don't carry the specificity of the script.
+    judged: skipped
   - case: era-poor-scene-stays-in-tang
     agent: image-prompt
-    prompt_hash: sha256:f5c02df1322dc4d1bee02be00cf6ffcf15e78467ae7f04a44685ff1b6308ca0d
+    prompt_hash: sha256:e8ad34eac8e43c69d340c159e89df999dda4ea5b29af89f2b9a6fc904bc882fd
     structural: pass
-    judged: pass
-    scores:
-      era-and-region-named: 10
-      period-dress-specific: 9
-    total: 19
-    comment: Dress detail is strong but omits lower-body garments and footwear, leaving the period outfit incomplete below the waist.
+    judged: skipped
   - case: script-and-research-context-order
     agent: storyboard
     prompt_hash: sha256:498187296a04220fd780efd1bfd088136e6cd75bd8663c7e0f53c9cde672b747
     structural: pass
-    judged: pass
-    scores:
-      scene-count-fits-duration: 8
-    total: 8
-    comment: 17 beats across a 240s runtime (avg ~14s, range 10-18s) is well-proportioned with durations matched to beat density (timeline recap gets 18s, title/endcard 10-12s), but a few adjacent beats cover the same point and some durations are padded relative to narration length.
+    judged: skipped
   - case: xuanwumen-scene-count-fits-180s
     agent: storyboard
     prompt_hash: sha256:eabe9e8b699f1c09dd486be87908cd61578b716df4ef93722e65f6b39da5f1fe
     structural: pass
-    judged: pass
-    scores:
-      scene-count-fits-duration: 7
-      shot-variety: 7
-    total: 14
-    comment: The 16 beats are proportional to the 182s runtime (~11s each), but several scenes carry narration that likely overruns their allotted seconds (scene-05's ~90 characters in 12s, scene-04 in 14s), and the mid-section leans heavily on near-identical single-character portraits with entrance-only animation.
+    judged: skipped

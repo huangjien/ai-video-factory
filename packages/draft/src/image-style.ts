@@ -13,13 +13,22 @@
  *   2. `promptSuffix` — appended verbatim to the final prompt, so the
  *      image model sees the style contract even when the LLM drifts.
  *
- * Styles (engineering proposal 2026-10-15):
+ * Supported styles:
  *   flat-vector  — default. Clean geometry → composes with the vector
  *                  REGISTRY components; highest cross-scene consistency.
+ *   photoreal   — recognizable people, products, and real-world settings.
+ *   watercolor  — painterly landscapes; keep central people foregrounded.
+ *   ink-wash    — poetic atmosphere; central figures remain readable.
+ *   clay-3d     — playful stop-motion scenes with defined faces and forms.
+ *   manga       — dramatic ink and screentone, without comic-page furniture.
+ *   genki-anime — upbeat, character-led 2D scenes.
+ *   medieval    — historically grounded illuminated-miniature scenes.
  *   editorial    — narrative/metaphor mode for history & abstract topics.
  *   whiteboard   — teaching mode. Marker line-art on white; pairs with
  *                  SvgScene draw-on animations. NOT the retired
  *                  DoodleScene canvas renderer.
+ *   isometric   — fixed-camera axonometric scenes for systems and processes.
+ *   paper-cut   — layered tactile collage for narrative scenes.
  *
  * Cross-scene consistency comes from these shared contracts — reusing
  * the same palette and camera vocabulary across scenes — not from any
@@ -29,8 +38,17 @@ import { loadImageStylePresets, loadPrompt } from "@video/prompts";
 
 export const IMAGE_STYLES = [
   "flat-vector",
+  "photoreal",
+  "watercolor",
+  "ink-wash",
+  "clay-3d",
+  "manga",
+  "genki-anime",
+  "medieval",
   "editorial",
   "whiteboard",
+  "isometric",
+  "paper-cut",
 ] as const;
 
 export type ImageStyle = (typeof IMAGE_STYLES)[number];

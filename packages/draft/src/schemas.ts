@@ -147,7 +147,7 @@ export function articleToStoryboardYaml(
     const section = sections[sectionIdx] ?? null;
     const builder: VisualPropsBuilder =
       VISUAL_BUILDERS[component] ?? VISUAL_BUILDERS.AnimatedIllustration!;
-    const props = builder(s, { section });
+    const props = builder(s, { section, language: f.language });
     const propsLines = propsToYamlLines(props, "        ");
     lines.push(`  - id: ${id}`);
     lines.push(`    duration: ${s.duration ?? 0}`);

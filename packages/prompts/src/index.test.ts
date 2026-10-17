@@ -52,23 +52,34 @@ describe("fillPrompt", () => {
 });
 
 describe("image brief expander", () => {
-  it("declares the six-part brief structure in a fixed order", () => {
-    const prompt = loadPrompt("draft-image-prompt");
-    const order = ["SUBJECT", "SCENE", "COMPOSITION", "LIGHTING", "STYLE", "CONSTRAINTS"];
-    const positions = order.map((part, i) => prompt.indexOf(`${i + 1}. ${part} `));
+  // v0.10.2: the output is six LABELLED lines the .prompt.txt sidecar and the
+  // image model both consume, not a paragraph. Matching runs on whitespace-
+  // normalized text so a line wrap inside the prompt file can neither fake a
+  // pass nor fail the assertion.
+  const flat = loadPrompt("draft-image-prompt").replace(/\s+/g, " ");
+
+  it("declares the six labelled lines in a fixed order", () => {
+    const labels = [
+      "1. Subject:",
+      "2. Scene:",
+      "3. Composition:",
+      "4. Lighting:",
+      "5. Style:",
+      "6. Constraints:",
+    ];
+    const positions = labels.map((l) => flat.indexOf(l));
     expect(positions.every((p) => p !== -1)).toBe(true);
     expect([...positions].sort((a, b) => a - b)).toEqual(positions);
   });
 
   it("requires a shot, a light source, and a reserved overlay zone", () => {
-    const prompt = loadPrompt("draft-image-prompt");
     // Vagueness is what the model falls back on when the brief is thin:
     // "dramatic lighting" instead of a direction, no framing, no room
     // left for the captions that land on top of the image.
-    expect(prompt).toContain("wide establishing shot");
-    expect(prompt).toContain("upper right");
-    expect(prompt).toContain("lower third");
-    expect(prompt).toMatch(/Never "dramatic lighting"/);
+    expect(flat).toContain("wide establishing shot");
+    expect(flat).toContain("upper right");
+    expect(flat).toContain("lower third");
+    expect(flat).toMatch(/Never "dramatic lighting"/);
   });
 
   it("bans reasoning, preamble and fences in the output", () => {
@@ -84,11 +95,20 @@ describe("image brief expander", () => {
 });
 
 describe("structured prompt files", () => {
-  it("image-styles.yaml has the three styles with non-empty blocks", () => {
+  it("image-styles.yaml has the twelve styles with non-empty blocks", () => {
     const presets = loadImageStylePresets();
     expect(Object.keys(presets).sort()).toEqual([
+      "clay-3d",
       "editorial",
       "flat-vector",
+      "genki-anime",
+      "ink-wash",
+      "isometric",
+      "manga",
+      "medieval",
+      "paper-cut",
+      "photoreal",
+      "watercolor",
       "whiteboard",
     ]);
     for (const preset of Object.values(presets)) {

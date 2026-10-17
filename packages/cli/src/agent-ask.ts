@@ -132,8 +132,17 @@ const STYLE_CHOICES: readonly { value: string; note: string }[] =
  */
 const IMAGE_STYLE_NOTES: Record<string, string> = {
   "flat-vector": "clean geometry; best cross-scene consistency",
+  photoreal: "strong subject fidelity; people, products, real settings",
+  watercolor: "painterly landscapes; foreground people stay readable",
+  "ink-wash": "poetic atmosphere; figures remain clearly visible",
+  "clay-3d": "playful stop-motion; stylized people and objects",
+  manga: "dramatic ink and screentone; action and character scenes",
+  "genki-anime": "bright 2D character scenes; upbeat explainers",
+  medieval: "period history; illuminated look without lettering",
   editorial: "visual metaphor; history/abstract topics",
   whiteboard: "marker sketch; pairs with draw-on animations",
+  isometric: "fixed axonometric view; systems and processes",
+  "paper-cut": "layered tactile collage; narrative scenes",
 };
 
 const IMAGE_STYLE_CHOICES: readonly { value: string; note: string }[] =
@@ -220,7 +229,7 @@ export const DRAFT_QUESTIONS: readonly AskQuestion[] = [
     choices: [...IMAGE_STYLE_CHOICES],
     default: "flat-vector",
     recommended: "flat-vector",
-    why: "editorial vs flat-vector is a taste call; neither is recoverable post-render",
+    why: "style is a taste call and cannot be changed after rendering",
     specified: (opts) => opts.imageStyle !== undefined,
     resolved: (opts) => opts.imageStyle ?? "flat-vector",
   },

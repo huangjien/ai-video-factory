@@ -1,0 +1,169 @@
+import { describe, expect, it } from "vitest";
+import { mkdtemp, mkdir, rm, writeFile, readFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import path from "node:path";
+import { runMake, writeVisualsCheckpoint } from "@video/make";
+import {
+  approveVisualsCheckpointCli,
+  runVisualsCli,
+} from "./visuals-command.js";
+
+/**
+ * v0.8 plan G4: the visuals approval gate — opt-in via article.md
+ * frontmatter; `video make` refuses to render until the on-disk image set
+ * matches an approved checkpoint.
+ */
+
+const ARTICLE = (gate: boolean) => `---
+project: visuals-gate
+language: zh-CN
+duration_target_sec: 12
+voice: zh-CN-YunjianNeural${gate ? "\nrequire_visual_approval: true" : ""}
+---
+
+# 标题
+
+## 1. 第一节
+
+正文。
+
+## Scenes
+
+\`\`\`yaml
+scenes:
+  - id: scene_1
+    duration: 5
+    caption: 一
+    visual: 列表要点甲
+    narration: 第一句。
+\`\`\`
+`;
+
+async function mkProject(gate: boolean): Promise<string> {
+  const dir = await mkdtemp(path.join(tmpdir(), "visuals-gate-"));
+  await mkdir(path.join(dir, "assets", "images"), { recursive: true });
+  await writeFile(path.join(dir, "article.md"), ARTICLE(gate), "utf8");
+  await writeFile(path.join(dir, "state.yaml"), "status: DRAFT\n", "utf8");
+  await writeFile(
+    path.join(dir, "audio-config.yaml"),
+    "voice: zh-CN-YunjianNeural\nbgm: calm\n",
+    "utf8",
+  );
+  return dir;
+}
+
+/** runMake with every process boundary stubbed (no ffmpeg/Remotion/uv). */
+const DEPS = {
+  renderPreview: async () => ["output/preview.mp4"],
+  mix: async () => ["output/final-mixed.mp4"],
+};
+
+describe("G4: visuals gate in runMake", () => {
+  it("gate on + no checkpoint ⇒ visuals-gate fails before any step", async () => {
+    const dir = await mkProject(true);
+    try {
+      const report = await runMake(
+        { projectRoot: dir, fake: true, imageProvider: "mock" },
+        DEPS,
+      );
+      const gate = report.steps.find((s) => s.name === "visuals-gate");
+      expect(gate?.status).toBe("fail");
+      expect(gate?.message).toContain("video visuals");
+      // Nothing downstream ran.
+      expect(report.steps.find((s) => s.name === "render-preview")).toBeUndefined();
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("gate on + approved checkpoint matching the images ⇒ gate passes", async () => {
+    const dir = await mkProject(true);
+    try {
+      // Generate one mock image, then approve the set.
+      const gen = await runVisualsCli({
+        project: dir,
+        fake: true,
+        imageProvider: "mock",
+        pythonBin: "/usr/bin/false",
+      });
+      expect(gen).toBe(0);
+      const code = await approveVisualsCheckpointCli(dir);
+      expect(code).toBe(0);
+
+      const report = await runMake(
+        { projectRoot: dir, fake: true, imageProvider: "mock" },
+        DEPS,
+      );
+      const gate = report.steps.find((s) => s.name === "visuals-gate");
+      expect(gate?.status).toBe("ran");
+      expect(report.steps.find((s) => s.name === "render-preview")?.status).toBe(
+        "ran",
+      );
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("gate off (default) ⇒ no visuals-gate step at all", async () => {
+    const dir = await mkProject(false);
+    try {
+      const report = await runMake(
+        { projectRoot: dir, fake: true, imageProvider: "mock" },
+        DEPS,
+      );
+      expect(report.steps.find((s) => s.name === "visuals-gate")).toBeUndefined();
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+});
+
+describe("G4: visuals CLI verbs", () => {
+  it("approve with no images ⇒ exit 1 with fix hint", async () => {
+    const dir = await mkProject(true);
+    try {
+      expect(await approveVisualsCheckpointCli(dir)).toBe(1);
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("visuals --reject marks the scene and regenerates it", async () => {
+    const dir = await mkProject(true);
+    try {
+      await runVisualsCli({
+        project: dir,
+        fake: true,
+        imageProvider: "mock",
+        pythonBin: "/usr/bin/false",
+      });
+      expect(await approveVisualsCheckpointCli(dir)).toBe(0);
+      const before = await readFile(path.join(dir, "assets/images/scene_1.jpg"));
+
+      // Reject scene 1 — the same run regenerates it (mock: same bytes)
+      // and the checkpoint entry flips to rejected with the reason.
+      expect(
+        await runVisualsCli({
+          project: dir,
+          fake: true,
+          imageProvider: "mock",
+          rejectScene: 1,
+          reason: "太暗",
+          pythonBin: "/usr/bin/false",
+        }),
+      ).toBe(0);
+      const after = await readFile(path.join(dir, "assets/images/scene_1.jpg"));
+      const checkpoint = await readFile(
+        path.join(dir, "checkpoints", "visuals.yaml"),
+        "utf8",
+      );
+      expect(checkpoint).toContain("status: rejected");
+      expect(checkpoint).toContain("reason: \"太暗\"");
+      // Mock is prompt-deterministic — regenerated bytes match; the
+      // meaningful assertion is the checkpoint state transition.
+      expect(after.equals(before)).toBe(true);
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+});

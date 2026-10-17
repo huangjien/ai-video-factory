@@ -26,13 +26,18 @@ script, research) triple. The package is fully text — no images, no video.
 Output: ONE fenced YAML code block (\`\`\`yaml ... \`\`\`) with EXACTLY these keys:
   title:            string (1-100 chars; SEO-friendly; localized to script language)
   description:      string (multi-line; include 2-5 hashtags at the bottom; cite research URLs)
-  chapters:         list of {timestamp, title}  (timestamps in MM:SS format, in order)
+  chapters:         list of {timestamp, title}  (zero-padded MM:SS, in order)
   thumbnail_prompt: string (text description of the thumbnail image to design)
   shorts_hook:      string (text for a 60-second Shorts clip: hook + key claim)
 
 Constraints:
 - Title must NOT exceed 100 chars (YouTube limit).
-- Chapters must be in MM:SS format and sorted by time.
+- Chapters must be zero-padded MM:SS — EXACTLY two digits on each side of the colon.
+  A video longer than one hour uses HH:MM:SS, also zero-padded.
+  Correct: "00:00", "01:23", "01:02:30"
+  WRONG:   "0:00", "1:23", "00:0", "83", "01:23.5" — these are rejected outright.
+- Chapters must be sorted by time.
+- Quote any string containing ":", "#", or a leading special character, so YAML parses.
 - VISUAL STYLE — prefer people over screens in both thumbnail and shorts.
 
 HARD RULES for thumbnail_prompt and shorts_hook:

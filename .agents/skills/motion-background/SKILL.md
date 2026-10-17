@@ -14,6 +14,8 @@ Ambient, living backgrounds that sit behind content without stealing focus. The 
 - Login/splash/empty-state living backdrops.
 - A gradient, mesh, aurora, shader, or particle/constellation field behind text or UI.
 
+In this repo the same depth cue can be built as a generated still plate panned/zoomed by Remotion — see `flux-image-prompting` (plate prompt) and `flux-visual-consistency` (keep the plate coherent across scenes).
+
 ## Pick an approach
 
 | Look | Technique | Cost |

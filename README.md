@@ -118,7 +118,8 @@ do).
 | `video new <id>`                    | scaffold a project under `projects/<id>/`                                                                                                                                                                                                                                                                                      |
 | `video draft <topic>`               | write `article.md` + `audio-config.yaml` from a topic via MiniMax/GLM (research + script + storyboard + audio plan in one; `--no-audio-plan` to split; `--file <path>` to seed with your raw idea, opinions preserved; **v0.4** `--style <theme>` writes storyboard theme; **v0.4** `--no-captions` skips the caption overlay) |
 | `video audio-plan <project>`        | (optional) regenerate `audio-config.yaml` after hand-editing article.md                                                                                                                                                                                                                                                        |
-| `video make <project>`              | TTS → audio assets → render → mix (`--dry-run` to preview, `--fake` for offline TTS, `--image-provider mock\|minimax\|flux\|none`, `--bgm-dir`/`--sfx-dir <dir>` to use your own music library)                                                                                                                                |
+| `video make <project>`              | TTS → audio assets → render → mix (`--dry-run` for a read-only impact table of what would re-run, `--fake` for offline TTS, `--image-provider minimax\|openai\|gemini\|mock\|none`, `--bgm-dir`/`--sfx-dir <dir>` to use your own music library; **v0.8** scene images are content-keyed so visual edits regenerate)                     |
+| `video visuals <project>`           | **v0.8** (optional) generate scene images + a Pillow contact sheet for review; `video approve visuals <project>` freezes the set and `video make` enforces it when `require_visual_approval: true` is set in article.md frontmatter                                                                                            |
 | `video retrospect <project>`        | **v0.4** ask the LLM for 3 concrete edits to `article.md` based on the latest runs + QA report (writes `projects/<slug>/retrospect.md`); `--dry-run` shows the input without calling the LLM                                                                                                                                   |
 | `video status <project>`            | shows current workflow checkpoint + **v0.4** the latest QA finding count next to the gate                                                                                                                                                                                                                                      |
 | `video theme [name] / --cwd <root>` | **v0.4** palette inspector — list every theme, print one theme's full token set, or resolve `style.theme` from a project's storyboard                                                                                                                                                                                          |
@@ -182,131 +183,58 @@ values fall back to `paper-light` (the v0.4.3 default) at render time and
 See `docs/ARCHITECTURE.md` — maps each design-doc section to the package and
 file that implements it, plus the v0.2+ roadmap.
 
-## Local Image Generation (v0.5.3 — flux is the default)
+## Image Providers (`video make` defaults to MiniMax)
 
-`--image-provider flux` runs **FLUX.2-klein-4B** (Black Forest Labs,
-Apache-2.0) locally on Apple Silicon via a Python sidecar
-(`packages/media-generators/python/` — Hugging Face `diffusers` +
-`pillow` + LoRA). No API key, no quota, no network after the one-time
-weight download. Design + rationale: `docs/v0.5-local-image-generation-plan.md`.
+Scene images come from **MiniMax `image-01`** by default (v0.8.1) — an
+HTTP call that returns in seconds and needs only `MINIMAX_API_KEY`.
+Three hosted providers are available; all of them are HTTP APIs billed
+against their own API key.
 
-```bash
-# One-time setup (~22 GB download, ungated — no HF token needed)
-cd packages/media-generators/python
-uv sync && uv run python flux_worker.py --download
+| `--image-provider` | Needs             | Latency           | Notes                                    |
+| ------------------ | ----------------- | ----------------- | ---------------------------------------- |
+| `minimax`          | `MINIMAX_API_KEY` | seconds per scene | default for `video make` / `video visuals` |
+| `openai`           | `OPENAI_API_KEY`  | seconds per scene |                                          |
+| `gemini`           | `GEMINI_API_KEY`  | seconds per scene |                                          |
+| `mock`             | nothing           | instant           | deterministic placeholders               |
+| `none`             | nothing           | —                 | skip image generation entirely            |
 
-# Then use it anywhere images are generated
-video make my-project --image-provider flux     # scene visuals, 1920×1080
-# v0.5.3+: `video make` defaults to flux when the local service is
-# ready. Pass `--image-provider minimax|mock|none` to override.
-video thumbnail my-project --provider flux      # 1280×720 thumbnails — title text drawn by Pillow (from youtube/title.txt), never by the image model; --no-text skips it
-```
-
-Pre-flight: `FluxKleinImageProvider` runs `uv run python
-flux_worker.py --check` once per render. If the local flux service
-isn't ready (uv missing, python env not synced, weights not
-downloaded), the render fails loud with a fix hint instead of a
-traceback. Bypass with `FLUX2_SKIP_HEALTH_CHECK=1` for CI.
-
-LoRA style adapters (startup-time, human-chosen). Two surfaces —
-checked-in config (preferred) or env override:
+Hosted providers return their own output sizes; scenes are fitted to the
+requested 1920×1080 frame at render time. `video thumbnail` takes the
+same providers through `--provider` (`mock | minimax | openai | gemini`,
+`mock` still the default there).
 
 ```bash
-# Checked-in lora-config.yaml — picked up automatically when the file
-# lives at <projectRoot>/lora-config.yaml or <repo>/lora-config.yaml.
-cat > projects/my-project/lora-config.yaml <<'YAML'
-loras:
-  - source: loras/ink-style.safetensors     # relative to config dir,
-    scale: 0.8                              # absolute path, or HF id
-    license: loras/ink-style.license.txt    # optional but recommended
-YAML
-video make my-project --image-provider flux
-
-# Or one-shot env override (legacy) — string form "path[:scale][,…]"
-FLUX2_LORA="loras/ink-style.safetensors:0.8" video make my-project --image-provider flux
-# …or the explicit yaml path
-FLUX2_LORA_CONFIG=/abs/path/to/lora-config.yaml video make my-project --image-provider flux
+video make my-project                           # scene visuals via MiniMax (default)
+video make my-project --image-provider openai   # scene visuals via OpenAI
+video make my-project --image-provider gemini   # scene visuals via Gemini
+video make my-project --image-provider mock     # deterministic placeholders
+video make my-project --image-provider none     # skip image generation
+video thumbnail my-project --provider minimax   # 1280×720 thumbnail via MiniMax
 ```
 
-The `lora-config.yaml` convention (mirrors `audio-config.yaml`): humans
-declare the project's style at the file level, license sidecars are
-enforced when declared, and the worker keeps the pipeline warm
-(no per-scene reload). Schema + precedence are documented in
-`docs/v0.5-local-image-generation-plan.md` §T5 and
-`packages/media-generators/src/lora-config.ts`.
+Scene image prompts still go through the v0.4 LLM expansion; provider
+failures are non-fatal (scene falls back to `AnimatedIllustration`).
 
-The worker keeps the pipeline warm across a whole render (model load ≈
-28 s on M4; scene images ≈ 1–3 min each), streams the text encoder via
-group offloading to fit 24 GB unified memory, snaps dimensions to the
-FLUX.2 VAE alignment and Pillow-fits to the exact requested box. Scene
-image prompts still go through the v0.4 LLM expansion; failures are
-non-fatal (scene falls back to `AnimatedIllustration`). Knobs:
-`FLUX2_MODEL / FLUX2_STEPS / FLUX2_GUIDANCE / FLUX2_DEVICE / FLUX2_DTYPE /
-FLUX2_OFFLOAD / FLUX2_LORA / FLUX2_LORA_CONFIG / FLUX2_TEXT_ENCODER_QUANT /
-FLUX2_HF_HOME / FLUX2_QUIET` (silence live step-progress logs) — full table
-in `packages/media-generators/python/README.md`.
+## Visual guardrails (v0.8 — freshness + review)
 
-### Memory pressure knobs
-
-For 9B variants or large LoRA stacks that push past the 24 GB M4
-ceiling, two knobs compound:
+Scene images are **content-keyed** since v0.8: each
+`assets/images/scene_N.jpg` carries a `scene_N.cache.json` sidecar hashing
+its inputs (the scene's `visual:` line, `image_style`, provider,
+geometry). Editing a visual direction now regenerates
+that image on the next `video make` — before v0.8 the cache keyed on file
+existence, so edits silently never reached the picture. Legacy images are
+adopted on first run, so upgrading never re-spends.
 
 ```bash
-FLUX2_OFFLOAD=full FLUX2_TEXT_ENCODER_QUANT=int8 video make big-project --image-provider flux
+video make <project> --dry-run   # read-only impact table: what re-runs, what's cached, gate state, drift
+video visuals <project>          # images + Pillow contact sheet for review
+video approve visuals <project>  # freeze the image set into checkpoints/visuals.yaml
 ```
 
-- `FLUX2_OFFLOAD=full` block-offloads the transformer so only one
-  block is resident on MPS at a time (text encoder is always
-  offloaded via group-offloading by default).
-- `FLUX2_TEXT_ENCODER_QUANT=int8` shrinks the Qwen3 text encoder
-  ~40% (8.1 GB → 4.9 GB on the 4B encoder, verified) with no
-  measurable diffusion quality loss. `int4` is blocked on MPS
-  (Apple's `mslk` framework isn't distributable). Doc §T6.3.
-
-### Style anchor — image-to-image across scenes
-
-`--reference-style-anchor` (v0.5.2, doc §T6.2) generates the anchor
-scene first and conditions every subsequent scene on it. Off by
-default — each scene looks independent. On, every scene after the
-anchor shares the anchor's look:
-
-```bash
-video make my-project --image-provider flux --reference-style-anchor
-# Pick a later scene as the anchor (default 1) when the first scenes
-# are titles and the first real visual is later.
-video make my-project --image-provider flux --reference-style-anchor --anchor-scene 3
-```
-
-Same path is followed for the LoRA flow above. The reference
-conditioning is implemented in the same `Flux2KleinPipeline` (4B
-accepts `image=`; the 9B KV variant is gated and not used). Per-image
-latency rises for the Qwen3 vision encoder pass on the reference;
-realistic for 512–768px references; 1024px references slow things
-materially.
-
-### Choosing a model
-
-The worker auto-detects `is_distilled` from the checkpoint's
-`model_index.json`. Default `black-forest-labs/FLUX.2-klein-4B` is
-step-distilled (8 steps, guidance ignored — fast). For the 50-step
-quality path with guidance honored, switch to the base:
-
-```bash
-FLUX2_MODEL=black-forest-labs/FLUX.2-klein-base-4B video make my-project --image-provider flux
-```
-
-Inspect any candidate checkpoint before committing to the multi-GB
-download (no safetensors fetched):
-
-```bash
-cd packages/media-generators/python
-uv run python flux_worker.py --check-model black-forest-labs/FLUX.2-klein-base-4B
-# → is_distilled: false, default_steps_with_worker: 50, guidance_honored: true
-```
-
-Both `video make` and `video thumbnail` resolve `lora-config.yaml` from
-`<projectRoot>` then `<repoRoot>` automatically; pass `--lora-config
-<path>` to override.
+Keyframe review is opt-in: set `require_visual_approval: true` in
+`article.md` frontmatter and `video make` refuses to render until the
+on-disk set matches the approved checkpoint, naming stale scenes.
+Design + rationale: `docs/v0.8-visual-guardrails-plan.md`.
 
 ## Advanced Media (v0.2.8 — final phase)
 
@@ -778,7 +706,7 @@ Seven quality wins shipped under the same human-gate principle:
   article's `visual:` field is now classified into the right VDSL
   component (FlowChart / Comparison / Terminal / Timeline / Callout /
   Illustration) instead of every scene being `AnimatedIllustration`.
-- **Image prompt expansion** (`video make --image-provider minimax`):
+- **Image prompt expansion** (any non-mock provider — `minimax` is the default):
   the article's 80-char `visual:` is rewritten into a 2-3 sentence
   prompt (subject · environment · lighting · composition · style)
   before `image-01`. Cached on content hash so re-runs are free;

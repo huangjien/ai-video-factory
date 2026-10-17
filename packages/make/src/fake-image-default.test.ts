@@ -9,9 +9,15 @@ import {
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { parse as parseYaml } from "yaml";
+import {
+  articleToStoryboardYaml,
+  parseArticle,
+  type ParsedArticle,
+} from "@video/draft";
+import { generateSceneVisuals, resolveImageProvider } from "./index.js";
 
 /**
- * Regression test for the bug: `video make --fake` rewrote every scene's
+ * Regression tests for the bug: `video make --fake` rewrote every scene's
  * `visual.component` from `AnimatedIllustration` to `ImageBackground`,
  * because the make pipeline defaulted `--fake` to imageProvider="mock"
  * and `updateStoryboardForImages` switched every scene to use the mock
@@ -19,9 +25,13 @@ import { parse as parseYaml } from "yaml";
  * the image (no caption), so the rendered video looked fine for scene 1
  * (Title component) and then ~9 minutes of blank frames for scenes 2+
  * — users reported "video stops showing pictures and animation at 3-4
- * minutes" (real elapsed: ~28 seconds). The fix defaults `--fake` to
+ * minutes" (real elapsed: ~28 seconds). The fix: `--fake` resolves to
  * imageProvider="none", which skips image generation entirely and
  * leaves scenes as AnimatedIllustration (caption + animated SVG).
+ *
+ * `video make`, `video visuals`, and the `--dry-run` impact table all
+ * resolve the provider through `resolveImageProvider` — one function, so
+ * a regression here breaks every entry point at once.
  */
 
 const FAKE_ARTICLE = `---
@@ -58,92 +68,91 @@ scenes:
 \`\`\`
 `;
 
-const FAKE_AUDIO_CONFIG = `voice: zh-CN-YunjianNeural
-bgm: "calm"
-bgm_fade_in_sec: 1
-bgm_fade_out_sec: 1
-`;
+describe("resolveImageProvider", () => {
+  it("resolves --fake to none so scenes keep AnimatedIllustration", () => {
+    expect(resolveImageProvider(true, undefined)).toBe("none");
+  });
 
-describe("--fake default imageProvider keeps scenes as AnimatedIllustration", () => {
+  it("defaults to minimax when the flag is omitted", () => {
+    expect(resolveImageProvider(undefined, undefined)).toBe("minimax");
+    expect(resolveImageProvider(false, undefined)).toBe("minimax");
+  });
+
+  it("honors an explicit provider, including under --fake", () => {
+    for (const explicit of ["minimax", "openai", "gemini", "mock", "none"] as const) {
+      expect(resolveImageProvider(undefined, explicit)).toBe(explicit);
+      expect(resolveImageProvider(true, explicit)).toBe(explicit);
+    }
+  });
+});
+
+interface SceneYaml {
+  id?: string;
+  visual?: { component?: string; props?: Record<string, unknown> };
+}
+
+function readStoryboard(sbPath: string): SceneYaml[] {
+  return (parseYaml(readFileSync(sbPath, "utf8")) as { scenes?: SceneYaml[] })
+    .scenes ?? [];
+}
+
+describe("generateSceneVisuals — provider none leaves scenes self-rendered", () => {
   let dir: string;
   let projectRoot: string;
+  let sbPath: string;
+  let article: ParsedArticle;
 
   beforeEach(() => {
     dir = mkdtempSync(path.join(tmpdir(), "video-fake-image-"));
     projectRoot = path.join(dir, "projects", "fixture");
     mkdirSync(path.join(projectRoot, "storyboard"), { recursive: true });
-    mkdirSync(path.join(projectRoot, "assets", "audio"), { recursive: true });
-    mkdirSync(path.join(projectRoot, "assets", "audio-assets", "bgm"), {
+    mkdirSync(path.join(projectRoot, "assets", "audio"), {
       recursive: true,
     });
-    mkdirSync(path.join(projectRoot, "captions"), { recursive: true });
     writeFileSync(path.join(projectRoot, "article.md"), FAKE_ARTICLE, "utf8");
-    writeFileSync(
-      path.join(projectRoot, "audio-config.yaml"),
-      FAKE_AUDIO_CONFIG,
-      "utf8",
+    sbPath = path.join(projectRoot, "storyboard", "storyboard.yaml");
+    article = parseArticle(
+      readFileSync(path.join(projectRoot, "article.md"), "utf8"),
     );
+    writeFileSync(sbPath, articleToStoryboardYaml(article), "utf8");
   });
 
   afterEach(() => {
     rmSync(dir, { recursive: true, force: true });
   });
 
-  it("exercises the provider-selection logic only (no render)", async () => {
-    // We can't easily import runMake without triggering a real render.
-    // Instead, this test directly invokes the side-effect that matters:
-    //   syncStoryboardFromArticle + generateSceneVisuals + updateStoryboardForImages
-    // for the bug surface, using the public API.
-    const { parseArticle, articleToStoryboardYaml } = await import(
-      "@video/draft"
-    );
-    const article = parseArticle(
-      readFileSync(path.join(projectRoot, "article.md"), "utf8"),
-    );
-    const sbPath = path.join(projectRoot, "storyboard", "storyboard.yaml");
-    writeFileSync(sbPath, articleToStoryboardYaml(article), "utf8");
+  it("switches nothing when the provider is none", async () => {
+    expect(
+      await generateSceneVisuals(projectRoot, article, { provider: "none" }),
+    ).toEqual([]);
 
-    // Mimic the make pipeline's pre-generate step: refresh from article.
-    // (syncStoryboardFromArticle is internal; we just write and check.)
-    const before = parseYaml(readFileSync(sbPath, "utf8")) as {
-      scenes?: { visual?: { component?: string } }[];
-    };
-    expect(before.scenes?.[1]?.visual?.component).toBe("Comparison");
-
-    // The actual fixed behavior is: imageProvider defaults to "none"
-    // when fake=true, so generateSceneVisuals early-returns and
-    // updateStoryboardForImages never runs. Simulate that path by
-    // asserting no ImageBackground switch happened (i.e., the
-    // storyboard we wrote above is what stays on disk after a full
-    // --fake run, because no images were generated).
-    //
-    // To prove the provider-default logic, inspect what the make
-    // package would call by reading the source — kept here as a guard
-    // against future regressions of the `??` expression.
-    const makeSrc = readFileSync(
-      path.resolve(__dirname, "index.ts"),
-      "utf8",
-    );
-    expect(makeSrc).toMatch(
-      /opts\.imageProvider\s*\?\?\s*\(?opts\.fake\s*\?\s*["']none["']\s*:/,
-    );
-    // And the old default ("mock") must NOT be present anymore.
-    expect(makeSrc).not.toMatch(
-      /opts\.fake\s*\?\s*["']mock["']\s*:\s*["']minimax["']/,
+    const scenes = readStoryboard(sbPath);
+    expect(scenes.length).toBeGreaterThan(0);
+    expect(scenes.map((s) => s.visual?.component)).not.toContain(
+      "ImageBackground",
     );
   });
 
-  it("captures the caption into ImageBackground props when explicitly switched", async () => {
-    // Defense-in-depth: if a caller does pass `--imageProvider mock` (or
-    // the real provider partially succeeds), updateStoryboardForImages
-    // must carry the scene's caption into the new ImageBackground props
-    // so the new caption overlay in ImageBackground.tsx can show it.
-    // We exercise this by reading the make source and asserting the
-    // prevText→caption wiring is present.
-    const makeSrc = readFileSync(
-      path.resolve(__dirname, "index.ts"),
-      "utf8",
-    );
-    expect(makeSrc).toMatch(/caption:\s*prevText/);
+  it("carries the scene caption onto ImageBackground when switched", async () => {
+    // Defense-in-depth for the v0.3.6 blank-frame bug: when images ARE
+    // generated (explicit --image-provider mock, or a real provider that
+    // partially succeeded), updateStoryboardForImages must move the
+    // AnimatedIllustration `text` prop onto ImageBackground as `caption`
+    // — otherwise the switch silently drops the on-screen text.
+    // articleToStoryboardYaml zero-pads ids (`scene-03`) and scenes stay in
+    // article order, so index 2 is the third scene. Only scene 3's visual
+    // falls through the component classifier to AnimatedIllustration.
+    const before = readStoryboard(sbPath)[2];
+    expect(before?.id).toBe("scene-03");
+    expect(before?.visual?.component).toBe("AnimatedIllustration");
+    const text = before?.visual?.props?.["text"];
+    expect(typeof text).toBe("string");
+
+    await generateSceneVisuals(projectRoot, article, { provider: "mock" });
+
+    const after = readStoryboard(sbPath)[2];
+    expect(after?.visual?.component).toBe("ImageBackground");
+    expect(after?.visual?.props?.["src"]).toContain("scene_3");
+    expect(after?.visual?.props?.["caption"]).toBe(text);
   });
 });

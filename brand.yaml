@@ -11,7 +11,7 @@ brand:
   corner: bottom-right           # top-left | top-right | bottom-left | bottom-right
   size_px: 72
   opacity: 0.85
-  intro:                         # omit this whole block = no branded opening
-    duration_sec: 15             # fixed-look opening window (10-20s typical)
-    background: aurora           # aurora | sunset | ocean | citrus
-    show_name: true
+  # intro: removed 2026-10-16 — the top brand band showed in (nearly) every
+  # scene because per-scene renders restart the intro window; restoring an
+  # `intro:` block now works (frame offset fixed in vdsl/Root), so add it
+  # back any time: duration_sec / background / show_name.

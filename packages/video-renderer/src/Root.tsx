@@ -110,11 +110,14 @@ export const Root = ({ renderPlan }: RootProps) => {
         />
       ) : null}
       {/* Branding (2026-10-05): fixed opening chrome inside the intro
-          window, then the corner watermark on every frame of every scene. */}
+          window, then the corner watermark on every frame of every scene.
+          BrandIntro gates on ABSOLUTE video time — in per-scene sliced
+          compositions useCurrentFrame() is scene-relative, so add the
+          plan's rebase offset (0/undefined in whole-plan renders). */}
       {renderPlan.style.brand ? (
         <BrandIntro
           brand={renderPlan.style.brand}
-          frame={frame}
+          frame={frame + (renderPlan.frameOffsetFrames ?? 0)}
           fps={renderPlan.project.fps}
           width={renderPlan.project.width}
         />

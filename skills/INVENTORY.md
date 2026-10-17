@@ -42,6 +42,37 @@
 - `javascript-animation` — frame-by-frame JS/Canvas drawing
 - `soundtrack` — procedural music in code (potential `@video/audio` extension)
 
+**FLUX.2 Klein visual assets (project-authored, v0.8):**
+- `flux2-klein-local-gen` — worker ops: setup, model variants, env knobs, memory, lock
+- `flux-image-prompting` — `visual:` lines, `image_style` presets, never-text-in-prompt
+- `flux-visual-consistency` — style anchor vs Visual Bible refs
+- `flux-asset-review` — image cache, dry-run impact table, contact sheet, approval gate
+
+Referenced from the `video` skill, both harness command files
+(`.opencode/command/video.md`, `.omp/commands/video.md`), and the craft
+skills that meet generated stills (`explainer-video`,
+`motion-background`, `shot-composition`, `color-motion`,
+`motion-art-direction`).
+
+## Project-authored skills (v0.8, 2026-10-16)
+
+Not packs — four skills written in-repo from the FLUX.2 Klein pipeline we
+own. They live in `.agents/skills/<name>/SKILL.md` (symlinked into
+`.omp/skills/` for OMP discovery, same convention as the packs) and are
+repo-coupled: they document *this* repo's worker, cache, and gate, so they
+are not candidates for the hub `~/.agents/skills/`.
+
+| Skill | Owns | Replaces re-deriving |
+|---|---|---|
+| `flux2-klein-local-gen` | worker ops: weight download, `--check` preflight, model variants (distilled 8-step vs base 50-step), `FLUX2_*` knobs, MPS memory (int8 encoder, offload), one-pipeline lock, throughput | README env tables read per session |
+| `flux-image-prompting` | writing `visual:` lines; subject/environment/lighting/composition; `image_style` presets (flat-vector / editorial / whiteboard); never-ask-for-text (Pillow `textOverlay`); diagram keywords route to native components, not images | per-image prompt debugging |
+| `flux-visual-consistency` | style anchor vs `visual_bible:` refs, precedence (scene ref > anchor), explicit-list-wins-over-`*`, first-ref-only limitation, ref sha256 in the cache key, what seeds do NOT promise | misuse (refs everywhere = slow; anchor conflicts) |
+| `flux-asset-review` | content-keyed image cache (sidecar, adoption, invalidation), `make --dry-run` impact table, `video visuals` contact sheet, `--reject`/`approve visuals`, `require_visual_approval` gate | guessing whether an image will regenerate |
+
+House rules for these (same as below): agent permissions apply; keep them
+in sync with the code they describe — each cites file paths so drift is
+visible in review.
+
 ## House rules (from the installer + plan §29)
 
 1. Skills run with full agent permissions — review any skill's scripts before invoking them (installer's own warning).

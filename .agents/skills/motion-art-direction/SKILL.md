@@ -17,7 +17,7 @@ Make the creative decisions for a motion piece before anyone animates a frame. D
 
 ## The one rule
 
-**Define the motion language first, then animate to it.** A motion language is a short spec — pick *one* of each: easing family, base timing unit, transition family, stagger rhythm, motion intensity. Everything in the piece obeys it. Consistency reads as confidence; variety reads as noise. When in doubt, reuse, don't invent.
+**Define the motion language first, then animate to it.** A motion language is a short spec — pick *one* of each: easing family, base timing unit, transition family, stagger rhythm, motion intensity. Everything in the piece obeys it. Consistency reads as confidence; variety reads as noise. When in doubt, reuse, don't invent. (Same discipline governs static art direction: when scenes are AI-generated stills, the "one look" is the `image_style` preset plus shared vocabulary — `flux-image-prompting`.)
 
 ## Direction workflow
 

@@ -54,7 +54,7 @@ export interface DraftOptions {
    *  article frontmatter so articleToStoryboardYaml emits
    *  `style.theme: <theme>` instead of the hardcoded "dark-tech". */
   style?: string;
-  /** v0.6: image-style preset for FLUX scene visuals — written into the
+  /** v0.6: image-style preset for generated scene visuals — written into the
    *  article.md frontmatter (`image_style:`) so `video make` picks it
    *  up. flat-vector (default) | editorial | whiteboard. Also a
    *  video-ask/1 knob (v0.7): passing it explicitly marks the
@@ -533,7 +533,7 @@ export function registerDraft(program: Command): void {
     )
     .option(
       "--image-style <style>",
-      "v0.6: FLUX scene-image preset — flat-vector | editorial | whiteboard (default: flat-vector); written into article.md frontmatter (v0.7: also an agent-ask knob, video-ask/1)",
+      "v0.6: scene-image style preset — flat-vector | editorial | whiteboard (default: flat-vector); written into article.md frontmatter (v0.7: also an agent-ask knob, video-ask/1)",
     )
     .option(
       "--style <theme>",

@@ -20,6 +20,7 @@ import { registerValidate } from "./validate-command.js";
 import { registerStatus } from "./status-command.js";
 import { registerTheme } from "./theme-command.js";
 import { registerWorkflow } from "./workflow-commands.js";
+import { registerVisuals } from "./visuals-command.js";
 import { registerPreview } from "./render-command.js";
 import { registerQa } from "./qa-command.js";
 import { registerStudio } from "./studio-command.js";
@@ -67,6 +68,7 @@ for (const register of [
   registerStatus,
   registerTheme,
   registerWorkflow,
+  registerVisuals,
   registerPreview,
   registerQa,
   registerStudio,

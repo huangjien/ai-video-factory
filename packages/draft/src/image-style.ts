@@ -1,10 +1,11 @@
 /**
- * v0.6 — image-style presets for FLUX scene visuals (P0/P1).
+ * v0.6 — image-style presets for generated scene visuals (P0/P1).
  *
  * The image provider generates FULL-SCENE background art; the precise
- * geometry and all written text stay in Remotion components / SvgScene /
- * the Pillow textOverlay pass. A style preset therefore only shapes the
- * BACKGROUND's visual language, at two injection points:
+ * geometry and all written text stay in Remotion components / SvgScene.
+ * Image models garble written text (especially CJK), so prompts must stay
+ * text-free. A style preset therefore only shapes the BACKGROUND's
+ * visual language, at two injection points:
  *
  *   1. `systemBlock` — extra rules for the LLM that rewrites the
  *      `visual:` line (expandScenePrompt), so the expansion BIAS is
@@ -20,8 +21,9 @@
  *                  SvgScene draw-on animations. NOT the retired
  *                  DoodleScene canvas renderer.
  *
- * Cross-scene consistency comes from `--reference-style-anchor`
- * conditioning + these shared contracts, not from any single prompt.
+ * Cross-scene consistency comes from these shared contracts — reusing
+ * the same palette and camera vocabulary across scenes — not from any
+ * single prompt.
  */
 
 export const IMAGE_STYLES = [

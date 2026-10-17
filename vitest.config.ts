@@ -25,6 +25,9 @@ export default defineConfig({
   test: {
     include: ["packages/*/src/**/*.test.{ts,tsx}"],
     passWithNoTests: true,
+    // Hermetic agent env for the whole suite (see file header) — a
+    // harness-running-vitest session must not change CLI behavior.
+    globalSetup: ["./vitest-global-setup.ts"],
     // Use forks (one process per test file) instead of the default thread
     // pool. Integration tests under packages/cli/src spin up local HTTP
     // servers and mutate process.env (GLM_BASE_URL, MINIMAX_API_HOST).

@@ -27,11 +27,17 @@ export const ArticleFrontmatterSchema = z
      *  `captions: { source: narration }` block so the renderer skips
      *  the caption overlay. Default false (captions on). */
     no_captions: z.boolean().optional(),
-    /** v0.6: image-style preset for FLUX scene visuals. Deliberately a
+    /** v0.6: image-style preset for generated scene visuals. Deliberately a
      *  plain string (article.md is human-edited — a typo must not brick
      *  parsing); resolveImageStyle coerces unknown values to
      *  flat-vector at the use site. */
     image_style: z.string().optional(),
+    /** v0.8 (G4): when truthy, `video make` refuses to render until the
+     *  current image set matches an approved visuals checkpoint
+     *  (`video visuals` + `video approve visuals`). z.unknown + defensive
+     *  boolean coercion at the use site — same typo-tolerance as
+     *  image_style. */
+    require_visual_approval: z.unknown().optional(),
   })
   .passthrough();
 export type ArticleFrontmatter = z.infer<typeof ArticleFrontmatterSchema>;

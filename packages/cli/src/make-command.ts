@@ -1,6 +1,6 @@
 import type { Command } from "commander";
 import path from "node:path";
-import { runMake } from "@video/make";
+import { computeMakeImpact, formatImpact, runMake } from "@video/make";
 import { resolveProjectDir } from "./project-path.js";
 import {
   MARK_FAIL,
@@ -16,23 +16,15 @@ export interface MakeOptions {
   cwd?: string;
   fake?: boolean;
   dryRun?: boolean;
-  /** Image provider for scene visuals: minimax (real AI), flux (local
-   *  FLUX.2 Klein 4B via diffusers), mock, or none. */
-  imageProvider?: "minimax" | "flux" | "mock" | "none";
+  /** Image provider for scene visuals: minimax (real AI), openai, gemini,
+   *  mock, or none. */
+  imageProvider?: "minimax" | "openai" | "gemini" | "mock" | "none";
   /** Local music library dir — BGM tags resolve to {tag}.wav inside it. */
   bgmDir?: string;
   /** Local SFX library dir — same lookup rule as bgmDir. */
   sfxDir?: string;
   /** BGM generation: auto (MiniMax when key present) | minimax | mock. */
   musicProvider?: "auto" | "minimax" | "mock";
-  /** Absolute path to lora-config.yaml for the flux provider. */
-  loraConfigPath?: string;
-  /** Legacy: LoRA adapters as "path[:scale][,path2[:scale2]]". */
-  lora?: string;
-  /** v0.5.2 (T6.2): flux style-anchor across all scenes from scene 1. */
-  referenceStyleAnchor?: boolean;
-  /** 1-based scene to use as the anchor (default 1). */
-  anchorScene?: number;
 }
 
 export async function runMakeCli(opts: MakeOptions): Promise<number> {
@@ -89,6 +81,23 @@ export async function runMakeCli(opts: MakeOptions): Promise<number> {
     );
     return 1;
   }
+  // v0.8 (G2): with --dry-run, the step list says "would-run" — the impact
+  // table says WHAT would actually happen (images/scenes/TTS vs caches,
+  // visuals gate, storyboard drift). Read-only: no provider constructed.
+  if (opts.dryRun === true) {
+    try {
+      const impact = computeMakeImpact(projectRoot, {
+        ...(opts.imageProvider !== undefined
+          ? { imageProvider: opts.imageProvider }
+          : {}),
+        ...(opts.fake !== undefined ? { fake: opts.fake } : {}),
+      });
+      console.log("\nimpact (nothing executed):");
+      for (const line of formatImpact(impact)) console.log(`  ${line}`);
+    } catch (err) {
+      console.error(`impact: ${(err as Error).message}`);
+    }
+  }
   console.log(`\nmake: done`);
   return 0;
 }
@@ -107,7 +116,7 @@ export function registerMake(program: Command): void {
     )
     .option(
       "--image-provider <provider>",
-      "image provider for scene visuals: minimax (real AI), flux (local FLUX.2 Klein 4B, no quota), mock, none (default: flux since v0.5.3; --fake implies none)",
+      "image provider for scene visuals: minimax (image-01, default since v0.8.1; needs MINIMAX_API_KEY), openai (gpt-image-2.5-flare; needs OPENAI_API_KEY), gemini (gemini-3.1-flash-image; needs GEMINI_API_KEY), mock, none (--fake implies none)",
     )
     .option(
       "--bgm-dir <dir>",
@@ -129,47 +138,18 @@ export function registerMake(program: Command): void {
         return v as "auto" | "minimax" | "mock";
       },
     )
-    .option("--dry-run", "log which steps would run without executing them")
-    .option(
-      "--lora-config <path>",
-      "absolute path to a lora-config.yaml for the flux image provider (overrides <projectRoot>/lora-config.yaml and <repo>/lora-config.yaml)",
-    )
-    .option(
-      "--lora <spec>",
-      'legacy: LoRA adapters for the flux provider, "path[:scale][,path2[:scale2]]"',
-    )
-    .option(
-      "--reference-style-anchor",
-      "v0.5.2 (T6.2): for --image-provider flux, generate scene 1 first and condition every subsequent scene on it (style anchor for visual consistency). Off by default.",
-    )
-    .option(
-      "--anchor-scene <n>",
-      "1-based scene number to use as the style anchor (default 1; with --reference-style-anchor). Useful when the first scenes are titles and the first real visual is later.",
-      (v) => {
-        const n = parseInt(v, 10);
-        if (!Number.isInteger(n) || n < 1) {
-          throw new Error(
-            `--anchor-scene must be a positive integer, got: ${v}`,
-          );
-        }
-        return n;
-      },
-    )
+.option("--dry-run", "log which steps would run without executing them")
     .action(
       async (
         project: string,
         opts: {
           cwd?: string;
           fake?: boolean;
-          imageProvider?: "minimax" | "flux" | "mock" | "none";
+          imageProvider?: "minimax" | "openai" | "gemini" | "mock" | "none";
           bgmDir?: string;
           sfxDir?: string;
           musicProvider?: "auto" | "minimax" | "mock";
           dryRun?: boolean;
-          loraConfig?: string;
-          lora?: string;
-          referenceStyleAnchor?: boolean;
-          anchorScene?: number;
         },
       ) => {
         process.exitCode = await runMakeCli({
@@ -185,16 +165,6 @@ export function registerMake(program: Command): void {
             ? { musicProvider: opts.musicProvider }
             : {}),
           ...(opts.dryRun !== undefined ? { dryRun: opts.dryRun } : {}),
-          ...(opts.loraConfig !== undefined
-            ? { loraConfigPath: opts.loraConfig }
-            : {}),
-          ...(opts.lora !== undefined ? { lora: opts.lora } : {}),
-          ...(opts.referenceStyleAnchor !== undefined
-            ? { referenceStyleAnchor: opts.referenceStyleAnchor }
-            : {}),
-          ...(opts.anchorScene !== undefined
-            ? { anchorScene: opts.anchorScene }
-            : {}),
         });
       },
     );

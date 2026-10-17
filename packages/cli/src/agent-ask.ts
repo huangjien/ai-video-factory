@@ -45,12 +45,15 @@ export interface AgentDetection {
  *    is still open. The PI_ row only fires for fork users; pi sessions
  *    are detectable via the OMO_ row when launched through
  *    oh-my-openagent, else VIDEO_ASK_ENV.
- *  - opencode has NO stable child-process marker (`OPENCODE_*` are user
- *    config overrides — false-positive risk; server URL not exported,
- *    anomalyco/opencode #9099) → deliberately deferred to VIDEO_ASK_ENV. */
+ *  - opencode (re-verified 2026-10-16 in a live opencode bash session,
+ *    fixing the stale A6 note): the runtime exports OPENCODE=1 and
+ *    OPENCODE_PID=<server pid> to child processes. Both are runtime-set,
+ *    not user-config overrides like the other OPENCODE_* names — so
+ *    OPENCODE_PID (specific, numeric) is the detector row. */
 const DETECTORS: readonly AgentDetection[] = [
   { harness: "zcode", via: "ZCODE_APP_VERSION" },
   { harness: "claude-code", via: "CLAUDECODE" },
+  { harness: "opencode", via: "OPENCODE_PID" },
   { harness: "oh-my-openagent", via: "OMO_CODING_AGENT_DIR" },
   { harness: "oh-my-pi", via: "OMP_CODING_AGENT_DIR" },
   { harness: "pi", via: "PI_CODING_AGENT_DIR" },
@@ -122,7 +125,7 @@ const STYLE_CHOICES: readonly { value: string; note: string }[] =
   }));
 
 /**
- * FLUX scene-image presets — values derive from `IMAGE_STYLES`
+ * Scene-image style presets — values derive from `IMAGE_STYLES`
  * (@video/draft, landed with v0.6) so a new preset extends the question
  * without a code change. Notes are the §5 envelope's presentation copy,
  * keyed by value; an unnoted preset falls back to its key.
@@ -194,7 +197,7 @@ export const DRAFT_QUESTIONS: readonly AskQuestion[] = [
     id: "image_style",
     flag: "--image-style",
     type: "choice",
-    question: "FLUX scene-image preset?",
+    question: "Scene-image style preset?",
     choices: [...IMAGE_STYLE_CHOICES],
     default: "flat-vector",
     recommended: "flat-vector",

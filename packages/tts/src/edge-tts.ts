@@ -37,8 +37,7 @@ export interface EdgeTTSProviderOptions {
  * handshake — verified 2026-10-14: constructor OK, synthesize() never
  * settles). The Python `edge-tts` package is the reference
  * implementation and works. TTS has no model load (~1 s per call), so
- * a per-call subprocess is fine — unlike the flux worker, no warm
- * daemon is needed.
+ * a per-call subprocess is fine — no warm daemon is needed.
  *
  * `pauseBetweenSentencesSec` is honored via post-processing:
  * split into sentences, synthesize each separately, ffmpeg-concat with

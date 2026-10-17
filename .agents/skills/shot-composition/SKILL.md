@@ -56,7 +56,7 @@ A **baseline grid** (vertical rhythm) of 8px is the standard spacing unit; size 
 
 ### 2. Place the focal point
 
-Use the **rule of thirds**: divide the frame into a 3x3 grid; place the primary subject on a third-line or at an intersection (the "power points"), not dead center — unless the piece deliberately uses symmetry for stillness/formality. The intersections roughly fall at 33%/67% horizontally and vertically.
+Use the **rule of thirds**: divide the frame into a 3x3 grid; place the primary subject on a third-line or at an intersection (the "power points"), not dead center — unless the piece deliberately uses symmetry for stillness/formality. The intersections roughly fall at 33%/67% horizontally and vertically. (When the frame is an AI-generated still rather than a composed scene, encode placement in the prompt — `flux-image-prompting`.)
 
 Build **visual hierarchy** in this priority order to direct the eye: **size > contrast > color > position**. The biggest, highest-contrast element wins attention first. Establish exactly one primary focal point per frame; secondary elements support, never compete.
 

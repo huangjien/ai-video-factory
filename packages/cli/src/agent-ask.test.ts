@@ -29,6 +29,23 @@ function baseOpts(): AskOpts {
   return { topic: "鸿门宴" };
 }
 
+// Hermetic agent-env baseline (2026-10-16): tests asserting "no agent
+// detected" must not inherit live harness markers from the enclosing
+// session — e.g. OPENCODE_PID when vitest runs inside opencode, which
+// made three "without agent env" tests fail. Tests that need a marker
+// stub it explicitly; detectAgentEnv tests pass explicit env objects.
+const DETECTOR_VARS = [
+  "ZCODE_APP_VERSION",
+  "CLAUDECODE",
+  "OPENCODE_PID",
+  "OMO_CODING_AGENT_DIR",
+  "OMP_CODING_AGENT_DIR",
+  "PI_CODING_AGENT_DIR",
+] as const;
+beforeEach(() => {
+  for (const v of DETECTOR_VARS) delete process.env[v];
+});
+
 /**
  * The suite itself runs inside an agent harness (this repo is developed
  * under zcode, which really exports ZCODE_APP_VERSION), so every test
@@ -99,7 +116,18 @@ describe("detectAgentEnv", () => {
     });
   });
 
-  it("does not fire on opencode config overrides (no stable marker — deferred to VIDEO_ASK_ENV)", () => {
+  it("detects opencode via the runtime-set OPENCODE_PID marker (re-verified 2026-10-16)", () => {
+    expect(detectAgentEnv({ OPENCODE_PID: "61981" })).toEqual({
+      harness: "opencode",
+      via: "OPENCODE_PID",
+    });
+    // OPENCODE=1 is set alongside it; either alone proves an opencode child.
+    expect(detectAgentEnv({ OPENCODE: "1", OPENCODE_PID: "61981" })?.harness).toBe(
+      "opencode",
+    );
+  });
+
+  it("does not fire on opencode user-config overrides (OPENCODE_PID is the only stable marker)", () => {
     expect(detectAgentEnv({ OPENCODE_API_KEY: "x" })).toBeNull();
   });
 

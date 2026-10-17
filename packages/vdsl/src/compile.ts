@@ -46,6 +46,12 @@ export interface RenderPlan {
   scenes: RenderPlanScene[];
   /** Project-level asset manifest (plan §11), carried for renderer/QA. */
   assets?: Asset[];
+  /** When this plan is a sliced single-scene composition
+   *  (`slicePlanScene`), local frame 0 maps to this absolute frame —
+   *  absolute-time overlays (BrandIntro's intro window) need it because
+   *  per-scene renders rebase `useCurrentFrame()` to 0 per scene.
+   *  Undefined/0 = frames are already absolute (whole-plan renders). */
+  frameOffsetFrames?: number;
 }
 
 export interface CompileOptions {
@@ -157,7 +163,15 @@ export function slicePlanScene(
   }
   const sliced: RenderPlanScene = { ...scene, startFrame: 0 };
   return {
-    plan: { ...plan, totalFrames: scene.durationInFrames, scenes: [sliced] },
+    // frameOffsetFrames preserves the scene's absolute position so
+    // absolute-time overlays (BrandIntro) keep working in the sliced
+    // composition — without it the intro window restarts at every scene.
+    plan: {
+      ...plan,
+      totalFrames: scene.durationInFrames,
+      scenes: [sliced],
+      frameOffsetFrames: scene.startFrame,
+    },
     scene,
   };
 }

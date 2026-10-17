@@ -35,12 +35,27 @@ export type VisualPropsBuilder = (
 // ---------------------------------------------------------------------------
 // Title — opening card. Always first scene.
 // ---------------------------------------------------------------------------
+/** Strip a leading type-classifier prefix ("时间线展示：七次重试" →
+ * "七次重试") from a visual direction. The prefix is an instruction to the
+ * visual classifier, not viewer-facing copy — it leaked onto the title
+ * card as subtext (observed 2026-10-16). Only strips when a colon appears
+ * early (≤8 chars in), so directions without a prefix pass through. */
+function stripDirectionPrefix(direction: string): string {
+  const idx = direction.search(/[：:]/);
+  if (idx <= 0 || idx > 8) return direction;
+  return direction.slice(idx + 1).trim();
+}
+
 const buildTitle: VisualPropsBuilder = (scene) => {
   const props: Record<string, unknown> = {
     text: scene.caption,
   };
-  if (scene.visual && scene.visual.length > 0) {
-    props.subtext = truncateForSubtext(scene.visual);
+  const subtext =
+    scene.visual && scene.visual.length > 0
+      ? stripDirectionPrefix(scene.visual)
+      : "";
+  if (subtext.length > 0) {
+    props.subtext = truncateForSubtext(subtext);
   }
   return props;
 };

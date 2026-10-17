@@ -10,16 +10,13 @@ export {
   type MiniMaxImageProviderOptions,
 } from "./minimax-image.js";
 export {
-  FluxKleinImageProvider,
-  type FluxKleinImageProviderOptions,
-} from "./flux-image.js";
+  OpenAIImageProvider,
+  type OpenAIImageProviderOptions,
+} from "./openai-image.js";
 export {
-  loadLoraConfig,
-  resolveLoraConfigPath,
-  LoraConfigError,
-  type LoraConfigEntry,
-  type ResolvedLoraConfig,
-} from "./lora-config.js";
+  GeminiImageProvider,
+  type GeminiImageProviderOptions,
+} from "./gemini-image.js";
 export {
   MockVideoProvider,
   type VideoProvider,
@@ -30,3 +27,8 @@ export {
   MiniMaxVideoProvider,
   type MiniMaxVideoProviderOptions,
 } from "./minimax-video.js";
+export {
+  buildContactSheet,
+  type ContactSheetOptions,
+  type ContactSheetResult,
+} from "./contact-sheet.js";

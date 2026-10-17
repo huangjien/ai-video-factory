@@ -5,8 +5,7 @@ Why Python: the JS `edge-tts-universal` 1.4.0 hangs against Microsoft's
 current endpoint (silent retry on the DRM-token handshake). The Python
 `edge-tts` package is the reference implementation and works (verified
 0.9 s / 17 KB for a zh sentence on 2026-10-14). TTS has no model load,
-so a per-call subprocess is fine — no warm daemon needed (unlike the
-flux worker).
+so a per-call subprocess is fine — no warm daemon needed.
 
 Protocol: reads one JSON object on stdin, writes one JSON object on
 stdout, MP3 audio to the requested output path.

@@ -15,6 +15,117 @@ video research → script → storyboard → audio (TTS) → audio-asset (BGM+SF
        video review                          → Content/Visual/Technical review YAMLs
 ```
 
+## v0.9 — local diffusion provider removed
+
+`minimax` became the default image provider in v0.8.1; this release deletes
+the local model entirely. It cost **~1–3 min/scene** on Apple Silicon while
+every hosted provider returns in seconds — unacceptable for a pipeline whose
+iteration loop is "edit `article.md`, re-render".
+
+**Deleted**
+
+- `packages/media-generators/src/flux-image.ts` + test, and the Python sidecar
+  `flux_worker.py` (`packages/media-generators/python/` keeps only
+  `contact_sheet.py`).
+- `lora-config.ts` + test, and the `lora-config.yaml` convention — LoRA had no
+  consumer outside that provider.
+- `--lora`, `--lora-config`, `--reference-style-anchor`, `--anchor-scene` from
+  `video make`; `--lora`, `--lora-config`, `--text`, `--no-text`,
+  `--text-position` from `video thumbnail`.
+- `visual_bible:` frontmatter and its parser (`parseVisualBible`,
+  `sceneRefNames`, `visualBibleRefPath`) — image-to-image conditioning had no
+  remaining provider.
+- `ImageRequest.referenceImage` and `ImageRequest.textOverlay` — both were
+  honoured only by the deleted provider.
+- Four skills: `flux2-klein-local-gen`, `flux-image-prompting`,
+  `flux-visual-consistency`, `flux-asset-review`.
+- `models/` (**23 GB** of weights) and the uv `.venv`. The Python project is
+  now Pillow-only: `uv.lock` went from ~30 packages to 2.
+
+**Kept**
+
+`--image-provider minimax|openai|gemini|mock|none`, `minimax` still the
+default. The v0.8 content-keyed image cache, `video make --dry-run` impact
+table, and the `video visuals` contact sheet + `require_visual_approval` gate
+are untouched; the cache key simply lost its LoRA / ref-digest / style-anchor
+inputs, so **existing images regenerate once** on the next `make`.
+
+**What you can no longer do**
+
+LoRA style adapters, cross-scene image-to-image consistency (style anchor or
+Visual Bible refs), Pillow text overlays on generated images, and native
+1920×1080 scene output — hosted providers cap 16:9 at 1280×720, which the
+renderer upscales. The last one bites `video thumbnail`: the overlay that
+rendered CJK titles crisply was Pillow inside the deleted worker, so
+`youtube/thumbnail.*` must now be typed in YouTube Studio.
+
+## v0.8.1 — minimax is the default image provider
+
+Local FLUX.2 Klein 4B costs **~1–3 min/scene** on Apple Silicon, which
+made `video make` unusable for iteration. `minimax` is now the default
+for scene images. One product call, plus a dedup.
+
+- **Default flips back to `minimax`.** New `resolveImageProvider(fake,
+  explicit)` in `packages/make/src/index.ts` replaces the
+  `opts.imageProvider ?? (opts.fake ? "none" : "flux")` expression that
+  was **duplicated in three places** — `runMake`, the read-only
+  `computeMakeImpact` (`--dry-run` table), and `video visuals`. They had
+  to agree or the impact table predicted spend the render never made;
+  now they cannot drift.
+- **What you give up by default:** LoRA (`--lora` / `lora-config.yaml`),
+  image-to-image conditioning (`--reference-style-anchor`,
+  `visual_bible:` refs), Pillow `textOverlay`, and native 1920×1080 —
+  the MiniMax API caps 16:9 at 1280×720, which the renderer upscales.
+  All four remain available behind `--image-provider flux`.
+- **What you gain:** seconds per scene, no local 22 GB weight download,
+  no MPS memory pressure.
+- **Tests:** `packages/make/src/fake-image-default.test.ts` now asserts
+  the resolver contract (fake ⇒ `none`; omitted ⇒ `minimax`; explicit
+  wins even under `--fake`) and exercises
+  `updateStoryboardForImages` through the public API instead of
+  regex-matching `index.ts` source text. Two source-text assertions
+  (`opts.imageProvider ?? …`, `caption: prevText`) were deleted; both
+  invariants now have behavior tests.
+
+## v0.8 — Visual Guardrails (freshness + review)
+
+The least-reviewed part of the pipeline now has three guardrails.
+Plan: `docs/v0.8-visual-guardrails-plan.md`.
+
+- **Content-keyed image cache.** Every generated `assets/images/scene_N.jpg`
+  gets a `scene_N.cache.json` sidecar hashing its inputs (visual line,
+  `image_style`, provider, LoRA, Visual-Bible refs, geometry). Editing a
+  scene's `visual:` line or flipping `image_style` now **regenerates that
+  image** — pre-v0.8 the cache keyed on file existence, so edits silently
+  never reached the picture. Pre-existing images without a sidecar are
+  adopted (kept + keyed), so upgrading never re-spends on untouched
+  scenes.
+- **Impact table.** `video make <project> --dry-run` prints, read-only:
+  which images regenerate / scenes re-render / WAVs re-synthesize, the
+  visuals-gate state, and article↔storyboard drift (the id-keyed-sync
+  limitation, surfaced rather than silently fixed).
+- **Keyframe review (opt-in).** `require_visual_approval: true` in
+  article.md frontmatter arms a third human gate:
+  `video visuals <project>` generates images + a Pillow contact sheet
+  (`assets/images/contact-sheet.png`), `video approve visuals <project>`
+  freezes the set into `checkpoints/visuals.yaml`, and `video make`
+  refuses to render until the on-disk set matches (naming stale scenes).
+  `video visuals <project> --reject 7 --reason "…"` force-regenerates one
+  scene. Gate off by default ⇒ v0.7.1 behavior exactly. The workflow stage
+  machine (`V01_STAGES`) is untouched — the gate is a checkpoint record,
+  not a stage.
+- **Visual Bible (opt-in).** `visual_bible:` in article.md frontmatter
+  declares named reference images (`assets/visual-bible/<file>`) mapped to
+  scenes; generation conditions on them through the existing flux
+  image-to-image path. Scene refs win over `--reference-style-anchor`;
+  v0.8 conditions on the first resolved ref (one conditioning image per
+  scene). Ref content participates in the cache key, so editing a
+  reference regenerates the scenes it conditions. Malformed frontmatter
+  warns and degrades — article.md is human-edited and never bricks.
+- Also in this release: vitest suites are now hermetic against live agent
+  harnesses (`vitest-global-setup.ts` scrubs `OPENCODE_PID` & friends —
+  a suite run inside opencode no longer changes CLI behavior).
+
 ## v0.7.1 — Live Pipeline Progress (video-progress/1)
 
 Long runs stop being silent. `video make` and `video draft` now print

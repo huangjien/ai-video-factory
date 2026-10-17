@@ -859,9 +859,10 @@ video youtube <slug>
 不再需要单独跑 `video audio` / `video audio-asset` / `video mix`：
 
 ```bash
-video make <slug>            # 真 Edge TTS（需要网络）
+video make <slug>            # 真 Edge TTS（需要网络）；生图默认走 MiniMax image-01（v0.8.1+，需要 MINIMAX_API_KEY）
 video make <slug> --fake     # 静音 WAV 占位 + 不调用 AI 生图（无需网络，离线 / CI 友好）
-video make <slug> --image-provider minimax  # 强制走真 AI 生图（非 --fake 时的默认）
+video make <slug> --image-provider openai # 走 OpenAI 生图（需要 OPENAI_API_KEY）
+video make <slug> --image-provider gemini # 走 Gemini 生图（需要 GEMINI_API_KEY）
 ```
 
 默认使用 Edge TTS（免费、无需 API key），但依赖在线 Microsoft 服务，
@@ -869,8 +870,9 @@ video make <slug> --image-provider minimax  # 强制走真 AI 生图（非 --fak
 
 `--fake` 同时跳过 AI 生图（无需 `MINIMAX_API_KEY`）。场景保留
 `AnimatedIllustration`（标题文字 + 动效 SVG），整段视频可全程离线
-渲染可见。需要 `--image-provider mock`（占位图）或
-`--image-provider minimax`（真 AI）时显式指定。
+渲染可见。需要占位图时传 `--image-provider mock`；换一家托管生图服务则传
+`--image-provider openai`（`OPENAI_API_KEY`）或 `--image-provider gemini`
+（`GEMINI_API_KEY`）。
 
 默认情况下，audio-config.yaml 里的 BGM/SFX 标签会物化成 1 秒**静音
 mock 占位**——混音机制照常运行，但没有真实音乐。把 `video make` 指向
@@ -932,6 +934,62 @@ Edge TTS 不收取直接 API 费，但商业再分发和长期生产使用应先
 条款。需要正式授权的生产服务时，可通过 `@video/tts` 的 `TTSProvider`
 接口替换（例如 MiniMax TTS / ElevenLabs）。
 
+## 9.6 视觉资产护栏（v0.8）
+
+围绕场景图像生成的三条护栏。计划：`docs/v0.8-visual-guardrails-plan.md`。
+默认全部关闭：不写新 frontmatter 字段的项目行为与 v0.7.1 完全一致。
+
+### 内容键控的图像缓存 + 影响表
+
+每张 `assets/images/scene_N.jpg` 都带一个 `scene_N.cache.json` 副文件，
+记录生成它的输入哈希（该场景的 `visual:` 文本、`image_style`、图像
+provider、画面尺寸）。改动其中任何一项，下一次
+`video make` 会删除旧图并重新生成 —— v0.8 之前缓存只看文件是否存在，
+所以改过的 `visual:` 永远不会反映到画面上。没有副文件的旧图会被**收编**
+（保留并补写哈希），所以升级不会重复花钱。
+
+花钱之前先看影响范围：
+
+```bash
+video make <project> --dry-run
+```
+
+```
+impact (nothing executed):
+  images: 1 regenerate (stale), 1 cached
+    regenerate: scene_7
+  tts: all 14 cached
+  render: 1 scene(s) will render, 13 cached
+    render: scene-07
+```
+
+表中还会提示分镜漂移：文章旁白已改，但按 id 对齐的同步保留了旧的分镜文本。
+
+### 关键帧审核（可选开关）
+
+在 `article.md` frontmatter 加：
+
+```yaml
+---
+require_visual_approval: true
+---
+```
+
+然后进入人工审核流程：
+
+```bash
+video visuals <project>                              # 生成图片 + 联系表
+video visuals <project> --reject 7 --reason "太暗"     # 强制重生成第 7 场
+video approve visuals <project>                      # 冻结当前图片集合
+video make <project>                                # 仅在集合一致时渲染
+```
+
+`video visuals` 会写出 `assets/images/contact-sheet.png`：一张带编号角标
+和标题文字的整页拼图（Pillow，复用现有 python 环境，不加载模型）。
+`video approve visuals` 把每张图的哈希写进 `checkpoints/visuals.yaml`。
+开关打开后，只要 checkpoint 缺失或过期，`video make` 会拒绝渲染并指出
+过期场景。工作流状态机不受影响 —— 这是一份 checkpoint 记录，不是新阶段。
+
 ## 10. 项目文件和可追溯性
 
 ### 推荐结构
@@ -954,6 +1012,8 @@ projects/<slug>/
 ├── assets/
 │   ├── audio/scene_*.wav           逐场景 TTS（video make 写）
 │   ├── audio-assets/{bgm,sfx}/     BGM/SFX 素材（video make 写）
+│   ├── images/scene_N.jpg          场景图 + scene_N.cache.json 输入键副文件（v0.8）
+│   ├── images/contact-sheet.png    v0.8：`video visuals` 生成的联系表
 │   └── excalidraw/                 video excalidraw 写：.excalidraw + 动画 SVG
 ├── captions/<lang>.srt              字幕（video make 写）
 ├── youtube/                         video youtube / thumbnail / shorts 的发布包

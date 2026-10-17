@@ -33,23 +33,29 @@ makes the shell call.
 `video make` steps are idempotent — re-running after editing article.md skips
 work whose outputs are newer than its inputs (`--dry-run` previews the plan).
 
+### Visual guardrails (v0.8)
+
+- `/video make <slug> --dry-run` prints an **impact table**: which scene
+  images regenerate, which scenes re-render, which WAVs re-synth, the
+  visuals-gate state, and any storyboard drift. Read-only.
+- Scene images are **content-keyed** (v0.8): editing a scene's `visual:`
+  line or flipping `image_style` regenerates that image on the next make;
+  legacy images without a sidecar are adopted (no re-spend).
+- Optional keyframe review: set `require_visual_approval: true` in
+  article.md frontmatter, then `/video visuals <slug>` (images +
+  contact sheet), `/video approve visuals <slug>` (freeze the set).
+  make then refuses to render on a stale set, naming the scenes.
+
 ### make flags that matter
 
 | Flag | Meaning |
 | --- | --- |
-| `--image-provider flux\|minimax\|mock\|none` | **flux is the default** (v0.5.3+): local FLUX.2-klein-4B via the Python sidecar — no key, no quota. One-time: `cd packages/media-generators/python && uv sync && uv run python flux_worker.py --download` (~22 GB). A pre-flight health check fails loud with a fix hint if the service isn't ready. |
-| `--reference-style-anchor` | (v0.5.2) generate the anchor scene first, then condition every later scene on it (image-to-image) for visual consistency. `--anchor-scene <N>` picks a later anchor (default 1). Off by default. |
-| `--lora-config <path>` / `--lora <spec>` | LoRA adapters; auto-discovers `lora-config.yaml` at `<project>` or repo root (license sidecars enforced when declared). |
+| `--image-provider minimax\|openai\|gemini\|mock\|none` | **minimax is the default** (v0.8.1+). All three real providers are HTTP APIs returning seconds per scene, each needing its own key: `MINIMAX_API_KEY` (image-01), `OPENAI_API_KEY`, `GEMINI_API_KEY`. `mock` gives deterministic placeholders, `none` skips image generation. |
 | `--music-provider auto\|minimax\|mock` | BGM generation (auto = MiniMax music-01 when `MINIMAX_API_KEY` set, else mock). |
 | `--bgm-dir/--sfx-dir <dir>` | use your own audio library instead of generation. |
 | `--fake` | offline: silent TTS placeholders + no images (`--image-provider none`). |
 
-Flux env knobs (full table in `packages/media-generators/python/README.md`):
-`FLUX2_MODEL` (switch to `…-base-4B` 50-step quality path), `FLUX2_STEPS`,
-`FLUX2_TEXT_ENCODER_QUANT` (**int8 default** since v0.5.4 — 40% encoder memory
-cut, lossless), `FLUX2_OFFLOAD=full` for 9B, `FLUX2_ALLOW_CONCURRENT=1`
-(overrides the one-flux-pipeline-at-a-time lock — two concurrent pipelines
-swap-thrash a 24 GB machine).
+
 
 ## Fine-grained verbs (back-compat with pre-minimal projects)
 
@@ -75,7 +81,7 @@ review → approve review (GATE) → final
 | `resume`                   | resume from last successful stage                  |
 | `preview`                  | render preview.mp4 (gated on approved storyboard; `--force` recorded) |
 | `final`                    | render final.mp4 (requires review APPROVED; QA error-level findings block it) |
-| `thumbnail <project>`      | YouTube thumbnail (`--provider flux\|minimax`, mock default) |
+| `thumbnail <project>`      | YouTube thumbnail (`--provider mock\|minimax\|openai\|gemini`, mock default) |
 | `shorts <project>`         | 60s Shorts clip                                    |
 | `youtube <project>`        | title/description/chapters/thumbnail-prompt package |
 
@@ -110,5 +116,3 @@ Every step writes `runs/<id>.yaml` and updates `state.yaml`.
   to disk. The grep test in the test suite asserts this.
 - **Failure exit code is non-zero** — surface LLM/TTS/render errors
   immediately; do not silently retry past bounded budgets.
-- **One flux pipeline at a time** — the provider enforces a lock; never
-  `FLUX2_ALLOW_CONCURRENT=1` on this 24 GB machine unless you mean it.

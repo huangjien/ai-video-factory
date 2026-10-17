@@ -11,8 +11,7 @@ dist/
 .omo/run-continuation/
 coverage/
 
-# Local FLUX.2 Klein model weights + python worker venv (~16 GB, never tracked)
-models/
+# Python venv (uv) for the Pillow contact-sheet helper (never tracked)
 packages/media-generators/python/.venv/
 
 # Test projects hold generated media (hundreds of MB) — only the

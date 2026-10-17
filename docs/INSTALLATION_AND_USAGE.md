@@ -509,11 +509,13 @@ An ambiguous prefix errors listing the candidates; a zero-match error
 lists every available project.
 
 ```bash
-video make my-topic                                  # TTS → audio assets → render → mix (default image provider: flux, v0.5.3+)
+video make my-topic                                  # TTS → audio assets → render → mix (default image provider: minimax, v0.8.1+)
 video make my-topic --fake                           # offline: silent placeholder WAVs + no AI images
 video make my-topic --image-provider mock            # force mock images (64×36 placeholders) for offline testing
-video make my-topic --image-provider minimax         # force real AI image generation (needs MINIMAX_API_KEY)
-video make my-topic --image-provider flux             # local FLUX.2 Klein 4B via Python sidecar (no quota; default since v0.5.3)
+video make my-topic --image-provider minimax         # real AI image generation via MiniMax image-01 (default; needs MINIMAX_API_KEY)
+video make my-topic --image-provider openai           # real AI image generation via OpenAI (needs OPENAI_API_KEY)
+video make my-topic --image-provider gemini           # real AI image generation via Gemini (needs GEMINI_API_KEY)
+video make my-topic --image-provider none              # skip image generation entirely
 video make my-topic --bgm-dir ~/audio/bgm --sfx-dir ~/audio/sfx  # real BGM/SFX from your library
 video make my-topic --dry-run                        # print what would run, do not execute
 ```
@@ -976,10 +978,10 @@ produced by `video make` in one invocation — no need for separate `video audio
 `video audio-asset`, or `video mix` calls:
 
 ```bash
-video make <slug>           # real Edge TTS (requires network); image provider defaults to flux (v0.5.3+) — no API key
+video make <slug>           # real Edge TTS (requires network); image provider defaults to minimax (v0.8.1+) — needs MINIMAX_API_KEY
 video make <slug> --fake    # silent placeholder WAVs + no AI images (offline / CI-friendly)
-video make <slug> --image-provider minimax  # force real AI image generation (MiniMax HTTP API; needs MINIMAX_API_KEY)
-video make <slug> --image-provider flux     # explicit (also the default) — local FLUX.2 Klein 4B, no quota, one-time weight download
+video make <slug> --image-provider openai    # image generation via OpenAI (needs OPENAI_API_KEY)
+video make <slug> --image-provider gemini    # image generation via Gemini (needs GEMINI_API_KEY)
 ```
 
 Default provider is Edge TTS (free, no API key). It depends on the
@@ -989,11 +991,9 @@ apply.
 `--fake` also disables AI image generation (no `MINIMAX_API_KEY`
 required). Scenes stay as `AnimatedIllustration` (caption + animated
 SVG), so the rendered video is visible end-to-end without any network
-access. Override with `--image-provider mock` (placeholders),
-`--image-provider minimax` (real AI), or `--image-provider flux`
-(local FLUX.2 Klein 4B, v0.5+, no quota — see
-`docs/v0.5-local-image-generation-plan.md` and the README's
-"Local Image Generation" section for setup).
+access. Override with `--image-provider mock` (placeholders), or another hosted provider —
+`openai` (`OPENAI_API_KEY`) / `gemini` (`GEMINI_API_KEY`). See the
+README's "Image Providers" section for the full comparison.
 
 By default the BGM/SFX tags in `audio-config.yaml` materialize as
 1-second **silent mock placeholders** — the mixing machinery runs, but
@@ -1125,6 +1125,66 @@ degrades to the silent mock with a warning, so a render never dies on
 music. `--bgm-dir` (your own library) always wins over generation, and
 `--music-provider mock` restores the silent placeholder.
 
+## 9.6 Visual guardrails (v0.8)
+
+Three guardrails around scene-image generation. Plan:
+`docs/v0.8-visual-guardrails-plan.md`. All default-off; a project with no
+new frontmatter keys behaves exactly as v0.7.1.
+
+### Content-keyed images + impact table
+
+Every `assets/images/scene_N.jpg` carries a `scene_N.cache.json` sidecar
+hashing its inputs (the scene's `visual:` line, `image_style`, image
+provider, geometry). Change any of
+them and the stale image is deleted and regenerated on the next
+`video make` — before v0.8 an edited `visual:` line never reached the
+picture because the cache keyed on file existence. Images that predate the
+sidecar are _adopted_ (kept and keyed), so upgrading never re-spends.
+
+Preview the blast radius before spending:
+
+```bash
+video make <project> --dry-run
+```
+
+```
+impact (nothing executed):
+  images: 1 regenerate (stale), 1 cached
+    regenerate: scene_7
+  tts: all 14 cached
+  render: 1 scene(s) will render, 13 cached
+    render: scene-07
+```
+
+The table also flags storyboard drift (article narration changed while
+the id-keyed sync kept the old storyboard text).
+
+### Keyframe review (opt-in gate)
+
+Add to `article.md` frontmatter:
+
+```yaml
+---
+require_visual_approval: true
+---
+```
+
+Then the human review loop:
+
+```bash
+video visuals <project>                              # generate + contact sheet
+video visuals <project> --reject 7 --reason "太暗"     # force-regenerate scene 7
+video approve visuals <project>                      # freeze the set
+video make <project>                                # renders only if the set matches
+```
+
+`video visuals` writes `assets/images/contact-sheet.png` — one labeled
+grid of every scene image (numbered badges + captions, Pillow in the
+existing python env). `video approve visuals` records per-scene hashes in
+`checkpoints/visuals.yaml`. Once armed, `video make` refuses to render
+while the checkpoint is missing or stale, naming the offending scenes.
+The workflow stage machine is untouched; the gate is a checkpoint record.
+
 ## 10. Project artifacts and provenance
 
 ### Recommended layout
@@ -1138,6 +1198,7 @@ projects/<slug>/
 ├── vdsl/vdsl.yaml                   normalized compiled VDSL (deterministic; falls back to the storyboard loudly when corrupt)
 ├── state.yaml                       workflow state machine (10 states; drives the gates and guards)
 ├── checkpoints/<stage>.yaml         human-gate audit trail (approved/rejected/invalidated)
+├── checkpoints/visuals.yaml         v0.8: approved image set (per-scene hashes) when require_visual_approval is on
 ├── runs/<run-id>.yaml               per-LLM/tool-call run records
 ├── scenes/                          per-scene MP4 cache (content-hash keyed; final 1080p30)
 ├── scenes-draft/                    low-quality draft cache (--draft: 960×540@15)
@@ -1147,6 +1208,8 @@ projects/<slug>/
 ├── assets/
 │   ├── audio/scene_*.wav           per-scene TTS (video make writes)
 │   ├── audio-assets/{bgm,sfx}/     BGM/SFX assets (video make writes)
+│   ├── images/scene_N.jpg          scene image + scene_N.cache.json input-key sidecar (v0.8)
+│   ├── images/contact-sheet.png    v0.8: `video visuals` review grid
 │   └── excalidraw/                 video excalidraw writes: .excalidraw + animated SVG
 ├── captions/<lang>.srt              subtitles (video make writes)
 ├── youtube/                         publishing package from video youtube / thumbnail / shorts
@@ -1390,19 +1453,18 @@ video approve storyboard --cwd "projects/$TOPIC"
 
 video make "$TOPIC"                       # TTS → audio assets → render → mix (real Edge TTS)
 video make "$TOPIC" --fake                # FakeTTSProvider (no network; silent placeholder WAVs + no AI images)
-video make "$TOPIC" --image-provider minimax  # force real AI image generation
-video make "$TOPIC" --image-provider flux     # local FLUX.2 Klein 4B (v0.5+; no quota)
+video make "$TOPIC" --image-provider minimax  # real AI image generation (default; needs MINIMAX_API_KEY)
+video make "$TOPIC" --image-provider openai   # via OpenAI (needs OPENAI_API_KEY)
+video make "$TOPIC" --image-provider gemini   # via Gemini (needs GEMINI_API_KEY)
 video make "$TOPIC" --dry-run             # print which steps would run; do not execute
 ```
 
 `--fake` skips both Edge TTS and AI image generation, so the rendered
 video is fully offline — scenes keep their `AnimatedIllustration`
 component (caption + animated SVG). Use `--image-provider mock` to
-exercise the `ImageBackground` path with placeholders, or
-`--image-provider flux` (v0.5+) for a local model that needs no
-quota — see the "Local Image Generation" section in the README or
-`docs/v0.5-local-image-generation-plan.md` for the one-time
-~22 GB weight download and the LoRA / style-anchor knobs.
+exercise the `ImageBackground` path with placeholders. See the
+"Image Providers" section in the README for the full provider
+comparison.
 
 Outputs:
 

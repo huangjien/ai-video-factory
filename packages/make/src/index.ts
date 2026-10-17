@@ -1,6 +1,6 @@
 import { execFile } from "node:child_process";
 import { createHash } from "node:crypto";
-import { mkdir, writeFile, readFile, readdir, stat } from "node:fs/promises";
+import { mkdir, writeFile, readFile, readdir, rm, stat } from "node:fs/promises";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { promisify } from "node:util";
 import os from "node:os";
@@ -30,12 +30,30 @@ import {
   type AudioAssetProvider,
 } from "@video/audio-assets";
 import {
-  FluxKleinImageProvider,
+  GeminiImageProvider,
   MiniMaxImageProvider,
   MockImageProvider,
-  resolveLoraConfigPath,
+  OpenAIImageProvider,
   type ImageProvider,
 } from "@video/media-generators";
+import {
+  imageCacheKey,
+  readImageCacheSidecar,
+  selfRenderedSceneNumbers,
+  visualsGateState,
+  writeImageCacheSidecar,
+} from "./visual-cache.js";
+import { ttsCacheKey, ZH_VOICE, EN_VOICE } from "./tts-cache.js";
+
+export { ttsCacheKey, ZH_VOICE, EN_VOICE } from "./tts-cache.js";
+export { computeMakeImpact, formatImpact } from "./impact.js";
+export {
+  imageSceneNumbers,
+  readVisualsCheckpoint,
+  rejectVisualsScene,
+  visualsGateState,
+  writeVisualsCheckpoint,
+} from "./visual-cache.js";
 
 const execFileAsync = promisify(execFile);
 
@@ -74,7 +92,7 @@ function elapsedSinceSec(t0: number): number {
  * waits: first beat once the call has lasted `afterSec` (default 30),
  * then every `everySec` (default 20). Beats stop when the promise
  * settles. This is the "time to time" signal that keeps a long single
- * call (FLUX frame, render, LLM draft) distinguishable from a hang.
+ * call (image generation, render, LLM draft) distinguishable from a hang.
  */
 export function heartbeat<T>(
   label: string,
@@ -108,29 +126,11 @@ export interface MakeOptions {
   idempotent?: boolean;
   /** If true, log what would be done without executing. */
   dryRun?: boolean;
-  /** Image provider for scene visuals: "minimax" (real AI), "flux"
-   * (local FLUX.2 Klein 4B via diffusers — no quota, no network),
-   * "mock" (deterministic placeholder), or "none" (skip image
-   * generation; scenes fall back to AnimatedIllustration shapes). */
-  imageProvider?: "minimax" | "flux" | "mock" | "none";
-  /** Absolute path to lora-config.yaml for the flux provider. */
-  loraConfigPath?: string;
-  /** Legacy: LoRA adapters as "path[:scale][,path2[:scale2]]". */
-  lora?: string;
-  /**
-   * v0.5.2 (T6.2): for the flux provider, generate scene 1 first, then
-   * condition every subsequent scene on that image (style anchor).
-   * Off by default — preserves the current per-scene-independent render.
-   */
-  referenceStyleAnchor?: boolean;
-  /**
-   * 1-based scene number to use as the style anchor. Default 1 (the
-   * first scene's image conditions scenes 2..N). Use a higher value
-   * for videos where the first scenes are titles and the first real
-   * visual is later (e.g. anchorScene=3 conditions scenes 4..N on
-   * scene 3's image).
-   */
-  anchorScene?: number;
+  /** Image provider for scene visuals: "minimax" | "openai" | "gemini"
+   * (hosted AI image APIs), "mock" (deterministic placeholder), or
+   * "none" (skip image generation; scenes fall back to
+   * AnimatedIllustration shapes). */
+  imageProvider?: "minimax" | "openai" | "gemini" | "mock" | "none";
   /** Local music library for real BGM — a directory containing
    * `{tag}.wav` (or any .wav whose name contains the tag). Without it
    * the audio-assets step writes a mock silent placeholder. */
@@ -174,11 +174,6 @@ export interface MakeDeps {
     minDurationSec: number,
   ) => Promise<Uint8Array>;
 }
-
-// Default: male narration voices. Female alternatives: zh-CN-XiaoxiaoNeural,
-// en-US-AriaNeural.
-const ZH_VOICE = "zh-CN-YunjianNeural";
-const EN_VOICE = "en-US-ChristopherNeural";
 
 /** Run the make pipeline against an article.md + audio-config.yaml project. */
 export async function runMake(
@@ -236,6 +231,29 @@ export async function runMake(
     await readFile(audioConfigPath, "utf8"),
   ) as AudioConfigShape;
 
+  // v0.8 (G4): visuals approval gate — opt-in via `require_visual_approval:
+  // true` in article.md frontmatter. make refuses to render unless the
+  // on-disk image set matches an approved visuals checkpoint. In --dry-run
+  // the impact table reports gate state instead (this block is skipped).
+  if (article.frontmatter["require_visual_approval"] === true && !dryRun) {
+    const gate = visualsGateState(opts.projectRoot);
+    if (gate.state !== "ok") {
+      failStep(
+        report,
+        "visuals-gate",
+        gate.state === "missing-checkpoint"
+          ? "require_visual_approval: true but no approved visuals checkpoint — run `video visuals <project>`, review the contact sheet, then `video approve visuals <project>`"
+          : `visuals changed since approval — stale: ${gate.staleScenes.map((n) => `scene_${n}`).join(", ")}. Re-run \`video visuals <project>\`, then \`video approve visuals <project>\``,
+      );
+      return report;
+    }
+    report.steps.push({
+      name: "visuals-gate",
+      status: "ran",
+      message: "image set matches the approved visuals checkpoint",
+    });
+  }
+
   try {
     await step("sync-storyboard", () =>
       syncStoryboardFromArticle(opts.projectRoot, article),
@@ -247,11 +265,7 @@ export async function runMake(
     //    — mock placeholders are too small to be useful backgrounds.
     await step("generate-visuals", () =>
       generateSceneVisuals(opts.projectRoot, article, {
-        provider: opts.imageProvider ?? (opts.fake ? "none" : "flux"),
-        loraConfigPath: opts.loraConfigPath,
-        lora: opts.lora,
-        referenceStyleAnchor: opts.referenceStyleAnchor,
-        anchorScene: opts.anchorScene,
+        provider: resolveImageProvider(opts.fake, opts.imageProvider),
         onEvent: emit,
       }),
     );
@@ -417,6 +431,33 @@ async function syncStoryboardFromArticle(
 }
 
 /**
+ * Default `--image-provider` when the flag is omitted — `minimax`
+ * (image-01). The local 4B diffusion path was the default from v0.5.3
+ * until v0.8.1, when it was replaced here and later removed: it cost
+ * ~1–3 min/scene on Apple Silicon while every hosted provider returns
+ * in seconds.
+ */
+const DEFAULT_IMAGE_PROVIDER: "minimax" | "openai" | "gemini" | "mock" | "none" =
+  "minimax";
+
+/**
+ * The `--image-provider` default in one place — `video make`,
+ * `video visuals`, and the read-only `video make --dry-run` impact table
+ * must agree or the impact table predicts spend the render never makes.
+ *
+ * `--fake` always resolves to "none": mock placeholders are 64×36, and
+ * switching scenes to `ImageBackground` left long videos with blank
+ * frames after the title card (v0.3.6).
+ */
+export function resolveImageProvider(
+  fake: boolean | undefined,
+  explicit: "minimax" | "openai" | "gemini" | "mock" | "none" | undefined,
+): "minimax" | "openai" | "gemini" | "mock" | "none" {
+  if (explicit !== undefined) return explicit;
+  return fake ? "none" : DEFAULT_IMAGE_PROVIDER;
+}
+
+/**
  * Generate an AI image for each scene's `visual:` description and save
  * to `assets/images/scene_N.jpg`. Idempotent — skips scenes whose image
  * already exists. When the provider is "none" or a scene has no visual
@@ -433,11 +474,7 @@ export async function generateSceneVisuals(
   projectRoot: string,
   article: ParsedArticle,
   opts: {
-    provider: "minimax" | "flux" | "mock" | "none";
-    loraConfigPath?: string | undefined;
-    lora?: string | undefined;
-    referenceStyleAnchor?: boolean | undefined;
-    anchorScene?: number | undefined;
+    provider: "minimax" | "openai" | "gemini" | "mock" | "none";
     onEvent?: ProgressEmit | undefined;
   },
 ): Promise<string[]> {
@@ -450,23 +487,10 @@ export async function generateSceneVisuals(
   let provider: ImageProvider;
   if (opts.provider === "minimax") {
     provider = new MiniMaxImageProvider();
-  } else if (opts.provider === "flux") {
-    const repoRoot = workspaceRootFor(projectRoot) ?? projectRoot;
-    const explicitLora = opts.lora;
-    const explicitConfig = opts.loraConfigPath;
-    const discoveredConfig =
-      explicitLora === undefined && explicitConfig === undefined
-        ? resolveLoraConfigPath({ projectRoot, repoRoot })
-        : undefined;
-    if (discoveredConfig) {
-      console.log(`[flux] lora config: ${discoveredConfig}`);
-    }
-    provider = new FluxKleinImageProvider({
-      ...(explicitConfig ? { loraConfigPath: explicitConfig } : {}),
-      ...(discoveredConfig ? { loraConfigPath: discoveredConfig } : {}),
-      ...(explicitLora ? { lora: explicitLora } : {}),
-      forwardStderr: process.env["FLUX2_QUIET"] === undefined,
-    });
+  } else if (opts.provider === "openai") {
+    provider = new OpenAIImageProvider();
+  } else if (opts.provider === "gemini") {
+    provider = new GeminiImageProvider();
   } else {
     provider = new MockImageProvider();
   }
@@ -483,19 +507,13 @@ export async function generateSceneVisuals(
 
   const outputs: string[] = [];
   const generatedImages: string[] = [];
-  let styleAnchor: string | undefined;
-  const anchorScene = opts.anchorScene ?? 1;
   // Scenes rendered by their own visual families (svg/canvas/excalidraw
   // components, or already ImageBackground) never consume the generated
   // JPG — skip them so image quota is spent only where it lands on screen.
   const selfRendered = selfRenderedSceneNumbers(projectRoot);
-  if (opts.referenceStyleAnchor && anchorScene > article.scenes.length) {
-    outputs.push(
-      `referenceStyleAnchor: anchorScene=${anchorScene} > scene count (${article.scenes.length}); no scenes will be conditioned`,
-    );
-  }
   const emit = opts.onEvent ?? noopEmit;
   const total = article.scenes.length;
+
   for (let i = 0; i < article.scenes.length; i++) {
     const scene = article.scenes[i]!;
     const visual = scene.visual ?? "";
@@ -503,16 +521,30 @@ export async function generateSceneVisuals(
     if (selfRendered.has(i + 1)) continue;
 
     const imagePath = path.join(imageDir, `scene_${i + 1}.jpg`);
-    // Promote the anchor on both fresh and idempotent paths — earlier
-    // versions only set styleAnchor after a successful generation, so
-    // re-runs silently dropped the anchor and scenes 2..N lost their
-    // conditioning. Doc §T6.2.
+    const cacheKey = imageCacheKey({
+      sceneNumber: i + 1,
+      visual,
+      imageStyle,
+      provider: opts.provider,
+      width: reqWidth,
+      height: reqHeight,
+    });
+    // G1 (v0.8): content-keyed freshness replaces existence-only caching.
+    // Matching key ⇒ skip. No sidecar ⇒ legacy adoption (write the current
+    // key, keep the image — upgrading must not re-spend on untouched
+    // scenes). Key mismatch ⇒ inputs changed: delete the stale jpg and
+    // fall through to regeneration.
     if (existsSync(imagePath)) {
-      generatedImages.push(imagePath);
-      if (opts.referenceStyleAnchor && anchorScene === i + 1) {
-        styleAnchor = imagePath;
+      const sidecar = readImageCacheSidecar(imagePath);
+      if (sidecar === null || sidecar.cacheKey === cacheKey) {
+        if (sidecar === null) writeImageCacheSidecar(imagePath, cacheKey);
+        generatedImages.push(imagePath);
+        continue;
       }
-      continue;
+      await rm(imagePath, { force: true });
+      outputs.push(
+        `scene_${i + 1}: stale image (visual/style changed) — regenerating`,
+      );
     }
 
     const itemLabel = `image scene_${i + 1}`;
@@ -557,14 +589,11 @@ export async function generateSceneVisuals(
             prompt: promptForImage,
             width: reqWidth,
             height: reqHeight,
-            // Style anchor: every later scene conditions on the anchor scene's
-            // image (flux-only; other providers ignore the field per the
-            // ImageRequest contract). Doc §T6.2.
-            ...(styleAnchor ? { referenceImage: styleAnchor } : {}),
           }),
         emit,
       );
       await writeFile(imagePath, result.bytes);
+      writeImageCacheSidecar(imagePath, cacheKey);
       emit({
         kind: "done",
         label: itemLabel,
@@ -573,16 +602,6 @@ export async function generateSceneVisuals(
       });
       outputs.push(`assets/images/scene_${i + 1}.jpg`);
       generatedImages.push(imagePath);
-      if (
-        opts.referenceStyleAnchor &&
-        anchorScene === i + 1 &&
-        styleAnchor === undefined
-      ) {
-        styleAnchor = imagePath;
-        outputs.push(
-          `style anchor: scene_${i + 1}.jpg will condition scenes ${i + 2}..N`,
-        );
-      }
     } catch (err) {
       // Non-fatal: scene falls back to AnimatedIllustration.
       emit({
@@ -615,31 +634,6 @@ export async function generateSceneVisuals(
  * scenes that have a generated image. Uses yaml parse/stringify (not
  * line regex) because this is a structural change, not a value tweak.
  */
-/** 1-based numbers of storyboard scenes whose component draws its own
- * visuals (anything but AnimatedIllustration, which is the only one the
- * image swap rewrites). Empty when the storyboard is unreadable. */
-function selfRenderedSceneNumbers(projectRoot: string): Set<number> {
-  const storyboardPath = path.join(
-    projectRoot,
-    "storyboard",
-    "storyboard.yaml",
-  );
-  try {
-    const parsed = parseYaml(readFileSync(storyboardPath, "utf8")) as {
-      scenes?: { id?: string; visual?: { component?: string } }[];
-    };
-    const out = new Set<number>();
-    for (const scene of parsed.scenes ?? []) {
-      if (scene.visual?.component === "AnimatedIllustration") continue;
-      const m = scene.id?.match(/scene[-_]?(\d+)/);
-      if (m) out.add(parseInt(m[1]!, 10));
-    }
-    return out;
-  } catch {
-    return new Set();
-  }
-}
-
 function updateStoryboardForImages(
   projectRoot: string,
   imagePaths: string[],
@@ -827,22 +821,10 @@ async function runTts(
   return outputs;
 }
 
+/** Sidecar shape for the TTS cache (`scene_N.wav.json`). */
 interface TtsCacheMeta {
   cacheKey: string;
   synthesizedAt: string;
-}
-
-function ttsCacheKey(
-  narration: string,
-  voice: string,
-  pauseSec: number | undefined,
-): string {
-  return (
-    "sha256:" +
-    createHash("sha256")
-      .update(`${voice}\u0000${pauseSec ?? "-"}\u0000${narration.trim()}`)
-      .digest("hex")
-  );
 }
 
 async function readTtsMeta(wavPath: string): Promise<TtsCacheMeta | null> {

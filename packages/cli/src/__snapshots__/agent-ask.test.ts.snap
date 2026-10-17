@@ -62,7 +62,7 @@ exports[`emitQuestionsDoc > emits the full video-ask/1 envelope (snapshot) 1`] =
       "default": "flat-vector",
       "flag": "--image-style",
       "id": "image_style",
-      "question": "FLUX scene-image preset?",
+      "question": "Scene-image style preset?",
       "recommended": "flat-vector",
       "type": "choice",
       "why": "editorial vs flat-vector is a taste call; neither is recoverable post-render",

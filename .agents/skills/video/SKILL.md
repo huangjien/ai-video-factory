@@ -4,10 +4,10 @@ description: Operate the AI Video Factory monorepo — a pnpm TypeScript pipelin
 metadata:
   author: local
   source: internal://~/workspace/ai-video-factory
-  version: "1.5.0"
-  last_reviewed: 2026-10-15
+  version: "1.7.0"
+  last_reviewed: 2026-10-17
   local_only: true
-  shipped_versions: [v0.5, v0.5.1, v0.5.2, v0.5.3]
+  shipped_versions: [v0.5, v0.5.1, v0.5.2, v0.5.3, v0.8.1]
 ---
 
 # AI Video Factory
@@ -80,6 +80,7 @@ Full command set:
 | `video thumbnail <project>` | YouTube thumbnail (MiniMax image) |
 | `video shorts <project>` | 60s Shorts clip (MiniMax video) |
 | `video youtube <project>` | Title / description / chapters / shorts hook |
+| `video visuals <project>` | v0.8: generate scene images + contact sheet for review (gate off by default) |
 
 Every command accepts `--cwd <dir>` (default `projects/`). Every step writes `runs/<id>.yaml` and updates `state.yaml`.
 
@@ -107,6 +108,22 @@ Every command accepts `--cwd <dir>` (default `projects/`). Every step writes `ru
 | (no match) | `AnimatedIllustration` | generic shapes |
 
 Renderers: `remotion` covers all classic components; `svg` → SvgScene; `canvas` → DoodleScene. New scenes need no YAML hand-editing — the storyboard regenerates, but hand edits to `storyboard.yaml` are overwritten by the next `video make` (article.md is the source of truth). One-off visual check of all components: `node scripts/render-visual-smoke.mjs` → stills in `.omo/tmp/visual-smoke/`. Branding smoke: `node scripts/render-brand-smoke.mjs` → `.omo/tmp/brand-smoke/`.
+
+### Visual asset guardrails (v0.8)
+
+Three guardrails around the least-reviewed part of the pipeline. Plan: `docs/v0.8-visual-guardrails-plan.md`.
+
+**Content-keyed image cache (G1).** Every generated `assets/images/scene_N.jpg` carries a `scene_N.cache.json` sidecar hashing its inputs (visual line, `image_style`, provider, geometry). Editing a scene's `visual:` line, flipping `image_style`, or changing a ref image **deletes the stale jpg and regenerates it on the next `video make`** — pre-v0.8 the cache keyed on file existence, so edits never propagated. Pre-existing images without a sidecar are *adopted* (kept + sidecar written), so upgrading never re-spends. Run `video make <project> --dry-run` to see exactly which images regenerate before spending.
+
+**Keyframe review (G3/G4, opt-in).** Add `require_visual_approval: true` to `article.md` frontmatter, then:
+
+```bash
+video visuals <project>                              # generate + contact sheet (assets/images/contact-sheet.png)
+video visuals <project> --reject 7 --reason "太暗"    # force-regenerate one scene this run
+video approve visuals <project>                      # freeze the current set into checkpoints/visuals.yaml
+```
+
+`video make` then refuses to render until the on-disk image set matches the approved checkpoint, naming the stale scenes. Gate off (default) ⇒ `make` behaves exactly as before. Reject requires an existing approved checkpoint; rejections force-regenerate on the next `video visuals` run.
 
 ## 2.5 Branding & marketing (root `brand.yaml`)
 
@@ -235,43 +252,21 @@ Idempotent: `video make` skips a step when its output is newer than its inputs. 
 ## 4. Provider flags
 
 - LLM: `--model minimax|glm` (default `glm` for draft, `minimax` for storyboard / youtube)
-- Image / video: `--image-provider minimax|flux|mock|none`, `--fake`
-  - v0.5.3+: **flux is the default for `video make`** (gated on `!fake`;
-    `mock` stays the default for `video thumbnail`). Override with
-    `--image-provider minimax|mock|none` if you want MiniMax or
-    offline placeholder paths.
-  - v0.5.3+: **pre-flight health check** — `FluxKleinImageProvider` runs
-    `uv run python flux_worker.py --check` once per render. If the
-    local flux service isn't ready (uv missing, env not synced,
-    weights not downloaded), the render fails loud with a fix hint
-    instead of a traceback. Bypass with `FLUX2_SKIP_HEALTH_CHECK=1`.
-  - `flux` = local FLUX.2-klein-4B (diffusers + pillow + LoRA, MPS). No API
-    key, no quota, no network after the one-time weight download.
-    One-time: `cd packages/media-generators/python && uv sync && uv run
-    python flux_worker.py --download` (~22 GB → `models/hf/`,
-    gitignored). Inspect a checkpoint before downloading with
-    `uv run python flux_worker.py --check-model <repo_id>`. Switch to
-    the 50-step quality path with
-    `FLUX2_MODEL=black-forest-labs/FLUX.2-klein-base-4B` (the worker
-    auto-detects `is_distilled` from the checkpoint's `model_index.json`).
-  - **LoRA** (v0.5.1): checked-in `lora-config.yaml` at `<projectRoot>`
-    or `<repo>` is the canonical surface; legacy `FLUX2_LORA="path[:scale][,…]"`
-    env still works. License sidecars (`{name}.license.txt`) enforced
-    when declared. CLI: `--lora-config <path>` (yaml), `--lora <spec>`
-    (legacy string). Both apply on the same flag set; precedence is
-    documented in `packages/media-generators/src/lora-config.ts`.
-  - **Style anchor** (v0.5.2 T6.2): `--reference-style-anchor` makes the
-    flux provider generate the anchor scene first, then condition every
-    subsequent scene on it (image-to-image, same `Flux2KleinPipeline`
-    — the 4B accepts `image=`; the 9B KV variant is gated). Default
-    anchor is scene 1; use `--anchor-scene <N>` (1-based) when the first
-    scenes are titles. Off by default; idempotent on re-run.
-  - **Memory pressure** (v0.5.2): `FLUX2_OFFLOAD=full` block-offloads the
-    transformer (9B under 24 GB M4); `FLUX2_TEXT_ENCODER_QUANT=int8`
-    cuts the Qwen3 text encoder ~40% (8.1 GB → 4.9 GB on the 4B
-    encoder). int4 is blocked on MPS (Apple's `mslk` framework isn't
-    distributable). Detail + latency notes in
-    `docs/v0.5-local-image-generation-plan.md` §T6.3.
+- Image / video: `--image-provider minimax|openai|gemini|mock|none`, `--fake`
+  - **v0.8.1+: `minimax` is the default for `video make` and
+    `video visuals`** (gated on `!fake`; `mock` stays the default for
+    `video thumbnail`). One resolver — `resolveImageProvider` in
+    `packages/make/src/index.ts` — serves `video make`, `video
+    visuals`, and the `--dry-run` impact table, so all three agree.
+  - Three hosted HTTP providers, all returning seconds per scene, each
+    needing its own key: `minimax` (`MINIMAX_API_KEY`, model
+    `image-01`), `openai` (`OPENAI_API_KEY`), `gemini`
+    (`GEMINI_API_KEY`). Each returns its own output size; scenes are
+    fitted to the requested 1920×1080 frame at render time.
+  - `mock` gives deterministic placeholder images, `none` skips image
+    generation entirely.
+  - `--fake` always resolves to `none` — scenes stay
+    `AnimatedIllustration` (caption + animated SVG).
 - TTS: `--fake` (offline placeholder)
 - Web search in research: `--no-web` (LLM knowledge only)
 
@@ -305,7 +300,7 @@ packages/
 
 ## 6. Common pitfalls
 
-- **Keyless smoke run (no API keys needed)**: write `article.md` (frontmatter: project/language/duration_target_sec/voice + `## Scenes` fenced YAML) and an `audio-config.yaml` (`voice: zh-CN-XiaoxiaoNeural`, `bgm: "calm"`, `sfx: {scene_1: whoosh}` — flat keys, not nested objects), then `video approve storyboard <project>` (gate) and `video make <project> --fake`. For real visuals without a MiniMax key, use `--image-provider flux` (local FLUX.2 Klein 4B; needs the ~22 GB weight download once).
+- **Keyless smoke run (no API keys needed)**: write `article.md` (frontmatter: project/language/duration_target_sec/voice + `## Scenes` fenced YAML) and an `audio-config.yaml` (`voice: zh-CN-XiaoxiaoNeural`, `bgm: "calm"`, `sfx: {scene_1: whoosh}` — flat keys, not nested objects), then `video approve storyboard <project>` (gate) and `video make <project> --fake`. For deterministic placeholder images without any key, use `--image-provider mock`.
 - **`no scene-N.wav files` in mix**: article scene ids must be `scene-1`, `scene-2`, … — TTS names narration WAVs after article ids and mix matches `/^scene[-_]\d+\.wav$/`. Ids like `s1` break the mix step.
 - **`video` not found**: symlink `bin/video` into a PATH dir (see §1). Verify with `which video` and `realpath $(which video)`.
 - **`Cannot find module '.../packages/cli/dist/index.js'`** — the `video` / `video` wrapper resolved the wrong project root. The bundled `bin/video` uses `realpath $0`, so this only happens with a custom wrapper that uses `dirname $0` or `$(pwd)`. Fix: either rebuild via `pnpm build`, or replace any custom wrapper with `bin/video`.
@@ -323,4 +318,3 @@ packages/
 - `ARCHITECTURE.md` — package boundaries and design decisions
 - `RELEASES.md` — version history
 - `AI_Video_Factory_Design_and_Plan_v1.1.md` — the canonical design doc
-- `docs/v0.5-local-image-generation-plan.md` — local image generation (FLUX.2 Klein 4B, LoRA, style anchor, int8 quant)

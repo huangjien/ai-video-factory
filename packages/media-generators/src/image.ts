@@ -10,26 +10,6 @@ export interface ImageRequest {
   prompt: string;
   width: number;
   height: number;
-  /**
-   * Optional reference image (image-to-image). v0.5.2 (T6.2). When set,
-   * providers that support it (FluxKleinImageProvider) condition the
-   * generation on this image — e.g. for style-anchored consistency
-   * across a video. The path is absolute; the provider's temp dir is
-   * the natural place. Providers that don't support it ignore the field.
-   */
-  referenceImage?: string;
-  /**
-   * Text drawn onto the image AFTER generation. Keeps the generation
-   * prompt text-free (diffusion garbles written text, especially CJK)
-   * while callers still get labeled images. v0.5.4: honored by
-   * FluxKleinImageProvider (Pillow draw in the worker); providers
-   * without post-render text support ignore the field.
-   */
-  textOverlay?: {
-    text: string;
-    /** Band the text is centered in. Default "bottom". */
-    position?: "top" | "center" | "bottom";
-  };
 }
 
 export interface ImageResult {

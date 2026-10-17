@@ -28,7 +28,12 @@ export const MINIMAL_API_COMMANDS: readonly MinimalApiCommand[] = [
   {
     invocation: "video make <project>",
     purpose:
-      "TTS → audio assets → render → mix (`--dry-run` to preview, `--fake` for offline TTS, `--image-provider mock\\|minimax\\|flux\\|none`, `--bgm-dir`/`--sfx-dir <dir>` to use your own music library)",
+      "TTS → audio assets → render → mix (`--dry-run` for a read-only impact table of what would re-run, `--fake` for offline TTS, `--image-provider mock\\|minimax\\|openai\\|gemini\\|none`, `--bgm-dir`/`--sfx-dir <dir>` to use your own music library; **v0.8** scene images are content-keyed so visual edits regenerate)",
+  },
+  {
+    invocation: "video visuals <project>",
+    purpose:
+      "**v0.8** (optional) generate scene images + a Pillow contact sheet for review; `video approve visuals <project>` freezes the set and `video make` enforces it when `require_visual_approval: true` is set in article.md frontmatter",
   },
   {
     invocation: "video retrospect <project>",
@@ -70,6 +75,15 @@ export const ADVANCED_VERBS: readonly string[] = [
   "validate",
   "scene",
   "laya",
+];
+
+/** Human gates documented in the README table. "visuals" is opt-in
+ *  (require_visual_approval in article.md); the workflow stage machine is
+ *  untouched (v0.8 plan D1). */
+export const APPROVAL_STAGES: readonly string[] = [
+  "storyboard",
+  "review",
+  "visuals (opt-in, v0.8)",
 ];
 
 function wrapWords(text: string, maxWidth: number, continuationIndent = 0): string[] {

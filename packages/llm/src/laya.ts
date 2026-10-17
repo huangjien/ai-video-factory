@@ -129,8 +129,8 @@ export interface LayaClientOptions {
 export class LayaClient {
   private readonly cfg: LayaConfig;
   private readonly fetchImpl: typeof fetch;
-  /** Memoized pre-flight result — same pattern as flux `healthChecked`:
-   * one /health per process, unhealthy → every decide() short-circuits. */
+  /** Memoized pre-flight result — one /health per process, unhealthy →
+   * every decide() short-circuits. */
   private healthState: "unknown" | "ok" | "down" = "unknown";
   private lastHealth: LayaHealth | null = null;
 

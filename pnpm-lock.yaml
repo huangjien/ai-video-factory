@@ -359,6 +359,9 @@ importers:
       '@video/video-renderer':
         specifier: workspace:*
         version: link:../video-renderer
+      '@video/workflow':
+        specifier: workspace:*
+        version: link:../workflow
       yaml:
         specifier: ^2.7.0
         version: 2.9.1

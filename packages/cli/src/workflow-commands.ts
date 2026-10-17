@@ -44,6 +44,19 @@ export async function runApprove(
   cwd: string | undefined,
   force: boolean = false,
 ): Promise<number> {
+  // v0.8 (G4): `video approve visuals <project>` freezes the current
+  // image set into checkpoints/visuals.yaml — deliberately NOT a workflow
+  // stage (V01_STAGES is frozen; plan D1), so it short-circuits here.
+  if (stage === "visuals") {
+    if (projectName === undefined) {
+      console.error("approve visuals: missing <project> argument");
+      return 1;
+    }
+    const { approveVisualsCheckpointCli } = await import(
+      "./visuals-command.js"
+    );
+    return approveVisualsCheckpointCli(projectName, cwd);
+  }
   const root = await rootOf(projectName, cwd);
   if (typeof root === "number") return root;
   return printResult(

@@ -47,7 +47,19 @@ function pickBgm(projectRoot: string, explicit?: string): string {
   return candidates[0] ?? "";
 }
 
-function pickNarrations(projectRoot: string): string[] {
+/** Scene number from a narration wav name — the numeric sort key.
+ * "scene_2.wav" → 2, "scene-10.wav" → 10 (separator/padding agnostic). */
+function sceneWavNumber(f: string): number {
+  const m = f.match(/^scene[-_](\d+)\.wav$/);
+  return m ? parseInt(m[1]!, 10) : Number.MAX_SAFE_INTEGER;
+}
+
+/** Narration wavs for the mix concat, in SCENE order. Numeric sort is
+ * load-bearing: lexicographic order interleaves scene_10..scene_14 between
+ * scene_1 and scene_2 whenever a video has ≥10 scenes, so the mixed audio
+ * track stops matching the visual/caption timeline (observed 2026-10-16:
+ * "audio has nothing to do with images and subtitle"). */
+export function pickNarrations(projectRoot: string): string[] {
   const audioDir = path.join(projectRoot, "assets", "audio");
   if (!existsSync(audioDir)) {
     throw new Error(
@@ -56,7 +68,7 @@ function pickNarrations(projectRoot: string): string[] {
   }
   const files = readdirSync(audioDir)
     .filter((f) => /^scene[-_]\d+\.wav$/.test(f))
-    .sort()
+    .sort((a, b) => sceneWavNumber(a) - sceneWavNumber(b) || a.localeCompare(b))
     .map((f) => path.join(audioDir, f));
   if (files.length === 0) {
     throw new Error(`no scene-N.wav files in ${audioDir}`);

@@ -18,8 +18,8 @@ import {
 } from "./evals.js";
 
 describe("evals fixtures on disk", () => {
-  it("lists both agents, each with cases", () => {
-    expect(listEvalAgents()).toEqual(["draft", "storyboard"]);
+  it("lists every agent, each with cases", () => {
+    expect(listEvalAgents()).toEqual(["draft", "image-prompt", "storyboard"]);
     expect(listEvalFiles(evalsDir(), "draft").length).toBeGreaterThan(0);
     expect(listEvalFiles(evalsDir(), "storyboard").length).toBeGreaterThan(0);
   });

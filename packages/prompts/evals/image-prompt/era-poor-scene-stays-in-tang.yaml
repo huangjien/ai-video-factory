@@ -1,0 +1,22 @@
+id: era-poor-scene-stays-in-tang
+agent: image-prompt
+input:
+  setting: Tang-dynasty China, 626-630 CE, Tang court and military dress
+  style: editorial
+  scene:
+    id: scene_13
+    visual: 宫门守卫在夜色中转身，手按腰间钥匙
+    caption: 戒备
+    narration: 宫禁森严，夜色已深。
+expects:
+  - axis: era-and-region-named
+    min: 8
+  - axis: period-dress-specific
+    min: 6
+provenance:
+  source: projects/玄武门 human review 2026-10-18 — frames with Western race and dress in a Tang video; differential probe on this scene showed a 1000-year drift (late Ming, 1620) when the setting is absent
+recorded:
+  prompt_hash: sha256:f5c02df1322dc4d1bee02be00cf6ffcf15e78467ae7f04a44685ff1b6308ca0d
+  scores:
+    era-and-region-named: 9
+    period-dress-specific: 8

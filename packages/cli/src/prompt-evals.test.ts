@@ -463,8 +463,31 @@ describe("renderReportYaml", () => {
 // ─── Agent adapters ──────────────────────────────────────────────────────────
 
 describe("EVAL_AGENTS", () => {
-  it("wires both planned agents and nothing dangling", () => {
-    expect(Object.keys(EVAL_AGENTS).sort()).toEqual(["draft", "storyboard"]);
+  it("wires every agent with a fixture directory and nothing dangling", () => {
+    expect(Object.keys(EVAL_AGENTS).sort()).toEqual([
+      "draft",
+      "image-prompt",
+      "storyboard",
+    ]);
+  });
+
+  it("the image-prompt adapter anchors era through the setting", () => {
+    // The era-poor guard scene: without the declared setting this exact
+    // scene produced a "late Ming dynasty, 1620" brief.
+    const input = {
+      setting: "Tang-dynasty China, 626-630 CE",
+      scene: {
+        id: "scene_13",
+        visual: "\u5bab\u95e8\u5b88\u536b\u5728\u591c\u8272\u4e2d\u8f6c\u8eab",
+        narration:
+          "\u5bab\u7981\u68ee\u4e25\uff0c\u591c\u8272\u5df2\u6df1\u3002",
+      },
+    };
+    const user = EVAL_AGENTS["image-prompt"]!.build(input)[1]?.content ?? "";
+    expect(user).toContain("Tang-dynasty China, 626-630 CE");
+    expect(user.indexOf("Setting (")).toBeLessThan(
+      user.indexOf("Visual direction:"),
+    );
   });
 
   it("each adapter's id matches its registry key", () => {

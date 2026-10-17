@@ -125,14 +125,14 @@ Enable once: `git config core.hooksPath .githooks`. The hook fires only when the
 | Situation | Hook behaviour | Cost |
 | --- | --- | --- |
 | default | layer 1 gates. Drift or an orphan fixture **blocks the push** | ~1s, free |
-| `PROMPT_EVAL_JUDGE=1 git push` | layer 2 rubric also runs; a score below its axis `min` blocks | **~4 min, ~10 provider calls** |
+| `PROMPT_EVAL_JUDGE=1 git push` | layer 2 rubric also runs; a score below its axis `min` blocks | **~5 min, ~12 provider calls** |
 | `PROMPT_EVAL_JUDGE=1` with provider down | exit 2 — warns, does **not** block | ~10s |
 | `CI=true` (workflows) | skips; the unit job already runs layer 1 | 0 |
 | `git push --no-verify` | skips the hook | 0 |
 
-**Why layer 2 is opt-in.** Measured 2026-10-18 on GLM, three draft cases: generation 95–165s per case, rubric judge 20–35s per case. The generation dominates and is irreducible — you cannot judge an article without writing it first. A judged layer can never be a fast gate, so it does not block by default.
+**Why layer 2 is opt-in.** Measured 2026-10-18 on GLM across six cases (3 draft, 2 storyboard, 1 image-prompt): generation 55–165s per case, rubric judge 11–45s per case. The generation dominates and is irreducible — you cannot judge an article without writing it first. A judged layer can never be a fast gate, so it does not block by default.
 
-`PROMPT_EVAL_JUDGE=1` judges the whole golden set (both agents). Narrow it with `PROMPT_EVAL_AGENT=<name>` and `PROMPT_EVAL_PROVIDER=<glm|minimax>`.
+`PROMPT_EVAL_JUDGE=1` judges the whole golden set (draft, storyboard, image-prompt). Narrow it with `PROMPT_EVAL_AGENT=<name>` and `PROMPT_EVAL_PROVIDER=<glm|minimax>`.
 
 **Exit codes.** `0` pass · `1` a measured failure (prompt drift, or a judged score below `min`) · `2` a case could not be measured at all (provider timeout, outage, content filter, schema rejection). The hook blocks on 1 and warns on 2 — a gate that blocks on its own flakiness gets disabled within a week.
 

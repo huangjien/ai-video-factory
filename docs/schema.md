@@ -175,6 +175,32 @@ default_renderer: canvas # → storyboard emits defaults: {renderer: canvas}
 The derived storyboard then carries `schema_version: "0.2"` and the
 `defaults:` block. Synonyms work here too (`hand-drawn` → `canvas`).
 
+### `setting:` — era, region, culture (v0.10)
+
+For any historical, period-specific or cultural topic, declare the setting in
+`article.md` frontmatter. It is spliced into every scene image brief, where the
+expander must state **era + region**, **people's appearance**, and **period
+dress/armour/materials** — and rule out the anachronism (plate armour, cathedral,
+Renaissance clothing) explicitly.
+
+```yaml
+---
+project: xuanwumen
+image_style: editorial
+setting: Tang-dynasty China, 626-630 CE, Tang court and military dress
+---
+```
+
+Without it the expander infers the era from the scene narration, which is
+unreliable: a probe on a `visual:` line with no dynasty marker produced
+**"late Ming dynasty, 1620"** for a Tang scene. The key is also part of the
+image-brief cache identity, so changing it invalidates briefs written under the
+old setting.
+
+`video draft` preserves this key (and `image_style` / `image_provider`) across
+re-drafts; `project`, `language`, `duration_target_sec` and `voice` always
+reflect the newest run.
+
 ## Camera (T7.4)
 
 A `type: camera` animation targets a NODE of an `SvgScene` scene; the node

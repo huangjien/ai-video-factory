@@ -1,6 +1,13 @@
 import { execFile } from "node:child_process";
 import { createHash } from "node:crypto";
-import { mkdir, writeFile, readFile, readdir, rm, stat } from "node:fs/promises";
+import {
+  mkdir,
+  writeFile,
+  readFile,
+  readdir,
+  rm,
+  stat,
+} from "node:fs/promises";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { promisify } from "node:util";
 import os from "node:os";
@@ -443,8 +450,8 @@ async function syncStoryboardFromArticle(
  * ~1–3 min/scene on Apple Silicon while every hosted provider returns
  * in seconds.
  */
-const DEFAULT_IMAGE_PROVIDER: "minimax" | "openai" | "gemini" | "mock" | "none" =
-  "minimax";
+const DEFAULT_IMAGE_PROVIDER:
+  "minimax" | "openai" | "gemini" | "mock" | "none" = "minimax";
 
 const IMAGE_PROVIDER_VALUES = [
   "minimax",
@@ -611,7 +618,13 @@ export async function generateSceneVisuals(
           expansionProvider,
           projectRoot,
           i + 1,
-          { style: imageStyle, learned: learnedImageRules },
+          {
+            style: imageStyle,
+            learned: learnedImageRules,
+            // v0.10: the declared era/region/culture. Absent in older
+            // articles, in which case the expander behaves exactly as before.
+            setting: article.frontmatter.setting,
+          },
         );
         promptForImage = prompt;
         outputs.push(

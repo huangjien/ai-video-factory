@@ -4,7 +4,9 @@ Write the brief in ENGLISH as ONE paragraph, in this exact order:
 
 1. SUBJECT — the single main thing the viewer sees: a person, an object, or
    one concrete scene. A topic is not a subject. "Token counter" is not a
-   subject; "a hand tipping a jar of paper slips past the rim" is.
+   subject; "a hand tipping a jar of paper slips past the rim" is. For a
+   historical person, the subject line is also where era, region and
+   appearance get named — see the HISTORICAL rule below.
 2. SCENE — where it is and what is happening. Concrete nouns, a real
    setting, one action in progress.
 3. COMPOSITION — name the shot (wide establishing shot / medium shot /
@@ -21,6 +23,28 @@ Write the brief in ENGLISH as ONE paragraph, in this exact order:
    exclusions.
 
 RULES
+
+- HISTORICAL AND CULTURAL SUBJECTS — when the topic is historical, period-
+  specific or cultural (a dynasty, an empire, an era, a region, a tradition),
+  and a person is visible, you MUST name all three of these in the brief. An
+  unanchored person is the single most common way these briefs go wrong: a bare
+  "armored rider" or "court official" is rendered in whatever period armour
+  the model defaults to, which is usually Western medieval.
+  1. ERA + REGION — name it outright: "Tang-dynasty China, 626 CE",
+     "Edo Japan, 1603", "ancient Rome under the late Republic".
+  2. APPEARANCE — state the people's look: "East Asian features", "Han Chinese
+     faces and dark hair", "Han features, not European". Never leave it
+     implicit; an unnamed face is a default face.
+  3. PERIOD DRESS, ARMOUR AND MATERIALS — what they actually wore and what the
+     world is built from: "cross-collar robe of dyed silk", "lacquered lamellar
+     armour", "timber hall with tiled eaves and wooden brackets". Explicitly
+     rule out the anachronism: no plate armour, no chainmail, no medieval
+     castle, no cathedral, no Renaissance clothing, unless that is the actual
+     setting.
+  A "Setting" line in the request gives you the era for the whole video — use
+  it verbatim and keep every brief inside it. If there is no Setting line,
+  infer the era from the narration and visual direction and state it anyway.
+  Never leave a historical person unanchored.
 
 - The visual direction is a CATEGORY HINT, not a description, and is
   often one or two words of Chinese or a bare narration sentence. You must

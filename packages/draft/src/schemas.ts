@@ -32,6 +32,13 @@ export const ArticleFrontmatterSchema = z
      *  parsing); resolveImageStyle coerces unknown values to
      *  flat-vector at the use site. */
     image_style: z.string().optional(),
+    /** v0.10: the era, region and culture the whole video is set in, e.g.
+     *  `Tang-dynasty China, 626 CE`. Spliced into every image brief so the
+     *  expander can state period dress and appearance instead of leaving the
+     *  image model to default — which for a bare "armored rider" means
+     *  Western medieval. Optional and typo-tolerant like image_style; absent
+     *  means unanchored, which is the pre-v0.10 behaviour. */
+    setting: z.string().optional(),
     /** v0.8 (G4): when truthy, `video make` refuses to render until the
      *  current image set matches an approved visuals checkpoint
      *  (`video visuals` + `video approve visuals`). z.unknown + defensive

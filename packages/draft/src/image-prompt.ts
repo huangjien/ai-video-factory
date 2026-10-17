@@ -45,7 +45,7 @@ const MAX_BRIEF_CHARS = 700;
  *  image cache in @video/make — a brief written by an older expander no
  *  longer describes the image that was generated from it.
  *  v2 — fixed the structure prompt; strips reasoning blocks before slicing. */
-export const IMAGE_PROMPT_REVISION = "2";
+export const IMAGE_PROMPT_REVISION = "3";
 
 /** Remove the reasoning scaffold that reasoning-enabled chat models emit
  *  ahead of their answer (`<think>…</think>`, an unterminated `<think>`,
@@ -69,7 +69,10 @@ function extractBrief(content: string): string {
   const fence = out.match(/```(?:[a-z]*)?\s*([\s\S]*?)```/i);
   if (fence?.[1]) out = fence[1];
   return out
-    .replace(/^\s*(?:here(?:'s| is)|the (?:image )?prompt(?: is)?|prompt)\s*[:—-]\s*/i, "")
+    .replace(
+      /^\s*(?:here(?:'s| is)|the (?:image )?prompt(?: is)?|prompt)\s*[:—-]\s*/i,
+      "",
+    )
     .replace(/^\s*(?:\*\*)?(?:prompt|brief)(?:\*\*)?\s*[:—-]\s*/i, "")
     .trim();
 }
@@ -81,30 +84,118 @@ export interface ScenePromptInput {
   narration?: string | undefined;
 }
 
+/** Everything the expander knows that is not per-scene: the style preset, the
+ *  human-review lessons, and the setting (era + region + culture). */
+export interface ScenePromptContext {
+  style?: ImageStyle | undefined;
+  learned?: string | undefined;
+  /** Declared era/region/culture for the whole video, from article.md
+   *  frontmatter `setting:` — e.g. "Tang-dynasty China, 626 CE". Without it
+   *  the expander only has the narration to guess from, which is how a Tang
+   *  court scene ends up rendered in Western medieval armour. */
+  setting?: string | undefined;
+}
+
+/** Body lives in `packages/prompts/prompts/draft-image-prompt.md` — edit it there. */
+const SYSTEM_PROMPT = loadPrompt("draft-image-prompt");
+
+/** The exact messages handed to the expander. Extracted from
+ *  `expandScenePrompt` so it can be asserted directly in tests and driven by
+ *  the prompt-eval harness without touching the filesystem or a provider. */
+export function buildScenePromptMessages(
+  scene: ScenePromptInput,
+  context: ScenePromptContext = {},
+): ChatMessage[] {
+  const style =
+    context.style !== undefined
+      ? resolveImageStyle(context.style)
+      : DEFAULT_IMAGE_STYLE;
+  const learned = context.learned ?? "";
+  const setting = context.setting?.trim() ?? "";
+
+  const parts: string[] = [];
+  parts.push(`Scene ID: ${scene.id}`);
+  if (setting !== "") {
+    // Placed above the visual direction on purpose: the visual line is a bare
+    // category hint and reads as era-neutral, so the setting has to arrive
+    // before the model decides what a "mounted courier" looks like.
+    parts.push(
+      `Setting (the whole video is set here — era, region and culture; every brief must stay inside it): ${setting}`,
+    );
+  }
+  if (scene.caption) parts.push(`Caption (on-screen text): ${scene.caption}`);
+  parts.push(`Visual direction: ${scene.visual}`);
+  if (scene.narration) {
+    parts.push(
+      `Narration (the scene's content — DO NOT render any of its words): ${scene.narration.slice(0, 200)}`,
+    );
+  }
+  parts.push(
+    "",
+    "Frame: 16:9 landscape, 1920x1080, a still that will move under a slow zoom or pan and carry caption overlays in the lower third.",
+    "",
+    "If the visual direction is a bare category or a narration fragment, invent the concrete subject, setting and action that make it visible. Write the brief in English, following the six parts in the system prompt, then output it alone.",
+  );
+
+  return [
+    {
+      role: "system",
+      content: [
+        SYSTEM_PROMPT,
+        styleSystemBlock(style),
+        // Human-review lessons. Empty in the common case; the block is
+        // omitted entirely rather than added as blank lines.
+        ...(learned.trim() === "" ? [] : [learned.trim()]),
+      ].join("\n\n"),
+    },
+    { role: "user", content: parts.join("\n") },
+  ];
+}
+
 export interface ExpandedPrompt {
   prompt: string;
   model: string;
   cacheHit: boolean;
 }
 
-/** Body lives in `packages/prompts/prompts/draft-image-prompt.md` — edit it there. */
-const SYSTEM_PROMPT = loadPrompt("draft-image-prompt");
+/**
+ * The pure half of the expander: build messages, call the provider, trim to the
+ * brief budget, append the verbatim style contract. No filesystem, no cache —
+ * which is what makes it drivable from the prompt-eval harness and directly
+ * testable. `expandScenePrompt` is this plus cache and sidecar writes.
+ */
+export async function expandSceneBrief(
+  scene: ScenePromptInput,
+  provider: Provider,
+  context: ScenePromptContext = {},
+): Promise<{ prompt: string; providerName: string }> {
+  const style =
+    context.style !== undefined
+      ? resolveImageStyle(context.style)
+      : DEFAULT_IMAGE_STYLE;
+  const messages = buildScenePromptMessages(scene, context);
+  const res = await provider.chat({ messages, temperature: 0.4 });
+  // The verbatim style contract rides along even if the LLM drifts —
+  // the image model always sees it. (Trim BEFORE the suffix so the
+  // generated part keeps the size budget; the suffix is fixed.)
+  const brief = extractBrief(res.content).slice(0, MAX_BRIEF_CHARS);
+  return {
+    prompt: `${brief}\n${stylePromptSuffix(style)}`,
+    providerName: provider.name,
+  };
+}
 
-/** Expand a single scene's visual direction into a real image prompt.
- *  Cheap LLM call; cached on disk; idempotent.
- *
- *  v0.6: `opts.style` (from article frontmatter `image_style:`) injects
- *  an image-style preset — composition rules into the system prompt and
- *  a verbatim style contract into the final prompt. The style is part
- *  of the cache key: switching styles re-expands. */
 export async function expandScenePrompt(
   scene: ScenePromptInput,
   provider: Provider,
   projectRoot: string,
   sceneNumber: number,
-  opts: { style?: ImageStyle; learned?: string } = {},
+  opts: ScenePromptContext = {},
 ): Promise<ExpandedPrompt> {
-  const style = opts.style !== undefined ? resolveImageStyle(opts.style) : DEFAULT_IMAGE_STYLE;
+  const style =
+    opts.style !== undefined
+      ? resolveImageStyle(opts.style)
+      : DEFAULT_IMAGE_STYLE;
   const learned = opts.learned ?? "";
   const cacheKey = createHash("sha256");
   cacheKey.update(scene.visual ?? "");
@@ -118,8 +209,12 @@ export async function expandScenePrompt(
   // Learned rules are part of the prompt contract, so they are part of
   // the identity of the prompt. Omitting this would let a prompt cached
   // before a lesson existed outlive every lesson ever recorded.
-  cacheKey.update("|");
   cacheKey.update(learned);
+  // Same for the declared setting: it changes what the brief is allowed to
+  // say about era, dress and appearance, so a brief written under one
+  // setting must never be reused under another.
+  cacheKey.update("|");
+  cacheKey.update(opts.setting ?? "");
   // Same argument for the expander itself: a reworded `draft-image-prompt.md`
   // must not keep serving briefs that were written by the previous wording.
   cacheKey.update("|");
@@ -149,41 +244,11 @@ export async function expandScenePrompt(
     }
   }
 
-  const parts: string[] = [];
-  parts.push(`Scene ID: ${scene.id}`);
-  if (scene.caption) parts.push(`Caption (on-screen text): ${scene.caption}`);
-  parts.push(`Visual direction: ${scene.visual}`);
-  if (scene.narration) {
-    parts.push(
-      `Narration (the scene's content — DO NOT render any of its words): ${scene.narration.slice(0, 200)}`,
-    );
-  }
-  parts.push(
-    "",
-    "Frame: 16:9 landscape, 1920x1080, a still that will move under a slow zoom or pan and carry caption overlays in the lower third.",
-    "",
-    "If the visual direction is a bare category or a narration fragment, invent the concrete subject, setting and action that make it visible. Write the brief in English, following the six parts in the system prompt, then output it alone.",
-  );
-  const messages: ChatMessage[] = [
-    {
-      role: "system",
-      content: [
-        SYSTEM_PROMPT,
-        styleSystemBlock(style),
-        // Human-review lessons. Empty in the common case; the block is
-        // omitted entirely rather than added as blank lines.
-        ...(learned.trim() === "" ? [] : [learned.trim()]),
-      ].join("\n\n"),
-    },
-    { role: "user", content: parts.join("\n") },
-  ];
-
-  const res = await provider.chat({ messages, temperature: 0.4 });
-  // The verbatim style contract rides along even if the LLM drifts —
-  // the image model always sees it. (Trim BEFORE the suffix so the
-  // generated part keeps the size budget; the suffix is fixed.)
-  const brief = extractBrief(res.content).slice(0, MAX_BRIEF_CHARS);
-  const prompt = `${brief}\n${stylePromptSuffix(style)}`;
+  const { prompt } = await expandSceneBrief(scene, provider, {
+    style,
+    learned,
+    setting: opts.setting,
+  });
   const model = "expanded-via-llm";
 
   await mkdir(path.dirname(cachePath), { recursive: true });
@@ -193,7 +258,12 @@ export async function expandScenePrompt(
     "utf8",
   );
   await writeFile(
-    path.join(projectRoot, "assets", "images", `scene_${sceneNumber}.prompt.txt`),
+    path.join(
+      projectRoot,
+      "assets",
+      "images",
+      `scene_${sceneNumber}.prompt.txt`,
+    ),
     prompt,
     "utf8",
   );

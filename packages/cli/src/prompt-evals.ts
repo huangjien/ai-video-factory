@@ -6,8 +6,18 @@ import {
   buildMessages as buildStoryboardMessages,
   callAgent as callStoryboardAgent,
 } from "@video/agent-storyboard";
-import type { DraftInput } from "@video/draft";
-import { buildMessages as buildDraftMessages, callDraft } from "@video/draft";
+import type {
+  DraftInput,
+  ImageStyle,
+  ScenePromptContext,
+  ScenePromptInput,
+} from "@video/draft";
+import {
+  buildMessages as buildDraftMessages,
+  buildScenePromptMessages,
+  callDraft,
+  expandSceneBrief,
+} from "@video/draft";
 import { stringify as yamlStringify } from "yaml";
 import {
   applyRecorded,
@@ -93,6 +103,21 @@ export const EVAL_AGENTS: Record<string, EvalAgent> = {
       return { output: result.markdown, providerName: result.providerName };
     },
   },
+  "image-prompt": {
+    id: "image-prompt",
+    /** The fixture input is the whole per-case context: the scene plus the
+     *  style/setting the article declares. A pure path — no cache, no sidecar
+     *  writes — so the harness measures the prompt, not the filesystem. */
+    build: (input) => buildImagePromptMessages(input),
+    call: async (input, provider) => {
+      const out = await expandSceneBrief(
+        imagePromptScene(input),
+        provider,
+        imagePromptContext(input),
+      );
+      return { output: out.prompt, providerName: out.providerName };
+    },
+  },
   storyboard: {
     id: "storyboard",
     build: (input) => buildStoryboardMessages(asAgentInput<AgentInput>(input)),
@@ -110,6 +135,36 @@ export const EVAL_AGENTS: Record<string, EvalAgent> = {
     },
   },
 };
+
+/** The image-prompt fixture shape: { scene, style?, learned?, setting? }. */
+function imagePromptScene(input: Record<string, unknown>): ScenePromptInput {
+  return asAgentInput<ScenePromptInput>(
+    input["scene"] as Record<string, unknown>,
+  );
+}
+
+function imagePromptContext(
+  input: Record<string, unknown>,
+): ScenePromptContext {
+  return {
+    ...(typeof input["style"] === "string"
+      ? { style: input["style"] as ImageStyle }
+      : {}),
+    ...(typeof input["learned"] === "string"
+      ? { learned: input["learned"] as string }
+      : {}),
+    ...(typeof input["setting"] === "string"
+      ? { setting: input["setting"] as string }
+      : {}),
+  };
+}
+
+function buildImagePromptMessages(input: Record<string, unknown>) {
+  return buildScenePromptMessages(
+    imagePromptScene(input),
+    imagePromptContext(input),
+  );
+}
 
 export function providerInstance(name: string): Provider {
   if (name === "glm") return new GLMProvider();

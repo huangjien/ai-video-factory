@@ -6,7 +6,11 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { initState, writeProjectState } from "@video/workflow";
 import type { Provider } from "@video/llm";
-import { runDraft, writeAudioConfigIfAbsent } from "./draft-command.js";
+import {
+  preserveFrontmatterKeys,
+  runDraft,
+  writeAudioConfigIfAbsent,
+} from "./draft-command.js";
 import { parseArticle } from "@video/draft";
 
 const DRAFT_JSON = {
@@ -170,7 +174,13 @@ describe("runDraft — end to end against a fake LLM", () => {
     });
     expect(code).toBe(0);
     const storyboard = await readFile(
-      path.join(projectsRoot, "projects", "dr-demo", "storyboard", "storyboard.yaml"),
+      path.join(
+        projectsRoot,
+        "projects",
+        "dr-demo",
+        "storyboard",
+        "storyboard.yaml",
+      ),
       "utf8",
     );
     expect(storyboard).toContain('"ocean-deep"');
@@ -275,6 +285,119 @@ scenes:
       null,
     );
     expect(r.status).toBe("failed");
-    expect(r.status === "failed" && r.error).toContain("boom: provider refused");
+    expect(r.status === "failed" && r.error).toContain(
+      "boom: provider refused",
+    );
+  });
+});
+
+// v0.10: `video draft` regenerates a fresh four-key frontmatter and wrote it
+// over article.md without reading the old file, so every hand-set durable key
+// was lost on the next draft. That silently erased the era `setting:` and made
+// the era fix worthless.
+describe("preserveFrontmatterKeys", () => {
+  const fresh = [
+    "---",
+    "project: xuanwumen",
+    "language: zh-CN",
+    "duration_target_sec: 300",
+    "voice: zh-CN-YunjianNeural",
+    "---",
+    "",
+    "# body",
+  ].join("\n");
+
+  it("carries a hand-set `setting` into the new article", () => {
+    const prev = [
+      "---",
+      "project: xuanwumen",
+      "language: zh-CN",
+      "duration_target_sec: 300",
+      "voice: zh-CN-YunjianNeural",
+      "setting: Tang-dynasty China, 626 CE",
+      "---",
+      "",
+      "# old body",
+    ].join("\n");
+    const out = preserveFrontmatterKeys(fresh, prev);
+    expect(out).toContain("setting: Tang-dynasty China, 626 CE");
+  });
+
+  it("never carries the keys the drafter owns", () => {
+    // duration changed in the new run; the old value must not win.
+    const prev = [
+      "---",
+      "project: old-name",
+      "language: en-US",
+      "duration_target_sec: 120",
+      "voice: en-US-AvaNeural",
+      "---",
+      "",
+      "# old",
+    ].join("\n");
+    const out = preserveFrontmatterKeys(fresh, prev);
+    expect(out).toContain("duration_target_sec: 300");
+    expect(out).not.toContain("duration_target_sec: 120");
+    expect(out).not.toContain("en-US");
+    expect(out).toContain("project: xuanwumen");
+  });
+
+  it("carries image_style / image_provider too (they were silently lost)", () => {
+    const prev = [
+      "---",
+      "project: x",
+      "image_style: editorial",
+      "image_provider: minimax",
+      "---",
+      "",
+    ].join("\n");
+    const out = preserveFrontmatterKeys(fresh, prev);
+    expect(out).toContain("image_style: editorial");
+    expect(out).toContain("image_provider: minimax");
+  });
+
+  it("an explicit value in the new draft wins", () => {
+    const next = fresh.replace(
+      "voice: zh-CN-YunjianNeural",
+      "voice: zh-CN-YunjianNeural\nsetting: Song-dynasty China, 1100 CE",
+    );
+    const prev = [
+      "---",
+      "project: x",
+      "setting: Tang-dynasty China, 626 CE",
+      "---",
+      "",
+    ].join("\n");
+    const out = preserveFrontmatterKeys(next, prev);
+    expect(out).toContain("setting: Song-dynasty China, 1100 CE");
+    expect(out).not.toContain("Tang-dynasty");
+  });
+
+  it("no previous article is a no-op", () => {
+    expect(preserveFrontmatterKeys(fresh, null)).toBe(fresh);
+  });
+
+  it("malformed frontmatter on either side is a no-op", () => {
+    expect(preserveFrontmatterKeys("no frontmatter", fresh)).toBe(
+      "no frontmatter",
+    );
+    expect(preserveFrontmatterKeys(fresh, "no frontmatter")).toBe(fresh);
+    expect(preserveFrontmatterKeys("---\nunterminated", fresh)).toBe(
+      "---\nunterminated",
+    );
+  });
+
+  it("leaves the body untouched", () => {
+    const prev = [
+      "---",
+      "project: x",
+      "setting: S",
+      "---",
+      "",
+      "# very old body",
+    ].join("\n");
+    const out = preserveFrontmatterKeys(fresh, prev);
+    expect(out).toContain("# body");
+    expect(out).not.toContain("# very old body");
   });
 });

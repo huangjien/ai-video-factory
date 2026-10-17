@@ -19,7 +19,7 @@ import {
   type YouTubeInput,
 } from "@video/youtube";
 import { parseArticleWithRecovery, type Scene } from "@video/draft";
-import { stringify as yamlStringify } from "yaml";
+import { parse as parseYaml, stringify as yamlStringify } from "yaml";
 import type { ChatMessage, Provider } from "@video/llm";
 import { formatRunId } from "@video/workflow";
 import {
@@ -226,7 +226,18 @@ export async function runYouTube(opts: YouTubeOptions): Promise<number> {
   let legacyInput: YouTubeInput | null = null;
   const articlePath = path.join(projectRoot, "article.md");
   if (existsSync(articlePath)) {
-    articleInput = await synthFromArticle(await readFile(articlePath, "utf8"));
+    const articleMd = await readFile(articlePath, "utf8");
+    // Prefer the RENDERED storyboard's durations when it covers the same
+    // scenes — chapter offsets must sum to the real runtime.
+    const renderedPath = path.join(projectRoot, "storyboard", "storyboard.yaml");
+    const rendered = existsSync(renderedPath)
+      ? await readFile(renderedPath, "utf8")
+      : undefined;
+    const sceneCount = parseArticleWithRecovery(articleMd).article.scenes.length;
+    articleInput = synthFromArticle(
+      articleMd,
+      readSyncedDurations(rendered, sceneCount),
+    );
   } else {
     const sbPath = path.join(projectRoot, "storyboard", "storyboard.yaml");
     const scriptPath = path.join(projectRoot, "script", "script.zh-CN.md");
@@ -432,10 +443,18 @@ export async function runYouTube(opts: YouTubeOptions): Promise<number> {
 /** Build a legacy-shaped YouTubeInput from the new article.md —
  * the YouTube agent consumes three string fields; this maps each.
  * v0.4 (T4): also extract the article's hook (first 1-3 prose sentences)
- * and topic so the agent can anchor the thumbnail's emotional tone. */
-function synthFromArticle(articleMd: string): YouTubeInput {
+ * and topic so the agent can anchor the thumbnail's emotional tone.
+ *
+ * `syncedDurations`, when supplied, come from the RENDERED storyboard.yaml
+ * (see readSyncedDurations). Chapter timestamps are cumulative offsets into
+ * the finished MP4, so they must be summed from the durations the renderer
+ * actually used — not from the article's declared ones. */
+function synthFromArticle(
+  articleMd: string,
+  syncedDurations?: number[] | undefined,
+): YouTubeInput {
   const { article } = parseArticleWithRecovery(articleMd);
-  const storyboard = synthStoryboardYaml(article.scenes);
+  const storyboard = synthStoryboardYaml(article.scenes, syncedDurations);
   const script = `# ${article.frontmatter.project}\n\n${article.proseBody.trim()}\n`;
   const research = articleMd;
   return {
@@ -445,6 +464,42 @@ function synthFromArticle(articleMd: string): YouTubeInput {
     hook: extractHook(article.proseBody),
     topic: article.frontmatter.project,
   };
+}
+
+/** Read the per-scene durations from the rendered storyboard.yaml, when it
+ * describes the same scene count as the article.
+ *
+ * `video make` rewrites those durations from the real TTS WAVs
+ * (syncStoryboardDurations), so they are the only numbers that match the
+ * rendered MP4. Without this, packaging sums the article's DECLARED
+ * durations: chapters drift by the difference, and once the declared total
+ * exceeds the real runtime the tail chapters point past the end of the
+ * video — which YouTube silently drops, leaving the chapter list wrong for
+ * everything after the first divergence.
+ *
+ * Returns null when there is no rendered storyboard, when it cannot be
+ * parsed, or when its scene count differs from the article's (in which case
+ * its index→scene mapping is unknown and trusting it would be worse than
+ * falling back to the declared values). */
+function readSyncedDurations(
+  storyboardYaml: string | undefined,
+  sceneCount: number,
+): number[] | undefined {
+  if (storyboardYaml === undefined) return undefined;
+  let parsed: { scenes?: { duration?: unknown }[] };
+  try {
+    parsed = parseYaml(storyboardYaml) as typeof parsed;
+  } catch {
+    return undefined;
+  }
+  const scenes = parsed.scenes;
+  if (!Array.isArray(scenes) || scenes.length !== sceneCount) return undefined;
+  const durations = scenes.map((s) =>
+    typeof s.duration === "number" && Number.isFinite(s.duration)
+      ? s.duration
+      : Number.NaN,
+  );
+  return durations.every((d) => Number.isFinite(d)) ? durations : undefined;
 }
 
 /** Pull the first 1-3 sentences of the prose body. Falls back to empty
@@ -465,12 +520,15 @@ function extractHook(proseBody: string): string {
   return sentences.join(" ").slice(0, 400);
 }
 
-function synthStoryboardYaml(scenes: Scene[]): string {
+function synthStoryboardYaml(
+  scenes: Scene[],
+  syncedDurations?: number[] | undefined,
+): string {
   const lines = [
     `scenes:`,
-    ...scenes.flatMap((s) => [
+    ...scenes.flatMap((s, i) => [
       `  - id: ${s.id}`,
-      `    duration: ${s.duration}`,
+      `    duration: ${syncedDurations?.[i] ?? s.duration}`,
       `    caption: ${yamlScalar(s.caption)}`,
       `    visual: ${yamlScalar(s.visual)}`,
     ]),

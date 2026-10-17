@@ -12,16 +12,8 @@ export {
   type ParsedArticle,
   type ArticleWithRecovery,
 } from "./schemas.js";
-export {
-  SYSTEM_PROMPT,
-  buildMessages,
-  type DraftInput,
-} from "./prompt.js";
-export {
-  callDraft,
-  DraftError,
-  type CallDraftResult,
-} from "./agent.js";
+export { SYSTEM_PROMPT, buildMessages, type DraftInput } from "./prompt.js";
+export { callDraft, DraftError, type CallDraftResult } from "./agent.js";
 export {
   ARTICLE_SCORE_AXES,
   ArticleScoreSchema,
@@ -54,8 +46,11 @@ export {
   type VisualOverridesResult,
 } from "./laya-assist.js";
 export {
+  buildScenePromptMessages,
+  expandSceneBrief,
   expandScenePrompt,
   IMAGE_PROMPT_REVISION,
+  type ScenePromptContext,
   type ScenePromptInput,
   type ExpandedPrompt,
 } from "./image-prompt.js";

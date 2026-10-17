@@ -112,6 +112,60 @@ export function stampFrontmatterKey(
   return `${head}\n${key}: ${value}${rest}`;
 }
 
+/** Frontmatter keys the drafter owns: they describe THIS run and must always
+ *  reflect the new draft, never be carried over from the old one. */
+const DRAFT_OWNED_FRONTMATTER = [
+  "project",
+  "language",
+  "duration_target_sec",
+  "voice",
+] as const;
+
+/**
+ * Carry forward durable config keys from the previous article into the new
+ * one (v0.10).
+ *
+ * `renderArticleMd` builds a fresh four-key frontmatter on every run, and
+ * `runDraft` writes it over the existing file without reading it first. So any
+ * key a human set by hand — `setting:` above all — silently vanished on the
+ * next `video draft`, along with `image_style` / `image_provider` whenever
+ * their flags were omitted. An era fix that does not survive a re-draft is not
+ * a fix.
+ *
+ * Only keys absent from `next` are copied; an explicit value always wins, and
+ * `stampFrontmatterKey` still overrides afterwards.
+ */
+export function preserveFrontmatterKeys(
+  next: string,
+  prev: string | null,
+): string {
+  if (prev === null) return next;
+  if (!prev.startsWith("---") || !next.startsWith("---")) return next;
+  const prevEnd = prev.indexOf("\n---", 3);
+  const nextEnd = next.indexOf("\n---", 3);
+  if (prevEnd === -1 || nextEnd === -1) return next;
+  const prevHead = prev.slice(0, prevEnd);
+  const nextHead = next.slice(0, nextEnd);
+
+  const present = new Set(
+    nextHead
+      .split("\n")
+      .map((line) => /^([A-Za-z_][A-Za-z0-9_]*):/.exec(line)?.[1])
+      .filter((k): k is string => k !== undefined),
+  );
+  const carried = prevHead
+    .split("\n")
+    .filter((line) => {
+      const key = /^([A-Za-z_][A-Za-z0-9_]*):/.exec(line)?.[1];
+      if (key === undefined) return false;
+      if (present.has(key)) return false;
+      return !(DRAFT_OWNED_FRONTMATTER as readonly string[]).includes(key);
+    })
+    .map((line) => line.trimEnd());
+  if (carried.length === 0) return next;
+  return `${nextHead}\n${carried.join("\n")}${next.slice(nextEnd)}`;
+}
+
 export type AudioPlanStep =
   | {
       status: "written";
@@ -328,6 +382,15 @@ export async function runDraft(opts: DraftOptions): Promise<number> {
 
   const articlePath = path.join(projectRoot, "article.md");
   await mkdir(path.dirname(articlePath), { recursive: true });
+  // v0.10: read the outgoing article first so durable config a human set by
+  // hand (notably `setting:`) survives this re-draft.
+  let previousArticle: string | null = null;
+  try {
+    previousArticle = await readFile(articlePath, "utf8");
+  } catch {
+    previousArticle = null; // first draft for this project
+  }
+  markdown = preserveFrontmatterKeys(markdown, previousArticle);
   // v0.6: `--image-style` is written INTO article.md frontmatter — the
   // human-editable single source `video make` reads. (Unlike --style,
   // which only affects this run's storyboard write.)

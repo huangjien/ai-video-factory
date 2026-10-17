@@ -136,8 +136,8 @@ if [ -n "$JUDGE_LAYER" ]; then
       eval_args+=(--agent "$PROMPT_EVAL_AGENT")
     fi
     note "pre-push: PROMPT_EVAL_JUDGE set — rubric layer on ${PROMPT_EVAL_AGENT:-all agents}."
-    note "         Budget ~4 min: each case generates an article or shotlist"
-    note "         (~55-165s) then judges it (~20-45s). Every axis min is"
+    note "         Budget ~5 min: each case generates an article, shotlist or image brief"
+    note "         (~55-165s) then judges it (~11-45s). Every axis min is"
     note "         calibrated to a measured floor, not a target — read the judge"
     note "         comment before believing a failure. Exit 2 = could not"
     note "         measure, does not block."

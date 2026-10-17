@@ -143,6 +143,25 @@ const IMAGE_STYLE_CHOICES: readonly { value: string; note: string }[] =
   }));
 
 /**
+ * Scene-image providers — the exact `--image-provider` value list, so
+ * adding a provider extends the question without a code change. Kept in
+ * sync with `resolveImageProvider` in @video/make.
+ */
+const IMAGE_PROVIDER_NOTES: Record<string, string> = {
+  minimax: "image-01; seconds per scene; needs MINIMAX_API_KEY",
+  openai: "gpt-image-2.5-flare; needs OPENAI_API_KEY",
+  gemini: "gemini-3.1-flash-image; needs GEMINI_API_KEY",
+  mock: "deterministic placeholders; no API key, not shippable",
+  none: "skip image generation; scenes render as vector shapes",
+};
+
+const IMAGE_PROVIDER_CHOICES: readonly { value: string; note: string }[] =
+  (["minimax", "openai", "gemini", "mock", "none"] as const).map((value) => ({
+    value,
+    note: IMAGE_PROVIDER_NOTES[value] ?? value,
+  }));
+
+/**
  * Known BGM tags — keys of `MUSIC_PROMPTS`
  * (packages/audio-assets/src/minimax-music.ts), so a new prompt preset
  * extends the question without a code change. `none` (→ `bgm: null`) is
@@ -164,7 +183,7 @@ const BGM_CHOICES: readonly { value: string; note: string }[] = [
   { value: "none", note: "no BGM (bgm: null)" },
 ];
 
-/** The five draft knobs worth asking about, stable order (§6). */
+/** The six draft knobs worth asking about, stable order (§6). */
 export const DRAFT_QUESTIONS: readonly AskQuestion[] = [
   {
     id: "lang",
@@ -204,6 +223,18 @@ export const DRAFT_QUESTIONS: readonly AskQuestion[] = [
     why: "editorial vs flat-vector is a taste call; neither is recoverable post-render",
     specified: (opts) => opts.imageStyle !== undefined,
     resolved: (opts) => opts.imageStyle ?? "flat-vector",
+  },
+  {
+    id: "image_provider",
+    flag: "--image-provider",
+    type: "choice",
+    question: "Scene-image provider?",
+    choices: [...IMAGE_PROVIDER_CHOICES],
+    default: "minimax",
+    recommended: "minimax",
+    why: "the provider decides both cost and visual character; every scene image is re-spent when it changes",
+    specified: (opts) => opts.imageProvider !== undefined,
+    resolved: (opts) => opts.imageProvider ?? "minimax",
   },
   {
     id: "style",
@@ -305,6 +336,7 @@ export async function emitQuestionsDoc(
       duration: byId.get("duration")?.resolved(opts) ?? 180,
       audience: opts.audience ?? "developers",
       image_style: byId.get("image_style")?.resolved(opts) ?? "flat-vector",
+      image_provider: byId.get("image_provider")?.resolved(opts) ?? "minimax",
       style: byId.get("style")?.resolved(opts) ?? "paper-light",
       bgm: byId.get("bgm")?.resolved(opts) ?? "calm",
     },

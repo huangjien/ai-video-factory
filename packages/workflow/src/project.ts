@@ -11,7 +11,7 @@ export interface ProjectState {
   history_tail: string[];
 }
 
-export const STATE_FILENAME = "state.yaml";
+const STATE_FILENAME = "state.yaml";
 
 export async function readProjectState(
   projectRoot: string,

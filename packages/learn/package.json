@@ -1,0 +1,27 @@
+{
+  "name": "@video/learn",
+  "version": "0.1.0",
+  "description": "Human-review learning loop: question set, lesson store, prompt-rule derivation, skill-update proposals",
+  "files": [
+    "dist"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "yaml": "^2.7.0",
+    "zod": "^3.25.0"
+  }
+}

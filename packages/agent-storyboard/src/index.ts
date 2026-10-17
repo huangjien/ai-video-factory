@@ -1,6 +1,5 @@
 export {
   callAgent,
-  extractYaml,
   AgentError,
   type AgentResult,
 } from "./agent.js";

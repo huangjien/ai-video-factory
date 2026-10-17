@@ -3,6 +3,7 @@ import { mkdtemp, mkdir, rm, writeFile, readFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { generateSceneVisuals } from "./index.js";
+import { imageCacheKey } from "./visual-cache.js";
 import { parseArticleWithRecovery } from "@video/draft";
 
 /**
@@ -146,5 +147,27 @@ describe("G1: content-keyed image cache", () => {
     } finally {
       await rm(dir, { recursive: true, force: true });
     }
+  });
+});
+
+describe("image cache keys the expander revision", () => {
+  it("a reworded brief expander invalidates every image, like a style flip", () => {
+    const base = {
+      sceneNumber: 1,
+      visual: "对比要点乙",
+      imageStyle: "flat-vector",
+      provider: "mock",
+      learnedDigest: "",
+      width: 1920,
+      height: 1080,
+    };
+    const key = imageCacheKey({ ...base, promptRevision: "2" });
+    // The brief an image was generated from is an input like any other:
+    // reword the expander and every existing image is stale, because it
+    // no longer corresponds to the prompt that would be sent today.
+    expect(imageCacheKey({ ...base, promptRevision: "1" })).not.toBe(key);
+    // Unrelated inputs stay independent.
+    expect(imageCacheKey({ ...base, promptRevision: "2" })).toBe(key);
+    expect(imageCacheKey({ ...base, visual: "对比要点丙", promptRevision: "2" })).not.toBe(key);
   });
 });

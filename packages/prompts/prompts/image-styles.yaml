@@ -1,0 +1,33 @@
+flat-vector:
+  systemBlock: |-
+    Style: FLAT VECTOR ILLUSTRATION.
+    - Compose from clean geometric shapes and solid fills. Minimal interior detail.
+    - Locked palette: deep navy #16213E, slate blue #4A6FA5, warm amber #E8A33D, off-white #F4F1EA on a dark ground. Use these same four colors in every scene; introduce no others. Amber is the only accent — reserve it for the one thing that matters.
+    - No gradients, no textures, no photorealism, no drop shadows.
+    - Prefer one clear focal shape over many competing ones. Strong figure-ground separation so the subject reads instantly at 1080p and survives a slow zoom or pan.
+    - Lighting reads as one clean source: a single soft directional light with flat ambient fill, no dramatic modelling. Say which side it comes from.
+    - Depth comes from overlap, scale and contrast, not from shading. Place a distinct foreground element, a subject in the middle ground, and a simplified background band.
+    - Leave breathing room — the lower third and the outer edges stay quiet because caption and title overlays land there.
+  promptSuffix: flat vector illustration, clean geometric shapes, solid fills, limited 4-color palette of deep navy slate blue warm amber and off-white, dark ground, no gradients, no texture, minimalist composition, generous negative space, quiet lower third, no text, no letters, no words
+editorial:
+  systemBlock: |-
+    Style: EDITORIAL ILLUSTRATION (narrative mode).
+    - Express the scene's IDEA through one visual metaphor — a single strong conceit, not a literal dump of the scene contents.
+    - Locked palette: two main colors plus one accent. Muted, low saturation — think desaturated ink blue #3C4A5E, warm paper cream #EDE6D8, and a single rust accent #B5533C. Reuse them in every scene so the whole video shares one identity.
+    - Stylized human figures with simplified faces and consistent proportions. When people recur across scenes, keep the same figure design language: same height range, same silhouette, same level of detail.
+    - Subtle paper texture and visible brushwork are allowed; hard geometric vector shapes are not.
+    - Lighting is motivated and directional — one warm source against a cool shadow side. Mood carries the argument: serious topics read contemplative, never cartoonish.
+    - Build depth in three layers: a soft out-of-focus foreground, the subject in the middle ground, a simplified background that recedes.
+    - Leave breathing room — the lower third and the outer edges stay quiet because caption and title overlays land there.
+  promptSuffix: editorial illustration, single visual metaphor, stylized simplified human figures, muted low-saturation palette of ink blue and warm paper cream with a single rust accent, subtle paper texture and visible brushwork, calm sophisticated mood, storybook composition, layered depth, quiet lower third, no text, no letters, no handwriting
+whiteboard:
+  systemBlock: |-
+    Style: WHITEBOARD / HAND-DRAWN MARKER SKETCH (teaching mode).
+    - Black ink line-art on a clean white board, with ONE accent color (a single blue) used only for emphasis.
+    - Locked palette: pure black ink #1A1A1A on board white #FFFFFF, with mid-blue #2F6FB5 as the only accent. No other color in any scene — reuse these three in every scene of the video.
+    - Doodle-level simplification: arrows, boxes, circles, simple stick-ish figures, circled highlights. Imperfect linework that reads as a real marker — slightly wobbly, pressure varies.
+    - No shading, no gradients, no color fills, no photorealism.
+    - Lighting is irrelevant by design; do not describe a light source. Read the board as evenly lit paper.
+    - Generous white space. This is a BACKGROUND for draw-on animations, so keep elements sparse and spatially separated so animated overlays have somewhere to land.
+    - Leave breathing room — the lower third and the outer edges stay quiet because caption and title overlays land there.
+  promptSuffix: whiteboard marker sketch, hand-drawn black ink line art with one blue accent color, doodle arrows and boxes, clean white background, slightly imperfect marker linework, large white space, no shading, no fills, quiet lower third, no text, no labels, no letters

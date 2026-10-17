@@ -65,6 +65,13 @@ export {
   type CaptionsOverlayProps,
 } from "./components/CaptionsOverlay.js";
 export {
+  CAPTION_FONT_RATIO,
+  captionFontSize,
+  captionHalo,
+  captionTextStyle,
+  isLightInk,
+} from "./captionStyle.js";
+export {
   BrandWatermark,
   BrandIntro,
   INTRO_GRADIENTS,

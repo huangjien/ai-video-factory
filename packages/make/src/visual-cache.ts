@@ -77,6 +77,16 @@ export interface ImageCacheKeyInput {
   visual: string;
   imageStyle: string | undefined;
   provider: string;
+  /** Digest of active human-review prompt rules ("" when none). A new
+   *  lesson changes this, so the scenes it could improve regenerate
+   *  instead of silently keeping pre-lesson art. */
+  learnedDigest: string;
+  /** Revision of the image-brief expander that produced the prompt this
+   *  image was generated from (`IMAGE_PROMPT_REVISION` in @video/draft).
+   *  A brief reworded after the fact no longer describes the image that
+   *  came from it, so the image is stale on the same terms a changed
+   *  `visual:` line is. */
+  promptRevision: string;
   width: number;
   height: number;
 }
@@ -91,6 +101,8 @@ export function imageCacheKey(input: ImageCacheKeyInput): string {
     input.visual.trim(),
     input.imageStyle ?? null,
     input.provider,
+    input.learnedDigest,
+    input.promptRevision,
     input.width,
     input.height,
   ]);

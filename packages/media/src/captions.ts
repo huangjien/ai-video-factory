@@ -1,6 +1,6 @@
 const CJK = /[\u4e00-\u9fff\u3000-\u303f\uff00-\uffef]/;
 
-export function textUnits(text: string): number {
+function textUnits(text: string): number {
   return [...text].reduce((w, ch) => w + (CJK.test(ch) ? 1 : 0.5), 0);
 }
 

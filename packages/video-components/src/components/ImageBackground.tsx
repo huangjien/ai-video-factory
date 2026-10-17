@@ -1,6 +1,7 @@
 import type { FC } from "react";
 import { AbsoluteFill } from "remotion";
 import { darkTechTheme, type Theme } from "../theme.js";
+import { captionFontSize, captionTextStyle } from "../captionStyle.js";
 
 export interface ImageBackgroundProps {
   theme?: Theme;
@@ -16,8 +17,14 @@ export interface ImageBackgroundProps {
   kenBurnsScale?: number;
   /** Optional caption overlaid at the bottom — keeps the scene
    *  informative even when the background image is a placeholder
-   *  (e.g. mock provider or failed real-provider generation). */
+   *  (e.g. mock provider or failed real-provider generation).
+   *  Drawn with the same type size and legibility treatment as
+   *  `CaptionsOverlay` (see `captionStyle.ts`) so the two never
+   *  disagree when both fire on the same scene. */
   caption?: string | undefined;
+  /** Frame height, used to scale the caption. Defaults to the 1080p
+   *  target; the renderer passes the real composition height. */
+  height?: number | undefined;
   startFrame: number;
   durationInFrames: number;
   frame: number;
@@ -38,6 +45,7 @@ export const ImageBackground: FC<ImageBackgroundProps> = ({
   fit = "cover",
   kenBurnsScale = 0.08,
   caption,
+  height = 1080,
   frame,
   durationInFrames,
 }) => {
@@ -88,12 +96,9 @@ export const ImageBackground: FC<ImageBackgroundProps> = ({
         >
           <p
             style={{
-              color: theme.colors.primary,
+              ...captionTextStyle(theme, captionFontSize(height)),
               fontFamily: theme.typography.title.fontFamily,
-              fontSize: 48,
-              fontWeight: 600,
               margin: 0,
-              textShadow: `0 0 24px ${theme.colors.accent}`,
             }}
           >
             {caption}

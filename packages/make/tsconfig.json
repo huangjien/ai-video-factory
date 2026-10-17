@@ -12,6 +12,7 @@
     { "path": "../audio-assets" },
     { "path": "../audio-mix" },
     { "path": "../media-generators" },
-    { "path": "../llm" }
+    { "path": "../llm" },
+    { "path": "../learn" }
   ]
 }

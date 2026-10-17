@@ -1,4 +1,5 @@
 import type { ChatMessage } from "@video/llm";
+import { fillPrompt, loadPrompt } from "@video/prompts";
 import { SCRIPT_SECTIONS } from "./schemas.js";
 
 export interface ScriptInput {
@@ -10,20 +11,11 @@ export interface ScriptInput {
   direction?: string | undefined;
 }
 
-export const SYSTEM_PROMPT = `You are the Script Agent for the AI Video Factory.
-
-Your ONLY job: draft a Chinese-language video script that the Storyboard
-Agent will later turn into scenes.
-
-Output: ONE fenced YAML code block (\`\`\`yaml ... \`\`\`) with EXACTLY these 7 keys
-(in this order — doc §28 spine):
-  ${SCRIPT_SECTIONS.join(", ")}
-
-Each value is the prose for that section, written in the target language
-(seven sections, no narration cues like "[画面切到...]" unless useful).
-
-Adapt the structure if the human provided a direction — but always cover
-all 7 sections. NO prose outside the YAML block.`;
+/** Body lives in `packages/prompts/prompts/script.md` (with a
+ *  `{{script_sections}}` placeholder) — edit it there. */
+export const SYSTEM_PROMPT = fillPrompt(loadPrompt("script"), {
+  script_sections: SCRIPT_SECTIONS.join(", "),
+});
 
 export function buildScriptMessages(input: ScriptInput): ChatMessage[] {
   const userParts = [

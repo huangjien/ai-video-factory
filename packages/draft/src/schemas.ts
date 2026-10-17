@@ -38,6 +38,10 @@ export const ArticleFrontmatterSchema = z
      *  boolean coercion at the use site — same typo-tolerance as
      *  image_style. */
     require_visual_approval: z.unknown().optional(),
+    /** Scene-image provider for `video make`. Deliberately a plain string
+     *  (article.md is human-edited — a typo must not brick parsing);
+     *  resolveImageProvider coerces unknown values at the use site. */
+    image_provider: z.string().optional(),
   })
   .passthrough();
 export type ArticleFrontmatter = z.infer<typeof ArticleFrontmatterSchema>;

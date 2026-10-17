@@ -1,10 +1,10 @@
-# Architecture — AI Video Agent (v0.6.0: decision layer)
+# Architecture — AI Video Agent (v0.9)
 
 The design source is `docs/ai-video-agent-development-plan-v0.2.md`; the
 traceable task plan is `docs/ai-video-agent-design-and-tasks-v0.2.md`;
 the v0.1 codebase mapping lives in `docs/architecture-v01-map.md`.
-This document describes the system AS BUILT — v0.6.0 (v0.6 Laya
-decision layer shipped with `LAYA_MODE` default off).
+This document describes the system AS BUILT — v0.9 (central prompt
+registry; local diffusion provider removed).
 
 ## Principles (plan §29)
 
@@ -130,6 +130,10 @@ parentheses; v0.5.2 additions marked):
 | `@video/llm` | llm | chat providers (GLM, MiniMax) with per-role routing + bounded retry/fallback; v0.6 `LayaClient` (advisory bounded decisions from the local laya-serve sidecar, `LAYA_MODE=off\|shadow\|on`) + the `laya-decisions.jsonl` sidecar writer |
 | `@video/vdsl` | schema | VDSL 0.1/0.2 zod schema, validator (line-numbered errors), deterministic compiler → `vdsl/vdsl.yaml` + `RenderPlan` |
 | `@video/motion` | motion | IartSkillAdapter, motion heuristics, deterministic `planSceneMotion`, Motion Agent (`callMotionAgent`) |
+| `@video/prompts` | prompts | central prompt registry — every LLM/Laya prompt body is a file under `packages/prompts/prompts/` (`loadPrompt()`/`fillPrompt()`), so prompts are edited without touching agent code |
+| `@video/draft` | draft | article drafter agent + scored quality judge + image-prompt expansion + image-style presets + regex visual classifier (+ Laya fall-through assist) |
+| `@video/make` | make | `video make` pipeline: TTS → audio assets → scene visuals → scene-isolated render → mix; impact analysis, content-keyed caches |
+| `@video/audio-plan` | audio-plan | Audio Planner agent (audio-config.yaml proposals from a parsed article) |
 | `@video/agent-storyboard`, `@video/research`, `@video/script`, `@video/review`, `@video/youtube` | agent | LLM agents (per-role provider routing incl. `motion`, transient retry, quota fallback) |
 | `@video/video-components` | renderer | 24 scene components in `REGISTRY` incl. `SvgScene` (whiteboard/diagram + camera) and `DoodleScene` (canvas hand-drawn + beat-sync); chrome overlays (`CaptionsOverlay`, `BrandWatermark`, `BrandIntro`); 9 `style.theme` palettes; 5 intro gradients; animation/easing/doodle/excalidraw logic. |
 | `@video/video-renderer` | remotion | scene-isolated Remotion rendering (`renderSceneToVideo`, `concatScenes`), draft mode, studio workspace generator |
@@ -137,6 +141,7 @@ parentheses; v0.5.2 additions marked):
 | `@video/media-generators` | images | `ImageProvider` + `VideoProvider` abstractions; `MockImageProvider`, `MiniMaxImageProvider` (**default since v0.8.1**), the OpenAI and Gemini image providers, `MiniMaxVideoProvider`. |
 | `@video/tts`, `@video/audio-assets`, `@video/audio-mix` | audio | Edge TTS (+word timestamps), BGM/SFX providers, ducking/fades mix engine |
 | `@video/qa` | qa | render report (duration/fps/resolution/audio/black-frames/assets/scene-audio-sync/captions/boundaries), contact sheet, export gate |
+| `@video/learn` | learn | human-review learning loop: `video learn` sessions → lesson store → `promptRules()` injected into image-prompt expansion |
 | `@video/workflow` | (agent state) | 10-state machine, checkpoints + invalidation, scene version store, run records |
 | `@video/cli` | cli | all verbs (`video`), stage guards, state-machine wiring |
 | `skills/`, `.agents/skills/` | skills | first-party + installed skill packs (`skills/INVENTORY.md`) |

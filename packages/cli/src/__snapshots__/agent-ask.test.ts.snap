@@ -70,6 +70,37 @@ exports[`emitQuestionsDoc > emits the full video-ask/1 envelope (snapshot) 1`] =
     {
       "choices": [
         {
+          "note": "image-01; seconds per scene; needs MINIMAX_API_KEY",
+          "value": "minimax",
+        },
+        {
+          "note": "gpt-image-2.5-flare; needs OPENAI_API_KEY",
+          "value": "openai",
+        },
+        {
+          "note": "gemini-3.1-flash-image; needs GEMINI_API_KEY",
+          "value": "gemini",
+        },
+        {
+          "note": "deterministic placeholders; no API key, not shippable",
+          "value": "mock",
+        },
+        {
+          "note": "skip image generation; scenes render as vector shapes",
+          "value": "none",
+        },
+      ],
+      "default": "minimax",
+      "flag": "--image-provider",
+      "id": "image_provider",
+      "question": "Scene-image provider?",
+      "recommended": "minimax",
+      "type": "choice",
+      "why": "the provider decides both cost and visual character; every scene image is re-spent when it changes",
+    },
+    {
+      "choices": [
+        {
           "note": "tech explainers (default prior to v0.4.3)",
           "value": "dark-tech",
         },
@@ -154,6 +185,7 @@ exports[`emitQuestionsDoc > emits the full video-ask/1 envelope (snapshot) 1`] =
     "audience": "developers",
     "bgm": "calm",
     "duration": 180,
+    "image_provider": "minimax",
     "image_style": "flat-vector",
     "lang": "zh-CN",
     "style": "paper-light",

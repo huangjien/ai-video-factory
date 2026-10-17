@@ -1,5 +1,10 @@
 import type { Theme } from "../theme.js";
 import { darkTechTheme } from "../theme.js";
+import {
+  CAPTION_FONT_RATIO,
+  captionFontSize,
+  captionTextStyle,
+} from "../captionStyle.js";
 
 export interface CaptionsOverlayProps {
   lines: string[];
@@ -14,7 +19,18 @@ export interface CaptionsOverlayProps {
  * from the compiled plan (CJK-aware wrapText, compile.ts), so this
  * component never re-wraps or truncates. Purely presentational: no
  * animation primitives, deterministic at any fps.
+ *
+ * No plate, and type at ~3.2% of frame height so the caption supports the
+ * image instead of covering it. See `captionStyle.ts` for the legibility
+ * treatment shared with `ImageBackground`.
  */
+
+/** Distance from the bottom edge, as a fraction of frame height. */
+const BOTTOM_RATIO = 0.055;
+
+/** Widest a single caption line may run, as a fraction of frame width. */
+const MAX_WIDTH_RATIO = 0.86;
+
 export const CaptionsOverlay = ({
   lines,
   width,
@@ -22,8 +38,8 @@ export const CaptionsOverlay = ({
   theme = darkTechTheme,
 }: CaptionsOverlayProps) => {
   if (lines.length === 0) return null;
-  const fontSize = Math.round(height * 0.042);
-  const bottom = Math.round(height * 0.055);
+  const fontSize = captionFontSize(height);
+  const bottom = Math.round(height * BOTTOM_RATIO);
   return (
     <div
       style={{
@@ -34,7 +50,7 @@ export const CaptionsOverlay = ({
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
-        gap: Math.round(fontSize * 0.25),
+        gap: Math.round(fontSize * 0.3),
         pointerEvents: "none",
       }}
     >
@@ -42,16 +58,12 @@ export const CaptionsOverlay = ({
         <div
           key={`${i}-${line.slice(0, 8)}`}
           style={{
-            maxWidth: Math.round(width * 0.86),
-            padding: `${Math.round(fontSize * 0.16)}px ${Math.round(fontSize * 0.5)}px`,
-            backgroundColor: "rgba(11, 18, 32, 0.72)",
-            color: theme.colors.primary,
-            fontFamily: theme.typography.body.fontFamily,
-            fontWeight: theme.typography.body.fontWeight,
-            fontSize,
-            lineHeight: 1.35,
+            maxWidth: Math.round(width * MAX_WIDTH_RATIO),
+            // Padding is inset only to give the outline room to render —
+            // there is no plate behind it.
+            padding: `${Math.round(fontSize * 0.1)}px ${Math.round(fontSize * 0.25)}px`,
             textAlign: "center",
-            borderRadius: Math.round(fontSize * 0.3),
+            ...captionTextStyle(theme, fontSize),
           }}
         >
           {line}
@@ -60,3 +72,5 @@ export const CaptionsOverlay = ({
     </div>
   );
 };
+
+export { CAPTION_FONT_RATIO };

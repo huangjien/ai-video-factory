@@ -25,6 +25,8 @@
     { "path": "../../packages/review" },
     { "path": "../../packages/youtube" },
     { "path": "../../packages/audio-assets" },
-    { "path": "../../packages/audio-mix" }
+    { "path": "../../packages/audio-mix" },
+    { "path": "../../packages/learn" },
+    { "path": "../../packages/prompts" }
   ]
 }

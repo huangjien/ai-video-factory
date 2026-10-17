@@ -1,0 +1,38 @@
+case: user-idea-seed-preserved
+agent: draft
+prompt_hash: sha256:4499c0ccb703e5daac7929c47bade0c17db840acd3d4966ad271fabad2b4a521
+messages:
+  - role: system
+    bytes: 15479
+    content_sha256: sha256:c5223e0a59a63fa5efc672a5e672b42495edae8860bb5f4aeee78ec148181c38
+    blocks:
+      - "Prioritize:"
+      - "Avoid:"
+      - "Normally use this progression:"
+      - "Use:"
+      - "Section headings should be:"
+      - "Create approximately:"
+      - "Each scene should generally last:"
+      - "The sum of all scene durations MUST equal:"
+      - "Each scene ID must be:"
+      - "CRITICAL:"
+      - "Narration must:"
+      - "Prefer:"
+      - "Do NOT begin with:"
+      - "Use one of these short category phrases:"
+      - "Normally use:"
+      - "Good captions communicate:"
+      - "Use transitions such as:"
+      - "The opening should normally contain:"
+      - "The ending should:"
+      - "Maintain consistency in:"
+      - "Do not output:"
+  - role: user
+    bytes: 706
+    content_sha256: sha256:e3b88ca1fc75d8964c42d9b81be7e32f771c26c28e59aa7b9c1c9d462f86696d
+    blocks:
+      - "Topic:"
+      - "Audience:"
+      - "Language:"
+      - "Total duration target (seconds):"
+      - § The user's major idea (from --file)

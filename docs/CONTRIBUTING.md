@@ -10,16 +10,16 @@ Requires **Node 22+** (tested on Node 26), **pnpm 12.5+** (the project uses pnpm
 ```bash
 # macOS
 brew install ffmpeg
-brew install pnpm@12.5.1
+brew install pnpm@12.11.2
 
 # Debian/Ubuntu
 sudo apt install ffmpeg nodejs
-npm install -g pnpm@12.5.1
+npm install -g pnpm@12.11.2
 
 # Verify
 node --version   # v22+
 pnpm --version    # v12.5+
-ffmpeg -version  # 4.x+
+ffmpeg -version  # 9.x
 ```
 
 Clone, install deps, verify everything builds:
@@ -34,7 +34,7 @@ pnpm run lint
 pnpm run acceptance    # runs the §62.4 acceptance audit
 ```
 
-CI runs the same five commands (build + lint + test + acceptance) on every
+CI runs the same four commands (build + lint + test + acceptance) on every
 PR and push to `main`. See `.github/workflows/test.yml`.
 
 ## Codebase orientation
@@ -44,14 +44,22 @@ PR and push to `main`. See `.github/workflows/test.yml`.
 | `packages/vdsl/`                          | VDSL schema (zod) + validator + compiler. The video format's source of truth.   |
 | `packages/video-components/`              | 24 scene components in `REGISTRY` + chrome overlays (`CaptionsOverlay`, `BrandWatermark`, `BrandIntro`) + 7 animation primitives (`fade`, `slide`, `scale`, `draw`, `typewriter`, `entrance`, `fadeOut`) + 9 `style.theme` palettes (3 official + 6 v0.4.x additions) + 5 intro gradients (`aurora`, `sunset`, `ocean`, `citrus`, `channel-banner`). |
 | `packages/video-renderer/`                | Remotion composition that consumes `RenderPlan`. The renderer.                  |
-| `packages/llm/`                           | Provider abstraction: `MiniMaxProvider`, `GLMProvider`. Used by every agent.    |
+| `packages/llm/`                           | Provider abstraction: `MiniMaxProvider`, `GLMProvider`, `LayaClient` decision sidecar (v0.6). Used by every agent. |
+| `packages/prompts/`                       | Central prompt registry — every LLM/Laya prompt body is a file under `prompts/` (`.md` / `image-styles.yaml` / `music.json`), loaded via `loadPrompt()`; `video prompts` lists them. Edit prompts there, not in agent source. Holds the golden-set fixtures under `evals/` (v0.10). |
+| `packages/draft/`                         | Article drafter agent + quality judge + image-style presets + visual classifier (the `video draft` brain). |
+| `packages/make/`                          | End-to-end `video make`: TTS → audio assets → scene visuals → render → mix, with impact analysis + content-keyed caches. |
+| `packages/audio-plan/`                    | Audio Planner agent (audio-config.yaml proposals). |
+| `packages/media/`                         | Caption wrapping, audio probing, scene-timing sync. |
+| `packages/qa/`                            | Render QA checks (ffprobe) + Laya triage consult. |
+| `packages/motion/`                        | Motion agent + heuristics (per-scene animation timelines). |
+| `packages/learn/`                         | Human-review learning loop (lessons → prompt rules). |
 | `packages/agent-storyboard/`              | Storyboard Agent (system prompt + agent).                                       |
 | `packages/research/`                      | Research Agent + MiniMax `web_search`.                                          |
 | `packages/script/`                        | Script Agent (7-section spine).                                                 |
 | `packages/tts/`                           | Edge TTS voiceover.                                                             |
 | `packages/audio-assets/`                  | BGM + SFX providers (mock + file-based).                                        |
 | `packages/audio-mix/`                     | ffmpeg-driven audio mixing (BGM + narration + SFX cues + fades).                |
-| `packages/media-generators/`              | Image + video provider abstractions + MiniMax implementations.                  |
+| `packages/media-generators/`              | Image + video provider abstractions + MiniMax / OpenAI / Gemini image implementations. |
 | `packages/review/`                        | Read-only Content/Visual/Technical review agent.                                |
 | `packages/youtube/`                       | YouTube publishing package (title/description/chapters.vtt/...).                |
 | `packages/workflow/`                      | 10-state machine + checkpoints + run records.                                   |
@@ -100,6 +108,43 @@ PR and push to `main`. See `.github/workflows/test.yml`.
 - **One assertion per test.** Smoke tests live in CLI integration tests (`packages/cli/src/*.integration.test.ts`).
 - **Test files must end with `.test.ts` or `.test.tsx`** so vitest picks them up.
 
+### Prompts
+
+- Every LLM/Laya prompt body lives in `packages/prompts/prompts/` — one file per prompt (e.g. `storyboard.md`). Edit the file; the pipeline loads it on the next run. Never inline prompt text in agent source.
+- Prompts with dynamic parts keep the static skeleton in the file with `{{placeholder}}` tokens and fill them via `fillPrompt()` (see `packages/script/src/prompt.ts`); message assembly (`buildMessages`) stays in code.
+- `loadPrompt()` strips one trailing newline, so file content stays byte-identical to the historical inline strings — `RunRecord.prompt_hash` lineage depends on this. Run `video prompts` to list/inspect the registry.
+- Registry hygiene is test-enforced: `packages/cli/src/prompt-registry.test.ts` imports every loader site and asserts the loader cache equals the files on disk, so an orphan prompt file (added, never loaded) or a dangling reference (deleted, still called) fails the suite. Rule: every prompt loads at module scope in its owning package.
+- Prompt **quality** regression is enforced by a golden set (v0.10): fixtures live in `packages/prompts/evals/<agent>/<case-id>.yaml`, each with a committed message snapshot in `__snapshots__/`. Run `video prompts eval` (structural, offline, free) or `pnpm run prompts:eval`; add `--judge glm` for the LLM rubric layer before landing a prompt change. Design + known gaps: `docs/v0.10-prompt-evals-plan.md`.
+- After a **deliberate** prompt edit, re-record both baselines or the next reviewer inherits the wrong one: `video prompts eval --update-snapshots` for the fingerprint, and `--judge glm --update-recorded` for the score.
+- Layer 1 runs in CI for free (`packages/cli/src/prompt-evals.test.ts`), including the two-way orphan guard — every fixture needs a snapshot, every snapshot needs a fixture. Layer 2 costs tokens and stays manual.
+
+#### Prompt evals before push (`.githooks/pre-push`)
+
+Enable once: `git config core.hooksPath .githooks`. The hook fires only when the push carries a change under `packages/prompts/`, then runs the golden set.
+
+| Situation | Hook behaviour | Cost |
+| --- | --- | --- |
+| default | layer 1 gates. Drift or an orphan fixture **blocks the push** | ~1s, free |
+| `PROMPT_EVAL_JUDGE=1 git push` | layer 2 rubric also runs; a score below its axis `min` blocks | **~4 min, ~10 provider calls** |
+| `PROMPT_EVAL_JUDGE=1` with provider down | exit 2 — warns, does **not** block | ~10s |
+| `CI=true` (workflows) | skips; the unit job already runs layer 1 | 0 |
+| `git push --no-verify` | skips the hook | 0 |
+
+**Why layer 2 is opt-in.** Measured 2026-10-18 on GLM, three draft cases: generation 95–165s per case, rubric judge 20–35s per case. The generation dominates and is irreducible — you cannot judge an article without writing it first. A judged layer can never be a fast gate, so it does not block by default.
+
+`PROMPT_EVAL_JUDGE=1` judges the whole golden set (both agents). Narrow it with `PROMPT_EVAL_AGENT=<name>` and `PROMPT_EVAL_PROVIDER=<glm|minimax>`.
+
+**Exit codes.** `0` pass · `1` a measured failure (prompt drift, or a judged score below `min`) · `2` a case could not be measured at all (provider timeout, outage, content filter, schema rejection). The hook blocks on 1 and warns on 2 — a gate that blocks on its own flakiness gets disabled within a week.
+
+**Calibrated thresholds.** Every `min` in `packages/prompts/evals/` is set to *observed floor − 1* over ≥4 judged runs, not to an aspirational target. A threshold above the current floor fails the very prompt it guards. When you deliberately change a prompt: `--update-snapshots` for the fingerprint, then `PROMPT_EVAL_JUDGE=1` plus `--update-recorded` for the score.
+
+### Formatting
+
+- Prettier is scoped by `.prettierignore` to code this repo owns: `packages/`, `scripts/`. Third-party agent skills (`.agents/`, `.claude/`, …), generated project output, build output, lock files, and **all Markdown/YAML/JSON** are excluded.
+- Markdown and data files are excluded on purpose. Prettier realigns every markdown table to uniform column widths, which rewrites large unchanged regions of otherwise-identical documents for zero semantic gain. Prettier formats code, not prose.
+- ~175 pre-existing files under `packages/` still differ from Prettier's output — mostly line-wrap choices at the 80-column boundary. Reformatting them is a deliberate, reviewable commit of its own, not something to fold into a feature change.
+- If you touch a file, make that file clean. Do not reformat unrelated files to "fix the check".
+
 ### Branches and CI
 
 - CI runs on every push/PR to `main` (`.github/workflows/test.yml`).
@@ -116,7 +161,7 @@ The pattern is consistent across `v0.3`:
 4. **Add a CLI verb** in `packages/cli/src/<verb>-command.ts`.
 5. **Wire the verb** into `packages/cli/src/index.ts`.
 6. **Update run records** to include provider/model/tokens fields (per the schema in `@video/workflow`).
-7. **Write docs**: README section + ARCHITECTURE entry.
+7. **Write docs**: README section + architecture.md entry.
 8. **Add a release tag** when the phase ships.
 
 ## Adding a new VDSL component
@@ -132,7 +177,7 @@ The pattern is consistent across `v0.3`:
 1. Create `packages/cli/src/<verb>-command.ts` exporting `run<Verb>(opts: <Verb>Options): Promise<number>`.
 2. Add a `program.command("<verb>")...` block in `packages/cli/src/index.ts`.
 3. Add tests (CLI integration or unit depending on complexity).
-4. Update README + ARCHITECTURE.
+4. Update README + architecture.md.
 
 ## Code style
 

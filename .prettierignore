@@ -1,0 +1,25 @@
+# Prettier scope. Same policy as eslint.config.mjs — prettier only checks code
+# this repo owns and writes.
+#
+# Third-party agent skills ship their own code style (T0.2) and are excluded
+# from lint for that reason; 242 of the 458 files prettier previously flagged
+# lived here alone. Generated project output, agent/tooling state directories,
+# and build output are all machine- or vendor-written.
+.agents/
+.claude/
+.opencode/
+.omp/
+.zcode/
+.omo/
+projects/
+node_modules/
+**/dist/
+**/*.tsbuildinfo
+pnpm-lock.yaml
+
+# Prose and data are hand-formatted on purpose. Prettier's markdown handling
+# realigns every table to uniform column widths, which rewrites long sections
+# of otherwise-unchanged documents for zero semantic gain; the JSON/YAML files
+# here are hand-tuned fixtures. Prettier formats code, not prose.
+**/*.md
+**/*.geojson

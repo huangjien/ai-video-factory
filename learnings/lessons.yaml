@@ -1,0 +1,21 @@
+schema: learn-lessons/1
+lessons:
+  - id: image-prompt:scenes 4 and 9 came back covered in unreadable fake signage
+    scope: image-prompt
+    statement: scenes 4 and 9 came back covered in unreadable fake signage
+    seenCount: 2
+    projects:
+      - skill-vs-agent
+      - skills-first
+    firstSeenAt: 2026-10-17T09:00:00.000Z
+    lastSeenAt: 2026-10-18T09:00:00.000Z
+    highConfidence: false
+  - id: render:the calm bgm tag resolved to a silent placeholder every run
+    scope: render
+    statement: the calm bgm tag resolved to a silent placeholder every run
+    seenCount: 1
+    projects:
+      - skill-vs-agent
+    firstSeenAt: 2026-10-17T09:00:00.000Z
+    lastSeenAt: 2026-10-17T09:00:00.000Z
+    highConfidence: false

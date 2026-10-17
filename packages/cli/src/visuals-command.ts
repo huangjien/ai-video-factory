@@ -73,7 +73,11 @@ export async function runVisualsCli(opts: VisualsOptions): Promise<number> {
     );
   }
 
-  const provider = resolveImageProvider(opts.fake, opts.imageProvider);
+  const provider = resolveImageProvider(
+    opts.fake,
+    opts.imageProvider,
+    article.frontmatter.image_provider,
+  );
   if (provider !== "none") {
     console.log(`▷ generate-visuals (${provider})`);
     const outputs = await generateSceneVisuals(projectRoot, article, {

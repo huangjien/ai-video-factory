@@ -264,34 +264,3 @@ function estimateDurationMs(text: string, cps = 5): number {
   const chars = [...text].length;
   return Math.max(500, Math.round((chars / cps) * 1000));
 }
-
-/** Test-only factory — the real EdgeTTSProvider talks to Microsoft; we expose
- * a mock for vitest that returns canned bytes without network. The mock
- * honors `pauseBetweenSentencesSec` by padding its duration estimate so
- * downstream timing math still works (no ffmpeg concat — that's a real
- * provider concern). */
-export interface MockEdgeTTSOptions extends EdgeTTSProviderOptions {
-  sampleBytes?: number;
-}
-
-export function mockEdgeTTSProvider(
-  opts: MockEdgeTTSOptions = {},
-): TTSProvider {
-  return {
-    name: "edge-mock",
-    async synthesize(req: TTSRequest): Promise<TTSResult> {
-      const chars = [...req.text].length;
-      const cps = opts.charsPerSecond ?? 5;
-      const baseDurationMs = Math.max(500, Math.round((chars / cps) * 1000));
-      // Approximate the extra silence the real provider would insert.
-      const pause = req.pauseBetweenSentencesSec ?? 0;
-      const sentences = pause > 0 ? splitSentences(req.text) : [];
-      const extra = pause * 1000 * Math.max(0, sentences.length - 1);
-      return {
-        audio: new Uint8Array(opts.sampleBytes ?? 1024),
-        durationMs: baseDurationMs + extra,
-        words: [],
-      };
-    },
-  };
-}

@@ -1,4 +1,5 @@
 import type { ChatMessage } from "@video/llm";
+import { fillPrompt, loadPrompt } from "@video/prompts";
 import type { MotionSpec, SceneMotionInput } from "./plan.js";
 
 /** Skill names whose guidance feeds the prompt when installed (T0.2). */
@@ -6,6 +7,9 @@ export const MOTION_SKILLS = [
   "animation-principles",
   "beat-sync-editing",
 ] as const;
+
+/** Loaded at import time so the registry coverage test sees it. */
+const MOTION_TEMPLATE = loadPrompt("motion");
 
 export interface MotionAgentSceneInput {
   sceneId: string;
@@ -26,27 +30,18 @@ export interface MotionAgentSceneInput {
 export function buildMotionMessages(
   input: MotionAgentSceneInput,
 ): ChatMessage[] {
-  const schemaRules = [
-    "Output ONLY a ```yaml fenced block with this exact shape:",
-    "animations:",
-    "  - id: <unique-id>",
-    "    target: <element id>",
-    "    type: draw|write|fade|move|scale|rotate|highlight|morph|camera",
-    "    start: <seconds, >= 0>",
-    "    duration: <seconds, > 0>",
-    "    easing: linear|easeIn|easeOut|easeInOut",
-    "transition:",
-    "  in: fade|cut",
-    "  out: fade|cut",
-    `HARD RULES: every start+duration must fit inside the scene's ${input.durationSec}s; ids unique; 2-5 animations total; at most one highlight; no unknown keys; omit nothing.`,
-    input.guidance
-      ? `Motion guidance to follow:\n${input.guidance}`
-      : "Skill guidance unavailable — rely on the schema rules and the baseline's timing.",
-  ].join("\n");
+  // Template lives in `packages/prompts/prompts/motion.md` — the skill
+  // fallback sentence is assembly logic, so it stays here.
+  const guidanceBlock = input.guidance
+    ? `Motion guidance to follow:\n${input.guidance}`
+    : "Skill guidance unavailable — rely on the schema rules and the baseline's timing.";
 
   const system: ChatMessage = {
     role: "system",
-    content: `You are the Motion Agent of a deterministic video pipeline. You design per-scene motion (timeline animations + transition) for explainer scenes rendered by Remotion. Motion craft rules: entrances use ease-out, exits ease-in, moves ease-in-out; stagger groups 40-80ms per item capped at ~0.7s total; keep entrances at most a third of the scene; land key moments on the beat when a BPM is given. ${schemaRules}`,
+    content: fillPrompt(MOTION_TEMPLATE, {
+      duration_sec: String(input.durationSec),
+      guidance_block: guidanceBlock,
+    }),
   };
 
   const user: ChatMessage = {

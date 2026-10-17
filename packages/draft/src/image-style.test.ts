@@ -78,7 +78,12 @@ describe("expandScenePrompt style injection", () => {
     );
     const system = provider.lastRequest!.messages[0]!.content;
     expect(system).toContain("EDITORIAL ILLUSTRATION");
-    expect(system).toContain("NEVER include text");
+    // The no-text rule lives in image-no-text-rules.md, injected by
+    // styleSystemBlock on every path. Assert the rule that must reach the
+    // expander, not the copy of it that used to be duplicated in the
+    // expander's own prompt file.
+    expect(system).toContain("HARD RULE — the image carries NO readable writing");
+    expect(system).toContain("RESERVE THE OVERLAY ZONE");
     expect(out.prompt.endsWith(stylePromptSuffix("editorial"))).toBe(true);
     expect(out.prompt).toContain("A lone lighthouse");
     expect(out.cacheHit).toBe(false);

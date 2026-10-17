@@ -18,7 +18,76 @@ export interface RootProps {
  * (30fps) renders fade for the same wall-clock time. */
 const TRANSITION_SECONDS = 0.6;
 
-export function transitionFramesFor(fps: number): number {
+/**
+ * Does the caption track draw text for this scene?
+ *
+ * Caption precedence. Two layers can draw a caption for one scene: the
+ * `CaptionsOverlay` track, and `ImageBackground`'s own `caption` prop (which
+ * `video make` fills by copying the scene's text into it). Both draw at the
+ * bottom of the frame, so when both fire the frame shows two different lines
+ * printed on top of each other — unreadable, on every generated-image scene.
+ *
+ * The component's own caption wins, because it carries the scene's
+ * `caption:` field: the human's own short on-screen label, capped at a few
+ * words by the article spec. The track falls back to the narration when
+ * `captions.source` is `narration`, which is a sentence or two — far too long
+ * for an on-screen caption. On an image scene the short label is the better
+ * caption, so it is the one that gets drawn.
+ *
+ * The track still owns every non-image scene, and any image scene whose
+ * component caption is empty.
+ */
+export type CaptionOwner = "component" | "track" | "none";
+
+export interface CaptionWiring {
+  owner: CaptionOwner;
+  /**
+   * Props merged over `scene.props` before the component renders. Empty when
+   * the component owns the caption; strips `caption` otherwise.
+   *
+   * This override has to exist because `scene.props` is spread into
+   * `baseProps` first, so the decision must actively UNSET the prop. In
+   *verting it is invisible to `sceneCaptionOwner`'s own tests — the
+   * component silently loses its caption while the track stays gated off,
+   * and the scene renders with no text at all. Returned here, next to
+   * `renderTrack`, so the two sides cannot disagree.
+   */
+  componentPropOverride: Record<string, unknown>;
+  /** Whether the `CaptionsOverlay` track renders this scene. */
+  renderTrack: boolean;
+}
+
+/** `ImageBackground` is the only registered component with a `caption` prop. */
+const COMPONENT_CAPTION_COMPONENTS = new Set(["ImageBackground"]);
+
+export function sceneCaptionOwner(
+  component: string,
+  props: Record<string, unknown> | undefined,
+  captions: RenderPlanScene["captions"],
+): CaptionOwner {
+  if (COMPONENT_CAPTION_COMPONENTS.has(component)) {
+    const text = props?.["caption"];
+    if (typeof text === "string" && text.trim() !== "") return "component";
+  }
+  if ((captions?.lines?.length ?? 0) > 0) return "track";
+  return "none";
+}
+
+/** Both halves of the decision, so they cannot drift apart. */
+export function captionWiring(
+  component: string,
+  props: Record<string, unknown> | undefined,
+  captions: RenderPlanScene["captions"],
+): CaptionWiring {
+  const owner = sceneCaptionOwner(component, props, captions);
+  return {
+    owner,
+    componentPropOverride: owner === "component" ? {} : { caption: undefined },
+    renderTrack: owner === "track",
+  };
+}
+
+function transitionFramesFor(fps: number): number {
   return Math.max(1, Math.round(TRANSITION_SECONDS * fps));
 }
 
@@ -34,7 +103,7 @@ export function transitionFramesFor(fps: number): number {
  * local frame is never consumed early) and avoids rendering a second full
  * scene tree at opacity 0.
  */
-export function sceneOpacityAtFrame(
+function sceneOpacityAtFrame(
   scene: RenderPlanScene,
   localFrame: number,
   fps: number,
@@ -48,10 +117,7 @@ export function sceneOpacityAtFrame(
   const outKind = scene.transition?.out ?? "fade";
   const exitStart = scene.durationInFrames - w;
   if (outKind === "fade" && localFrame >= exitStart) {
-    const fade = Math.max(
-      0,
-      1 - (localFrame - exitStart) / w,
-    );
+    const fade = Math.max(0, 1 - (localFrame - exitStart) / w);
     opacity = Math.min(opacity, fade);
   }
   return Math.max(0, Math.min(1, opacity));
@@ -63,8 +129,7 @@ export const Root = ({ renderPlan }: RootProps) => {
   // unknown names fall back to dark-tech so a typo never crashes a render.
   const theme = resolveTheme(renderPlan.style.theme);
   const sceneIdx = renderPlan.scenes.findIndex(
-    (s) =>
-      frame >= s.startFrame && frame < s.startFrame + s.durationInFrames,
+    (s) => frame >= s.startFrame && frame < s.startFrame + s.durationInFrames,
   );
   if (sceneIdx === -1) return null;
   const scene = renderPlan.scenes[sceneIdx];
@@ -75,7 +140,15 @@ export const Root = ({ renderPlan }: RootProps) => {
   const SceneComponent = entry.component;
   const localFrame = frame - scene.startFrame;
 
-  const opacity = sceneOpacityAtFrame(scene, localFrame, renderPlan.project.fps);
+  const opacity = sceneOpacityAtFrame(
+    scene,
+    localFrame,
+    renderPlan.project.fps,
+  );
+
+  // Which layer draws this scene's caption — exactly one of them does, and
+  // both halves of that decision come from one call.
+  const caption = captionWiring(scene.component, scene.props, scene.captions);
 
   const wrapStyle: React.CSSProperties = {
     position: "absolute",
@@ -93,6 +166,10 @@ export const Root = ({ renderPlan }: RootProps) => {
     animations: scene.animations,
     fps: renderPlan.project.fps,
     theme,
+    // Frame height so components that draw their own text can scale it
+    // instead of hardcoding pixels.
+    height: renderPlan.project.height,
+    ...caption.componentPropOverride,
   } as unknown as Record<string, unknown> & React.JSX.IntrinsicElements["div"];
 
   return (
@@ -101,7 +178,7 @@ export const Root = ({ renderPlan }: RootProps) => {
       <div style={{ position: "absolute", inset: 0, opacity }}>
         <SceneComponent {...baseProps} />
       </div>
-      {scene.captions ? (
+      {scene.captions && caption.renderTrack ? (
         <CaptionsOverlay
           lines={scene.captions.lines}
           width={renderPlan.project.width}

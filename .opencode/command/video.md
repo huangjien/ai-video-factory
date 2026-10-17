@@ -70,20 +70,31 @@ review → approve review (GATE) → final
 | `research <topic>`         | AI-gather facts + sources + claims                 |
 | `script <topic>`           | AI-draft a 7-section script                        |
 | `storyboard <topic>`       | AI-draft a VDSL storyboard                         |
+| `motion <project>`         | per-scene animation timelines (agent + heuristics) |
 | `audio <project>`          | Synthesize voiceover + captions (Edge TTS via Python sidecar) |
 | `audio-asset <project>`    | BGM + SFX generation                               |
+| `mix <project>`            | ffmpeg mix (BGM + narration + SFX cues)            |
+| `qa <project>`             | render report + contact sheet                      |
+| `scene <project> list/restore/approve` | per-scene version store              |
 | `review <project>`         | Read-only Content/Visual/Technical review          |
 | `validate <file>`          | VDSL validation (shape + assets + audio)           |
 | `status`                   | per-stage checklist + current checkpoint           |
 | `approve [stage]`          | human approve; advances state machine              |
 | `reject <reason>`          | record feedback, transition to regenerate          |
 | `rollback <checkpoint-id>` | confirm + invalidate downstream stages             |
+| `reset <project> --force`  | wipe shipped-work guards for a full re-run         |
 | `resume`                   | resume from last successful stage                  |
 | `preview`                  | render preview.mp4 (gated on approved storyboard; `--force` recorded) |
 | `final`                    | render final.mp4 (requires review APPROVED; QA error-level findings block it) |
 | `thumbnail <project>`      | YouTube thumbnail (`--provider mock\|minimax\|openai\|gemini`, mock default) |
 | `shorts <project>`         | 60s Shorts clip                                    |
-| `youtube <project>`        | title/description/chapters/thumbnail-prompt package |
+| `youtube <project>`        | title/description/chapters/thumbnail-prompt package; `--upload` publishes directly (one-time `youtube --auth` OAuth; `--privacy` default private) |
+| `excalidraw <project>`     | `.excalidraw` asset → animated SVG                 |
+| `studio <project>`         | Remotion Studio workspace for live preview         |
+| `theme [name]`             | palette inspector (list / one / resolve project)   |
+| `laya health/ask/eval`     | Laya decision-sidecar diagnostics (advisory)       |
+| `learn <project>`          | human-review learning loop (`--ask`/`--answer`/`--status`/`--propose`) |
+| `prompts [show <name>]`    | inspect the central prompt registry (`packages/prompts`) |
 
 Every step writes `runs/<id>.yaml` and updates `state.yaml`.
 

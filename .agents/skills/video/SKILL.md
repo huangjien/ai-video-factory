@@ -4,10 +4,10 @@ description: Operate the AI Video Factory monorepo — a pnpm TypeScript pipelin
 metadata:
   author: local
   source: internal://~/workspace/ai-video-factory
-  version: "1.7.0"
+  version: "1.8.0"
   last_reviewed: 2026-10-17
   local_only: true
-  shipped_versions: [v0.5, v0.5.1, v0.5.2, v0.5.3, v0.8.1]
+  shipped_versions: [v0.5, v0.5.1, v0.5.2, v0.5.3, v0.8.1, v0.9]
 ---
 
 # AI Video Factory
@@ -79,12 +79,23 @@ Full command set:
 | `video status [project]` | Pipeline state |
 | `video thumbnail <project>` | YouTube thumbnail (MiniMax image) |
 | `video shorts <project>` | 60s Shorts clip (MiniMax video) |
-| `video youtube <project>` | Title / description / chapters / shorts hook |
+| `video youtube <project>` | Title / description / chapters / shorts hook; `--upload` publishes final-mixed.mp4 + thumbnail directly (OAuth: `video youtube --auth` once, then `--privacy private\|unlisted\|public`, default private) |
 | `video visuals <project>` | v0.8: generate scene images + contact sheet for review (gate off by default) |
+| `video research <topic>` | Facts + sources + claims package (feeds draft) |
+| `video motion <project>` | Per-scene animation timelines (agent + heuristics) |
+| `video mix <project>` | ffmpeg mix only (BGM + narration + SFX) |
+| `video qa <project>` | Render report + contact sheet |
+| `video scene <project> list/restore/approve` | Per-scene version store |
+| `video excalidraw <project>` | `.excalidraw` asset → animated SVG |
+| `video studio <project>` | Remotion Studio live-preview workspace |
+| `video theme [name]` | Palette inspector (list / one / resolve project) |
+| `video laya health/ask/eval` | Laya decision-sidecar diagnostics (advisory) |
+| `video learn <project>` | Human-review learning loop (`--ask`/`--answer`/`--status`/`--propose`) |
+| `video prompts [show <name>]` | Inspect the central prompt registry (`packages/prompts/prompts/`) |
 
 Every command accepts `--cwd <dir>` (default `projects/`). Every step writes `runs/<id>.yaml` and updates `state.yaml`.
 
-### Visual components (v0.4.2 registry — 25 components)
+### Visual components (registry — 24 components)
 
 `video make` re-derives `storyboard.yaml` from article.md on every run: each scene's `visual:` field is keyword-matched by a deterministic classifier (`packages/draft/src/visual-classifier.ts`), which picks a component and a prop builder fills structured props from caption/narration/prose. First scene is always Title. When editing article.md, steer visuals by putting trigger keywords in `visual:`:
 
@@ -108,6 +119,196 @@ Every command accepts `--cwd <dir>` (default `projects/`). Every step writes `ru
 | (no match) | `AnimatedIllustration` | generic shapes |
 
 Renderers: `remotion` covers all classic components; `svg` → SvgScene; `canvas` → DoodleScene. New scenes need no YAML hand-editing — the storyboard regenerates, but hand edits to `storyboard.yaml` are overwritten by the next `video make` (article.md is the source of truth). One-off visual check of all components: `node scripts/render-visual-smoke.mjs` → stills in `.omo/tmp/visual-smoke/`. Branding smoke: `node scripts/render-brand-smoke.mjs` → `.omo/tmp/brand-smoke/`.
+
+### How a `visual:` line becomes an image prompt
+
+Only `AnimatedIllustration` / `ImageBackground` scenes reach the image model.
+Everything else is a deterministic Remotion component. For those image
+scenes, a cheap LLM call expands the `visual:` line into one paragraph
+following a fixed six-part structure — **subject → scene → composition →
+lighting → style → constraints** — which is the whole prompt contract:
+
+| Part | What it must carry | Weak | Strong |
+|---|---|---|---|
+| Subject | one concrete thing a camera could film | "token counter" | "a hand tipping a jar of paper slips past the rim" |
+| Scene | real setting, one action in progress | "about context" | "a blank sheet on a dark desk beside an open ring binder" |
+| Composition | named shot + where the subject sits + three depth layers | "person in a kitchen" | "close-up three-quarter view from above, sheet in the left third, blurred keyboard in the near foreground" |
+| Lighting | **one** concept: source, direction, quality | "dramatic lighting" | "warm desk lamp from the upper right, cool fill from the left" |
+| Style | medium + linework/texture + palette | "beautiful illustration" | "flat vector, solid fills, navy / slate blue / amber, no gradients" |
+| Constraints | the quiet overlay zone + exclusions | (omitted) | "keep the lower third quiet; no text, no letters, no labels" |
+
+Two things decide image quality, in this order:
+
+1. **Specificity, not adjectives.** Concrete nouns and directions are
+   control; "epic, highly detailed, 8K" is noise the model ignores.
+2. **A locked palette, reused in every scene.** Cross-scene consistency
+   comes from the preset's palette and lighting philosophy, not from any
+   single prompt. Each preset in `image-styles.yaml` names its exact colors
+   and the expander is told to reuse them.
+
+The `visual:` line is only a **category hint** — often two Chinese words, and
+sometimes a raw narration sentence that was never hand-edited. The expander
+is instructed to invent the concrete subject, setting and action from the
+narration. If a scene's art keeps coming out generic, the fix is usually a
+richer `visual:` line in `article.md`, not a prompt edit.
+
+Edit the contract in `packages/prompts/prompts/draft-image-prompt.md` and
+`image-styles.yaml`; `video prompts show draft-image-prompt` prints it.
+
+**Gotcha — reasoning models.** The expansion LLM is reasoning-enabled, so
+its raw response starts with a `<think>` block. `expandScenePrompt` strips
+that before slicing to the character budget. If you ever see `<think>` in a
+`scene_N.prompt.txt`, or in `.prompt-cache/*.json`, the strip regressed —
+before that fix the thinking consumed the whole budget and the image model
+received meta-commentary instead of the scene.
+
+### Captions carry no background, and only one set of them per scene
+
+Two hard rules, both from watching real output rather than from the spec.
+
+**No plate.** Captions sit on a generated image, so whatever is behind them
+changes every re-render. A background colour is only ever legible against
+one particular picture, so legibility comes from the glyphs instead: a
+four-way `text-shadow` outline plus a soft spread, in whichever direction
+the theme's text colour needs (Rec. 601 luma; 7 of 9 themes are light-ink,
+2 are dark-ink). Outline with `text-shadow`, **not** `-webkit-text-stroke` —
+a stroke is painted centred on the glyph edge, so it thins the letterform,
+and CJK horizontals are barely 2px wide at 35px. Type is
+`CAPTION_FONT_RATIO` (0.032) of frame height ≈ 35px at 1080p, down from 0.042
+(45px), which covered the image it was captioning. Shared by
+`captionStyle.ts`, so `CaptionsOverlay` and `ImageBackground` cannot drift.
+
+**One caption per scene, and the short label wins.** Two layers can draw a
+caption: the `CaptionsOverlay` track, and `ImageBackground`'s own `caption`
+prop, which `video make` fills from the scene's `caption:` field. Both draw
+at the bottom of the frame, so when both fired the frame showed two
+different lines printed on top of each other — unreadable, on every image
+scene. `captionWiring()` in `Root.tsx` decides, and returns BOTH halves in
+one call (`componentPropOverride` + `renderTrack`) so they cannot disagree.
+
+Precedence: **the component's own caption wins**, because it carries the
+`caption:` field — the human's short on-screen label, a few words per the
+article spec — while the track falls back to the narration when
+`captions.source` is `narration`, which is a sentence or two and far too long
+to burn in. The track still owns every non-image scene, and any image scene
+whose caption is empty.
+
+Two traps when touching that wiring:
+
+- `scene.props` is spread into `baseProps` **first**, so the decision has to
+  actively *unset* `caption`. Inverting the override does not fail any
+  assertion on `sceneCaptionOwner` — the component just silently loses its
+  caption while the track stays gated off, and the scene renders with no text
+  at all. This happened, and was caught by rendering a still, not a test.
+- Assert that override with `toStrictEqual`, **not** `toEqual`. Vitest's
+  `toEqual` treats `{caption: undefined}` as equal to `{}`, which makes the
+  assertion blind to precisely the inversion it exists to catch.
+
+Changing caption type or the halo? `packages/video-components/src/captionStyle.ts`
+is the single source; both renderers read it. To eyeball it against a real
+image, render one still over a project's `assets/images/scene_N.jpg` rather
+than trusting the markup assertions.
+
+### Every render cache needs the thing that made it as an input
+
+Three caches decide "can I reuse this?" — and each one was blind to a class
+of change. The rule: **if an input can change the output, it belongs in the
+cache key.** Bump the matching revision when you edit the thing it names.
+
+| Cache | Key | Revision to bump | Set when |
+|---|---|---|---|
+| Scene mp4 (`scenes/*.mp4.json`) | fragment hash + `projectHash` + audio + `rendererRevision` | `RENDERER_REVISION` in `packages/video-renderer/src/pipeline.ts` | any change under `video-renderer/src` or `video-components/src` that alters a frame |
+| Scene image (`assets/images/scene_N.jpg`) | scene content + style + provider + `learnedDigest` + `promptRevision` | `IMAGE_PROMPT_REVISION` in `packages/draft/src/image-prompt.ts` | the brief expander prompt, its stripping rules, or its instruction text changes |
+| Image brief (`assets/images/.prompt-cache/*.json`) | scene content + style + learned + `IMAGE_PROMPT_REVISION` | same | same |
+
+Why this bit us twice, on the same day:
+
+- Changing the caption treatment left all **59** cached scene mp4s across the
+  four shipped projects matching — no storyboard edit, no theme flip, no audio
+  change, so every one would replay the old plate and 45px type. The change
+  was invisible in any re-render.
+- The `make --dry-run` impact table then reported **all 59 as "cached"**, so
+  even the preview lied.
+
+So `rendererRevision` is stored as an explicit sidecar field, not folded into
+`projectHash`: the dry-run has no compiled renderPlan and must not rebuild one
+to answer "will this re-render?" — it string-compares the same exported
+constant the pipeline stamps. `projectHash` (theme/brand/geometry) still gates
+freshness at make time and is deliberately not predicted by the table; it can
+only force *more* work than the table shows, never less.
+
+Do not bump a revision for a refactor with identical output — an unnecessary
+bump re-renders every scene and re-synthesises every image. Hashing the source
+tree instead would re-render on every comment edit, which is why these are
+deliberately manual.
+
+### MiniMax `image-01` request limits (verified 2026-10-17)
+
+From the official `ImageGenerationReq` OpenAPI for `POST /v1/image_generation`
+(`platform.minimax.io/docs/api-reference/image-generation-t2i`). Re-read
+that page rather than trusting this table if you change the provider:
+
+| Fact | Consequence here |
+|---|---|
+| `prompt_optimizer: boolean`, default `false` | Sent **explicitly** as `false`. The brief's palette lock and reserved overlay zone are the whole point; a server-side rewrite discards them. Opt in with `new MiniMaxImageProvider({ promptOptimizer: true })` to A/B the two modes on one scene. |
+| `prompt` max **1500 characters** | Longest real prompt is brief (700) + longest suffix (333) = 1033, so this is headroom. `MiniMaxImageProvider` throws locally rather than spending a request on a 400. |
+| 8 aspect ratios only: `1:1 16:9 4:3 3:2 2:3 3:4 9:16 21:9` | `aspect_ratio` wins over raw `width`/`height`, so the provider maps to the nearest supported ratio. 1920×1080 → `16:9`. Pinned by test, not memory. |
+| **No `subject_reference` field** | MiniMax's text-to-image endpoint takes no reference image, despite the parameter appearing in MiniMax's own skills scripts. There is no conditioning path for scene backgrounds — cross-scene consistency is textual (locked palettes), not reference-based. |
+| **No `aigc_watermark` field** | A provider watermark cannot be suppressed via the API. The prompt-level `no watermark` rule is the only lever. |
+
+**Iterating on a bad image.** Change one instruction at a time, then
+`video make <project> --dry-run` to see which scene images that change would
+regenerate before anything is spent. To re-render one rejected scene:
+`video visuals <project> --reject <scene> --reason "<why>"` records the
+reason and force-regenerates that scene, and writes a Pillow contact sheet
+to `assets/images/contact-sheet.png` for review. `video approve visuals
+<project>` freezes the set; add `require_visual_approval: true` to
+`article.md` frontmatter to make `video make` enforce it.
+
+### Generated images carry NO readable text
+
+**Hard rule. Image models cannot render writing — they emit
+confident-looking gibberish, and CJK comes out worse than Latin.**
+
+Observed failure (`projects/skill-vs-agent`, `image_style: editorial`): three
+consecutive scenes returned full two-page spreads of fake paragraphs, and a
+fourth came back as a doodle sheet captioned *"LAGH'S KEY OF OURAMMING
+BEAGY…"*. A `no text` suffix on the prompt did not prevent it.
+
+| Never put in a `visual:` line | Write this instead |
+|---|---|
+| "a poster reading '思考链'" | "a printed poster with indistinct marks" |
+| "a screen showing the title 思维链" | "a screen with blurred unreadable content" |
+| "a shopfront sign saying 杂货" | "a shopfront with an unreadable sign" |
+| "a page of handwritten notes" | "a page covered in vague scribbled lines" |
+| any typography, subtitle, watermark, logo, caption | omit entirely |
+
+The rule is enforced in `styleSystemBlock()`
+(`packages/draft/src/image-style.ts`), which injects these constraints into
+**every** prompt expansion on top of each preset's suffix.
+
+Treat every exclusion as an instruction, not a guarantee — the model still
+occasionally produces words. Anything that must be legible is drawn by the
+renderer instead.
+
+**Division of labor** — never let a model draw what a renderer can place:
+
+| Owner | Content |
+|---|---|
+| Image model | subject, environment, lighting, palette — **never text** |
+| Remotion components / `SvgScene` | geometry, layout, diagrams, counters, captions |
+| Pillow, or YouTube Studio | any legible text that must exist |
+
+`visual:` lines steer the deterministic component classifier too: a line
+containing `对比` renders a native `Comparison` component, not an image. See
+the trigger table above.
+
+> **Pillow caveat (since v0.9):** the in-pipeline Pillow text-overlay that
+> used to burn captions into generated images was removed with the local
+> diffusion provider. On-screen text now comes from Remotion components and
+> `CaptionsOverlay`; thumbnails must have their title typed in YouTube
+> Studio. `contact_sheet.py` is the only remaining Pillow pass and it draws
+> review labels, not production text.
 
 ### Visual asset guardrails (v0.8)
 
@@ -145,7 +346,7 @@ brand:
 
 Multi-BGM — different music for the opening vs the body, in `audio-config.yaml` (overrides `bgm`; `track` = named tag generated like `bgm`, or a file path resolved project-first then workspace-root — shared brand audio lives in `<repo>/assets/brand/`; `until_sec` = absolute window end, last entry runs to the end):
 
-**BGM generation backends** (`video make <p> --music-provider auto|minimax|mock`, default `auto`): `auto` uses MiniMax music-01 generation when `MINIMAX_API_KEY` is set (original, license-clean beds; ~60s each, looped by the timeline), else silent mock; a failed generation degrades to mock with a warning. Named tags map to curated zh prompts in `MUSIC_PROMPTS` (`packages/audio-assets/src/minimax-music.ts`) — shipped: `calm`, `epic`, `guofeng`, `liubang-xiaodiao` (古风小调，琵琶竹笛，汉代气象)， `fanzhuan-march` (反转进行曲，由压抑到爆发). Unknown tags are passed to the API as free-text prompts verbatim (Chinese works). bgmDir library always wins over generation.
+**BGM generation backends** (`video make <p> --music-provider auto|minimax|mock`, default `auto`): `auto` uses MiniMax music-01 generation when `MINIMAX_API_KEY` is set (original, license-clean beds; ~60s each, looped by the timeline), else silent mock; a failed generation degrades to mock with a warning. Named tags map to curated zh prompts in `packages/prompts/prompts/music.json` — shipped: `calm`, `epic`, `guofeng`, `liubang-xiaodiao` (古风小调，琵琶竹笛，汉代气象)， `fanzhuan-march` (反转进行曲，由压抑到爆发). Unknown tags are passed to the API as free-text prompts verbatim (Chinese works). bgmDir library always wins over generation.
 
 ```yaml
 bgm_tracks:
@@ -215,14 +416,37 @@ Exit-2 shape (abbreviated):
 }
 ```
 
-`questions[]` holds one entry per unspecified knob (stable order: `lang`, `duration`, `bgm`, `image_style`, `style`), each with `recommended`, `{value, note}` choices, and a `why`. `resolved` echoes the full effective config (explicit + defaults) — use it to show "keeping X" or to pass a complete flag set back.
+`questions[]` holds one entry per unspecified knob (stable order: `lang`, `duration`, `image_style`, `image_provider`, `style`, `bgm`), each with `recommended`, `{value, note}` choices, and a `why`. `resolved` echoes the full effective config (explicit + defaults) — use it to show "keeping X" or to pass a complete flag set back.
 
 Re-run pattern (all knobs explicit → no second ask):
 
 ```bash
 video draft "<topic>" --lang zh-CN --duration 120 \
-  --image-style editorial --style paper-light --bgm guofeng
+  --image-style editorial --image-provider minimax \
+  --style paper-light --bgm guofeng
 ```
+
+### The six knobs, and what each one buys
+
+Ask about all of them. Each is a silent default today, and each one
+wrong costs a paid re-render.
+
+| Knob | Flag | Silent default | Why it is worth asking |
+|---|---|---|---|
+| `lang` | `--lang` | `zh-CN` | narration language drives every downstream prompt |
+| `duration` | `--duration` | `180` | scene count scales with it |
+| `image_style` | `--image-style` | `flat-vector` | taste call, unrecoverable post-render |
+| `image_provider` | `--image-provider` | `minimax` | decides **cost** and visual character; every scene image re-spends when it changes |
+| `style` | `--style` | `paper-light` | theme repaints every scene |
+| `bgm` | `--bgm` | `calm` | generated per tag at make time |
+
+`--image-provider <minimax|openai|gemini|mock|none>` and `--image-style`
+both stamp into **`article.md` frontmatter** (`image_provider:` /
+`image_style:`) — `article.md` is the durable source of truth, so
+`video make` honors them without the flag being passed again.
+Precedence: explicit `--image-provider` flag > `--fake` (⇒ `none`) >
+frontmatter > `minimax`. An unrecognized frontmatter value falls back to
+`minimax` rather than failing — `article.md` is hand-edited.
 
 `--bgm <tag|none>`: the answered tag is stamped into a **fresh** `audio-config.yaml` (`none` → `bgm: null`); an existing `audio-config.yaml` wins (warning printed, file untouched); `--no-audio-plan` drops the `bgm` question entirely.
 
@@ -251,7 +475,7 @@ Idempotent: `video make` skips a step when its output is newer than its inputs. 
 
 ## 4. Provider flags
 
-- LLM: `--model minimax|glm` (default `glm` for draft, `minimax` for storyboard / youtube)
+- LLM: `--model minimax|glm` (default `glm` for draft, review, youtube; `minimax` for storyboard)
 - Image / video: `--image-provider minimax|openai|gemini|mock|none`, `--fake`
   - **v0.8.1+: `minimax` is the default for `video make` and
     `video visuals`** (gated on `!fake`; `mock` stays the default for
@@ -314,7 +538,7 @@ packages/
 ## 7. More reading
 
 - `README.md` — one-page overview
-- `INSTALLATION_AND_USAGE.md` — full reference (commands, flags, troubleshooting)
-- `ARCHITECTURE.md` — package boundaries and design decisions
-- `RELEASES.md` — version history
-- `AI_Video_Factory_Design_and_Plan_v1.1.md` — the canonical design doc
+- `docs/INSTALLATION_AND_USAGE.md` — full reference (commands, flags, troubleshooting)
+- `docs/architecture.md` — package boundaries and design decisions
+- `docs/RELEASES.md` — version history
+- `docs/AI_Video_Factory_Design_and_Plan_v1.1.md` — the canonical design doc

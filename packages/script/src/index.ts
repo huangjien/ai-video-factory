@@ -6,7 +6,6 @@ export {
 } from "./prompt.js";
 export {
   callScript,
-  extractYaml,
   ScriptError,
   type CallScriptResult,
 } from "./agent.js";

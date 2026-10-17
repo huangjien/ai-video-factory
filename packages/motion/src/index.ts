@@ -15,13 +15,10 @@ export {
   type MotionAgentResult,
 } from "./agent.js";
 export {
-  COMPONENT_ENTRANCE,
-  EASING_RULES,
   EMPHASIS_AT_FRACTION,
   EMPHASIS_DURATION_SEC,
   EMPHASIS_MIN_SCENE_SEC,
   ENTRANCE_DELAY_SEC,
-  ENTRANCE_MAX_SCENE_FRACTION,
   STAGGER,
   clampDuration,
   entranceTypeForComponent,

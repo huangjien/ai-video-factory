@@ -20,6 +20,10 @@ export default defineConfig({
       "@video/audio-mix": path.resolve("packages/audio-mix/src"),
       "@video/motion": path.resolve("packages/motion/src"),
       "@video/qa": path.resolve("packages/qa/src"),
+      "@video/prompts": path.resolve("packages/prompts/src"),
+      "@video/draft": path.resolve("packages/draft/src"),
+      "@video/make": path.resolve("packages/make/src"),
+      "@video/audio-plan": path.resolve("packages/audio-plan/src"),
     },
   },
   test: {

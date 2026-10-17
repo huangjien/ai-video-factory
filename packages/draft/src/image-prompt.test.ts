@@ -52,7 +52,7 @@ describe("expandScenePrompt", () => {
     expect(userMsg).toContain("Scene ID: scene_1");
     expect(userMsg).toContain("Caption (on-screen text): 连接");
     expect(userMsg).toContain("Visual direction: network of nodes");
-    expect(userMsg).toContain("DO NOT render the words");
+    expect(userMsg).toContain("DO NOT render any of its words");
 
     const sidecar = await readFile(
       path.join(dir, "assets", "images", "scene_1.prompt.txt"),
@@ -76,13 +76,55 @@ describe("expandScenePrompt", () => {
     expect(r.prompt).toContain("different visual");
   });
 
-  it("truncates provider output to 400 chars, then appends the style suffix", async () => {
-    const provider = fakeProvider(() => "y".repeat(600));
+  it("truncates provider output to the brief budget, then appends the style suffix", async () => {
+    const provider = fakeProvider(() => "y".repeat(2000));
     const r = await expandScenePrompt({ ...SCENE, visual: "third visual" }, provider, dir, 3);
-    // v0.6: generated part ≤ 400 + "\n" + flat-vector (default) suffix.
+    // v0.6: generated part ≤ budget + "\n" + flat-vector (default) suffix.
     expect(r.prompt).toBe(
-      "y".repeat(400) + "\n" + stylePromptSuffix("flat-vector"),
+      "y".repeat(700) + "\n" + stylePromptSuffix("flat-vector"),
     );
+  });
+
+  it("strips reasoning scaffolding so the brief, not the thinking, is kept", async () => {
+    const provider = fakeProvider(
+      () =>
+        "<think>The user wants a flat vector brief. Key elements: a document, " +
+        "a folder, a person. Let me craft the paragraph now.</think>\n" +
+        "A blank sheet of paper on a dark wooden desk, softly creased.",
+    );
+    const r = await expandScenePrompt({ ...SCENE, visual: "think-leak" }, provider, dir, 5);
+    expect(r.prompt).not.toContain("<think>");
+    expect(r.prompt).not.toContain("Key elements");
+    expect(r.prompt).toContain("blank sheet of paper on a dark wooden desk");
+  });
+
+  it("drops everything after an unterminated <think> (budget-truncated response)", async () => {
+    const provider = fakeProvider(
+      () => "<think>The user wants a brief about tokens and counting and",
+    );
+    const r = await expandScenePrompt({ ...SCENE, visual: "open-think" }, provider, dir, 6);
+    expect(r.prompt).not.toContain("tokens and counting");
+    expect(r.prompt).toBe("\n" + stylePromptSuffix("flat-vector"));
+  });
+
+  it("unwraps a fenced answer and strips a leading label", async () => {
+    const provider = fakeProvider(
+      () => "Prompt: ```\nA wide establishing shot of a windswept plain.\n```",
+    );
+    const r = await expandScenePrompt({ ...SCENE, visual: "fenced" }, provider, dir, 7);
+    expect(r.prompt).toBe(
+      "A wide establishing shot of a windswept plain.\n" +
+        stylePromptSuffix("flat-vector"),
+    );
+  });
+
+  it("frames the brief for a 16:9 still that carries lower-third captions", async () => {
+    const provider = fakeProvider(() => "A quiet harbour at dawn.");
+    await expandScenePrompt({ ...SCENE, visual: "frame-context" }, provider, dir, 8);
+    const user = provider.calls[0]?.messages.find((m) => m.role === "user")?.content ?? "";
+    expect(user).toContain("16:9");
+    expect(user).toContain("caption overlays in the lower third");
+    expect(user).toContain("invent the concrete subject");
   });
 
   it("a corrupt cache entry is ignored and re-expanded", async () => {

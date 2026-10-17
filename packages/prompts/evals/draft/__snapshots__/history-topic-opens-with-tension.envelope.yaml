@@ -1,0 +1,37 @@
+case: history-topic-opens-with-tension
+agent: draft
+prompt_hash: sha256:6cb9721df846d28191732497afb7d6e34c10b17c3ad57bdc7af56b3f8b6c4adb
+messages:
+  - role: system
+    bytes: 15479
+    content_sha256: sha256:c5223e0a59a63fa5efc672a5e672b42495edae8860bb5f4aeee78ec148181c38
+    blocks:
+      - "Prioritize:"
+      - "Avoid:"
+      - "Normally use this progression:"
+      - "Use:"
+      - "Section headings should be:"
+      - "Create approximately:"
+      - "Each scene should generally last:"
+      - "The sum of all scene durations MUST equal:"
+      - "Each scene ID must be:"
+      - "CRITICAL:"
+      - "Narration must:"
+      - "Prefer:"
+      - "Do NOT begin with:"
+      - "Use one of these short category phrases:"
+      - "Normally use:"
+      - "Good captions communicate:"
+      - "Use transitions such as:"
+      - "The opening should normally contain:"
+      - "The ending should:"
+      - "Maintain consistency in:"
+      - "Do not output:"
+  - role: user
+    bytes: 119
+    content_sha256: sha256:fecd08fb2f6f08b93cb48b1df3f563ac0d14bd619c40efac054aae4be53beb8b
+    blocks:
+      - "Topic:"
+      - "Audience:"
+      - "Language:"
+      - "Total duration target (seconds):"

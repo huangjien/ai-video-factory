@@ -130,7 +130,6 @@ export const ClaimStatus = z.preprocess(
   safeCoerceClaimStatus,
   z.enum(["fact", "opinion", "uncertain", "needs_human"]),
 );
-export type ClaimStatusType = "fact" | "opinion" | "uncertain" | "needs_human";
 
 export const ClaimSchema = z
   .object({

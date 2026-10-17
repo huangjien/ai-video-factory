@@ -186,3 +186,126 @@ describe("MiniMaxImageProvider (v0.3 phase 1) — platform.minimax.io docs", () 
     };
   });
 });
+
+/**
+ * `prompt_optimizer` and the documented request limits, verified against the
+ * official OpenAPI for POST /v1/image_generation
+ * (platform.minimax.io/docs/api-reference/image-generation-t2i, read
+ * 2026-10-17): `prompt_optimizer` is a boolean defaulting to false, and
+ * `prompt` is capped at 1500 characters.
+ */
+describe("MiniMaxImageProvider — verified API contract", () => {
+  let server: Server;
+  let baseUrl: string;
+  let lastBody: string | undefined;
+
+  beforeAll(async () => {
+    server = createServer((req: IncomingMessage, res: ServerResponse) => {
+      const chunks: Buffer[] = [];
+      req.on("data", (c) => chunks.push(c));
+      req.on("end", () => {
+        lastBody = Buffer.concat(chunks).toString("utf8");
+        res.statusCode = 200;
+        res.setHeader("Content-Type", "application/json");
+        res.end(
+          JSON.stringify({
+            id: "x",
+            data: { image_base64: [TINY_JPEG_B64] },
+            metadata: { success_count: 1, failed_count: 0 },
+            base_resp: { status_code: 0, status_msg: "success" },
+          }),
+        );
+      });
+    });
+    baseUrl = await listen(server);
+  });
+
+  afterAll(async () => {
+    // undici keeps pooled sockets alive, so close them explicitly —
+    // otherwise close() waits on connections that never go idle.
+    server.closeAllConnections();
+    await new Promise<void>((r) => server.close(() => r()));
+  });
+
+  it("sends prompt_optimizer: false EXPLICITLY (never relies on the API default)", async () => {
+    process.env["MINIMAX_API_KEY"] = "test-key";
+    // The brief is already a careful six-part spec. Letting the server
+    // rewrite it would discard the palette lock and the reserved overlay
+    // zone. Today the API default happens to be false — but "happens to"
+    // is not a contract, and this brief is the whole reason the pipeline
+    // can hold a video together.
+    const p = new MiniMaxImageProvider({ apiHost: baseUrl });
+    await p.generate({ prompt: "brief", width: 1920, height: 1080 });
+    const body = JSON.parse(lastBody ?? "{}");
+    expect(body.prompt_optimizer).toBe(false);
+    expect(body).toHaveProperty("prompt_optimizer");
+  });
+
+  it("can opt into the optimizer, so the two modes are A/B comparable", async () => {
+    process.env["MINIMAX_API_KEY"] = "test-key";
+    const p = new MiniMaxImageProvider({
+      apiHost: baseUrl,
+      promptOptimizer: true,
+    });
+    await p.generate({ prompt: "brief", width: 1920, height: 1080 });
+    expect(JSON.parse(lastBody ?? "{}").prompt_optimizer).toBe(true);
+  });
+
+  it("rejects a prompt over the documented 1500-character limit before spending", async () => {
+    process.env["MINIMAX_API_KEY"] = "test-key";
+    const p = new MiniMaxImageProvider({ apiHost: baseUrl });
+    lastBody = undefined;
+    await expect(
+      p.generate({ prompt: "x".repeat(1501), width: 1920, height: 1080 }),
+    ).rejects.toThrow(/1500/);
+    // Nothing sent: a rejected-length request must not reach the paid API.
+    expect(lastBody).toBeUndefined();
+  });
+
+  it("supports exactly the eight documented ratios, at their documented sizes", async () => {
+    // Every pair below is quoted from the official ImageGenerationReq
+    // OpenAPI. If MiniMax adds or drops a ratio, this fails and the
+    // ASPECT_RATIOS table needs re-verification — it should not be
+    // updated from memory.
+    process.env["MINIMAX_API_KEY"] = "test-key";
+    const p = new MiniMaxImageProvider({ apiHost: baseUrl });
+    const documented: [string, number, number][] = [
+      ["1:1", 1024, 1024],
+      ["16:9", 1280, 720],
+      ["4:3", 1152, 864],
+      ["3:2", 1248, 832],
+      ["2:3", 832, 1248],
+      ["3:4", 864, 1152],
+      ["9:16", 720, 1280],
+      ["21:9", 1344, 576],
+    ];
+    for (const [ratio, w, h] of documented) {
+      await p.generate({ prompt: `frame ${ratio}`, width: w, height: h });
+      expect(
+        JSON.parse(lastBody ?? "{}").aspect_ratio,
+        `${w}x${h} should resolve to ${ratio}`,
+      ).toBe(ratio);
+    }
+  });
+
+  it("sends only documented fields — no subject_reference, no aigc_watermark", async () => {
+    process.env["MINIMAX_API_KEY"] = "test-key";
+    const p = new MiniMaxImageProvider({ apiHost: baseUrl });
+    await p.generate({ prompt: "brief", width: 1920, height: 1080 });
+    const body = JSON.parse(lastBody ?? "{}");
+    // Neither appears in the ImageGenerationReq schema. subject_reference
+    // is advertised in MiniMax's own skills scripts, but NOT on this
+    // text-to-image endpoint — so there is no reference-image path for
+    // scene backgrounds here.
+    expect(body).not.toHaveProperty("subject_reference");
+    expect(body).not.toHaveProperty("aigc_watermark");
+    expect(Object.keys(body).sort()).toEqual([
+      "aspect_ratio",
+      "model",
+      "n",
+      "prompt",
+      "prompt_optimizer",
+      "response_format",
+    ]);
+  });
+});

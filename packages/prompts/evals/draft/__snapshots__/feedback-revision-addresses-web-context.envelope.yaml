@@ -1,0 +1,40 @@
+case: feedback-revision-addresses-web-context
+agent: draft
+prompt_hash: sha256:60af87a18c34b950eec588c56b1f63207113136c0d24d50bb70cbec504da355d
+messages:
+  - role: system
+    bytes: 15479
+    content_sha256: sha256:c5223e0a59a63fa5efc672a5e672b42495edae8860bb5f4aeee78ec148181c38
+    blocks:
+      - "Prioritize:"
+      - "Avoid:"
+      - "Normally use this progression:"
+      - "Use:"
+      - "Section headings should be:"
+      - "Create approximately:"
+      - "Each scene should generally last:"
+      - "The sum of all scene durations MUST equal:"
+      - "Each scene ID must be:"
+      - "CRITICAL:"
+      - "Narration must:"
+      - "Prefer:"
+      - "Do NOT begin with:"
+      - "Use one of these short category phrases:"
+      - "Normally use:"
+      - "Good captions communicate:"
+      - "Use transitions such as:"
+      - "The opening should normally contain:"
+      - "The ending should:"
+      - "Maintain consistency in:"
+      - "Do not output:"
+  - role: user
+    bytes: 677
+    content_sha256: sha256:bc0baeac85454c6b5ee87519dd21badf604f47e9f815612dfd900218f6f87b74
+    blocks:
+      - "Topic:"
+      - "Audience:"
+      - "Language:"
+      - "Total duration target (seconds):"
+      - § Supporting web search results (cite inside the article when relevant)
+      - § Revision feedback — the previous draft was rejected by the quality judge
+      - "Previous draft was rejected:"

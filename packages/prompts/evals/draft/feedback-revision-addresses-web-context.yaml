@@ -1,0 +1,24 @@
+id: feedback-revision-addresses-web-context
+agent: draft
+input:
+  topic: 城市里养一只猫的实际开销
+  audience: 第一次养猫、正在考虑要不要养的人
+  language: zh-CN
+  duration: 240
+  webContext:
+    - url: https://example.com/annual-cat-cost
+      title: 年度养猫成本构成
+      snippet: 食物、砂、猫砂、疫苗、绝育 annual breakdown across three cities.
+    - url: https://example.com/emergency-fund
+      title: 宠物急诊费用区间
+      snippet: Common out-of-hours consultation and surgery cost ranges.
+  feedback: "Previous draft was rejected: it cited no source and gave a single flat annual number."
+expects:
+  - axis: claim-grounding
+    min: 4
+provenance:
+  source: seed bootstrap from projects/benchmark-v01 research history — unsupported-claim drift was a recurring QA finding class
+recorded:
+  prompt_hash: sha256:60af87a18c34b950eec588c56b1f63207113136c0d24d50bb70cbec504da355d
+  scores:
+    claim-grounding: 5

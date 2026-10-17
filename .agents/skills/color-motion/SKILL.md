@@ -24,7 +24,7 @@ Limit hues. A strong motion palette is **1 primary + 1 accent + 2-3 neutrals**. 
 
 In dark scenes, make the accent pop with **low-to-moderate chroma and high lightness** rather than maximum saturation — a blown-out saturated accent vibrates and looks cheap on dark backgrounds.
 
-When the palette must land inside AI-generated stills (not just code), feed it as palette words in the image prompt and pick the matching preset — see `flux-image-prompting` (`image_style` contracts carry "limited 4-color palette, no gradients").
+When the palette must land inside AI-generated stills (not just code), feed it as palette words in the image prompt and pick the matching preset — the `image_style` presets (`packages/prompts/prompts/image-styles.yaml`) carry the palette contracts ("limited 4-color palette, no gradients").
 
 Use OKLCH to reason about color: `oklch(L C H)` where L is perceptual lightness (0-1), C is chroma (0 ≈ 0.37 max), H is hue angle (0-360). Holding L and C constant while rotating H gives hues of genuinely equal visual weight — impossible to do reliably in HSL.
 

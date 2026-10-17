@@ -3,4 +3,4 @@
  *  `program.version(VERSION)` for `--version` and the --help banner)
  *  and by `ui.ts` (where it's used by `brandBannerLine`). Keeping it
  *  here avoids a `ui.ts` → `index.ts` → `ui.ts` import cycle. */
-export const VERSION = "0.7.1";
+export const VERSION = "0.9.0";

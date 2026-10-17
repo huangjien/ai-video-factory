@@ -15,6 +15,7 @@
   },
   "dependencies": {
     "@video/llm": "workspace:*",
+    "@video/prompts": "workspace:*",
     "@video/vdsl": "workspace:*",
     "yaml": "^2.7.0"
   }

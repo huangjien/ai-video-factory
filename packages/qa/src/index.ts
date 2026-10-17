@@ -4,6 +4,7 @@ import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { promisify } from "node:util";
 import type { RenderPlan } from "@video/vdsl";
+import { loadPrompt } from "@video/prompts";
 import {
   appendLayaDecision,
   LayaClient,
@@ -420,11 +421,8 @@ export async function writeQaArtifacts(
   return report;
 }
 
-export const QA_TRIAGE_INSTRUCTIONS =
-  "A rendered video's QA report summary is given. " +
-  "pass = nothing beyond the normal human gate; " +
-  "review = flag for closer human review at the review checkpoint; " +
-  "block = serious defects, recommend a re-render before review.";
+/** Body lives in `packages/prompts/prompts/qa-triage.md` — edit it there. */
+export const QA_TRIAGE_INSTRUCTIONS = loadPrompt("qa-triage");
 
 /** Compact state string for the triage consult (≤ ~2k chars). */
 export function buildTriageState(report: RenderReport): string {

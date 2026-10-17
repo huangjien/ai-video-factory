@@ -400,10 +400,12 @@ workspace 依赖和 FFmpeg。已安装的技能包（`.agents/skills/`，清单�
 `skills/INVENTORY.md`）只服务于 LLM agent（主要是 `video motion`），
 渲染路径从不读取它们。
 
-当前注册的 15 个组件：`Title`、`Paragraph`、`AnimatedIllustration`、
+当前注册的 24 个组件：`Title`、`Paragraph`、`AnimatedIllustration`、
 `CodeBlock`、`Terminal`、`Image`、`ImageBackground`、`FlowChart`、
 `Comparison`、`Timeline`、`Callout`、`EndCard`、`Character`、
-`SvgScene`、`DoodleScene`。
+`SvgScene`、`DoodleScene`、`QuoteBlock`、`StatGrid`、`BarChart`、
+`Leaderboard`、`Checklist`、`BigIdea`、`PyramidDiagram`、`VennDiagram`、
+`CycleDiagram`。
 
 **项目级渲染器默认值**：省略 `visual.renderer` 的场景继承可选的
 `defaults.renderer` 块（优先级：场景 > defaults > `remotion`）。make 流
@@ -918,7 +920,7 @@ sfx: {}
 
 默认音色取决于 article 的 `language` 字段。想按项目自定义，改
 `audio-config.yaml` 里的 `voice:`；想改全局默认，改
-`packages/make/src/index.ts` 的 `ZH_VOICE` / `EN_VOICE` 常量并重新构建。
+`packages/make/src/tts-cache.ts` 的 `ZH_VOICE` / `EN_VOICE` 常量并重新构建。
 
 | 语言    | 默认（男声）                          | 女声备选               | 其它男声备选                                               |
 | ------- | ------------------------------------- | ---------------------- | ---------------------------------------------------------- |

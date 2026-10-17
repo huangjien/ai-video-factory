@@ -11,13 +11,32 @@ export interface MiniMaxImageProviderOptions {
   defaultModel?: string | undefined;
   /** Override the default retry sleeps (default: [1000, 2000, 4000]). Tests use [1,1,1]. */
   retrySleeps?: number[] | undefined;
+  /**
+   * Let the server rewrite the prompt before generating (default false).
+   *
+   * Our prompt is a hand-specified six-part brief whose palette lock and
+   * reserved overlay zone are the whole reason a video holds together, so
+   * the default is false. The flag exists so the two modes can be compared
+   * on the same scene instead of argued about — see `video prompts show
+   * draft-image-prompt`.
+   */
+  promptOptimizer?: boolean | undefined;
 }
 
 const DEFAULT_MODEL = "image-01";
 
-/** Width/height pairs the MiniMax image API supports via aspect_ratio
- * (per platform.minimax.io OpenAPI). aspect_ratio takes priority over raw
- * width/height, so we always map to the closest supported ratio. */
+/** `prompt` is documented as max 1500 characters
+ *  (platform.minimax.io/docs/api-reference/image-generation-t2i, read
+ *  2026-10-17). Longest real prompt today is MAX_BRIEF_CHARS (700) plus the
+ *  longest style suffix (333) = 1033, so this is headroom, not a live cap —
+ *  but the cap is the API's, so the check is ours to make before the spend. */
+const MAX_PROMPT_CHARS = 1500;
+
+/** Width/height pairs the MiniMax image API supports via aspect_ratio.
+ *  Values verified verbatim against the official `ImageGenerationReq`
+ *  OpenAPI (platform.minimax.io/docs/api-reference/image-generation-t2i,
+ *  read 2026-10-17) — the enum and every pixel pair match. Re-verify if
+ *  MiniMax adds a ratio; `minimax-image.test.ts` pins the table. */
 const ASPECT_RATIOS: { ratio: string; w: number; h: number }[] = [
   { ratio: "1:1", w: 1024, h: 1024 },
   { ratio: "16:9", w: 1280, h: 720 },
@@ -53,6 +72,7 @@ export class MiniMaxImageProvider implements ImageProvider {
   private readonly apiHost: string;
   private readonly defaultModel: string;
   private readonly retrySleeps: number[];
+  private readonly promptOptimizer: boolean;
 
   constructor(opts: MiniMaxImageProviderOptions = {}) {
     this.apiHost =
@@ -61,6 +81,7 @@ export class MiniMaxImageProvider implements ImageProvider {
       "https://api.minimax.io";
     this.defaultModel = opts.defaultModel ?? DEFAULT_MODEL;
     this.retrySleeps = opts.retrySleeps ?? [1000, 2000, 4000];
+    this.promptOptimizer = opts.promptOptimizer ?? false;
   }
 
   async generate(req: ImageRequest): Promise<ImageResult> {
@@ -71,6 +92,14 @@ export class MiniMaxImageProvider implements ImageProvider {
         this.name,
       );
       throw err;
+    }
+    // Reject locally: the limit is documented, and a 400 from a paid
+    // endpoint is a worse way to learn it than a local throw.
+    if (req.prompt.length > MAX_PROMPT_CHARS) {
+      throw new ImageGenerationError(
+        `prompt is ${req.prompt.length} characters; the MiniMax image API accepts at most ${MAX_PROMPT_CHARS}`,
+        this.name,
+      );
     }
     const data = await withRetry(
       async () => {
@@ -86,6 +115,10 @@ export class MiniMaxImageProvider implements ImageProvider {
             aspect_ratio: closestAspectRatio(req.width, req.height),
             response_format: "base64",
             n: 1,
+            // Sent explicitly rather than omitted. The API default is
+            // false today, but a brief this carefully composed must not
+            // be silently rewritten because a server default moved.
+            prompt_optimizer: this.promptOptimizer,
           }),
         });
         const text = await res.text();

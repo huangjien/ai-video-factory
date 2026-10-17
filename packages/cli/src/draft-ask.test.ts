@@ -8,6 +8,7 @@ import {
   vi,
 } from "vitest";
 import { Command } from "commander";
+import { DRAFT_QUESTIONS } from "./agent-ask.js";
 import {
   mkdir,
   mkdtemp,
@@ -207,7 +208,7 @@ describe("runDraft ask gate", () => {
       questions: unknown[];
     };
     expect(envelope.protocol).toBe("video-ask/1");
-    expect(envelope.questions).toHaveLength(5);
+    expect(envelope.questions).toHaveLength(DRAFT_QUESTIONS.length);
     expect(cap.stderr[0]).toContain("agent-ask:");
   });
 });
@@ -277,6 +278,7 @@ describe("runDraft ask gate — proceed paths", () => {
         lang: "en-US",
         duration: 90,
         imageStyle: "editorial",
+        imageProvider: "minimax",
         style: "dark-tech",
         bgm: "guofeng",
         noReview: true,

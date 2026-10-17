@@ -1,4 +1,5 @@
 import { withRetry } from "@video/llm";
+import { loadMusicPrompts } from "@video/prompts";
 import {
   AudioAssetError,
   type AudioAssetProvider,
@@ -22,15 +23,7 @@ const DEFAULT_MODEL = "music-01";
  * language). Add entries here to grow the project's music vocabulary —
  * e.g. `liubang-xiaodiao` was requested for the 鸿门宴 project.
  */
-export const MUSIC_PROMPTS: Record<string, string> = {
-  calm: "平静舒缓的背景音乐，钢琴与弦乐，克制柔和，无打击乐重音",
-  epic: "史诗感配乐，大规模弦乐与定音鼓，紧张推进，气势磅礴",
-  guofeng: "中国风民族管弦乐，古筝琵琶与竹笛，古韵悠长",
-  "liubang-xiaodiao":
-    "中国古风小调，琵琶与竹笛为主，鼓点沉稳，汉代帝王气象，大气的民族管弦乐",
-  "fanzhuan-march":
-    "剧情反转进行曲，弦乐与定音鼓层层推进，由压抑渐强到爆发，悬疑转高昂",
-};
+export const MUSIC_PROMPTS: Record<string, string> = loadMusicPrompts();
 
 function promptForTag(tag: string, mood?: string): string {
   return MUSIC_PROMPTS[tag] ?? mood ?? tag.replace(/[-_]+/g, " ");

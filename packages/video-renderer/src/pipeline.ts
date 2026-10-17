@@ -32,7 +32,7 @@ const VDSL_REL = "vdsl/vdsl.yaml";
 
 /** Draft quality (plan §27): same composition, 960x540@15 — iteration on
  *  composition/motion does not need 1080p30 render minutes. */
-export const DRAFT_COMPILE: CompileOptions = { fps: 15, width: 960, height: 540 };
+const DRAFT_COMPILE: CompileOptions = { fps: 15, width: 960, height: 540 };
 
 async function mtimeOrZero(p: string): Promise<number> {
   try {
@@ -108,7 +108,8 @@ export async function mergeBrandConfig(
 ): Promise<void> {
   const wsRoot = workspaceRootFor(root);
   const sources: { dir: string; file: string }[] = [];
-  if (wsRoot) sources.push({ dir: wsRoot, file: path.join(wsRoot, "brand.yaml") });
+  if (wsRoot)
+    sources.push({ dir: wsRoot, file: path.join(wsRoot, "brand.yaml") });
   sources.push({ dir: root, file: path.join(root, "brand.yaml") });
 
   let merged: Record<string, unknown> = {};
@@ -148,12 +149,16 @@ function workspaceRootFor(projectRoot: string): string | null {
 
 /** Parse + normalize one brand.yaml. Returns null (with a warning) when
  *  unparsable. Accepts both `brand: {...}` and a bare brand block. */
-function parseBrandFile(file: string): { block: Record<string, unknown> } | null {
+function parseBrandFile(
+  file: string,
+): { block: Record<string, unknown> } | null {
   let raw: unknown;
   try {
     raw = parseYaml(readFileSync(file, "utf8"));
   } catch (err) {
-    console.error(`warn: ${file} unparsable — ignored (${(err as Error).message.split("\n")[0]})`);
+    console.error(
+      `warn: ${file} unparsable — ignored (${(err as Error).message.split("\n")[0]})`,
+    );
     return null;
   }
   if (
@@ -163,7 +168,11 @@ function parseBrandFile(file: string): { block: Record<string, unknown> } | null
     (raw as Record<string, unknown>).brand &&
     typeof (raw as Record<string, unknown>).brand === "object"
   ) {
-    return { block: { ...((raw as Record<string, unknown>).brand as Record<string, unknown>) } };
+    return {
+      block: {
+        ...((raw as Record<string, unknown>).brand as Record<string, unknown>),
+      },
+    };
   }
   return raw && typeof raw === "object"
     ? { block: { ...(raw as Record<string, unknown>) } }
@@ -183,10 +192,36 @@ interface SceneCacheMeta {
    * Absent on sidecars written before this field existed — treated as a
    * mismatch so legacy caches invalidate exactly once. */
   projectHash?: string;
+  /** `RENDERER_REVISION` that produced these pixels. Explicit rather than
+   * folded into `projectHash` so `video make --dry-run` can check it with a
+   * string compare — the dry-run has no compiled renderPlan and must not
+   * reconstruct one just to answer "will this re-render?". */
+  rendererRevision?: string;
   audioPath?: string;
   audioMtimeMs?: number;
   renderedAt: string;
 }
+
+/**
+ * Identity of the renderer build, recorded in every scene cache sidecar.
+ *
+ * The cache decides freshness from the storyboard fragment, the project
+ * inputs, and the audio. None of those move when the RENDERER changes —
+ * editing a component's colour, type size, or layout leaves all three
+ * identical, so every cached scene mp4 is replayed with the old pixels.
+ * That is not hypothetical: changing the caption treatment on 2026-10-17
+ * left all 59 cached scene mp4s across the four shipped projects matching,
+ * i.e. the change was invisible in any re-render.
+ *
+ * Bump this whenever a change under `video-renderer/src` or
+ * `video-components/src` alters what a frame looks like. It does NOT need
+ * bumping for refactors with identical output — an unnecessary bump
+ * re-renders every scene, which is expensive.
+ *
+ * Same contract as `IMAGE_PROMPT_REVISION` in @video/draft, and deliberately
+ * manual: hashing the source tree would re-render on every comment edit.
+ */
+export const RENDERER_REVISION = "2"; // 2: caption type + halo + no-plate overlay
 
 /** Cache freshness: the scene fragment, the narration audio, AND every
  *  project-level render input (theme, fps/width/height) must match. A
@@ -198,12 +233,16 @@ export function sceneCacheIsFresh(
   projectHash: string,
   audioPath: string | null,
   audioMtimeMs: number,
+  rendererRevision: string = RENDERER_REVISION,
 ): boolean {
   return (
     meta !== null &&
     sceneHash !== null &&
     meta.sceneHash === sceneHash &&
     meta.projectHash === projectHash &&
+    // Absent on sidecars written before the field existed — a mismatch,
+    // so pre-existing caches invalidate exactly once.
+    meta.rendererRevision === rendererRevision &&
     (meta.audioPath ?? null) === (audioPath ?? null) &&
     Math.abs((meta.audioMtimeMs ?? 0) - audioMtimeMs) < 1
   );
@@ -238,14 +277,17 @@ export interface IncrementalRenderResult {
  *  whose narration audio is unchanged — editing scene-007 re-renders only
  *  scene-007, regardless of mtimes elsewhere in the file. projectHash
  *  covers render inputs OUTSIDE the fragments (theme, geometry). */
-export async function renderScenesIncrementally(
+async function renderScenesIncrementally(
   renderPlan: RenderPlan,
   storyboardText: string,
   root: string,
   opts: { draft?: boolean; log?: (line: string) => void } = {},
 ): Promise<IncrementalRenderResult> {
   const log = opts.log ?? (() => {});
-  const scenesDir = path.join(root, opts.draft === true ? "scenes-draft" : "scenes");
+  const scenesDir = path.join(
+    root,
+    opts.draft === true ? "scenes-draft" : "scenes",
+  );
   const projectHash = hashSceneFragment(
     JSON.stringify({
       project: renderPlan.project,
@@ -275,6 +317,7 @@ export async function renderScenesIncrementally(
     await writeSceneCacheMeta(file, {
       sceneHash: sceneHash ?? "",
       projectHash,
+      rendererRevision: RENDERER_REVISION,
       ...(audioPath !== null ? { audioPath, audioMtimeMs: audioM } : {}),
       renderedAt: new Date().toISOString(),
     });
@@ -399,7 +442,9 @@ export async function renderPreviewProject(
       log(`  QA: all checks passed → qa/render-report.json`);
     }
   } catch (err) {
-    log(`  QA: tooling failed (video is still valid): ${(err as Error).message}`);
+    log(
+      `  QA: tooling failed (video is still valid): ${(err as Error).message}`,
+    );
   }
 
   const runId = formatRunId("render");

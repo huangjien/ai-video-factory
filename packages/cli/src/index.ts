@@ -28,6 +28,8 @@ import { registerScene } from "./scene-command.js";
 import { registerFinal } from "./render-command.js";
 import { registerRetrospect } from "./retrospect-command.js";
 import { registerLaya } from "./laya-command.js";
+import { registerLearn } from "./learn-command.js";
+import { registerPrompts } from "./prompts-command.js";
 import { buildBanner } from "./minimal-api.js";
 import { VERSION } from "./version.js";
 
@@ -76,6 +78,8 @@ for (const register of [
   registerFinal,
   registerRetrospect,
   registerLaya,
+  registerLearn,
+  registerPrompts,
 ]) {
   register(program);
 }

@@ -965,9 +965,41 @@ video youtube <slug>
 ```
 
 Writes title, description, WebVTT chapters, package YAML, thumbnail
-prompt, and Shorts hook under `youtube/`. Does **not** upload to YouTube
-nor generate the thumbnail / Shorts MP4 (those come from `video thumbnail`
-and `video shorts` — see §12.5).
+prompt, and Shorts hook under `youtube/`. The thumbnail / Shorts MP4
+come from `video thumbnail` and `video shorts` (see §12.5).
+
+#### Direct upload (v0.9.1)
+
+```bash
+video youtube --auth                      # one-time OAuth consent
+video youtube <slug> --upload             # package + upload final-mixed.mp4
+video youtube <slug> --upload --privacy public   # private (default) | unlisted | public
+```
+
+Upload sends `output/final-mixed.mp4` with the packaged title and
+description (chapters block prepended — YouTube activates chapter markers
+only when the description leads with a `00:00 …` line), then sets
+`youtube/thumbnail.png|jpg` as the thumbnail if present.
+
+One-time setup (~15 min, needs a browser):
+
+1. `console.cloud.google.com` → create a project.
+2. APIs & Services → Library → enable **YouTube Data API v3**.
+3. OAuth consent screen → External → add your Google account as a
+   **Test user**; scope `youtube.upload`.
+4. Credentials → Create OAuth client ID → type **Desktop app** →
+   download `client_secret.json`.
+5. Save it as `~/.config/secrets/client_secret_youtube.json` (or set
+   `YOUTUBE_CLIENT_SECRET_FILE`, or pass `--client-secret <path>`).
+6. `video youtube --auth` — opens the browser, prints
+   `YOUTUBE_REFRESH_TOKEN=…`; append it to `~/.config/secrets/ai.env`
+   and restart your shell.
+
+Caveats while the OAuth app stays in **Testing** status: refresh tokens
+expire after 7 days (re-run `--auth`), uploads land **locked private**
+(flip to public in YouTube Studio), and the daily upload quota is ~6
+videos (1,600 of the default 10,000 units each). Publishing the app
+through Google verification lifts the first two.
 
 ## 9. Voice, subtitles, and audio
 
@@ -1043,7 +1075,7 @@ sfx: {}
 The default voice depends on the article's `language` field. To override
 per-project, edit `voice:` in `audio-config.yaml`. To change the global
 default, edit `ZH_VOICE` / `EN_VOICE` in
-`packages/make/src/index.ts` and re-build.
+`packages/make/src/tts-cache.ts` and re-build.
 
 | Language | Default (male)                             | Female alt.            | Other male alts                                          |
 | -------- | ------------------------------------------ | ---------------------- | -------------------------------------------------------- |
@@ -1118,8 +1150,7 @@ original license-clean music via the MiniMax music-01 API (beds ≈60 s,
 looped to fill their windows). Curated prompt vocabulary ships for
 `calm`, `epic`, `guofeng`, `liubang-xiaodiao` (古风小调，琵琶竹笛，
 汉代帝王气象) and `fanzhuan-march` (剧情反转进行曲，由压抑渐强到爆发) —
-add entries to `MUSIC_PROMPTS` in
-`packages/audio-assets/src/minimax-music.ts`; unknown tags become
+add entries to `packages/prompts/prompts/music.json`; unknown tags become
 free-text style prompts verbatim (Chinese accepted). A failed generation
 degrades to the silent mock with a warning, so a render never dies on
 music. `--bgm-dir` (your own library) always wins over generation, and

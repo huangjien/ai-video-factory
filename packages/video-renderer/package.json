@@ -17,8 +17,7 @@
     }
   },
   "scripts": {
-    "build": "tsc -p tsconfig.json",
-    "render:hello": "node scripts/render-hello.mjs"
+    "build": "tsc -p tsconfig.json"
   },
   "dependencies": {
     "@remotion/bundler": "^4.0.0",

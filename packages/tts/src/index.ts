@@ -7,9 +7,7 @@ export {
 } from "./provider.js";
 export {
   EdgeTTSProvider,
-  mockEdgeTTSProvider,
   splitSentences,
   type EdgeTTSProviderOptions,
-  type MockEdgeTTSOptions,
 } from "./edge-tts.js";
 export { FakeTTSProvider, type FakeTTSOptions } from "./fake.js";

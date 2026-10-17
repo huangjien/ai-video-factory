@@ -1,21 +1,30 @@
 import { describe, expect, it } from "vitest";
-import { sceneCacheIsFresh } from "./pipeline.js";
+import { RENDERER_REVISION, sceneCacheIsFresh } from "./pipeline.js";
 
 const HASH_A = "sha256:" + "a".repeat(64);
 const HASH_B = "sha256:" + "b".repeat(64);
 const AUDIO = "/proj/assets/audio/scene-01.wav";
 
+/** A sidecar as the CURRENT renderer writes it — see renderer-revision.test.ts
+ *  for why the revision field is part of freshness. */
+type Sidecar = NonNullable<Parameters<typeof sceneCacheIsFresh>[0]>;
+const current = (over: Record<string, unknown> = {}): Sidecar =>
+  ({
+    rendererRevision: RENDERER_REVISION,
+    ...over,
+  }) as Sidecar;
+
 describe("sceneCacheIsFresh — project-level render inputs invalidate the cache", () => {
   it("is fresh when fragment, project inputs, and audio all match", () => {
     expect(
       sceneCacheIsFresh(
-        {
+        current({
           sceneHash: HASH_A,
           projectHash: HASH_B,
           audioPath: AUDIO,
           audioMtimeMs: 1000,
           renderedAt: "t",
-        },
+        }),
         HASH_A,
         HASH_B,
         AUDIO,
@@ -27,11 +36,7 @@ describe("sceneCacheIsFresh — project-level render inputs invalidate the cache
   it("is stale when the theme changed (projectHash differs, fragments identical)", () => {
     expect(
       sceneCacheIsFresh(
-        {
-          sceneHash: HASH_A,
-          projectHash: HASH_B,
-          renderedAt: "t",
-        },
+        current({ sceneHash: HASH_A, projectHash: HASH_B, renderedAt: "t" }),
         HASH_A,
         "sha256:" + "c".repeat(64),
         null,
@@ -55,7 +60,7 @@ describe("sceneCacheIsFresh — project-level render inputs invalidate the cache
   it("is stale when the scene fragment changed", () => {
     expect(
       sceneCacheIsFresh(
-        { sceneHash: HASH_A, projectHash: HASH_B, renderedAt: "t" },
+        current({ sceneHash: HASH_A, projectHash: HASH_B, renderedAt: "t" }),
         HASH_B,
         HASH_B,
         null,
@@ -68,7 +73,7 @@ describe("sceneCacheIsFresh — project-level render inputs invalidate the cache
     expect(sceneCacheIsFresh(null, HASH_A, HASH_B, null, 0)).toBe(false);
     expect(
       sceneCacheIsFresh(
-        { sceneHash: HASH_A, projectHash: HASH_B, renderedAt: "t" },
+        current({ sceneHash: HASH_A, projectHash: HASH_B, renderedAt: "t" }),
         null,
         HASH_B,
         null,

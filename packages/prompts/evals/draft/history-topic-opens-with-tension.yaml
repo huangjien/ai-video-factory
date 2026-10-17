@@ -1,0 +1,19 @@
+id: history-topic-opens-with-tension
+agent: draft
+input:
+  topic: 玄武门之变
+  audience: 对历史感兴趣的普通观众
+  language: zh-CN
+  duration: 180
+expects:
+  - axis: hook-tension
+    min: 6
+  - axis: scene-count-fits-duration
+    min: 6
+provenance:
+  source: projects/玄武门 — seed bootstrap; article.md opened on date+hoofbeats and ran 14 scenes for 180s, the shape a neutral-tone regression would break. Not yet a real judged failure.
+recorded:
+  prompt_hash: sha256:6cb9721df846d28191732497afb7d6e34c10b17c3ad57bdc7af56b3f8b6c4adb
+  scores:
+    hook-tension: 8
+    scene-count-fits-duration: 7

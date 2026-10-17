@@ -55,6 +55,11 @@ export const MINIMAL_API_COMMANDS: readonly MinimalApiCommand[] = [
     purpose:
       "**v0.6** local decision-model diagnostics — probe the Laya sidecar (/health), run one bounded-decision consult with raw probabilities, and score the project's `laya-decisions.jsonl` against the §7 promotion gates; advisory only, `LAYA_MODE=off` by default",
   },
+  {
+    invocation: "video prompts / show <name> / path / eval",
+    purpose:
+      "**v0.8** inspect the central prompt registry — every LLM/Laya prompt body lives as an editable file under `packages/prompts/prompts/`; list them, print one, or get the directory. **v0.10** `eval` runs the golden set in `packages/prompts/evals/` (structural by default, CI-safe; `--judge <provider>` adds the LLM rubric layer)",
+  },
 ];
 
 /** Verbs wired for back-compat but outside the recommended path — shown in

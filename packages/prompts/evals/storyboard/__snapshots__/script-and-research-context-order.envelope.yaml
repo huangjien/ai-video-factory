@@ -1,0 +1,27 @@
+case: script-and-research-context-order
+agent: storyboard
+prompt_hash: sha256:498187296a04220fd780efd1bfd088136e6cd75bd8663c7e0f53c9cde672b747
+messages:
+  - role: system
+    bytes: 2837
+    content_sha256: sha256:48cb4086b3023cc90397b601feab933b48d0ce16db0278a0774f6a9a5598be35
+    blocks:
+      - "Your ONLY job:"
+      - "Rules:"
+      - "Optional:"
+      - "Few-shot example:"
+  - role: user
+    bytes: 1036
+    content_sha256: sha256:b31d8e5131ef520f66361769b8001bfabea92777129a26d1018ff41bf021fac7
+    blocks:
+      - "Topic:"
+      - "Audience:"
+      - "Language:"
+      - "Total duration target (seconds):"
+      - "Style:"
+      - § Supporting research (from approved `video research` output — supporting evidence, not a replacement for your draft)
+      - § Key claims to incorporate or counter
+      - § Approved script (from `video script` — map each scene to a section)
+      - § 1. 一炷香的刻度
+      - § 2. 烟的误差
+      - § 3. 漏刻登场

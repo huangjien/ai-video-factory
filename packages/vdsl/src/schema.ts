@@ -37,10 +37,33 @@ const ANIMATION_ENTRANCE_SYNONYMS: Record<
   "slide-up": "slide",
   "slide-up-down": "slide",
   "slide-in": "slide",
+  // Directional slides. Observed from GLM on 2026-10-18 via
+  // `video prompts eval --judge` (docs/v0.10-prompt-evals-plan.md §8 gap 2):
+  // the model reached for a direction every time, and the schema threw away
+  // the whole storyboard. Direction is not expressible downstream —
+  // compile.ts carries this as a plain enum and animation-emitter treats
+  // every "slide" the same — so collapsing the qualifier is lossless.
+  "slide-left": "slide",
+  "slide-right": "slide",
+  "slide-out": "slide",
+  "slide-in-from-left": "slide",
+  "slide-in-from-right": "slide",
+  "slide-in-from-bottom": "slide",
+  "slide-in-both-sides": "slide",
   slideup: "slide",
   sliding: "slide",
   swipe: "slide",
   "slide-down": "slide",
+  // Vertical translate verbs: an element moving up into place is a "slide"
+  // downstream — compile.ts carries one "slide" and animation-emitter does
+  // not branch on direction. Observed as "rise" alongside the `style` key
+  // problem on 2026-10-18.
+  rise: "slide",
+  "rise-up": "slide",
+  lift: "slide",
+  "lift-up": "slide",
+  elevate: "slide",
+  ascend: "slide",
   // "scale" cluster — covers zoom / bounce / pop / grow / pulse etc.
   scale: "scale",
   bounce: "scale",
@@ -48,10 +71,14 @@ const ANIMATION_ENTRANCE_SYNONYMS: Record<
   zoom: "scale",
   "zoom-in": "scale",
   zoomin: "scale",
+  // Same incident: "zoom-out" arrived alongside the directional slides.
+  "zoom-out": "scale",
+  "zoom-in-out": "scale",
   grow: "scale",
   pulse: "scale",
   "scale-up": "scale",
   scale_up: "scale",
+  "scale-down": "scale",
   // "draw" cluster
   draw: "draw",
   wipe: "draw",
@@ -64,6 +91,95 @@ const ANIMATION_ENTRANCE_SYNONYMS: Record<
   "type-write": "typewriter",
   "type-write-step-by-step": "typewriter",
 };
+
+/** Qualifiers that only pick a direction or a starting edge. A value whose
+ *  every segment after the cluster head is one of these is a synonym for the
+ *  head — `slide-in-both-sides` is "slide", not a typo. Anything else is
+ *  still rejected, which is what keeps a real bug visible. */
+const DIRECTIONAL_QUALIFIERS = new Set([
+  "left",
+  "right",
+  "leftward",
+  "rightward",
+  "up",
+  "down",
+  "upward",
+  "downward",
+  "in",
+  "out",
+  "on",
+  "off",
+  "over",
+  "under",
+  "across",
+  "through",
+  "away",
+  "back",
+  "around",
+  "forward",
+  "backward",
+  "from",
+  "to",
+  "toward",
+  "towards",
+  "top",
+  "bottom",
+  "both",
+  "side",
+  "sides",
+  "horizontal",
+  "vertical",
+  "diagonal",
+  "edge",
+  "corner",
+  "center",
+  "centre",
+  "inside",
+  "outside",
+  "screen",
+  "offscreen",
+  "onscreen",
+]);
+
+/** Cluster head → canonical value. Only heads that meaningfully take a
+ *  directional qualifier appear here; `typewriter` deliberately does not, so
+ *  a mangled typewriter animation still fails instead of quietly becoming a
+ *  fade. */
+const DIRECTIONAL_CLUSTER_HEADS: Record<
+  string,
+  (typeof ANIMATION_ENTRANCE_CANONICAL)[number]
+> = {
+  slide: "slide",
+  swipe: "slide",
+  zoom: "scale",
+  scale: "scale",
+  fade: "fade",
+  crossfade: "fade",
+  wipe: "draw",
+};
+
+/**
+ * `slide-in-from-left` → "slide", `fade-from-top` → "fade".
+ *
+ * The table above covers what was actually observed; this covers the open
+ * space around it, because enumerating every direction a model might reach
+ * for is how the original list ended up incomplete. Scoped to directional
+ * qualifiers on purpose: `slide-banana` still fails, so the "reject real bugs"
+ * guarantee in this module's header survives.
+ */
+function stripDirectionalQualifiers(
+  key: string,
+): (typeof ANIMATION_ENTRANCE_CANONICAL)[number] | null {
+  const segments = key.split("-");
+  if (segments.length < 2) return null;
+  const head = segments[0];
+  if (!head) return null;
+  const canonical = DIRECTIONAL_CLUSTER_HEADS[head];
+  if (!canonical) return null;
+  return segments.slice(1).every((q) => DIRECTIONAL_QUALIFIERS.has(q))
+    ? canonical
+    : null;
+}
 
 export function coerceAnimationEntrance(
   raw: string,
@@ -78,6 +194,8 @@ export function coerceAnimationEntrance(
   if ((ANIMATION_ENTRANCE_CANONICAL as readonly string[]).includes(key)) {
     return key as (typeof ANIMATION_ENTRANCE_CANONICAL)[number];
   }
+  const directional = stripDirectionalQualifiers(key);
+  if (directional) return directional;
   throw new Error(
     `unknown animation.entrance: "${raw}" (canonical: ${ANIMATION_ENTRANCE_CANONICAL.join(", ")})`,
   );
@@ -371,9 +489,7 @@ const EASING_SYNONYMS: Record<string, (typeof EASING_CANONICAL)[number]> = {
   smooth: "easeInOut",
 };
 
-export function coerceEasing(
-  raw: string,
-): (typeof EASING_CANONICAL)[number] {
+export function coerceEasing(raw: string): (typeof EASING_CANONICAL)[number] {
   const key = raw
     .trim()
     .toLowerCase()
@@ -687,8 +803,9 @@ function applyRendererDefaults(board: z.infer<typeof storyboardObjectSchema>) {
   };
 }
 
-export const storyboardSchema =
-  storyboardObjectSchema.transform(applyRendererDefaults);
+export const storyboardSchema = storyboardObjectSchema.transform(
+  applyRendererDefaults,
+);
 export type Storyboard = z.output<typeof storyboardSchema>;
 export type Scene = Storyboard["scenes"][number];
 export type TimelineAnimation = z.infer<typeof timelineAnimationSchema>;

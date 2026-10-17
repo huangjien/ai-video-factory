@@ -1,0 +1,34 @@
+id: script-and-research-context-order
+agent: storyboard
+input:
+  topic: 为什么古代计时用燃香
+  audience: 对古代生活史感兴趣的普通观众
+  language: zh-CN
+  duration: 240
+  style: paper-cutout
+  researchContext:
+    markdown: |
+      燃香计时在中国史料中见于东汉，"香有五种"的说法到唐代已成常识。
+      早期寺庙以香次报时，宋代以后漏刻逐渐替代了它在公共场合的角色。
+      燃香的误差随香的长短与材料变化，不适合需要精确对齐的场合。
+    claimSummary: |
+      - 燃香计时最早见于东汉寺观
+      - 宋代后漏刻在公共计时中取代燃香
+      - 燃香误差大，不适用于精确对齐
+  scriptContext:
+    markdown: |
+      ## 1. 一炷香的刻度
+      东汉的寺庙靠一炷香报时，观众跟着烟走。
+      ## 2. 烟的误差
+      香的长短与材料决定误差，刮风就彻底乱了。
+      ## 3. 漏刻登场
+      宋代起，漏刻接管了公共计时。
+expects:
+  - axis: scene-count-fits-duration
+    min: 6
+provenance:
+  source: "contract declared in packages/agent-storyboard/src/prompt.ts: researchContext arrives before scriptContext so claims back the script before the agent maps scenes"
+recorded:
+  prompt_hash: sha256:498187296a04220fd780efd1bfd088136e6cd75bd8663c7e0f53c9cde672b747
+  scores:
+    scene-count-fits-duration: 8

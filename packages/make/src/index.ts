@@ -12,6 +12,7 @@ import {
   resolveImageStyle,
   runLayaVisualAssist,
   stylePromptSuffix,
+  IMAGE_PROMPT_REVISION,
   type ParsedArticle,
 } from "@video/draft";
 import { MiniMaxProvider } from "@video/llm";
@@ -36,6 +37,7 @@ import {
   OpenAIImageProvider,
   type ImageProvider,
 } from "@video/media-generators";
+import { loadLessonStore, promptRules, rulesDigest } from "@video/learn";
 import {
   imageCacheKey,
   readImageCacheSidecar,
@@ -265,7 +267,11 @@ export async function runMake(
     //    — mock placeholders are too small to be useful backgrounds.
     await step("generate-visuals", () =>
       generateSceneVisuals(opts.projectRoot, article, {
-        provider: resolveImageProvider(opts.fake, opts.imageProvider),
+        provider: resolveImageProvider(
+          opts.fake,
+          opts.imageProvider,
+          article.frontmatter.image_provider,
+        ),
         onEvent: emit,
       }),
     );
@@ -440,21 +446,49 @@ async function syncStoryboardFromArticle(
 const DEFAULT_IMAGE_PROVIDER: "minimax" | "openai" | "gemini" | "mock" | "none" =
   "minimax";
 
+const IMAGE_PROVIDER_VALUES = [
+  "minimax",
+  "openai",
+  "gemini",
+  "mock",
+  "none",
+] as const;
+
+/** Type guard — `article.md` is human-edited, so a frontmatter
+ *  `image_provider:` may hold anything. Narrows without a cast. */
+function isKnownImageProvider(
+  value: string | undefined,
+): value is "minimax" | "openai" | "gemini" | "mock" | "none" {
+  return (
+    value !== undefined &&
+    (IMAGE_PROVIDER_VALUES as readonly string[]).includes(value)
+  );
+}
+
 /**
  * The `--image-provider` default in one place — `video make`,
  * `video visuals`, and the read-only `video make --dry-run` impact table
  * must agree or the impact table predicts spend the render never makes.
  *
- * `--fake` always resolves to "none": mock placeholders are 64×36, and
- * switching scenes to `ImageBackground` left long videos with blank
- * frames after the title card (v0.3.6).
+ * Precedence: explicit flag > `--fake` (⇒ "none") > the project's
+ * `article.md` frontmatter `image_provider:` > the global default.
+ *
+ * `--fake` resolves to "none" rather than "mock": mock placeholders are
+ * 64×36, and switching scenes to `ImageBackground` left long videos with
+ * blank frames after the title card (v0.3.6).
  */
 export function resolveImageProvider(
   fake: boolean | undefined,
   explicit: "minimax" | "openai" | "gemini" | "mock" | "none" | undefined,
+  articleDefault?: string,
 ): "minimax" | "openai" | "gemini" | "mock" | "none" {
   if (explicit !== undefined) return explicit;
-  return fake ? "none" : DEFAULT_IMAGE_PROVIDER;
+  if (fake) return "none";
+  // `article.md` is the source of truth for durable project config: a
+  // `video draft --image-provider` answer is stamped into the frontmatter
+  // and read back here. Unknown values fall through to the default.
+  if (isKnownImageProvider(articleDefault)) return articleDefault;
+  return DEFAULT_IMAGE_PROVIDER;
 }
 
 /**
@@ -507,6 +541,17 @@ export async function generateSceneVisuals(
 
   const outputs: string[] = [];
   const generatedImages: string[] = [];
+  // Lessons recorded by `video learn` from human review of earlier
+  // videos. Active ones (corroborated or high-confidence) are spliced
+  // into the image prompt contract. "" in the common case.
+  const wsRoot = workspaceRootFor(projectRoot);
+  const learnedImageRules =
+    wsRoot === null ? "" : promptRules(loadLessonStore(wsRoot), "image-prompt");
+  if (learnedImageRules !== "") {
+    outputs.push(
+      `image prompts: applying ${learnedImageRules.split("\n").filter((l) => l.startsWith("- ")).length} human-review lesson(s)`,
+    );
+  }
   // Scenes rendered by their own visual families (svg/canvas/excalidraw
   // components, or already ImageBackground) never consume the generated
   // JPG — skip them so image quota is spent only where it lands on screen.
@@ -526,6 +571,8 @@ export async function generateSceneVisuals(
       visual,
       imageStyle,
       provider: opts.provider,
+      learnedDigest: rulesDigest(learnedImageRules),
+      promptRevision: IMAGE_PROMPT_REVISION,
       width: reqWidth,
       height: reqHeight,
     });
@@ -564,7 +611,7 @@ export async function generateSceneVisuals(
           expansionProvider,
           projectRoot,
           i + 1,
-          { style: imageStyle },
+          { style: imageStyle, learned: learnedImageRules },
         );
         promptForImage = prompt;
         outputs.push(
@@ -1045,7 +1092,7 @@ function isTrackPath(track: string): boolean {
 /** `<anywhere>/projects/<slug>` → `<anywhere>`; null otherwise. Shared
  * branding resources (brand.yaml, assets/brand/) live at the workspace
  * root and every project references them. */
-function workspaceRootFor(projectRoot: string): string | null {
+export function workspaceRootFor(projectRoot: string): string | null {
   const parentDir = path.dirname(projectRoot);
   if (path.basename(parentDir) === "projects") {
     return path.dirname(parentDir);

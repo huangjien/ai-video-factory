@@ -2,11 +2,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import {
-  EdgeTTSProvider,
-  mockEdgeTTSProvider,
-  splitSentences,
-} from "./edge-tts.js";
+import { EdgeTTSProvider, splitSentences } from "./edge-tts.js";
 
 /**
  * The real EdgeTTSProvider shells out to the Python edge-tts sidecar
@@ -251,30 +247,6 @@ describe("EdgeTTSProvider.synthesize (fake python worker)", () => {
       pauseBetweenSentencesSec: 1.0,
     });
     expect(capturedRequests()).toHaveLength(1);
-  });
-});
-
-describe("mockEdgeTTSProvider honors pauseBetweenSentencesSec via duration padding", () => {
-  it("zero pause → baseline duration estimate", async () => {
-    const m = mockEdgeTTSProvider({ sampleBytes: 64, charsPerSecond: 10 });
-    const r = await m.synthesize({
-      text: "a".repeat(20),
-      voice: "v",
-      language: "en-US",
-      pauseBetweenSentencesSec: 0,
-    });
-    expect(r.durationMs).toBe(2000);
-  });
-
-  it("positive pause + multi-sentence → adds N-1 silences", async () => {
-    const m = mockEdgeTTSProvider({ sampleBytes: 64, charsPerSecond: 10 });
-    const r = await m.synthesize({
-      text: "X. Y. Z.",
-      voice: "v",
-      language: "en-US",
-      pauseBetweenSentencesSec: 1.0,
-    });
-    expect(r.durationMs).toBeGreaterThan(2000);
   });
 });
 

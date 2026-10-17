@@ -1,0 +1,185 @@
+#!/usr/bin/env bash
+#
+# pre-push — prompt golden-set gate.
+#
+# Runs `video prompts eval` before any push that carries a change under
+# packages/prompts/. Layer 1 (structural: prompt fingerprint + fixture/snapshot
+# orphan guard) is offline and always runs; layer 2 (rubric judge) runs when
+# GLM_API_KEY is present. A failing eval blocks the push, because a prompt edit
+# that silently regresses quality is invisible until someone watches a render.
+#
+# Escape hatches, in the order you should reach for them:
+#   git push --no-verify         skip this hook entirely
+#   SKIP_PROMPT_EVALS=1 git push skip via env (CI-ish contexts)
+#
+# One-time install (the hook is inert until this is set):
+#   git config core.hooksPath .githooks
+#
+# Spec: docs/v0.10-prompt-evals-plan.md §5 (CI posture) and §8 (what shipped).
+
+set -uo pipefail
+
+if [ -t 1 ]; then
+  BOLD=$'\033[1m'; RED=$'\033[31m'; DIM=$'\033[2m'; OFF=$'\033[0m'
+else
+  BOLD=""; RED=""; DIM=""; OFF=""
+fi
+
+note() { printf '%s\n' "${DIM}$*${OFF}"; }
+
+# Path whose changes gate the push. Fixtures and their snapshots live under
+# it too: re-baselining a golden set is exactly the edit this hook must judge.
+WATCH_PATH="packages/prompts"
+
+# Judge layer: OFF by default. Measured cost on 2026-10-18, GLM, 3 draft
+# cases: generation 95-134s per case, rubric judge 20-26s per case, ~160s wall
+# for the set at concurrency 4. The generation dominates and is irreducible —
+# you cannot judge an article without writing it first — so a judged layer 2
+# can never be a *fast* gate. Layer 1 alone is sub-second and free, so that is
+# what blocks a push. Opt in when you want the rubric verdict and can wait:
+#
+#   PROMPT_EVAL_JUDGE=1 git push
+#
+# Two env vars narrow it: PROMPT_EVAL_AGENT (default: every agent with cases)
+# and PROMPT_EVAL_PROVIDER (default glm).
+#
+JUDGE_LAYER="${PROMPT_EVAL_JUDGE:-}"
+
+# ── 1. skip conditions ──────────────────────────────────────────────────────
+
+if [ -n "${CI:-}" ]; then
+  note "pre-push: CI detected — the workflow's unit job already runs layer 1."
+  exit 0
+fi
+if [ -n "${SKIP_PROMPT_EVALS:-}" ]; then
+  note "pre-push: SKIP_PROMPT_EVALS set — prompt evals skipped."
+  exit 0
+fi
+
+repo_root=$(git rev-parse --show-toplevel 2>/dev/null) || exit 0
+cd "$repo_root" || exit 0
+
+ZEROS=$(printf '%040d' 0)
+
+# ── 2. which files does this push actually carry? ───────────────────────────
+#
+# pre-push feeds one line per ref on stdin:
+#   <local_ref> <local_sha> <remote_ref> <remote_sha>
+# A new branch reports an all-zero remote_sha, so there is no tip to diff.
+
+pushed=$(mktemp)
+trap 'rm -f "$pushed"' EXIT
+
+saw_ref=0
+while read -r _local_ref local_sha _remote_ref remote_sha; do
+  [ -n "${local_sha:-}" ] || continue
+  saw_ref=1
+  if [ "$remote_sha" = "$ZEROS" ]; then
+    base=$(git merge-base "$local_sha" origin/main 2>/dev/null || true)
+    if [ -n "$base" ]; then
+      git diff --name-only "$base..$local_sha" >>"$pushed"
+    else
+      # No origin/main to compare against — review the branch's own commits.
+      git diff-tree --no-commit-id --name-only -r "$local_sha" >>"$pushed"
+    fi
+  else
+    git diff --name-only "$remote_sha..$local_sha" >>"$pushed"
+  fi
+done
+
+if [ "$saw_ref" -eq 0 ]; then
+  note "pre-push: no refs on stdin — nothing to gate."
+  exit 0
+fi
+
+changed=$(sort -u "$pushed" | grep "^${WATCH_PATH}/" || true)
+if [ -z "$changed" ]; then
+  note "pre-push: no ${WATCH_PATH} changes in this push — prompt evals skipped."
+  exit 0
+fi
+
+printf '\n%s\n' "${BOLD}pre-push: ${WATCH_PATH} changed in this push:${OFF}"
+printf '%s\n' "$changed" | sed 's/^/  /'
+
+# The eval scores the working tree, which is not always what is being pushed.
+# Not fatal — but a green run against uncommitted prompt edits says nothing
+# about the commits on the way out.
+dirty=$(git status --porcelain -- "$WATCH_PATH" || true)
+if [ -n "$dirty" ]; then
+  note ""
+  note "pre-push: ${WATCH_PATH} also has uncommitted changes — the eval below"
+  note "         scores the working tree, not the commits being pushed."
+  printf '%s\n' "$dirty" | sed "s/^/  ${DIM}/;s/\$/${OFF}/"
+fi
+
+# ── 3. run the golden set ───────────────────────────────────────────────────
+
+if ! command -v pnpm >/dev/null 2>&1; then
+  printf '%s\n' "${RED}pre-push: pnpm not found — cannot run prompt evals.${OFF}"
+  exit 1
+fi
+
+printf '\n'
+if ! pnpm run build; then
+  printf '\n%s\n' "${RED}pre-push: build failed — fix it before pushing.${OFF}"
+  exit 1
+fi
+
+eval_args=(prompts eval)
+if [ -n "$JUDGE_LAYER" ]; then
+  if [ -n "${GLM_API_KEY:-}" ]; then
+    # All agents by default. Both storyboard cases now validate end to end
+    # (directional entrance synonyms, the style shape in the prompt, and the
+    # agent's repair pass), so there is no reason to hold one back.
+    eval_args+=(--judge "${PROMPT_EVAL_PROVIDER:-glm}")
+    if [ -n "${PROMPT_EVAL_AGENT:-}" ]; then
+      eval_args+=(--agent "$PROMPT_EVAL_AGENT")
+    fi
+    note "pre-push: PROMPT_EVAL_JUDGE set — rubric layer on ${PROMPT_EVAL_AGENT:-all agents}."
+    note "         Budget ~4 min: each case generates an article or shotlist"
+    note "         (~55-165s) then judges it (~20-45s). Every axis min is"
+    note "         calibrated to a measured floor, not a target — read the judge"
+    note "         comment before believing a failure. Exit 2 = could not"
+    note "         measure, does not block."
+  else
+    note "pre-push: PROMPT_EVAL_JUDGE set but GLM_API_KEY is not — layer 2 skipped."
+  fi
+else
+  note "pre-push: layer 1 only (sub-second, free). Set PROMPT_EVAL_JUDGE=1 to"
+  note "         also gate on the rubric layer — it costs ~4 minutes."
+fi
+
+printf '\n'
+node packages/cli/dist/index.js "${eval_args[@]}"
+status=$?
+
+case "$status" in
+  0)
+    printf '\n%s\n' "${BOLD}pre-push: prompt evals pass.${OFF}"
+    exit 0
+    ;;
+  2)
+    # Exit 2: a case could not be measured at all (provider timeout, provider
+    # outage, schema rejection). Blocking here would make this gate flaky for
+    # reasons that have nothing to do with the prompts being pushed.
+    printf '\n%s\n' "${RED}pre-push: prompt evals could NOT be measured — not blocking.${OFF}"
+    note "  Layer 1 ran; layer 2 hit an infrastructure error on at least one case."
+    note "  Read the rows above, then push again or run the judged layer by hand."
+    exit 0
+    ;;
+  *)
+    ;;
+esac
+
+cat >&2 <<EOF
+
+${RED}pre-push: prompt evals FAILED — not pushing.${OFF}
+  Read the judge comment first: every axis min is calibrated to a measured
+  floor, not a target, so a lone sub-floor score can be judge variance.
+  Re-record the baseline only when the change was deliberate:
+    node packages/cli/dist/index.js prompts eval --update-snapshots
+    node packages/cli/dist/index.js prompts eval --judge glm --update-recorded
+  Otherwise revert the prompt edit, or bypass knowingly:
+    git push --no-verify
+EOF
+exit 1

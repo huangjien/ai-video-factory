@@ -5,7 +5,7 @@ import type { Stage } from "./states.js";
  * depend on the immediately preceding stage. Rollback marks downstream
  * checkpoints as `invalidated` (§18.2 lines 799-801) without deleting files.
  */
-export const DEPENDENCY_MAP: Record<Stage, ReadonlyArray<Stage>> = {
+const DEPENDENCY_MAP: Record<Stage, ReadonlyArray<Stage>> = {
   init: ["storyboard", "compile", "render", "review", "final"],
   storyboard: ["compile", "render", "review", "final"],
   compile: ["render", "review", "final"],

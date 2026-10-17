@@ -55,6 +55,7 @@ export {
 } from "./laya-assist.js";
 export {
   expandScenePrompt,
+  IMAGE_PROMPT_REVISION,
   type ScenePromptInput,
   type ExpandedPrompt,
 } from "./image-prompt.js";

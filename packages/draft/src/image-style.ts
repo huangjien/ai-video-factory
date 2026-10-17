@@ -25,6 +25,7 @@
  * the same palette and camera vocabulary across scenes — not from any
  * single prompt.
  */
+import { loadImageStylePresets, loadPrompt } from "@video/prompts";
 
 export const IMAGE_STYLES = [
   "flat-vector",
@@ -50,41 +51,30 @@ interface StylePreset {
   promptSuffix: string;
 }
 
-export const IMAGE_STYLE_PRESETS: Record<ImageStyle, StylePreset> = {
-  "flat-vector": {
-    systemBlock: `Style: FLAT VECTOR ILLUSTRATION.
-- Compose from clean geometric shapes, solid fills, minimal detail.
-- One restrained palette of 3-5 harmonious colors plus a light background; no gradients, no textures, no photorealism.
-- Favor clear figure-ground separation so foreground shapes read instantly at 1080p and survive slow zoom/pan camera moves.
-- Leave breathing room (lower third and edges) — UI captions and component overlays are added later.`,
-    promptSuffix:
-      "flat vector illustration, clean geometric shapes, solid fills, limited 4-color palette, light background, no gradients, no texture, minimalist composition, generous negative space, no text, no letters, no words",
-  },
-  editorial: {
-    systemBlock: `Style: EDITORIAL ILLUSTRATION (narrative mode).
-- Express the scene's IDEA through one visual metaphor — a single strong conceit, not a literal scene dump.
-- Stylized human figures with simplified faces and consistent proportions; when people appear, keep the same figure design language as the rest of the video.
-- A muted, editorial palette (2 main colors + 1 accent) on a calm background; subtle paper-like texture allowed.
-- Mood carries the argument: serious topics read contemplative, not cartoonish.`,
-    promptSuffix:
-      "editorial illustration, single visual metaphor, stylized simplified figures, muted palette with one accent color, subtle paper texture, calm sophisticated mood, storybook composition, no text, no letters, no handwriting",
-  },
-  whiteboard: {
-    systemBlock: `Style: WHITEBOARD / HAND-DRAWN MARKER SKETCH (teaching mode).
-- Black ink line-art with ONE accent color for emphasis, on a clean white board.
-- Doodle-level simplification: arrows, boxes, simple stick-ish figures, circled highlights.
-- Generous white space; linework slightly imperfect like a real marker (no photorealism, no shading gradients).
-- This is a BACKGROUND for draw-on animations: keep elements sparse and spatially separated so animated overlays have room.`,
-    promptSuffix:
-      "whiteboard marker sketch, hand-drawn black ink line art with one blue accent, doodle arrows and boxes, clean white background, imperfect linework, large white space, no shading, no text, no labels, no letters",
-  },
-};
+export const IMAGE_STYLE_PRESETS: Record<ImageStyle, StylePreset> =
+  loadImageStylePresets() as Record<ImageStyle, StylePreset>;
+
+/**
+ * Hard rule injected into every prompt expansion, on top of each
+ * preset's own suffix. Image models cannot render legible writing —
+ * they emit confident-looking gibberish, and CJK comes out worse than
+ * Latin. Observed failure: `editorial` + a hosted image model produced
+ * full two-page spreads of fake paragraphs for three scenes in a row,
+ * regardless of a "no text" suffix on the prompt.
+ *
+ * So the rule is aimed at the LLM doing the expansion, not only at the
+ * final prompt string: it must never ASK for text in the first place.
+ * When a scene genuinely needs printed material, describe it as blank or
+ * illegible — vague marks, never words.
+ */
+/** Body lives in `packages/prompts/prompts/image-no-text-rules.md` — edit it there. */
+const NO_TEXT_RULES = loadPrompt("image-no-text-rules");
 
 /** Extra system rules for expandScenePrompt — always injected, so the
  * style contract is explicit even at the default and cache entries are
  * style-tagged. */
 export function styleSystemBlock(style: ImageStyle): string {
-  return IMAGE_STYLE_PRESETS[style].systemBlock;
+  return `${IMAGE_STYLE_PRESETS[style].systemBlock}\n\n${NO_TEXT_RULES}`;
 }
 
 /** Appended verbatim to the expanded prompt before caching/writing. */

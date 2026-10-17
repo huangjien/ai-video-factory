@@ -28,7 +28,7 @@ const rootSrcPath = `${rendererDir}/Root.${ext}`;
  * os.tmpdir() per render (plus `remotion-v*-assets*` dirs) and never
  * removes them — hundreds of renders accumulate tens of GB. This sweep
  * removes entries older than `maxAgeMs`. Fire-and-forget; never throws. */
-export async function sweepRemotionTemp(
+async function sweepRemotionTemp(
   maxAgeMs: number = 3600_000,
 ): Promise<number> {
   const tmp = tmpdir();
@@ -96,7 +96,7 @@ const RENDERED_COMPONENTS: Record<string, RegExp> = {
 /** Fail loudly when a scene names a visual renderer/component combination
  * that has no wired runtime (plan §9). Silent fallback would render the
  * wrong thing; the CLI should stop instead. */
-export function assertPlanRenderable(plan: RenderPlan): void {
+function assertPlanRenderable(plan: RenderPlan): void {
   const unwired = plan.scenes.filter((s) => {
     const allowed = RENDERED_COMPONENTS[s.renderer];
     return !allowed || !allowed.test(s.component);

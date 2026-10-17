@@ -61,6 +61,11 @@ export interface DraftOptions {
    *  image_style question as specified for the agent-ask gate
    *  (docs/v0.7-agent-ask-protocol-plan.md §5–§6). */
   imageStyle?: string;
+  /** Scene-image provider — written into the article.md frontmatter
+   *  (`image_provider:`) so `video make` picks it up. minimax (default)
+   *  | openai | gemini | mock | none. Also a video-ask/1 knob: passing
+   *  it explicitly marks the image_provider question as specified. */
+  imageProvider?: string;
   /** v0.7 (video-ask/1): force the agent-ask gate — emit the
    *  video-ask/1 question envelope and exit 2 even when no agent
    *  harness is detected. See docs/v0.7-agent-ask-protocol-plan.md §4. */
@@ -327,13 +332,20 @@ export async function runDraft(opts: DraftOptions): Promise<number> {
   // human-editable single source `video make` reads. (Unlike --style,
   // which only affects this run's storyboard write.)
   const imageStyle = resolveImageStyle(opts.imageStyle);
-  await writeFile(
-    articlePath,
-    opts.imageStyle !== undefined
-      ? stampFrontmatterKey(markdown, "image_style", imageStyle)
-      : markdown,
-    "utf8",
-  );
+  let stamped = opts.imageStyle
+    ? stampFrontmatterKey(markdown, "image_style", imageStyle)
+    : markdown;
+  // Same contract as image_style: the provider choice is durable project
+  // config, so it belongs in article.md where `video make` reads it — not
+  // in a one-shot draft flag.
+  if (opts.imageProvider !== undefined) {
+    stamped = stampFrontmatterKey(
+      stamped,
+      "image_provider",
+      opts.imageProvider,
+    );
+  }
+  await writeFile(articlePath, stamped, "utf8");
 
   let parsedArticle: ParsedArticle | null = null;
   try {
@@ -454,6 +466,7 @@ export interface DraftCliOpts {
   file?: string;
   audioPlan?: boolean;
   imageStyle?: string;
+  imageProvider?: string;
   style?: string;
   captions?: boolean;
   review?: boolean;
@@ -482,6 +495,9 @@ export function draftCliOptsToDraftOptions(
     ...(opts.file !== undefined ? { ideaFile: opts.file } : {}),
     noAudioPlan: opts.audioPlan === false,
     ...(opts.imageStyle !== undefined ? { imageStyle: opts.imageStyle } : {}),
+    ...(opts.imageProvider !== undefined
+      ? { imageProvider: opts.imageProvider }
+      : {}),
     ...(opts.style !== undefined ? { style: opts.style } : {}),
     noCaptions: opts.captions === false,
     noReview: opts.review === false,
@@ -534,6 +550,19 @@ export function registerDraft(program: Command): void {
     .option(
       "--image-style <style>",
       "v0.6: scene-image style preset — flat-vector | editorial | whiteboard (default: flat-vector); written into article.md frontmatter (v0.7: also an agent-ask knob, video-ask/1)",
+    )
+    .option(
+      "--image-provider <provider>",
+      "scene-image provider stamped into article.md frontmatter: minimax (default; needs MINIMAX_API_KEY) | openai | gemini | mock | none (v0.7: also an agent-ask knob, video-ask/1)",
+      (v) => {
+        const allowed = ["minimax", "openai", "gemini", "mock", "none"];
+        if (!allowed.includes(v)) {
+          throw new Error(
+            `--image-provider must be ${allowed.join("|")}, got: ${v}`,
+          );
+        }
+        return v;
+      },
     )
     .option(
       "--style <theme>",

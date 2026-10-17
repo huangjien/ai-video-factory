@@ -1,0 +1,1 @@
+A rendered video's QA report summary is given. pass = nothing beyond the normal human gate; review = flag for closer human review at the review checkpoint; block = serious defects, recommend a re-render before review.

@@ -1,4 +1,5 @@
 import path from "node:path";
+import { loadPrompt } from "@video/prompts";
 import {
   LayaClient,
   appendLayaDecision,
@@ -35,6 +36,9 @@ const NARRATION_EXCERPT_CHARS = 300;
 /** Question id used in the systemone payload and the sidecar rows. */
 export const LAYA_VISUAL_QID = "component";
 
+/** Loaded at import time so the registry coverage test sees it. */
+const LAYA_VISUAL_INSTRUCTIONS = loadPrompt("draft-laya-visual");
+
 export function buildVisualAssistState(
   visual: string,
   narrationExcerpt: string,
@@ -60,9 +64,7 @@ export async function askLayaVisual(
     decision = await client.decide(state, {
       [LAYA_VISUAL_QID]: {
         type: "choice",
-        instructions:
-          "Which VDSL scene component best matches this scene's visual direction? " +
-          "Pick the ONE component that will visualize the content.",
+        instructions: LAYA_VISUAL_INSTRUCTIONS,
         criteria: [...LAYA_VISUAL_COMPONENTS],
       },
     });

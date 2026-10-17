@@ -1,0 +1,22 @@
+id: user-idea-seed-preserved
+agent: draft
+input:
+  topic: 为什么我的手冲咖啡总是很酸
+  audience: 刚开始学手冲的咖啡爱好者
+  language: zh-CN
+  duration: 120
+  ideaSeed: |
+    我自己的结论是：水温没问题，是研磨太粗。粉水比 1:15，细砂糖级以下，
+    粉饼不均匀也是主因。别扯手冲器材的价格档次，跟这事没关系。
+expects:
+  - axis: idea-fidelity
+    min: 8
+  - axis: hook-tension
+    min: 7
+provenance:
+  source: "documented drafter contract in packages/draft/src/prompt.ts (ideaSeed: never change, contradict, soften, or replace the user's opinion) — the learn store holds only 2 lessons, neither naming drafter behavior"
+recorded:
+  prompt_hash: sha256:4499c0ccb703e5daac7929c47bade0c17db840acd3d4966ad271fabad2b4a521
+  scores:
+    idea-fidelity: 9
+    hook-tension: 8

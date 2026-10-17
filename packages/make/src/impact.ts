@@ -1,11 +1,14 @@
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { parse as parseYaml } from "yaml";
+import { extractSceneFragment, hashSceneFragment } from "@video/workflow";
 import {
-  extractSceneFragment,
-  hashSceneFragment,
-} from "@video/workflow";
-import { parseArticleWithRecovery, resolveImageStyle } from "@video/draft";
+  parseArticleWithRecovery,
+  resolveImageStyle,
+  IMAGE_PROMPT_REVISION,
+} from "@video/draft";
+import { loadLessonStore, promptRules, rulesDigest } from "@video/learn";
+import { RENDERER_REVISION } from "@video/video-renderer";
 import {
   imageCacheKey,
   readImageCacheSidecar,
@@ -13,7 +16,13 @@ import {
   storyboardSceneComponents,
   visualsGateState,
 } from "./visual-cache.js";
-import { EN_VOICE, resolveImageProvider, ttsCacheKey, ZH_VOICE } from "./index.js";
+import {
+  EN_VOICE,
+  resolveImageProvider,
+  ttsCacheKey,
+  workspaceRootFor,
+  ZH_VOICE,
+} from "./index.js";
 
 /**
  * Read-only impact report for `video make --dry-run` (v0.8 plan G2).
@@ -87,12 +96,24 @@ export function computeMakeImpact(
   const imageAdopt: number[] = [];
   const imageCached: number[] = [];
   const imageDir = path.join(projectRoot, "assets", "images");
-  const provider = resolveImageProvider(opts.fake, opts.imageProvider);
+  const provider = resolveImageProvider(
+    opts.fake,
+    opts.imageProvider,
+    article.frontmatter.image_provider,
+  );
   if (provider !== "none") {
     const selfRendered = selfRenderedSceneNumbers(projectRoot);
     const reqWidth = provider === "mock" ? 64 : 1920;
     const reqHeight = provider === "mock" ? 36 : 1080;
     const imageStyle = resolveImageStyle(article.frontmatter.image_style);
+    // Same lookup as generateSceneVisuals, or the table predicts spend
+    // the render never makes: shared resolver, shared root detection.
+    const wsRoot = workspaceRootFor(projectRoot);
+    const learnedDigest = rulesDigest(
+      wsRoot === null
+        ? ""
+        : promptRules(loadLessonStore(wsRoot), "image-prompt"),
+    );
     article.scenes.forEach((scene, i) => {
       const n = i + 1;
       const visual = scene.visual ?? "";
@@ -102,6 +123,8 @@ export function computeMakeImpact(
         visual,
         imageStyle,
         provider,
+        learnedDigest,
+        promptRevision: IMAGE_PROMPT_REVISION,
         width: reqWidth,
         height: reqHeight,
       });
@@ -140,8 +163,7 @@ export function computeMakeImpact(
     }
   }
   const effectiveVoice =
-    voice ??
-    (article.frontmatter.language === "en-US" ? EN_VOICE : ZH_VOICE);
+    voice ?? (article.frontmatter.language === "en-US" ? EN_VOICE : ZH_VOICE);
   article.scenes.forEach((scene) => {
     const idNum = scene.id.replace(/^scene[-_]?/, "");
     const wav = path.join(audioDir, `scene_${idNum}.wav`);
@@ -197,12 +219,24 @@ export function computeMakeImpact(
         return;
       }
       try {
-        const m = JSON.parse(sidecar) as { sceneHash?: string };
+        const m = JSON.parse(sidecar) as {
+          sceneHash?: string;
+          rendererRevision?: string;
+        };
         const frag = extractSceneFragment(storyboardText, sbId);
         const hash = frag === null ? null : hashSceneFragment(frag);
-        // projectHash (theme/brand/geometry) also gates freshness; dry-run
-        // compares fragments only and notes the caveat once.
-        if (m.sceneHash && hash && m.sceneHash === hash) {
+        // The renderer revision is a plain field in the sidecar, so the
+        // dry-run can check it with a string compare — it has no compiled
+        // renderPlan and must not rebuild one just to answer "will this
+        // re-render?". projectHash (theme/brand/geometry) still gates
+        // freshness at make time and is not predicted here; it only ever
+        // forces MORE work than this table shows, never less.
+        if (
+          m.sceneHash &&
+          hash &&
+          m.sceneHash === hash &&
+          m.rendererRevision === RENDERER_REVISION
+        ) {
           scenesCached.push(scene.id);
         } else {
           scenesRender.push(scene.id);
@@ -211,11 +245,6 @@ export function computeMakeImpact(
         scenesRender.push(scene.id);
       }
     });
-    if (scenesCached.length > 0) {
-      warnings.push(
-        "scene render check compares fragments only — theme/brand changes invalidate ALL scenes at make time",
-      );
-    }
   }
 
   // ── Visuals gate (G4) — visualsGateState is the single source of truth
@@ -282,9 +311,13 @@ export function formatImpact(impact: MakeImpact): string[] {
         `${impact.imageCached.length} cached`;
   lines.push(img);
   if (impact.imageRegenerate.length > 0)
-    lines.push(`  regenerate: ${impact.imageRegenerate.map((n) => `scene_${n}`).join(", ")}`);
+    lines.push(
+      `  regenerate: ${impact.imageRegenerate.map((n) => `scene_${n}`).join(", ")}`,
+    );
   if (impact.imageGenerate.length > 0)
-    lines.push(`  generate: ${impact.imageGenerate.map((n) => `scene_${n}`).join(", ")}`);
+    lines.push(
+      `  generate: ${impact.imageGenerate.map((n) => `scene_${n}`).join(", ")}`,
+    );
   const tts =
     impact.ttsSynthesize.length === 0 && impact.ttsResynth.length === 0
       ? `tts: all ${impact.ttsCached.length} cached`

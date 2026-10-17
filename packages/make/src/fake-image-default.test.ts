@@ -84,6 +84,24 @@ describe("resolveImageProvider", () => {
       expect(resolveImageProvider(true, explicit)).toBe(explicit);
     }
   });
+
+  it("falls back to the article.md frontmatter image_provider", () => {
+    // `video draft --image-provider` stamps this; `video make` must
+    // honor it without the flag being passed again.
+    expect(resolveImageProvider(undefined, undefined, "gemini")).toBe("gemini");
+    expect(resolveImageProvider(false, undefined, "mock")).toBe("mock");
+  });
+
+  it("precedence: flag > --fake > frontmatter > default", () => {
+    // A hand-typed frontmatter typo must not brick the pipeline.
+    expect(resolveImageProvider(undefined, undefined, "not-a-provider")).toBe(
+      "minimax",
+    );
+    // --fake means offline even when the project names a real provider.
+    expect(resolveImageProvider(true, undefined, "openai")).toBe("none");
+    // An explicit flag still wins over everything.
+    expect(resolveImageProvider(true, "mock", "openai")).toBe("mock");
+  });
 });
 
 interface SceneYaml {

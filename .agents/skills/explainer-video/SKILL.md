@@ -57,7 +57,7 @@ Pace tracks tension. Move quickly through Problem/Stakes to reach the value; slo
 
 1. **Script** — one core message. Structure: problem → solution → how → payoff. Write tight voiceover (VO); time it at ~2.3 words/second (≈140 wpm). A 60s video is ~138 words.
 2. **Storyboard** — one idea per scene. Sketch each frame plus its transition; map each VO line to a visual.
-3. **Build scenes** — animate diagrams/data, kinetic text/keywords, and backgrounds (techniques inlined below). When a scene background should be an AI-generated still in a rendered video (this repo's pipeline), the prompt craft lives in `flux-image-prompting` — diagrams/data keep the code-drawn path.
+3. **Build scenes** — animate diagrams/data, kinetic text/keywords, and backgrounds (techniques inlined below). When a scene background should be an AI-generated still in a rendered video (this repo's pipeline), the prompt craft lives in the `image_style` presets (`packages/prompts/prompts/image-styles.yaml`) — diagrams/data keep the code-drawn path.
 4. **Narration & captions** — record/generate VO, align scene cuts to VO beats, burn in captions (most plays are muted).
 5. **Edit** — cut to the narration, hold each idea long enough to land, remove any scene that doesn't advance the message.
 6. **Polish** — color pass, consistent easing, audio mix, end card.

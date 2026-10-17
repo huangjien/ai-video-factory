@@ -187,14 +187,36 @@ describe("detectAgentEnv", () => {
 // ─── Question set (§5 / §6) ─────────────────────────────────────────────────
 
 describe("DRAFT_QUESTIONS", () => {
-  it("has exactly 5 questions in stable order", () => {
+  it("asks the documented knobs in stable order", () => {
+    // Order is the §6 contract: narration, then pacing, then look, then
+    // provider, then motion, then audio.
     expect(DRAFT_QUESTIONS.map((q) => q.id)).toEqual([
       "lang",
       "duration",
       "image_style",
+      "image_provider",
       "style",
       "bgm",
     ]);
+  });
+
+  it("image_provider choices mirror the --image-provider value list", () => {
+    const provider = DRAFT_QUESTIONS.find(
+      (q) => q.id === "image_provider",
+    ) as AskQuestion;
+    expect(provider.flag).toBe("--image-provider");
+    expect(provider.type).toBe("choice");
+    expect(provider.choices?.map((c) => c.value)).toEqual([
+      "minimax",
+      "openai",
+      "gemini",
+      "mock",
+      "none",
+    ]);
+    for (const c of provider.choices ?? []) {
+      expect(c.note.length).toBeGreaterThan(0);
+      expect(c.note).not.toBe(c.value);
+    }
   });
 
   it("style choices are generated from the THEMES registry", () => {
@@ -259,41 +281,42 @@ describe("DRAFT_QUESTIONS", () => {
 // ─── questionsFor ────────────────────────────────────────────────────────────
 
 describe("questionsFor", () => {
-  it("returns all 5 questions when nothing is specified", () => {
-    expect(questionsFor(baseOpts()).map((q) => q.id)).toEqual([
-      "lang",
-      "duration",
-      "image_style",
-      "style",
-      "bgm",
-    ]);
+  it("returns every question when nothing is specified", () => {
+    expect(questionsFor(baseOpts()).map((q) => q.id)).toEqual(
+      DRAFT_QUESTIONS.map((q) => q.id),
+    );
   });
 
   it("drops each knob passed explicitly", () => {
-    expect(
-      questionsFor({ topic: "t", lang: "en-US" }).map((q) => q.id),
-    ).toEqual(["duration", "image_style", "style", "bgm"]);
-    expect(questionsFor({ topic: "t", duration: 90 }).map((q) => q.id)).toEqual(
-      ["lang", "image_style", "style", "bgm"],
-    );
-    expect(
-      questionsFor({ topic: "t", imageStyle: "editorial" }).map((q) => q.id),
-    ).toEqual(["lang", "duration", "style", "bgm"]);
-    expect(
-      questionsFor({ topic: "t", style: "dark-tech" }).map((q) => q.id),
-    ).toEqual(["lang", "duration", "image_style", "bgm"]);
-    expect(
-      questionsFor({ topic: "t", bgm: "guofeng" }).map((q) => q.id),
-    ).toEqual(["lang", "duration", "image_style", "style"]);
+    const ids = (opts: Parameters<typeof questionsFor>[0]) =>
+      questionsFor(opts).map((q) => q.id);
+    const all = DRAFT_QUESTIONS.map((q) => q.id);
+    // Each knob, when passed, removes exactly itself and nothing else.
+    // Question ids are snake_case; the DraftOptions keys are camelCase,
+    // so the pairing is explicit rather than inferred.
+    const knobs = [
+      ["lang", { lang: "en-US" }],
+      ["duration", { duration: 90 }],
+      ["image_style", { imageStyle: "editorial" }],
+      ["image_provider", { imageProvider: "gemini" }],
+      ["style", { style: "dark-tech" }],
+      ["bgm", { bgm: "guofeng" }],
+    ] as const;
+    for (const [id, knob] of knobs) {
+      expect(ids({ topic: "t", ...knob })).toEqual(
+        all.filter((other) => other !== id),
+      );
+    }
   });
 
-  it("all five explicit → empty set", () => {
+  it("every knob explicit → empty set", () => {
     expect(
       questionsFor({
         topic: "t",
         lang: "zh-CN",
         duration: 120,
         imageStyle: "flat-vector",
+        imageProvider: "minimax",
         style: "paper-light",
         bgm: "calm",
       }),
@@ -303,7 +326,7 @@ describe("questionsFor", () => {
   it("--no-audio-plan drops the bgm question", () => {
     expect(
       questionsFor({ topic: "t", noAudioPlan: true }).map((q) => q.id),
-    ).toEqual(["lang", "duration", "image_style", "style"]);
+    ).toEqual(["lang", "duration", "image_style", "image_provider", "style"]);
   });
 
   it("is pure: same input → same output, no env reads", () => {
@@ -390,8 +413,9 @@ describe("emitQuestionsDoc", () => {
     expect(code).toBe(2);
     const envelope = JSON.parse(cap.stdout) as Record<string, unknown>;
     expect(envelope).toMatchSnapshot();
+    const asked = (envelope["questions"] as unknown[]).length;
     expect(cap.stderr).toEqual([
-      "agent-ask: 5 question(s) pending (exit 2 — run not started, nothing spent)",
+      `agent-ask: ${asked} question(s) pending (exit 2 — run not started, nothing spent)`,
       "  re-run with the flags above, or --no-ask to accept the defaults",
     ]);
   });
@@ -425,13 +449,9 @@ describe("emitQuestionsDoc", () => {
     expect(envelope.protocol).toBe("video-ask/1");
     expect(envelope.command).toEqual(["draft", "t"]);
     expect(envelope.detected).toBe("zcode (ZCODE_APP_VERSION)");
-    expect(envelope.questions.map((q) => q.id)).toEqual([
-      "lang",
-      "duration",
-      "image_style",
-      "style",
-      "bgm",
-    ]);
+    expect(envelope.questions.map((q) => q.id)).toEqual(
+      DRAFT_QUESTIONS.map((q) => q.id),
+    );
     for (const q of envelope.questions) {
       expect(Object.keys(q)).toEqual([
         "id",
@@ -449,6 +469,7 @@ describe("emitQuestionsDoc", () => {
       duration: 180,
       audience: "developers",
       image_style: "flat-vector",
+      image_provider: "minimax",
       style: "paper-light",
       bgm: "calm",
     });
@@ -457,7 +478,13 @@ describe("emitQuestionsDoc", () => {
   it("resolved echoes explicit values; audience never asked but always resolved", async () => {
     const cap = capture();
     await emitQuestionsDoc(
-      { topic: "t", lang: "en-US", audience: "ops", duration: 90 },
+      {
+        topic: "t",
+        lang: "en-US",
+        audience: "ops",
+        duration: 90,
+        imageProvider: "openai",
+      },
       ["draft", "t"],
     );
     const envelope = JSON.parse(cap.stdout) as {
@@ -468,6 +495,7 @@ describe("emitQuestionsDoc", () => {
       duration: 90,
       audience: "ops",
       image_style: "flat-vector",
+      image_provider: "openai",
       style: "paper-light",
       bgm: "calm",
     });
@@ -546,6 +574,7 @@ describe("maybeAgentAsk", () => {
           lang: "zh-CN",
           duration: 120,
           imageStyle: "editorial",
+          imageProvider: "gemini",
           style: "dark-tech",
           bgm: "guofeng",
         },
@@ -596,6 +625,7 @@ describe("maybeAgentAsk", () => {
           lang: "zh-CN",
           duration: 120,
           imageStyle: "editorial",
+          imageProvider: "gemini",
           style: "dark-tech",
           bgm: "guofeng",
         },

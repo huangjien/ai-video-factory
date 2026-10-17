@@ -24,6 +24,7 @@
     "@video/audio-mix": "workspace:*",
     "@video/audio-plan": "workspace:*",
     "@video/draft": "workspace:*",
+    "@video/learn": "workspace:*",
     "@video/llm": "workspace:*",
     "@video/media": "workspace:*",
     "@video/media-generators": "workspace:*",

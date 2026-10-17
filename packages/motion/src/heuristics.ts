@@ -22,7 +22,7 @@ export interface EasingRule {
 /** Quick reference table (SKILL.md "Quick reference" + timing table):
  * enter = ease-out 300–500ms (hero/full-screen up to 800ms);
  * exit = ease-in 200–300ms; move = ease-in-out 300–400ms. */
-export const EASING_RULES = {
+const EASING_RULES = {
   enter: { easing: "easeOut", durationSec: [0.3, 0.8] },
   exit: { easing: "easeIn", durationSec: [0.2, 0.3] },
   move: { easing: "easeInOut", durationSec: [0.3, 0.4] },
@@ -42,7 +42,7 @@ export const ENTRANCE_DELAY_SEC = 0.1;
 
 /** An entrance should not eat the scene: cap at ~35% of scene duration
  * (SKILL.md: "feels floaty → duration too long → cut 30%"). */
-export const ENTRANCE_MAX_SCENE_FRACTION = 0.35;
+const ENTRANCE_MAX_SCENE_FRACTION = 0.35;
 
 /** Scenes long enough to earn one mid-scene emphasis beat (SKILL.md rhythm:
  * one major event per ~500–800ms is for montages; for explainer scenes a
@@ -54,7 +54,7 @@ export const EMPHASIS_DURATION_SEC = 0.6;
 /** Component family → entrance animation type (VDSL canonical). Elements
  * that read as diagrams draw on; text terminals type on; everything else
  * fades. */
-export const COMPONENT_ENTRANCE: ReadonlyArray<{
+const COMPONENT_ENTRANCE: ReadonlyArray<{
   match: RegExp;
   type: "draw" | "write" | "fade" | "scale";
 }> = [

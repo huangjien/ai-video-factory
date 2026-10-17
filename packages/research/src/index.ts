@@ -12,7 +12,6 @@ export {
 export { SYSTEM_PROMPT, buildMessages, type ResearchInput } from "./prompt.js";
 export {
   callResearch,
-  extractYaml,
   ResearchError,
   type CallResearchDeps,
   type CallResearchResult,

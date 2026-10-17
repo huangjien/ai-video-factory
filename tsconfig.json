@@ -54,6 +54,21 @@
     },
     {
       "path": "packages/audio-mix"
+    },
+    {
+      "path": "packages/learn"
+    },
+    {
+      "path": "packages/prompts"
+    },
+    {
+      "path": "packages/draft"
+    },
+    {
+      "path": "packages/make"
+    },
+    {
+      "path": "packages/audio-plan"
     }
   ]
 }

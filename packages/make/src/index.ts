@@ -43,6 +43,9 @@ import {
   MockImageProvider,
   OpenAIImageProvider,
   type ImageProvider,
+  loadBakeManifest,
+  bakeDigestFor,
+  runBakeText,
 } from "@video/media-generators";
 import { loadLessonStore, promptRules, rulesDigest } from "@video/learn";
 import {
@@ -524,6 +527,11 @@ export async function generateSceneVisuals(
   const imageDir = path.join(projectRoot, "assets", "images");
   await mkdir(imageDir, { recursive: true });
 
+  // v0.10.5: per-scene baked text (titles/quotes). Loaded before the scene
+  // loop because the digest joins the image cache key — baked text lives
+  // inside the jpg, so it is an input, not a post-effect.
+  const bakeManifest = await loadBakeManifest(imageDir);
+
   const isMock = opts.provider === "mock";
   let provider: ImageProvider;
   if (opts.provider === "minimax") {
@@ -580,6 +588,7 @@ export async function generateSceneVisuals(
       provider: opts.provider,
       learnedDigest: rulesDigest(learnedImageRules),
       promptRevision: IMAGE_PROMPT_REVISION,
+      bakeDigest: bakeDigestFor(i + 1, bakeManifest),
       width: reqWidth,
       height: reqHeight,
     });
@@ -590,7 +599,11 @@ export async function generateSceneVisuals(
     // fall through to regeneration.
     if (existsSync(imagePath)) {
       const sidecar = readImageCacheSidecar(imagePath);
-      if (sidecar === null || sidecar.cacheKey === cacheKey) {
+      // A sidecar-less legacy image cannot be adopted when this scene bakes
+      // text: the jpg on disk predates baking and its typography is unknown.
+      const adoptable =
+        sidecar === null && bakeDigestFor(i + 1, bakeManifest) === "";
+      if (sidecar?.cacheKey === cacheKey || adoptable) {
         if (sidecar === null) writeImageCacheSidecar(imagePath, cacheKey);
         generatedImages.push(imagePath);
         continue;
@@ -674,6 +687,20 @@ export async function generateSceneVisuals(
       outputs.push(
         `scene_${i + 1}: image gen failed — ${(err as Error).message.slice(0, 60)}`,
       );
+    }
+  }
+
+  if (bakeManifest) {
+    const baked = await runBakeText({
+      imagesDir: imageDir,
+      manifest: bakeManifest,
+    });
+    if (baked.ok && baked.baked.length > 0) {
+      outputs.push(
+        `assets/images: baked text onto scene(s) ${baked.baked.join(", ")} (Pillow)`,
+      );
+    } else if (!baked.ok) {
+      outputs.push(`bake text failed — ${baked.error ?? "unknown"}`);
     }
   }
 

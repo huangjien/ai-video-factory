@@ -13,6 +13,11 @@ import {
   type ImageProvider,
 } from "@video/media-generators";
 import { formatRunId } from "@video/workflow";
+import {
+  parseArticleWithRecovery,
+  resolveImageStyle,
+  stylePromptSuffix,
+} from "@video/draft";
 
 export interface ThumbnailOptions {
   project: string;
@@ -20,6 +25,42 @@ export interface ThumbnailOptions {
   width?: number;
   height?: number;
   providerName?: "mock" | "minimax" | "openai" | "gemini" | undefined;
+}
+
+/**
+ * Fold the video's visual identity into the thumbnail prompt (v0.10.3).
+ *
+ * The scene briefs carry two contracts the thumbnail historically did not: the
+ * verbatim style preset (`stylePromptSuffix`) and, for historical topics, the
+ * declared setting. The result was a video rendered as editorial illustration
+ * with a cinematic-35mm photographic thumbnail — the shop window selling a
+ * different product than the shop.
+ *
+ * This is code, not a prompt instruction, on purpose: the contract rides along
+ * even when `youtube/thumbnail-prompt.txt` was written by an older agent (or
+ * hand-edited), the same way `expandScenePrompt` appends the style contract
+ * after the LLM-authored brief so the image model always sees it.
+ */
+export function applyVisualIdentity(
+  prompt: string,
+  article: {
+    image_style?: string | undefined;
+    setting?: string | undefined;
+  } | null,
+): string {
+  if (!article) return prompt;
+  const parts: string[] = [prompt];
+  if (article.image_style) {
+    // A typo'd preset coerces to the default the same way `video make`
+    // treats it, rather than failing the thumbnail over a style name.
+    parts.push(stylePromptSuffix(resolveImageStyle(article.image_style)));
+  }
+  if (article.setting?.trim()) {
+    parts.push(
+      `Setting (the whole video is set here — era, region and culture; the image must stay inside it): ${article.setting.trim()}`,
+    );
+  }
+  return parts.join("\n");
 }
 
 function safeGitHead(cwd: string): string {
@@ -45,10 +86,32 @@ export async function runThumbnail(opts: ThumbnailOptions): Promise<number> {
     return 1;
   }
   const { readFile } = await import("node:fs/promises");
-  const prompt = (await readFile(promptPath, "utf8")).trim();
-  if (!prompt) {
+  const basePrompt = (await readFile(promptPath, "utf8")).trim();
+  if (!basePrompt) {
     console.error(`empty thumbnail prompt: ${promptPath}`);
     return 1;
+  }
+  // v0.10.3: match the thumbnail to the video's content style. article.md is
+  // the human-editable source of truth for both keys; absent (or unparseable)
+  // means no identity declared, and the prompt is used as-is.
+  let identity: {
+    image_style?: string | undefined;
+    setting?: string | undefined;
+  } | null = null;
+  const articlePath = path.join(projectRoot, "article.md");
+  if (existsSync(articlePath)) {
+    try {
+      identity = parseArticleWithRecovery(await readFile(articlePath, "utf8"))
+        .article.frontmatter;
+    } catch {
+      identity = null;
+    }
+  }
+  const prompt = applyVisualIdentity(basePrompt, identity);
+  if (prompt !== basePrompt) {
+    console.log(
+      `thumbnail: applied video visual identity (style/setting from article.md)`,
+    );
   }
 
   // YouTube recommended thumbnail: 1280x720 (16:9)
@@ -126,37 +189,42 @@ export async function runThumbnail(opts: ThumbnailOptions): Promise<number> {
 }
 
 export function registerThumbnail(program: Command): void {
-program
-  .command("thumbnail")
-  .argument("<project>", "project for the thumbnail: topic, folder name, path, or unique prefix")
-  .option("--cwd <dir>", "base directory for the project")
-  .option("--width <px>", "thumbnail width (default 1280)", (v) =>
-    parseInt(v, 10),
-  )
-  .option("--height <px>", "thumbnail height (default 720)", (v) =>
-    parseInt(v, 10),
-  )
-  .option(
-    "--provider <name>",
-    "image provider: mock|minimax|openai|gemini (default mock — minimax needs MINIMAX_API_KEY; openai needs OPENAI_API_KEY; gemini needs GEMINI_API_KEY)",
-  )
-  .action(
-    async (
-      project: string,
-      opts: {
-        cwd?: string;
-        width?: number;
-        height?: number;
-        provider?: "mock" | "minimax" | "openai" | "gemini";
+  program
+    .command("thumbnail")
+    .argument(
+      "<project>",
+      "project for the thumbnail: topic, folder name, path, or unique prefix",
+    )
+    .option("--cwd <dir>", "base directory for the project")
+    .option("--width <px>", "thumbnail width (default 1280)", (v) =>
+      parseInt(v, 10),
+    )
+    .option("--height <px>", "thumbnail height (default 720)", (v) =>
+      parseInt(v, 10),
+    )
+    .option(
+      "--provider <name>",
+      "image provider: mock|minimax|openai|gemini (default mock — minimax needs MINIMAX_API_KEY; openai needs OPENAI_API_KEY; gemini needs GEMINI_API_KEY)",
+    )
+    .action(
+      async (
+        project: string,
+        opts: {
+          cwd?: string;
+          width?: number;
+          height?: number;
+          provider?: "mock" | "minimax" | "openai" | "gemini";
+        },
+      ) => {
+        process.exitCode = await runThumbnail({
+          project,
+          ...(opts.cwd !== undefined ? { cwd: opts.cwd } : {}),
+          ...(opts.width !== undefined ? { width: opts.width } : {}),
+          ...(opts.height !== undefined ? { height: opts.height } : {}),
+          ...(opts.provider !== undefined
+            ? { providerName: opts.provider }
+            : {}),
+        });
       },
-    ) => {
-      process.exitCode = await runThumbnail({
-        project,
-        ...(opts.cwd !== undefined ? { cwd: opts.cwd } : {}),
-        ...(opts.width !== undefined ? { width: opts.width } : {}),
-        ...(opts.height !== undefined ? { height: opts.height } : {}),
-        ...(opts.provider !== undefined ? { providerName: opts.provider } : {}),
-      });
-    },
-  );
+    );
 }

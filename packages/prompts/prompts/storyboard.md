@@ -9,6 +9,14 @@ Rules:
 4. Use components from this registered set ONLY:
    Title, Paragraph, CodeBlock, Terminal, Image, FlowChart, Comparison,
    Timeline, Callout, EndCard, Character.
+   PREFER IMAGE-BACKED SCENES. `Image` (with Character where a person is
+   central) is the default choice; diagram and card components — FlowChart,
+   Comparison, Timeline, Callout, CodeBlock, Terminal, StatGrid-style — are
+   for the rare moment the narration genuinely needs the schematic itself,
+   at most 1-2 per video, never consecutive. A deck of vector cards breaks
+   the video's single visual identity; photographs and illustrations keep
+   it. Titles and quotes belong on the image (baked at make time), not on
+   card components.
 5. Visual durations are in SECONDS; scene count and total duration are driven by the requested target (refer to the "Total duration target (seconds): N" value emitted later):
    - target ≤ 60s  → 5-8 scenes
    - target 60-120s → 8-12 scenes

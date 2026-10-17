@@ -1,10 +1,10 @@
 case: xuanwumen-scene-count-fits-180s
 agent: storyboard
-prompt_hash: sha256:eabe9e8b699f1c09dd486be87908cd61578b716df4ef93722e65f6b39da5f1fe
+prompt_hash: sha256:495a148d2ab7905238ef900418e1fc39106ea0a73a4c9d1b5c8b3e696fec16d0
 messages:
   - role: system
-    bytes: 2837
-    content_sha256: sha256:48cb4086b3023cc90397b601feab933b48d0ce16db0278a0774f6a9a5598be35
+    bytes: 3384
+    content_sha256: sha256:75891afaba717b3f36b3e3b4e9c3fcc8f6b093c494c3f6fb99775857f61ea0d1
     blocks:
       - "Your ONLY job:"
       - "Rules:"

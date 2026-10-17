@@ -201,6 +201,34 @@ old setting.
 re-drafts; `project`, `language`, `duration_target_sec` and `voice` always
 reflect the newest run.
 
+### `bake.json` — text baked onto scene images (v0.10.5)
+
+When a scene needs large typography — an opening title, a closing quote — the
+text is typeset onto the generated image with Pillow at `video make` time,
+instead of rendering the scene as a vector card component. The manifest lives
+beside the images:
+
+```json
+{
+  "scenes": {
+    "1":  { "style": "title", "text": "长安清晨，宫门马蹄", "subtext": "公元626年7月2日" },
+    "26": { "style": "quote", "text": "当规则无法约束野心……", "attribution": "玄武门之变" }
+  },
+  "palette": { "color": [244,241,234,255], "accent": [181,83,60,255], "scrim": 125 }
+}
+```
+
+Text lands in the upper two-thirds; the lower third stays quiet for the
+caption overlay. The bake spec is part of the image cache key — an edited
+title regenerates the image exactly like an edited `visual:` line does.
+
+The thumbnail inherits both keys too (v0.10.3): `video youtube` passes them to
+the agent so `thumbnail_prompt` is written in the video's own style preset and
+era, and `video thumbnail` appends the verbatim style contract and the setting
+line to the prompt in code — so the match holds even for a
+`youtube/thumbnail-prompt.txt` written before this existed. A video rendered
+as editorial illustration no longer ships a cinematic-35mm thumbnail.
+
 ## Camera (T7.4)
 
 A `type: camera` animation targets a NODE of an `SvgScene` scene; the node

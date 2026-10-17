@@ -6,9 +6,10 @@ import type { ChatRequest, ChatResponse, Provider } from "@video/llm";
 import {
   IMAGE_PROMPT_REVISION,
   buildScenePromptMessages,
+  expandSceneBrief,
   expandScenePrompt,
 } from "./image-prompt.js";
-import { stylePromptSuffix } from "./image-style.js";
+import { stylePromptSuffix, styleSystemBlock } from "./image-style.js";
 
 function fakeProvider(
   respond: (req: ChatRequest) => string,
@@ -99,12 +100,12 @@ describe("expandScenePrompt", () => {
       dir,
       3,
     );
-    // v0.6: generated part ≤ budget + "\n" + flat-vector (default) suffix.
-    // v0.10.2: the budget is 1400 — the labelled format measures longer than
-    // the paragraph it replaced; the cap is a runaway guard, not a target.
-    expect(r.prompt).toBe(
-      "y".repeat(1400) + "\n" + stylePromptSuffix("flat-vector"),
-    );
+    // v0.10.3: the ceiling now covers the ASSEMBLED prompt, so the brief is
+    // trimmed to whatever the suffix leaves over — a long style suffix must
+    // not push the total past what the image API accepts.
+    const suffix = stylePromptSuffix("flat-vector");
+    expect(r.prompt).toBe("y".repeat(1500 - suffix.length - 1) + "\n" + suffix);
+    expect(r.prompt.length).toBeLessThanOrEqual(1500);
   });
 
   it("strips reasoning scaffolding so the brief, not the thinking, is kept", async () => {
@@ -317,9 +318,11 @@ describe("setting participates in the brief cache identity", () => {
   });
 
   it("revision is bumped so paragraph-era briefs are never reused", () => {
-    // v3 = era anchoring, v4 = the six labelled output lines. Without each
-    // bump, briefs cached by the previous expander wording outlive the change.
-    expect(IMAGE_PROMPT_REVISION).toBe("4");
+    // v3 = era anchoring, v4 = the six labelled output lines, v5 = the
+    // assembled-prompt ceiling, v6 = the flat-vector contract merge. Without
+    // each bump, briefs cached by the previous expander wording outlive the
+    // change.
+    expect(IMAGE_PROMPT_REVISION).toBe("6");
   });
 });
 
@@ -406,5 +409,81 @@ describe("the expander prompt demands the six labelled lines", () => {
     ]) {
       expect(example).toContain(label);
     }
+  });
+});
+
+describe("prompt fits the provider ceiling", () => {
+  // MiniMax rejects a prompt over 1500 chars; the old budget covered only
+  // the brief, so a long style suffix silently dropped whole scenes.
+  it("keeps brief + suffix within 1500 characters for a long-suffix style", async () => {
+    const provider = {
+      name: "test" as const,
+      async chat() {
+        return {
+          content: "S".repeat(5000),
+          providerName: "test",
+          usage: { input: 0, output: 0 },
+        };
+      },
+    };
+    const { prompt } = await expandSceneBrief(
+      { id: "scene_1", narration: "x", caption: "y", visual: "z" },
+      provider,
+      { style: "isometric" },
+    );
+    expect(prompt.length).toBeLessThanOrEqual(1500);
+  });
+
+  it("still carries the style suffix verbatim", async () => {
+    const provider = {
+      name: "test" as const,
+      async chat() {
+        return {
+          content: "B".repeat(5000),
+          providerName: "test",
+          usage: { input: 0, output: 0 },
+        };
+      },
+    };
+    const { prompt } = await expandSceneBrief(
+      { id: "scene_1", narration: "x", caption: "y", visual: "z" },
+      provider,
+      { style: "isometric" },
+    );
+    expect(prompt).toContain("isometric illustration");
+  });
+});
+
+// v0.10.4: the A/B verdict, pinned. Against the proposed alternative text,
+// the shipped preset kept its decisive property — a LOCKED, named palette
+// (3/3 scenes consistent vs 1/3 for an unlocked "coordinated 4-6 colours") —
+// while adopting the alternative's three genuinely additive phrases. These
+// assertions keep the merge from being silently reverted to either extreme.
+describe("flat-vector style contract (post-merge)", () => {
+  const suffix = stylePromptSuffix("flat-vector");
+
+  it("keeps the locked, named four-colour palette", () => {
+    expect(suffix).toContain(
+      "limited 4-color palette of deep navy slate blue warm amber and off-white",
+    );
+    expect(suffix).toContain("dark ground");
+  });
+
+  it("carries the merged phrases from the alternative text", () => {
+    expect(suffix).toContain("simple silhouettes");
+    expect(suffix).toContain("no 3D rendering");
+    expect(suffix).toContain("no glossy surfaces");
+  });
+
+  it("stays short enough to leave the brief room under the 1500 ceiling", () => {
+    // The A/B loser was 752 chars and forced briefs down to 3 of 6 lines.
+    // This merge must not drift that way: 350 leaves >1100 for the brief.
+    expect(suffix.length).toBeLessThanOrEqual(350);
+  });
+
+  it("the system block allows one subtle flat shadow, not drop shadows", () => {
+    const block = styleSystemBlock("flat-vector");
+    expect(block).toContain("one subtle flat shadow");
+    expect(block).toContain("never a soft gradient or a drop shadow");
   });
 });

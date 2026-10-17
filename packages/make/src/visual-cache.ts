@@ -19,9 +19,10 @@ import { parse as parseYaml } from "yaml";
  * an image exists) and `ImageBackground` (already bound to its image — a
  * changed `visual:` must be able to regenerate it; v0.8 G1).
  */
-export function storyboardSceneComponents(
-  projectRoot: string,
-): { ids: string[]; components: Map<number, string> } {
+export function storyboardSceneComponents(projectRoot: string): {
+  ids: string[];
+  components: Map<number, string>;
+} {
   const ids: string[] = [];
   const components = new Map<number, string>();
   try {
@@ -48,7 +49,10 @@ export function selfRenderedSceneNumbers(projectRoot: string): Set<number> {
   const { components } = storyboardSceneComponents(projectRoot);
   const out = new Set<number>();
   for (const [n, component] of components) {
-    if (component === "AnimatedIllustration" || component === "ImageBackground") {
+    if (
+      component === "AnimatedIllustration" ||
+      component === "ImageBackground"
+    ) {
       continue;
     }
     out.add(n);
@@ -87,6 +91,10 @@ export interface ImageCacheKeyInput {
    *  came from it, so the image is stale on the same terms a changed
    *  `visual:` line is. */
   promptRevision: string;
+  /** Digest of this scene's bake.json spec ("" when none). Baked text lives
+   *  INSIDE the jpg, so an edited title must invalidate the cached image —
+   *  otherwise the old typography ships forever behind a "fresh" key. */
+  bakeDigest: string;
   width: number;
   height: number;
 }
@@ -103,6 +111,7 @@ export function imageCacheKey(input: ImageCacheKeyInput): string {
     input.provider,
     input.learnedDigest,
     input.promptRevision,
+    input.bakeDigest,
     input.width,
     input.height,
   ]);
@@ -125,7 +134,10 @@ export function readImageCacheSidecar(
     const raw = JSON.parse(
       readFileSync(imageCacheSidecarPath(jpgPath), "utf8"),
     ) as Partial<ImageCacheSidecar>;
-    if (typeof raw.cacheKey === "string" && raw.cacheKey.startsWith("sha256:")) {
+    if (
+      typeof raw.cacheKey === "string" &&
+      raw.cacheKey.startsWith("sha256:")
+    ) {
       return { cacheKey: raw.cacheKey, createdAt: raw.createdAt ?? "" };
     }
     return null;
@@ -305,9 +317,10 @@ function toVisualsCheckpointYaml(cp: VisualsCheckpoint): string {
 /** G4 gate evaluation: compare the approved checkpoint against the current
  * image set. Only scenes WITH an image on disk participate (missing images
  * are the generator's business, not the approval gate's). */
-export function visualsGateState(
-  projectRoot: string,
-): { state: "ok" | "missing-checkpoint" | "stale"; staleScenes: number[] } {
+export function visualsGateState(projectRoot: string): {
+  state: "ok" | "missing-checkpoint" | "stale";
+  staleScenes: number[];
+} {
   const checkpoint = readVisualsCheckpoint(projectRoot);
   if (checkpoint === null) {
     return { state: "missing-checkpoint", staleScenes: [] };
@@ -317,11 +330,7 @@ export function visualsGateState(
   for (const n of imageSceneNumbers(projectRoot)) {
     const hash = fileSha256(path.join(imageDir, `scene_${n}.jpg`));
     const approved = checkpoint.scenes[`scene_${n}`];
-    if (
-      !approved ||
-      approved.hash !== hash ||
-      approved.status === "rejected"
-    ) {
+    if (!approved || approved.hash !== hash || approved.status === "rejected") {
       stale.push(n);
     }
   }

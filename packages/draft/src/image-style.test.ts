@@ -37,7 +37,10 @@ describe("resolveImageStyle", () => {
   it("defaults missing / invalid values to flat-vector", () => {
     expect(resolveImageStyle(undefined)).toBe("flat-vector");
     expect(resolveImageStyle("")).toBe("flat-vector");
-    expect(resolveImageStyle("watercolor")).toBe("flat-vector");
+    // "watercolor" was the invalid example here until it became a real
+    // preset (51ad647) and this assertion started failing at HEAD; a value
+    // that is NOT in IMAGE_STYLES is what this test needs.
+    expect(resolveImageStyle("definitely-not-a-style")).toBe("flat-vector");
     expect(resolveImageStyle(null)).toBe(DEFAULT_IMAGE_STYLE);
   });
 

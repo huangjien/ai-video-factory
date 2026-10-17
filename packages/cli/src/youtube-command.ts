@@ -229,11 +229,16 @@ export async function runYouTube(opts: YouTubeOptions): Promise<number> {
     const articleMd = await readFile(articlePath, "utf8");
     // Prefer the RENDERED storyboard's durations when it covers the same
     // scenes — chapter offsets must sum to the real runtime.
-    const renderedPath = path.join(projectRoot, "storyboard", "storyboard.yaml");
+    const renderedPath = path.join(
+      projectRoot,
+      "storyboard",
+      "storyboard.yaml",
+    );
     const rendered = existsSync(renderedPath)
       ? await readFile(renderedPath, "utf8")
       : undefined;
-    const sceneCount = parseArticleWithRecovery(articleMd).article.scenes.length;
+    const sceneCount =
+      parseArticleWithRecovery(articleMd).article.scenes.length;
     articleInput = synthFromArticle(
       articleMd,
       readSyncedDurations(rendered, sceneCount),
@@ -463,6 +468,14 @@ function synthFromArticle(
     research,
     hook: extractHook(article.proseBody),
     topic: article.frontmatter.project,
+    // v0.10.3: the thumbnail inherits the video's visual identity — same
+    // style preset, same palette, same era anchoring as the scene briefs.
+    ...(article.frontmatter.image_style
+      ? { imageStyle: article.frontmatter.image_style }
+      : {}),
+    ...(article.frontmatter.setting
+      ? { setting: article.frontmatter.setting }
+      : {}),
   };
 }
 

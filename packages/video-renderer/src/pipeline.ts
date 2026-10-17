@@ -221,7 +221,9 @@ interface SceneCacheMeta {
  * Same contract as `IMAGE_PROMPT_REVISION` in @video/draft, and deliberately
  * manual: hashing the source tree would re-render on every comment edit.
  */
-export const RENDERER_REVISION = "2"; // 2: caption type + halo + no-plate overlay
+export const RENDERER_REVISION = "3"; // 2: caption type + halo + no-plate overlay
+// 3: the title card preserves inter-word spaces — each glyph is its own flex
+// item, so a bare space collapsed to zero width and headlines rendered run-on.
 
 /** Cache freshness: the scene fragment, the narration audio, AND every
  *  project-level render input (theme, fps/width/height) must match. A

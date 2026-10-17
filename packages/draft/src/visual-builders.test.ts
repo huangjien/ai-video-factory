@@ -610,3 +610,50 @@ describe("fallback labels follow the article language", () => {
     expect(JSON.stringify(props)).toMatch(/[一-鿿]/);
   });
 });
+
+describe("Comparison titles never leak a newline", () => {
+  // Narrations arrive as YAML block scalars; without flattening, a raw
+  // "\n" got sliced into the middle of a card title and rendered literally.
+  it("flattens whitespace in both card titles", () => {
+    const props = VISUAL_BUILDERS.Comparison!(
+      scene({
+        id: "scene_1",
+        duration: 8,
+        caption: "Hundred phone lines",
+        visual: "compare: phone lines vs manual",
+        narration:
+          "Tools-first hands over a hundred phone lines.\nSkills-first hands over one manual instead.",
+      }),
+      { section: null, language: "en-US" },
+    );
+    const titles = [
+      (props.left as { title: string }).title,
+      (props.right as { title: string }).title,
+    ];
+    for (const t of titles) expect(t).not.toMatch(/[\r\n]/);
+  });
+});
+
+describe("card bullets survive dotted abbreviations", () => {
+  // A naive split on "." turned "The 1 a.m. struggle had no reason to repeat."
+  // into a bullet reading "The 1 a" — visible on screen.
+  it("does not emit a fragment from 1 a.m.", () => {
+    const props = VISUAL_BUILDERS.Comparison!(
+      scene({
+        id: "scene_1",
+        duration: 8,
+        caption: "Last night vs this morning",
+        visual: "compare: night vs morning",
+        narration:
+          "Last night: seven wrong calls, versus this morning one prompt. The 1 a.m. struggle never repeated.",
+      }),
+      { section: null, language: "en-US" },
+    );
+    const items = [
+      ...(props.left as { items: string[] }).items,
+      ...(props.right as { items: string[] }).items,
+    ];
+    expect(items).not.toContain("The 1 a");
+    expect(items.some((i) => i.includes("1 a.m."))).toBe(true);
+  });
+});

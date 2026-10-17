@@ -115,7 +115,10 @@ describe("G1: content-keyed image cache", () => {
       const kept = await readFile(path.join(dir, "assets/images/scene_1.jpg"));
       expect(kept.equals(legacy)).toBe(true); // adopted, NOT regenerated
       const sidecar = JSON.parse(
-        await readFile(path.join(dir, "assets/images/scene_1.cache.json"), "utf8"),
+        await readFile(
+          path.join(dir, "assets/images/scene_1.cache.json"),
+          "utf8",
+        ),
       ) as { cacheKey: string };
       expect(sidecar.cacheKey).toMatch(/^sha256:/);
     } finally {
@@ -158,6 +161,7 @@ describe("image cache keys the expander revision", () => {
       imageStyle: "flat-vector",
       provider: "mock",
       learnedDigest: "",
+      bakeDigest: "",
       width: 1920,
       height: 1080,
     };
@@ -168,6 +172,27 @@ describe("image cache keys the expander revision", () => {
     expect(imageCacheKey({ ...base, promptRevision: "1" })).not.toBe(key);
     // Unrelated inputs stay independent.
     expect(imageCacheKey({ ...base, promptRevision: "2" })).toBe(key);
-    expect(imageCacheKey({ ...base, visual: "对比要点丙", promptRevision: "2" })).not.toBe(key);
+    expect(
+      imageCacheKey({ ...base, visual: "对比要点丙", promptRevision: "2" }),
+    ).not.toBe(key);
+  });
+
+  it("keys on the bake spec — baked text lives inside the jpg (v0.10.5)", () => {
+    const base = {
+      sceneNumber: 1,
+      visual: "v",
+      imageStyle: "editorial",
+      provider: "minimax",
+      learnedDigest: "",
+      bakeDigest: "sha256:aaa",
+      width: 1920,
+      height: 1080,
+      promptRevision: "6",
+    };
+    const key = imageCacheKey(base);
+    // An edited title must invalidate the cached image: the old typography
+    // is baked into the pixels, not composited at render time.
+    expect(imageCacheKey({ ...base, bakeDigest: "sha256:bbb" })).not.toBe(key);
+    expect(imageCacheKey({ ...base, bakeDigest: "sha256:aaa" })).toBe(key);
   });
 });

@@ -32,3 +32,12 @@ export {
   type ContactSheetOptions,
   type ContactSheetResult,
 } from "./contact-sheet.js";
+export {
+  loadBakeManifest,
+  loadBakeManifestSync,
+  bakeDigestFor,
+  runBakeText,
+  type BakeManifest,
+  type BakeSpec,
+  type BakeTextResult,
+} from "./bake-text.js";

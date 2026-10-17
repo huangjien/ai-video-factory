@@ -30,8 +30,9 @@ export interface ContactSheetResult {
   error?: string;
 }
 
-/** packages/media-generators/{dist|src} → ../python (same either way). */
-function resolvePythonDir(): string {
+/** packages/media-generators/{dist|src} → ../python (same either way).
+ *  Shared by every uv-run helper in this package. */
+export function resolvePythonDir(): string {
   const here = path.dirname(fileURLToPath(import.meta.url));
   return path.resolve(here, "..", "python");
 }

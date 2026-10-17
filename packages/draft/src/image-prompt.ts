@@ -33,17 +33,22 @@ import {
  *   <projectRoot>/assets/images/scene_<N>.prompt.txt
  */
 
-/** Character budget for the LLM-authored part of the brief. The fixed
- *  structure needs room for six parts; 400 clipped mid-sentence and left
- *  the constraints — the overlay zone and the exclusions — unwritten.
- *  The style suffix is appended after this budget, not counted in it. */
-// 1400 (v0.10.2): a hard cap, not a target — the prompt asks for 500-1000
-// characters. The labelled six-line format measures longer than the paragraph
-// it replaced (labels ~65 chars, plus era/appearance/dress anchoring and the
-// three-layer depth guidance), and on three 玄武门 scenes a 1100 cap still
-// sliced every brief inside Constraints. The cap exists so a runaway response
-// cannot crowd out the style suffix; it is not a model limit, and the suffix
-// is not counted against it.
+/** Hard ceiling on the WHOLE prompt, brief + style suffix.
+ *
+ *  The provider enforces this, not us: `MiniMaxImageProvider` rejects a
+ *  prompt over 1500 characters rather than spending a request on a 400. The
+ *  budget used to cover only the brief, on the reasoning that the suffix is
+ *  fixed and therefore not the expander's problem — which is exactly how
+ *  `isometric` (a long suffix) pushed three skills-first scenes to 1561-1613
+ *  characters and silently dropped them from the render. Budget against the
+ *  provider's limit and slice the brief to whatever is left over. */
+const MAX_PROMPT_CHARS = 1500;
+
+/** Ceiling for the LLM-authored part alone, used when the suffix is short
+ *  enough that the provider limit is not the binding constraint. The fixed
+ *  structure needs room for six parts; 400 clipped mid-sentence and left the
+ *  constraints — the overlay zone and the exclusions — unwritten. The prompt
+ *  asks for 500-1000 characters, so this only bites on a runaway response. */
 const MAX_BRIEF_CHARS = 1400;
 
 /** Bumped whenever the expander prompt, this module's instruction text, or
@@ -55,7 +60,11 @@ const MAX_BRIEF_CHARS = 1400;
 // v4 — six labelled output lines (Subject/Scene/Composition/Lighting/Style/
 // Constraints) + materials guidance. v3 was the era anchoring; briefs written
 // as a single paragraph must not survive the format change.
-export const IMAGE_PROMPT_REVISION = "4";
+// v6 — flat-vector contract merge: "simple silhouettes" + "no 3D rendering,
+// no glossy surfaces" in the suffix, and the flat-shadow nuance in the system
+// block. The suffix is stored inside every cached brief, so a preset change
+// must invalidate the cache the same way an expander change does.
+export const IMAGE_PROMPT_REVISION = "6";
 
 /** Remove the reasoning scaffold that reasoning-enabled chat models emit
  *  ahead of their answer (`<think>…</think>`, an unterminated `<think>`,
@@ -186,11 +195,17 @@ export async function expandSceneBrief(
   const messages = buildScenePromptMessages(scene, context);
   const res = await provider.chat({ messages, temperature: 0.4 });
   // The verbatim style contract rides along even if the LLM drifts —
-  // the image model always sees it. (Trim BEFORE the suffix so the
-  // generated part keeps the size budget; the suffix is fixed.)
-  const brief = extractBrief(res.content).slice(0, MAX_BRIEF_CHARS);
+  // the image model always sees it. Trim the brief so the ASSEMBLED prompt
+  // fits the provider's ceiling: a long style suffix must not push the total
+  // past what the API accepts.
+  const suffix = stylePromptSuffix(style);
+  const briefBudget = Math.min(
+    MAX_BRIEF_CHARS,
+    MAX_PROMPT_CHARS - suffix.length - 1,
+  );
+  const brief = extractBrief(res.content).slice(0, briefBudget);
   return {
-    prompt: `${brief}\n${stylePromptSuffix(style)}`,
+    prompt: `${brief}\n${suffix}`,
     providerName: provider.name,
   };
 }

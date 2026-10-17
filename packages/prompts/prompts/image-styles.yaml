@@ -3,12 +3,12 @@ flat-vector:
     Style: FLAT VECTOR ILLUSTRATION.
     - Compose from clean geometric shapes and solid fills. Minimal interior detail.
     - Locked palette: deep navy #16213E, slate blue #4A6FA5, warm amber #E8A33D, off-white #F4F1EA on a dark ground. Use these same four colors in every scene; introduce no others. Amber is the only accent — reserve it for the one thing that matters.
-    - No gradients, no textures, no photorealism, no drop shadows.
+    - No gradients, no textures, no photorealism. If a shape needs separation, one subtle flat shadow is allowed — a slightly darker solid of the same colour, hard-edged — never a soft gradient or a drop shadow.
     - Prefer one clear focal shape over many competing ones. Strong figure-ground separation so the subject reads instantly at 1080p and survives a slow zoom or pan.
     - Lighting reads as one clean source: a single soft directional light with flat ambient fill, no dramatic modelling. Say which side it comes from.
     - Depth comes from overlap, scale and contrast, not from shading. Place a distinct foreground element, a subject in the middle ground, and a simplified background band.
     - Leave breathing room — the lower third and the outer edges stay quiet because caption and title overlays land there.
-  promptSuffix: flat vector illustration, clean geometric shapes, solid fills, limited 4-color palette of deep navy slate blue warm amber and off-white, dark ground, no gradients, no texture, minimalist composition, generous negative space, quiet lower third, no text, no letters, no words
+  promptSuffix: flat vector illustration, clean geometric shapes, solid fills, simple silhouettes, limited 4-color palette of deep navy slate blue warm amber and off-white, dark ground, no gradients, no texture, no 3D rendering, no glossy surfaces, minimalist composition, generous negative space, quiet lower third, no text, no letters, no words
 editorial:
   systemBlock: |-
     Style: EDITORIAL ILLUSTRATION (narrative mode).

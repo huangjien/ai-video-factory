@@ -79,6 +79,10 @@ export const Title: FC<TitleProps> = ({
                 key={i}
                 style={{
                   display: "inline-block",
+                  // Each character is its own flex item, so a space inside one
+                  // collapses to zero width and the headline renders as
+                  // "Sevenwrongtoolcalls". `pre` keeps the glyph's width.
+                  whiteSpace: "pre",
                   transform: `translate(${k.x}px, ${k.y}px) rotate(${k.rot}deg) scale(${breath})`,
                 }}
               >

@@ -14,7 +14,7 @@ expects:
 provenance:
   source: projects/玄武门 — the committed storyboard has 14 scenes for 180s; a 20+ scene body for a 3-minute target is the failure this axis encodes. Not yet a real judged failure.
 recorded:
-  prompt_hash: sha256:eabe9e8b699f1c09dd486be87908cd61578b716df4ef93722e65f6b39da5f1fe
+  prompt_hash: sha256:495a148d2ab7905238ef900418e1fc39106ea0a73a4c9d1b5c8b3e696fec16d0
   scores:
     scene-count-fits-duration: 8
     shot-variety: 6

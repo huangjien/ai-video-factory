@@ -271,14 +271,8 @@ function splitLeftRight(blob: string, language: string | undefined): {
   if (parts.length >= 2) {
     const a = parts[0]?.trim() ?? "";
     const b = parts.slice(1).join(" ").trim();
-    const aSentences = a
-      .split(/[。.!?！？\n]/)
-      .map((s) => s.trim())
-      .filter((s) => s.length >= 2 && s.length <= 60);
-    const bSentences = b
-      .split(/[。.!?！？\n]/)
-      .map((s) => s.trim())
-      .filter((s) => s.length >= 2 && s.length <= 60);
+    const aSentences = splitSentences(a).filter((s) => s.length <= 60);
+    const bSentences = splitSentences(b).filter((s) => s.length <= 60);
     if (aSentences.length >= 1 && bSentences.length >= 1) {
       return {
         left: { title: truncate(a, 18), items: aSentences.slice(0, 4) },
@@ -309,10 +303,7 @@ function splitLeftRight(blob: string, language: string | undefined): {
   }
 
   // 4) Last resort — split narration into two halves.
-  const sentences = blob
-    .split(/[。.!?！？\n]/)
-    .map((s) => s.trim())
-    .filter((s) => s.length >= 2 && s.length <= 60);
+  const sentences = splitSentences(blob).filter((s) => s.length <= 60);
   const half = Math.max(1, Math.floor(sentences.length / 2));
   return {
     left: {
@@ -324,6 +315,20 @@ function splitLeftRight(blob: string, language: string | undefined): {
       items: sentences.slice(half).slice(0, 4),
     },
   };
+}
+
+/** Split prose into sentences, treating dotted abbreviations as part of the
+ *  sentence. A plain `split(/[。.!?！？\n]/)` cuts "1 a.m." into "1 a" and "m",
+ *  and the stray fragments then land on screen as card bullets. */
+const ABBREVIATIONS = /\b(a\.m|p\.m|e\.g|i\.e|etc|Mr|Mrs|Ms|Dr|vs|no)\./gi;
+const DOT_MASK = "\u0001";
+
+function splitSentences(text: string): string[] {
+  const masked = text.replace(ABBREVIATIONS, (m) => m.replace(/\./g, DOT_MASK));
+  return masked
+    .split(/[。.!?！？\n]/)
+    .map((s) => s.split(DOT_MASK).join(".").trim())
+    .filter((s) => s.length > 0);
 }
 
 function extractBullets(blob: string, headingIdx: number): string[] {
@@ -713,8 +718,12 @@ function dedup<T>(xs: T[]): T[] {
 }
 
 function truncate(s: string, max: number): string {
-  if (s.length <= max) return s;
-  return `${s.slice(0, max - 1)}…`;
+  // Collapse whitespace first. Narrations reach the builders as YAML block
+  // scalars, so a raw newline otherwise gets sliced into the middle of a card
+  // title and renders as a literal "\n" on screen.
+  const flat = s.replace(/\s+/g, " ").trim();
+  if (flat.length <= max) return flat;
+  return `${flat.slice(0, max - 1)}…`;
 }
 
 /** Title.subtext is rendered as one <p> at 36px on the title card —

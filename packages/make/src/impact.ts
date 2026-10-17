@@ -1,5 +1,6 @@
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
+import { bakeDigestFor, loadBakeManifestSync } from "@video/media-generators";
 import { parse as parseYaml } from "yaml";
 import { extractSceneFragment, hashSceneFragment } from "@video/workflow";
 import {
@@ -114,6 +115,11 @@ export function computeMakeImpact(
         ? ""
         : promptRules(loadLessonStore(wsRoot), "image-prompt"),
     );
+    // Baked scene text is an image input here too: the impact table must
+    // count an edited title as a regeneration, not a no-op.
+    const bakeManifest = loadBakeManifestSync(
+      path.join(projectRoot, "assets", "images"),
+    );
     article.scenes.forEach((scene, i) => {
       const n = i + 1;
       const visual = scene.visual ?? "";
@@ -125,6 +131,7 @@ export function computeMakeImpact(
         provider,
         learnedDigest,
         promptRevision: IMAGE_PROMPT_REVISION,
+        bakeDigest: bakeDigestFor(n, bakeManifest),
         width: reqWidth,
         height: reqHeight,
       });

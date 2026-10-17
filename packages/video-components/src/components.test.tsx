@@ -34,6 +34,18 @@ describe("Todo 8 — components batch A (render at frame 0 and mid)", () => {
     expect(a).not.toBe(b);
   });
 
+  it("Title keeps the width of spaces between words", () => {
+    // Each glyph is its own flex item, so a bare space collapsed to zero
+    // width and every headline rendered as one run-on word.
+    const html = renderToStaticMarkup(
+      <Title text="Seven Wrong Calls" startFrame={0} durationInFrames={60} frame={15} />,
+    );
+    // The space glyph must be rendered with `white-space: pre` so it is not
+    // collapsed away by the browser.
+    const spaceSpan = /<span style="[^"]*white-space:pre[^"]*"> <\/span>/.test(html);
+    expect(spaceSpan).toBe(true);
+  });
+
   it("Paragraph clamps long text within stage height (assert no overflow markup)", () => {
     const longText = "字".repeat(200);
     const html = renderToStaticMarkup(

@@ -13,7 +13,7 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "test": "vitest run",
+    "test": "vitest run --coverage --coverage.thresholds.lines=80 --coverage.thresholds.functions=78 --coverage.thresholds.branches=62 --coverage.thresholds.statements=80",
     "publish:packages:dry-run": "pnpm run build && pnpm publish --filter \"./packages/*\" --access public --dry-run",
     "publish:packages": "pnpm run build && pnpm publish --filter \"./packages/*\" --access public",
     "benchmark:verify": "node scripts/benchmark-verify.mjs",

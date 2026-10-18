@@ -13,6 +13,7 @@ import { MiniMaxWebSearch } from "@video/research";
 import {
   articleToStoryboardYaml,
   callDraft,
+  DEFAULT_MIN_SCORE,
   parseArticleWithRecovery,
   renderArticleReviewYaml,
   resolveImageStyle,
@@ -347,8 +348,8 @@ export async function runDraft(opts: DraftOptions): Promise<number> {
       callDraft(draftInput, provider, fallback),
     ));
   } else {
-    const minScore = opts.minScore ?? 70;
-    const maxAttempts = opts.maxAttempts ?? 3;
+    const minScore = opts.minScore ?? DEFAULT_MIN_SCORE;
+    const maxAttempts = opts.maxAttempts ?? 8;
     const result = await withProgress(
       `drafting article (${chosenName}, judged)`,
       async () => {
@@ -680,14 +681,16 @@ export function registerDraft(program: Command): void {
     )
     .option(
       "--no-review",
-      "skip the article quality gate (default: judge rates attractive/interesting/useful, drafts below 25/30 are regenerated)",
+      "skip the article quality gate (default: an LLM judge scores 8 dimensions × 24 indicators on a 0-100 weighted scale; drafts below the bar or with Critical risk flags are regenerated with the judge's feedback)",
     )
-    .option("--min-score <n>", "article quality bar of 30 (default: 25)", (v) =>
-      parseInt(v, 10),
+    .option(
+      "--min-score <n>",
+      "article quality bar on the 0-100 weighted score (default: 90 = grade A; Critical risk flags fail regardless of score)",
+      (v) => parseInt(v, 10),
     )
     .option(
       "--max-attempts <n>",
-      "total draft attempts in the quality loop (default: 3)",
+      "total draft attempts in the quality loop (default: 8; the top-scoring candidate is kept regardless of passing)",
       (v) => parseInt(v, 10),
     )
     .option(

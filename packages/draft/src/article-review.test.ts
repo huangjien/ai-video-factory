@@ -242,8 +242,8 @@ describe("gradeFor", () => {
 });
 
 describe("DEFAULT_MIN_SCORE", () => {
-  it("sets the acceptance bar at grade C (70/100)", () => {
-    expect(DEFAULT_MIN_SCORE).toBe(70);
+  it("sets the acceptance bar at grade A (90/100)", () => {
+    expect(DEFAULT_MIN_SCORE).toBe(90);
   });
 });
 
@@ -409,7 +409,7 @@ describe("runScoredDraft", () => {
       GOOD_ARTICLE,
       buildPassingRaw(2), // 40
     ]);
-    const r = await runScoredDraft(INPUT, p, null, { minScore: 100 });
+    const r = await runScoredDraft(INPUT, p, null, { minScore: 100, maxAttempts: 3 });
     expect(r.passing).toBe(false);
     expect(r.attempts).toHaveLength(3);
     expect(r.score?.computed.overall_score).toBe(80);

@@ -119,10 +119,11 @@ const DIM_BY_ID: Record<string, DimensionDef> = Object.fromEntries(
 
 export const PROFILE_ID = "general_article_v1" as const;
 
-/** Acceptance grade: 70/100 = C ("基本可用"). Old bar was 25/30 ≈ 83%.
- *  The new bar drops a touch because Critical-flag overrides already
- *  catch what high scores would otherwise smuggle through. */
-export const DEFAULT_MIN_SCORE = 70;
+/** Acceptance bar: 90/100 = A (2026-10-18 — user directive: only A-grade
+ *  articles auto-pass; everything else iterates to the attempt cap and the
+ *  top-scoring candidate wins regardless of passing). History: 70 = C
+ *  ("基本可用") before that, 25/30 ≈ 83% before v0.9. */
+export const DEFAULT_MIN_SCORE = 90;
 
 /** Total possible — sum of dimension weights, used by the engine only
  *  for the percentage form. */
@@ -605,7 +606,10 @@ export async function runScoredDraft(
   opts: ScoredDraftOptions = {},
 ): Promise<ScoredDraftResult> {
   const minScore = opts.minScore ?? DEFAULT_MIN_SCORE;
-  const maxAttempts = Math.max(1, opts.maxAttempts ?? 3);
+  // 8 attempts (2026-10-18 user directive, paired with the A-grade bar):
+  // few drafts clear 90 early, so the loop usually spends the full budget
+  // and the best-scoring candidate is kept regardless of passing.
+  const maxAttempts = Math.max(1, opts.maxAttempts ?? 8);
 
   const attempts: ScoredAttempt[] = [];
   const usage = { input: 0, output: 0 };
@@ -654,6 +658,10 @@ export async function runScoredDraft(
     feedback = feedbackBlock(entry, minScore);
   }
 
+  // Best wins, period: after the final attempt the top-scoring candidate is
+  // returned even when nothing passed the bar (user directive 2026-10-18 —
+  // "after 8 times, use the top score one, no matter what"). `passing` is
+  // reported honestly alongside; selection itself is score-only.
   // maxAttempts ≥ 1 ⇒ the loop ran at least once.
   let best = attempts[0]!;
   for (const a of attempts) {

@@ -821,12 +821,13 @@ video draft "AI Agent Memory" --no-audio-plan     # article.md only
 video draft "AI Agent Memory" --bgm guofeng       # stamp bgm: guofeng into the FRESH audio-config.yaml
 video draft "AI Agent Memory" --no-ask            # never ask questions — accept the defaults (see below)
 
-# Quality gate (on by default): after drafting, an LLM judge rates the
-# article attractive / interesting / useful — 0-10 each, 30 total.
-# Below the bar (default 25) the draft is regenerated with the judge's
-# feedback, up to 3 drafts; the best-scoring candidate is kept and the
-# per-attempt scores land in <project>/article-review.yaml.
-video draft "AI Agent Memory" --min-score 27 --max-attempts 4
+# Quality gate (on by default): after drafting, an LLM judge scores the
+# article across 8 dimensions × 24 indicators on a 0-100 weighted scale.
+# Below the bar (default 90 = grade A; Critical risk flags fail regardless
+# of score) the draft is regenerated with the judge's feedback, up to 8
+# attempts; the top-scoring candidate is kept even if nothing passed, and
+# the per-attempt scores land in <project>/article-review.yaml.
+video draft "AI Agent Memory" --min-score 80 --max-attempts 8
 video draft "AI Agent Memory" --no-review         # single draft, no judging
 
 # 2. 🚪 Human gate: read article.md, then approve the storyboard

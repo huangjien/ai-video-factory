@@ -121,6 +121,25 @@ describe("hasTextOverlay (T4 validator)", () => {
     expect(hasTextOverlay("海报风格设计")).toBe(true);
     expect(hasTextOverlay("界面 仪表盘")).toBe(true);
   });
+  it("allows the compliant 'no text' constraint the template mandates", () => {
+    expect(
+      hasTextOverlay(
+        "Two engineers at a whiteboard · medium shot · warm side-light · no text, no letters, no logos · the right third stays quiet for the title",
+      ),
+    ).toBe(false);
+    expect(hasTextOverlay("A matte concrete texture under soft light")).toBe(
+      false,
+    );
+    expect(hasTextOverlay("Close-up in an office, out of context")).toBe(false);
+  });
+  it("allows the zh negation the template mandates (live 2026-10-18)", () => {
+    expect(
+      hasTextOverlay(
+        "年轻的女工程师 · 站在米白墙前 · 右侧留白留给后期排印标题 · 编辑部风格插画，全画面无任何文字、字母、数字、标志或水印",
+      ),
+    ).toBe(false);
+    expect(hasTextOverlay("年轻女工程师站在墙前，字幕压在下方")).toBe(true);
+  });
 });
 
 describe("callYouTube text-overlay retry path (T4)", () => {

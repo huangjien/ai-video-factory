@@ -130,23 +130,33 @@ export async function callYouTube(
 }
 
 /** v0.4 (T4): banned tokens that indicate the LLM is describing a text
- *  overlay / poster / dashboard instead of a real scene. The validator
- *  scans the lowercased prompt for any of these substrings. */
-const BANNED_TOKENS = [
+ *  overlay / poster / dashboard instead of a real scene.
+ *
+ *  Two refinements (2026-10-18, live-verified): the prompt template tells
+ *  the model "NEVER include text, subtitles, watermarks, logos…", so a
+ *  COMPLIANT English brief says "no text, no lettering" — scanning raw
+ *  substrings rejected it and blocked packaging on both providers. ASCII
+ *  tokens therefore match on word boundaries (so "texture" and "context"
+ *  pass), and negated mentions are stripped before the scan. CJK has no
+ *  word boundaries, so those stay substring matches. */
+const NEGATED_MENTION =
+  /\b(?:no|without|zero|never|free of|devoid of)\s+(?:visible\s+|readable\s+|legible\s+)?(?:text|lettering|letters|typography|captions?|subtitles?|words|writing|labels?)\b/gi;
+
+const ASCII_BANNED_TOKENS = [
   "text",
   "subtitle",
   "subtitles",
   "watermark",
   "logo",
   "caption",
-  "caption:",
-  "title text",
-  "bold text",
+  "captions",
+];
+
+const CJK_BANNED_TOKENS = [
   "大字",
   "字幕",
   "标志",
   "logo文字",
-  "标题",
   "海报",
   "海报风格",
   "屏幕截图",
@@ -154,8 +164,39 @@ const BANNED_TOKENS = [
   "仪表盘",
   "界面",
 ];
+// 标题 is deliberately NOT here: the prompt template REQUIRES a brief to
+// name the quiet region it reserves for the title ("留给后期排印标题"),
+// so banning the word rejected a compliant brief every time. The template
+// already forbids describing a real text overlay in far stronger terms.
+
+/** zh negation cue. A compliant zh brief ends with "无任何文字、字母、
+ *  数字、标志或水印", so the banned noun sits inside a negation. */
+const CJK_NEGATION = /无|没有|不含|不要|不得|不带|不出现|零/;
+
+/** Characters of look-back in which a zh negation excuses a banned noun
+ *  (long enough to cover "无任何文字、字母、数字、标志", short enough
+ *  that "标题在左上角，无字幕" still fails on 标题). */
+const CJK_LOOKBACK = 30;
+
+function cjkTokenAllowed(lower: string, token: string): boolean {
+  let from = 0;
+  for (;;) {
+    const idx = lower.indexOf(token, from);
+    if (idx === -1) return true; // token absent entirely
+    const before = lower.slice(Math.max(0, idx - CJK_LOOKBACK), idx);
+    if (!CJK_NEGATION.test(before)) return false;
+    from = idx + token.length;
+  }
+}
 
 export function hasTextOverlay(prompt: string): boolean {
-  const lower = prompt.toLowerCase();
-  return BANNED_TOKENS.some((tok) => lower.includes(tok.toLowerCase()));
+  const lower = prompt.toLowerCase().replace(NEGATED_MENTION, " ");
+  if (
+    ASCII_BANNED_TOKENS.some((tok) =>
+      new RegExp(`\\b${tok}\\b`, "i").test(lower),
+    )
+  ) {
+    return true;
+  }
+  return CJK_BANNED_TOKENS.some((tok) => !cjkTokenAllowed(lower, tok));
 }

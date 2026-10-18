@@ -50,9 +50,13 @@ Minimal API (v0.3.9+ recommended) — two commands do the whole pipeline:
 
 ```bash
 video draft "<topic>"   # LLM writes article.md + audio-config.yaml + derived storyboard.yaml
-                        # quality gate: judge rates attractive/interesting/useful (0-10 each);
-                        # below 25/30 the draft is regenerated with the judge's feedback
-                        # (max 3 drafts, best wins) → article-review.yaml sidecar.
+                        # quality gate: an LLM judge scores 8 dimensions × 24 indicators on a
+                        # 0-100 weighted scale (bar: 90 = grade A; Critical risk flags fail
+                        # regardless of score); below-bar drafts are regenerated with the
+                        # judge's feedback (default 8 attempts, top-scoring candidate wins
+                        # even if nothing passed; a judge failure degrades to accepting the
+                        # draft unreviewed) → article-review.yaml sidecar. Implementation:
+                        # packages/draft/src/article-review.ts (runScoredDraft).
                         # Flags: --no-review, --min-score <n>, --max-attempts <n>;
                         #         --ask/--no-ask (agent questions, §2.6), --bgm <tag|none>
 video make <project>    # TTS → audio assets → render scenes → mix → final-mixed.mp4

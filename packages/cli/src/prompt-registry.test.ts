@@ -10,6 +10,7 @@ import { describe, expect, it } from "vitest";
 // prompt loaded from inside the CLI itself).
 import "@video/agent-storyboard";
 import "@video/audio-plan";
+import "@video/bilibili";
 import "@video/draft";
 import "@video/motion";
 import "@video/qa";

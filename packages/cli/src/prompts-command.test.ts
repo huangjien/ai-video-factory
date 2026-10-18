@@ -25,7 +25,7 @@ describe("video prompts", () => {
     expect(out).toContain("storyboard.md");
     expect(out).toContain("draft-article.md");
     expect(out).toContain("music.json");
-    expect(out).toMatch(/1[567] prompts — edit under/);
+    expect(out).toMatch(/1[5678] prompts — edit under/);
   });
 
   it("shows a prompt body by stem", async () => {

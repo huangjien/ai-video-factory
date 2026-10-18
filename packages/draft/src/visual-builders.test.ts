@@ -759,4 +759,96 @@ describe("buildComparison titles are content-derived", () => {
     ) as { left: { title: string }; right: { title: string } };
     expect([props.left.title, props.right.title]).toEqual(["—", "—"]);
   });
+
+  // Chinese captions state a contrast without spaces — "精确，还是结构".
+  // Without 还是 in the separator list that caption produced no title at
+  // all, and the cards fell back to positional words on screen.
+  it("reads a space-less Chinese A-vs-still-B caption as a contrast pair", () => {
+    const props = VISUAL_BUILDERS.Comparison!(
+      scene({
+        id: "scene_1",
+        duration: 12,
+        caption: "精确，还是结构",
+        visual: "一块裂开的石板，左半与右半各刻一词",
+        narration: "提示词工程奖励精确，每一个字都是杠杆；Agent工程奖励结构，工具边界才是新的杠杆。",
+      }),
+      { section: null, language: "zh-CN" },
+    ) as {
+      left: { title: string; items: string[] };
+      right: { title: string; items: string[] };
+    };
+    // Titles name the CONTENT, and the trailing comma is not part of it.
+    expect(props.left.title).toBe("精确");
+    expect(props.right.title).toBe("结构");
+  });
+
+  // The semicolon is where the other side of a two-part narration starts.
+  // Without it both halves landed on one card and the other rendered empty.
+  it("splits a two-part narration on its semicolon so neither card is empty", () => {
+    const props = VISUAL_BUILDERS.Comparison!(
+      scene({
+        id: "scene_1",
+        duration: 12,
+        caption: "精确，还是结构",
+        visual: "",
+        narration: "提示词工程奖励精确，每一个字都是杠杆；Agent工程奖励结构，工具边界才是新的杠杆。",
+      }),
+      { section: null, language: "zh-CN" },
+    ) as {
+      left: { items: string[] };
+      right: { items: string[] };
+    };
+    expect(props.left.items.length).toBeGreaterThan(0);
+    expect(props.right.items.length).toBeGreaterThan(0);
+    expect(props.right.items.join(" ")).toContain("结构");
+  });
+
+  // A prose section is matched to scenes by index, so with 7 sections and
+  // 25 scenes most scenes get one about a different topic entirely; its
+  // sentences then filled a card that should have held this scene's copy.
+  // An 18-character budget is an 18-CJK-unit budget; on an English title
+  // it cut mid-word and burned "Promoted into inf…" onto the card.
+  it("gives English card titles a wider character budget than Chinese", () => {
+    const props = VISUAL_BUILDERS.Comparison!(
+      scene({
+        id: "scene_1",
+        duration: 12,
+        caption: "Promoted into infrastructure",
+        visual: "",
+        narration: "So the skill wasn't replaced. It was promoted instead.",
+      }),
+      { section: null, language: "en-US" },
+    ) as { left: { title: string } };
+    expect(props.left.title).toBe("Promoted into infrastructure");
+    expect(props.left.title).not.toContain("…");
+  });
+
+  it("keeps a misaligned prose section out of the cards", () => {    const props = VISUAL_BUILDERS.Comparison!(
+      scene({
+        id: "scene_1",
+        duration: 10,
+        caption: "修测试，不修代码",
+        visual: "",
+        narration: "跑测试，三个用例挂了。它扫了一眼报错，改了超时时间。",
+      }),
+      {
+        section: {
+          heading: "别的事",
+          body: "这一段讲的是完全无关的行业新闻，不该出现在对比卡片里。",
+        },
+        language: "zh-CN",
+      },
+    ) as {
+      left: { title: string; items: string[] };
+      right: { title: string; items: string[] };
+    };
+    const onScreen = [
+      props.left.title,
+      props.right.title,
+      ...props.left.items,
+      ...props.right.items,
+    ].join(" ");
+    expect(onScreen).not.toContain("行业新闻");
+    expect(onScreen).not.toContain("别的事");
+  });
 });

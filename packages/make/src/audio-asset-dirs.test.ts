@@ -82,16 +82,21 @@ describe("runAudioAssets with bgmDir/sfxDir", () => {
     const whoosh = path.join(root2, "assets", "audio-assets", "sfx", "whoosh.wav");
     const bgm = path.join(root2, "assets", "audio-assets", "bgm", "calm.wav");
     expect(readFileSync(whoosh).equals(readFileSync(path.join(sfxLib, "whoosh.wav")))).toBe(true);
-    // No bgmDir → mock placeholder: 44-byte header + 8000 samples of 0x80.
-    expect(readFileSync(bgm).byteLength).toBe(8044);
+    // No bgmDir → BGM is NOT staged. Without a user-supplied library the
+    // tag is resolved against `assets/bgm/` at mix time and handed to ffmpeg
+    // in place, so nothing is copied (a mock placeholder here would also
+    // shadow the real library track).
+    expect(existsSync(bgm)).toBe(false);
   });
 
   it("defaults to mock placeholders when no dirs are given", async () => {
     const root3 = path.join(dir, "projects", "fixture-mock");
     await runAudioAssets(root3, CONFIG);
+    // BGM is resolved at mix time, not materialised (see above); SFX still
+    // falls back to a mock placeholder so the mix has valid audio.
     expect(
-      readFileSync(path.join(root3, "assets", "audio-assets", "bgm", "calm.wav")).byteLength,
-    ).toBe(8044);
+      existsSync(path.join(root3, "assets", "audio-assets", "bgm", "calm.wav")),
+    ).toBe(false);
     expect(
       readFileSync(path.join(root3, "assets", "audio-assets", "sfx", "whoosh.wav")).byteLength,
     ).toBe(8044);

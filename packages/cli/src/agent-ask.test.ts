@@ -231,14 +231,15 @@ describe("DRAFT_QUESTIONS", () => {
     }
   });
 
-  it("bgm choices are the 5 known tags + none", () => {
+  // The shortlist is drawn from the curated library. It used to list the
+  // MiniMax generation prompts (calm/epic/guofeng/…), which are not files —
+  // every option pointed at a track that did not exist.
+  it("bgm choices are library tags + none", () => {
     const bgm = DRAFT_QUESTIONS.find((q) => q.id === "bgm") as AskQuestion;
     expect(bgm.choices?.map((c) => c.value)).toEqual([
-      "calm",
-      "epic",
-      "guofeng",
-      "liubang-xiaodiao",
-      "fanzhuan-march",
+      "upbeat-your-love",
+      "light-gravity",
+      "classical-gymnopedie-no-3",
       "none",
     ]);
   });
@@ -318,7 +319,7 @@ describe("questionsFor", () => {
         imageStyle: "flat-vector",
         imageProvider: "minimax",
         style: "paper-light",
-        bgm: "calm",
+        bgm: "upbeat-your-love",
       }),
     ).toEqual([]);
   });
@@ -471,7 +472,7 @@ describe("emitQuestionsDoc", () => {
       image_style: "flat-vector",
       image_provider: "minimax",
       style: "paper-light",
-      bgm: "calm",
+      bgm: "upbeat-your-love",
     });
   });
 
@@ -497,7 +498,7 @@ describe("emitQuestionsDoc", () => {
       image_style: "flat-vector",
       image_provider: "openai",
       style: "paper-light",
-      bgm: "calm",
+      bgm: "upbeat-your-love",
     });
   });
 

@@ -82,7 +82,7 @@ describe("runMake — orchestration through injected process seams", () => {
 
   it("runs all eight steps in pipeline order without spawning the CLI", async () => {
     const report = await runMake(
-      { projectRoot: dir, fake: true, musicProvider: "mock" },
+      { projectRoot: dir, fake: true },
       fakeDeps,
     );
     expect(report.steps.map((s) => s.name)).toEqual([...STEP_ORDER]);
@@ -107,7 +107,7 @@ describe("runMake — orchestration through injected process seams", () => {
       },
     };
     const report = await runMake(
-      { projectRoot: dir, fake: true, musicProvider: "mock" },
+      { projectRoot: dir, fake: true },
       boom,
     );
     const render = report.steps.find((s) => s.name === "render-preview");
@@ -122,7 +122,7 @@ describe("runMake — orchestration through injected process seams", () => {
   it("dry-run marks every step would-run and touches nothing", async () => {
     calls.length = 0;
     const report = await runMake(
-      { projectRoot: dir, fake: true, musicProvider: "mock", dryRun: true },
+      { projectRoot: dir, fake: true, dryRun: true },
       fakeDeps,
     );
     expect(report.steps.map((s) => s.name)).toEqual([...STEP_ORDER]);

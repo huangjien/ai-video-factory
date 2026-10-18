@@ -1,4 +1,4 @@
-import { MUSIC_PROMPTS } from "@video/audio-assets";
+import { loadBgmCatalogue } from "@video/prompts";
 import { IMAGE_STYLES } from "@video/draft";
 import { THEME_NAMES, THEME_META } from "@video/video-components";
 import type { DraftOptions } from "./draft-command.js";
@@ -8,7 +8,7 @@ import type { DraftOptions } from "./draft-command.js";
  *
  * Design source: `docs/v0.7-agent-ask-protocol-plan.md` (binding). This
  * module is PURE: no fs, no I/O beyond the two stdout/stderr emitters at
- * the bottom. Registry imports (`IMAGE_STYLES`, `MUSIC_PROMPTS`,
+ * the bottom. Registry imports (`IMAGE_STYLES`, the BGM catalogue,
  * `THEME_NAMES`) are plain data — no provider is ever constructed. All
  * environment reads go through an `env` parameter (defaulting to
  * `process.env`) so tests inject fake environments.
@@ -171,26 +171,35 @@ const IMAGE_PROVIDER_CHOICES: readonly { value: string; note: string }[] =
   }));
 
 /**
- * Known BGM tags — keys of `MUSIC_PROMPTS`
- * (packages/audio-assets/src/minimax-music.ts), so a new prompt preset
- * extends the question without a code change. `none` (→ `bgm: null`) is
- * appended last. Notes are the §5 envelope's presentation copy.
+ * Shortlist of BGM tracks for the question, drawn from the curated library
+ * (`music.json` / `assets/bgm/`). NOT the whole catalogue: a question with
+ * 18 choices is unusable, and the audio planner picks from the full list
+ * whenever the user does not answer here.
+ *
+ * These used to be MiniMax *generation prompts* — `calm`, `epic`,
+ * `guofeng`. Those tags no longer exist as files, so every option this
+ * question offered pointed at nothing.
  */
-const BGM_NOTES: Record<string, string> = {
-  calm: "piano + strings, restrained; safe for any topic",
-  epic: "massed strings + timpani; dramatic topics",
-  guofeng: "Chinese folk orchestra; history/culture topics",
-  "liubang-xiaodiao": "Han-dynasty folk motif; strong period flavor",
-  "fanzhuan-march": "tension-building march; twist/reversal narratives",
-};
+const BGM_SHORTLIST = [
+  "upbeat-your-love",
+  "light-gravity",
+  "classical-gymnopedie-no-3",
+] as const;
 
 const BGM_CHOICES: readonly { value: string; note: string }[] = [
-  ...Object.keys(MUSIC_PROMPTS).map((tag) => ({
-    value: tag,
-    note: BGM_NOTES[tag] ?? tag,
-  })),
+  ...BGM_SHORTLIST.map((tag) => {
+    const entry = loadBgmCatalogue()[tag];
+    return {
+      value: tag,
+      note: entry
+        ? `${entry.track} — ${entry.use_when.split(";")[0] ?? entry.use_when}`
+        : tag,
+    };
+  }),
   { value: "none", note: "no BGM (bgm: null)" },
 ];
+
+const BGM_DEFAULT = "upbeat-your-love";
 
 /** The six draft knobs worth asking about, stable order (§6). */
 export const DRAFT_QUESTIONS: readonly AskQuestion[] = [
@@ -263,12 +272,12 @@ export const DRAFT_QUESTIONS: readonly AskQuestion[] = [
     type: "choice",
     question: "Background music track?",
     choices: [...BGM_CHOICES],
-    default: "calm",
-    recommended: "calm",
-    why: "BGM is generated per tag at make time; wrong mood is a paid re-render",
+    default: BGM_DEFAULT,
+    recommended: BGM_DEFAULT,
+    why: "picked from the local library in assets/bgm/ — no generation cost, but the wrong mood still re-renders every scene",
     specified: (opts) => opts.bgm !== undefined,
     dropped: (opts) => opts.noAudioPlan === true,
-    resolved: (opts) => opts.bgm ?? "calm",
+    resolved: (opts) => opts.bgm ?? BGM_DEFAULT,
   },
 ];
 

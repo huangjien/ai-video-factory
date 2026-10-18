@@ -97,7 +97,6 @@ describe("runMake progress events (video-progress/1)", () => {
       {
         projectRoot: dir,
         fake: true,
-        musicProvider: "mock",
         onEvent: (e) => events.push(e),
       },
       fakeDeps,
@@ -140,7 +139,6 @@ describe("runMake progress events (video-progress/1)", () => {
       {
         projectRoot: dir,
         fake: true,
-        musicProvider: "mock",
         onEvent: (e) => events.push(e),
       },
       fakeDeps,
@@ -163,7 +161,6 @@ describe("runMake progress events (video-progress/1)", () => {
       {
         projectRoot: dir,
         fake: true,
-        musicProvider: "mock",
         dryRun: true,
         onEvent: (e) => events.push(e),
       },
@@ -176,7 +173,7 @@ describe("runMake progress events (video-progress/1)", () => {
   it("defaults to silence when no onEvent is passed (existing behavior)", async () => {
     const dir = await freshProject();
     const report = await runMake(
-      { projectRoot: dir, fake: true, musicProvider: "mock" },
+      { projectRoot: dir, fake: true },
       fakeDeps,
     );
     expect(report.steps.every((s) => s.status === "ran")).toBe(true);
@@ -189,7 +186,6 @@ describe("runMake progress events (video-progress/1)", () => {
       {
         projectRoot: dir,
         fake: true,
-        musicProvider: "mock",
         onEvent: (e) => events.push(e),
       },
       {

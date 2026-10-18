@@ -27,6 +27,19 @@ export const ArticleFrontmatterSchema = z
      *  `captions: { source: narration }` block so the renderer skips
      *  the caption overlay. Default false (captions on). */
     no_captions: z.boolean().optional(),
+    /** What the caption overlay burns in. `narration` (default) mirrors the
+     *  spoken paragraph — right for a talking-head or plain-background scene,
+     *  but it is a paragraph, and on a designed card the card already says
+     *  it, so the frame ends up printing the same sentence twice. `caption`
+     *  burns the scene's short `caption:` label instead.
+     *
+     *  This is also the only way an en-US article renders: the safe-area
+     *  check allows ~24 CJK units/line (ASCII counts 0.5), so three lines
+     *  cap an English scene at ~144 characters — which ordinary English
+     *  narration exceeds on almost every scene (observed 2026-10-18: 19 of
+     *  23 scenes failed validation). Splitting 19 scenes apart is the other
+     *  way out; this is the one that does not rewrite the prose. */
+    captions_source: z.enum(["narration", "caption"]).optional(),
     /** v0.6: image-style preset for generated scene visuals. Deliberately a
      *  plain string (article.md is human-edited — a typo must not brick
      *  parsing); resolveImageStyle coerces unknown values to
@@ -123,6 +136,7 @@ export function articleToStoryboardYaml(
     `scenes:`,
   ];
   const captionsOn = f.no_captions !== true;
+  const captionSource = f.captions_source === "caption" ? "caption" : "narration";
   // Map scenes → prose sections (same 1:N rule as recoverEmptyNarrations)
   // so visual builders can pull structured data from the article body.
   const sections = parseProseSections(article.proseBody);
@@ -176,7 +190,15 @@ export function articleToStoryboardYaml(
     }
     if (captionsOn) {
       lines.push(`    captions:`);
-      lines.push(`      source: narration`);
+      if (captionSource === "caption") {
+        lines.push(`      source: caption`);
+        const label = (s.caption ?? "").replace(/\s+/g, " ").trim();
+        if (label.length > 0) {
+          lines.push(`      text: ${yamlStr(label)}`);
+        }
+      } else {
+        lines.push(`      source: narration`);
+      }
     }
   });
   return lines.join("\n") + "\n";

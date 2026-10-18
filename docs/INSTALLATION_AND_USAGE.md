@@ -830,7 +830,7 @@ New flags on `video draft`:
 | ------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `--ask`             | force the agent question protocol, even with no agent harness detected                                                                                         |
 | `--no-ask`          | never ask — accept the defaults (right choice for unattended sub-runs)                                                                                         |
-| `--bgm <tag\|none>` | BGM tag stamped into a fresh `audio-config.yaml`: `calm`, `epic`, `guofeng`, `liubang-xiaodiao`, `fanzhuan-march`, `none` (default: the audio-plan LLM's pick) |
+| `--bgm <tag\|none>` | BGM tag from the library in `assets/bgm/` (e.g. `upbeat-your-love`, `light-gravity`, `classical-gymnopedie-no-3`), or `none` for silence. Default: the audio planner's pick — see `assets/bgm/README.md` |
 
 **Live progress (v0.7.1)** — `video make` and `video draft` print
 step/scene progress and heartbeats to **stderr** while running
@@ -1167,17 +1167,13 @@ still apply.
 
 #### Where named BGM tracks come from
 
-`video make <project> --music-provider auto|minimax|mock` (default
-`auto`): with `MINIMAX_API_KEY` set, named tags are **generated** as
-original license-clean music via the MiniMax music-01 API (beds ≈60 s,
-looped to fill their windows). Curated prompt vocabulary ships for
-`calm`, `epic`, `guofeng`, `liubang-xiaodiao` (古风小调，琵琶竹笛，
-汉代帝王气象) and `fanzhuan-march` (剧情反转进行曲，由压抑渐强到爆发) —
-add entries to `packages/prompts/prompts/music.json`; unknown tags become
-free-text style prompts verbatim (Chinese accepted). A failed generation
-degrades to the silent mock with a warning, so a render never dies on
-music. `--bgm-dir` (your own library) always wins over generation, and
-`--music-provider mock` restores the silent placeholder.
+BGM is resolved from the local library in `assets/bgm/`, never generated.
+`bgm: <tag>` in `audio-config.yaml` looks in the project's
+`assets/audio-assets/bgm/` first, then `assets/bgm/`, then `assets/brand/`, and
+passes the file to ffmpeg in place. A tag that resolves nowhere warns and mixes
+silence — a bad tag never fails the render. `packages/prompts/prompts/music.json`
+indexes the library with each track's duration, loudness, dynamic range and
+suitability notes; see `assets/bgm/README.md` for provenance.
 
 ## 9.6 Visual guardrails (v0.8)
 

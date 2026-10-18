@@ -245,13 +245,21 @@ function deriveCalloutKind(scene: ArticleScene): CalloutKind {
 // ---------------------------------------------------------------------------
 const buildComparison: VisualPropsBuilder = (scene, input) => {
   const language = input.language;
-  const sectionBody = input.section?.body ?? "";
   const narration = (scene.narration ?? "").trim();
-  const blob = `${scene.caption ?? ""}\n${narration}\n${sectionBody}`;
+  // Items come from THIS scene's own copy only. The prose section is
+  // matched to scenes by index, and an article with 7 sections across 25
+  // scenes hands most scenes a section about something else entirely —
+  // its sentences then land inside one of the two cards, so the right
+  // card argued about the previous scene while the left card argued
+  // about this one (observed 2026-10-18). The section heading survives
+  // as a title fallback via `hint`, where a slightly-off signal cannot
+  // overwrite on-screen content.
+  const blob = `${scene.caption ?? ""}\n${narration}`;
   const split = splitLeftRight(blob, input.language, {
     caption: scene.caption ?? "",
     visual: scene.visual ?? "",
     sectionHeading: input.section?.heading ?? "",
+    maxTitle: titleBudget(input.language),
   });
   return {
     text: scene.caption,
@@ -269,6 +277,17 @@ interface ComparisonHint {
   caption: string;
   visual: string;
   sectionHeading: string;
+  /** Character budget for a card title. The historical constant was 18,
+   *  which is an 18-CJK-unit budget; applied to English it cut titles
+   *  mid-word ("Promoted into inf…" for "Promoted into
+   *  infrastructure"), so the budget scales with the declared language. */
+  maxTitle: number;
+}
+
+/** 18 CJK units fits a Chinese title; English needs roughly twice the
+ *  characters for the same visual width. */
+function titleBudget(language: string | undefined): number {
+  return (language ?? "zh-CN").toLowerCase().startsWith("en") ? 34 : 18;
 }
 
 /** Split the narration / section into two buckets by the most common
@@ -284,9 +303,12 @@ function splitLeftRight(
   left: { title: string; items: string[] };
   right: { title: string; items: string[] };
 } {
-  // 1) Look for explicit "A vs B" pattern.
+  // 1) Look for explicit "A vs B" pattern. A semicolon counts as the
+  //    contrast marker: in a two-part narration ("…每一个字都是杠杆；
+  //    Agent工程奖励结构，工具边界…") it is exactly where the other
+  //    side starts, and without it both halves land on one card.
   const sepRe =
-    /(?:\s*(?:vs\.?|versus|对比|相比|instead|whereas|而|但是|但)\s*)/i;
+    /(?:\s*(?:vs\.?|versus|对比|相比|instead|whereas|而|但是|但|；|;)\s*)/i;
   const parts = blob.split(sepRe);
   if (parts.length >= 2) {
     const a = parts[0]?.trim() ?? "";
@@ -379,21 +401,33 @@ function comparisonSideTitle(
   hint: ComparisonHint,
   side: "left" | "right",
 ): string {
-  // 1) Side text already extracted by the caller (e.g. the half of
+  // 1) The caption's own contrast pair, when it yields BOTH sides. The
+  //    caption is the LLM-authored headline — "精确，还是结构" names the
+  //    two cards outright, while the blob's left half is just the first
+  //    sentence fragment ("岗位描述换了词" / "它扫了一眼报错"). Requiring
+  //    both sides keeps a one-sided caption split from overriding a
+  //    better signal.
+  const captionLeft = contrastSide(hint.caption, "left");
+  const captionRight = contrastSide(hint.caption, "right");
+  if (captionLeft.length > 0 && captionRight.length > 0) {
+    return truncate(side === "left" ? captionLeft : captionRight, hint.maxTitle);
+  }
+
+  // 2) Side text already extracted by the caller (e.g. the half of
   //    a "vs" pair, or a colon-split half of the caption).
   const flat = primary.replace(/\s+/g, " ").trim();
-  if (flat.length > 0) return truncate(flat, 18);
+  if (flat.length > 0) return truncate(flat, hint.maxTitle);
 
   // 2) Caption split on a contrast separator ("A vs B", "A — B",
   //    "A 对比 B", "A 和 B"…). Caption is the LLM-authored headline,
   //    so its halves are the most reliable labels we have.
   const fromCaption = contrastSide(hint.caption, side);
-  if (fromCaption.length > 0) return truncate(fromCaption, 18);
+  if (fromCaption.length > 0) return truncate(fromCaption, hint.maxTitle);
 
   // 3) Visual direction likewise carries a "compare X vs Y" hint in
   //    roughly half of all Comparisons (the article draft writes one).
   const fromVisual = contrastSide(hint.visual, side);
-  if (fromVisual.length > 0) return truncate(fromVisual, 18);
+  if (fromVisual.length > 0) return truncate(fromVisual, hint.maxTitle);
 
   // 4) The first sentence we extracted for this side works as a
   //    crude label — trim to its leading noun phrase so it does not
@@ -401,14 +435,14 @@ function comparisonSideTitle(
   const firstSentence = sideItems[0];
   if (firstSentence && firstSentence.trim().length > 0) {
     const phrase = stripLeadingVerb(firstSentence);
-    if (phrase.length > 0) return truncate(phrase, 18);
+    if (phrase.length > 0) return truncate(phrase, hint.maxTitle);
   }
 
   // 5) Section heading is the only signal that's shared across both
   //    sides, so it carries less meaning — but it's still better
   //    than "Left" / "右" echoing on screen.
   const heading = hint.sectionHeading.trim();
-  if (heading.length > 0) return truncate(heading, 18);
+  if (heading.length > 0) return truncate(heading, hint.maxTitle);
 
   // 6) Truly nothing to say. An em-dash is the honest signal that
   //    we have no content; positional labels were worse.
@@ -416,14 +450,29 @@ function comparisonSideTitle(
 }
 
 /** Split `text` on a contrast separator and return the requested
- *  side. Returns "" when no separator matches. */
+ *  side. Returns "" when no separator matches.
+ *
+ *  `还是` is here because "A，还是 B" is the commonest way a Chinese
+ *  caption states a contrast ("精确，还是结构"), and without it that
+ *  whole class of captions yielded no title at all. The leading
+ *  connective is stripped so the card reads "结构", not "还是结构". */
 function contrastSide(text: string, side: "left" | "right"): string {
+  // Chinese is written without spaces, so a contrast connective there must
+  // NOT require surrounding whitespace — "精确，还是结构" has none. Only
+  // the multi-character connectives are matched bare; single-character
+  // 和/跟 are left space-gated because they hide inside ordinary words
+  // (共和国, 温和) and would split a caption at nothing.
   const sepRe =
-    /\s+(?:vs\.?|versus|对比|相比|而不是|和|跟|&\s+|:\s+|—\s+|——\s+|--\s+|·\s+)\s*/i;
+    /(?:还是|而不是|或者|对比|相比)|\s+(?:vs\.?|versus|和|跟|&\s+|:\s+|—\s+|——\s+|--\s+|·\s+)\s*/i;
   const parts = text.split(sepRe);
   if (parts.length < 2) return "";
-  if (side === "left") return (parts[0] ?? "").trim();
-  return parts.slice(1).join(" ").trim();
+  const raw =
+    side === "left" ? (parts[0] ?? "") : parts.slice(1).join(" ").trim();
+  const trimmed =
+    side === "right" ? raw.replace(/^(?:还是|而不是|或者|或)\s*/, "") : raw;
+  // "精确，还是结构" splits to "精确，" — the comma belongs to the
+  // sentence, not to the card's name.
+  return trimmed.replace(/[，,、。;；\s]+$/, "").trim();
 }
 
 /** Drop a sentence-leading subject-verb or preposition so the

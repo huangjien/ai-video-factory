@@ -1,0 +1,8 @@
+Source:    https://www.youtube.com/watch?v=6dljI1XwggY
+Track:     Twinkle Twinkle Little Star
+Artist:    The Green Orbs
+Mood/type: kids
+Playlist:  https://www.youtube.com/playlist?list=PL_k9bFPONrNfrmOXvxU3FijljSFUCc-Rm
+Extracted: 2026-10-18, yt-dlp bestaudio -> mp3 (192 kbps)
+
+STATUS: No-copyright / royalty-free BGM from a curated "No Copyright Music" playlist. The playlist title declares the tracks free for use; verify the source page before any commercial distribution and credit the artist as the comment block on the track's YouTube page requires.

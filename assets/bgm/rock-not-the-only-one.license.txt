@@ -1,0 +1,8 @@
+Source:    https://www.youtube.com/watch?v=YXJfaJemHMo
+Track:     Not the Only One
+Artist:    Rondo Brothers
+Mood/type: rock
+Playlist:  https://www.youtube.com/playlist?list=PL_k9bFPONrNfrmOXvxU3FijljSFUCc-Rm
+Extracted: 2026-10-18, yt-dlp bestaudio -> mp3 (192 kbps)
+
+STATUS: No-copyright / royalty-free BGM from a curated "No Copyright Music" playlist. The playlist title declares the tracks free for use; verify the source page before any commercial distribution and credit the artist as the comment block on the track's YouTube page requires.

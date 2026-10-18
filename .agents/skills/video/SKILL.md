@@ -347,7 +347,19 @@ brand:
 
 Multi-BGM — different music for the opening vs the body, in `audio-config.yaml` (overrides `bgm`; `track` = named tag generated like `bgm`, or a file path resolved project-first then workspace-root — shared brand audio lives in `<repo>/assets/brand/`; `until_sec` = absolute window end, last entry runs to the end):
 
-**BGM generation backends** (`video make <p> --music-provider auto|minimax|mock`, default `auto`): `auto` uses MiniMax music-01 generation when `MINIMAX_API_KEY` is set (original, license-clean beds; ~60s each, looped by the timeline), else silent mock; a failed generation degrades to mock with a warning. Named tags map to curated zh prompts in `packages/prompts/prompts/music.json` — shipped: `calm`, `epic`, `guofeng`, `liubang-xiaodiao` (古风小调，琵琶竹笛，汉代气象)， `fanzhuan-march` (反转进行曲，由压抑到爆发). Unknown tags are passed to the API as free-text prompts verbatim (Chinese works). bgmDir library always wins over generation.
+**BGM comes from a local library, never a service.** `assets/bgm/` holds the
+curated tracks (`<mood>-<slug>.mp3` + a sibling `.license.txt`); `music.json` is
+its index, carrying each track's real duration/LUFS/dynamic-range plus scenario
+notes. `bgm: <tag>` in `audio-config.yaml` resolves against the project's own
+`assets/audio-assets/bgm/` first, then `assets/bgm/`, then `assets/brand/`; an
+unresolvable tag warns and mixes silence rather than failing the render. The
+file is handed to ffmpeg in place — it is never copied per project. Track it
+shorter than the runtime and it loops, so prefer `needs_loop_under_300s: false`
+for long videos; the mixer applies one fixed bed level, so avoid
+`quiet_master` tracks that would vanish under narration.
+
+`bgm_tracks` still works for multi-window timelines; path-shaped `track` values
+resolve project-first then workspace-root.
 
 ```yaml
 bgm_tracks:

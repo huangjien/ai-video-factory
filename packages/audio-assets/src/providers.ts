@@ -1,12 +1,66 @@
-import { existsSync, readFileSync, readdirSync } from "node:fs";
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
+import {
+  existsSync,
+  readdirSync,
+  readFileSync,
+  statSync,
+} from "node:fs";
 import path from "node:path";
 import type {
+  AssetResult,
   AudioAssetProvider,
   BgmOptions,
   SfxOptions,
-  AssetResult,
 } from "./schemas.js";
 import { AudioAssetError } from "./schemas.js";
+
+const execFileAsync = promisify(execFile);
+
+/** Audio formats `FileBasedAudioAssetProvider.lookup` accepts. Order matches
+ *  the priority of "exact filename match" — the first extension tried is
+ *  the file the resolver will hand to ffmpeg without a remux step. */
+export const SUPPORTED_AUDIO_EXTENSIONS = [
+  ".wav",
+  ".mp3",
+  ".m4a",
+] as const;
+
+export type AudioExtension = (typeof SUPPORTED_AUDIO_EXTENSIONS)[number];
+
+/** Map an extension to the MIME type `AssetResult.contentType` expects. */
+function contentTypeFor(ext: string): AssetResult["contentType"] {
+  const lower = ext.toLowerCase();
+  if (lower === ".wav") return "audio/wav";
+  if (lower === ".mp3") return "audio/mpeg";
+  if (lower === ".m4a") return "audio/mp4";
+  throw new AudioAssetError(`unsupported extension: ${ext}`, "file-based");
+}
+
+/** Probe duration in seconds via ffprobe. Returns null when ffprobe is
+ *  unavailable or fails — the caller then falls back to a placeholder
+ *  duration. The provider's `durationSec` is advisory (mix plans
+ *  re-probe via `bgm-timeline`), so a missing probe must not break
+ *  tag resolution. */
+async function probeDurationSec(filePath: string): Promise<number | null> {
+  try {
+    const { stdout } = await execFileAsync("ffprobe", [
+      "-v",
+      "error",
+      "-select_streams",
+      "a:0",
+      "-show_entries",
+      "stream=duration",
+      "-of",
+      "csv=p=0",
+      filePath,
+    ]);
+    const seconds = parseFloat(stdout.trim());
+    return Number.isFinite(seconds) && seconds > 0 ? seconds : null;
+  } catch {
+    return null;
+  }
+}
 
 /** Deterministic local-only provider — returns a short synthetic WAV
  * (RIFF header + 1-second silence at 8kHz mono 8-bit) so downstream mixers
@@ -46,10 +100,15 @@ export class MockAudioAssetProvider implements AudioAssetProvider {
 }
 
 /** Real-files provider — looks up tag-named files in user-configured
- * directories. Match rule: exact filename `{tag}.wav` (case-insensitive),
- * then fallback to any file whose name contains the tag. The user is
- * responsible for licensing the assets (recorded on the returned result
- * based on a sibling `{tag}.license.txt` if present). */
+ * directories. Match rule: try `{tag}.{wav,mp3,m4a}` in order, then
+ * fallback to any file in the directory whose name contains the tag.
+ * The user is responsible for licensing the assets (recorded on the
+ * returned result based on a sibling `{tag}.license.txt` if present).
+ *
+ * Since v2026-10-18, multi-format support covers `.wav`, `.mp3`, and `.m4a`.
+ * The new `assets/bgm/` curated library uses 192 kbps mp3; the project-local
+ * `assets/audio-assets/bgm/` previously emitted wav. Both paths resolve
+ * transparently via this provider. */
 export class FileBasedAudioAssetProvider implements AudioAssetProvider {
   readonly name = "file-based";
   private readonly bgmDirectory: string;
@@ -85,14 +144,31 @@ export class FileBasedAudioAssetProvider implements AudioAssetProvider {
         this.name,
       );
     }
-    const exact = path.join(directory, `${tag}.wav`);
-    let chosen = exact;
-    if (!existsSync(exact)) {
-      const entries = readdirSync(directory).filter(
-        (f) =>
-          f.toLowerCase().includes(tag.toLowerCase()) &&
-          f.toLowerCase().endsWith(".wav"),
-      );
+
+    // 1) Exact match — try every supported extension in order; the first
+    //    existing file wins. Picking the most-favorable format (wav → mp3
+    //    → m4a) keeps the mixer feeding ffmpeg lossless audio when both
+    //    formats are on disk for the same tag.
+    const tagLc = tag.toLowerCase();
+    let chosen: string | null = null;
+    for (const ext of SUPPORTED_AUDIO_EXTENSIONS) {
+      const p = path.join(directory, `${tag}${ext}`);
+      if (existsSync(p)) {
+        chosen = p;
+        break;
+      }
+    }
+
+    // 2) Substring fallback — any file in the directory whose name
+    //    (case-insensitive, without the extension) contains the tag.
+    if (!chosen) {
+      const entries = readdirSync(directory).filter((f) => {
+        const lc = f.toLowerCase();
+        if (!SUPPORTED_AUDIO_EXTENSIONS.some((ext) => lc.endsWith(ext))) {
+          return false;
+        }
+        return lc.slice(0, lc.lastIndexOf(".")).includes(tagLc);
+      });
       if (entries.length === 0) {
         throw new AudioAssetError(
           `${kind} tag "${tag}" not found in ${directory}`,
@@ -101,12 +177,15 @@ export class FileBasedAudioAssetProvider implements AudioAssetProvider {
       }
       chosen = path.join(directory, entries[0] ?? "");
     }
+
     const bytes = readFileSync(chosen);
     const license = readLicense(directory, tag);
+    const ext = path.extname(chosen).toLowerCase() as AudioExtension;
+    const durationSec = (await probeDurationSec(chosen)) ?? statSync(chosen).size;
     return {
       bytes: new Uint8Array(bytes),
-      contentType: "audio/wav",
-      durationSec: 1,
+      contentType: contentTypeFor(ext),
+      durationSec,
       license,
       source: chosen,
     };

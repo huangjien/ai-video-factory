@@ -184,42 +184,34 @@ exports[`emitQuestionsDoc > emits the full video-ask/1 envelope (snapshot) 1`] =
     {
       "choices": [
         {
-          "note": "piano + strings, restrained; safe for any topic",
-          "value": "calm",
+          "note": "Your Love — Forward-moving tech explainers and 'the paradigm is changing' narratives",
+          "value": "upbeat-your-love",
         },
         {
-          "note": "massed strings + timpani; dramatic topics",
-          "value": "epic",
+          "note": "Gravity — Default choice for light, breezy technical explainers - loud master keeps it audible under narration.",
+          "value": "light-gravity",
         },
         {
-          "note": "Chinese folk orchestra; history/culture topics",
-          "value": "guofeng",
-        },
-        {
-          "note": "Han-dynasty folk motif; strong period flavor",
-          "value": "liubang-xiaodiao",
-        },
-        {
-          "note": "tension-building march; twist/reversal narratives",
-          "value": "fanzhuan-march",
+          "note": "Gymnopedie No. 3 — Quiet, reflective, philosophical or historical narration",
+          "value": "classical-gymnopedie-no-3",
         },
         {
           "note": "no BGM (bgm: null)",
           "value": "none",
         },
       ],
-      "default": "calm",
+      "default": "upbeat-your-love",
       "flag": "--bgm",
       "id": "bgm",
       "question": "Background music track?",
-      "recommended": "calm",
+      "recommended": "upbeat-your-love",
       "type": "choice",
-      "why": "BGM is generated per tag at make time; wrong mood is a paid re-render",
+      "why": "picked from the local library in assets/bgm/ — no generation cost, but the wrong mood still re-renders every scene",
     },
   ],
   "resolved": {
     "audience": "developers",
-    "bgm": "calm",
+    "bgm": "upbeat-your-love",
     "duration": 180,
     "image_provider": "minimax",
     "image_style": "flat-vector",

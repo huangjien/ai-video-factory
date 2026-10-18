@@ -11,9 +11,17 @@ export {
 export {
   FileBasedAudioAssetProvider,
   MockAudioAssetProvider,
+  SUPPORTED_AUDIO_EXTENSIONS,
+  type AudioExtension,
 } from "./providers.js";
 export {
-  MiniMaxMusicProvider,
-  MUSIC_PROMPTS,
-  type MiniMaxMusicProviderOptions,
-} from "./minimax-music.js";
+  curatedBgmDirectory,
+  listMoods,
+  loadLocalBgmLibrary,
+  pickByMood,
+  probeLibrary,
+  resolveBgmTag,
+  type BgmResolution,
+  type LocalBgmEntry,
+  type ResolvedBgm,
+} from "./local-library.js";

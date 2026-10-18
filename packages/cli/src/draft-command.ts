@@ -606,7 +606,7 @@ export function registerDraft(program: Command): void {
     .option("--audience <text>", "target audience (default: developers)")
     .option(
       "--bgm <tag>",
-      "v0.7: BGM track tag stamped into audio-config.yaml — calm | epic | guofeng | liubang-xiaodiao | fanzhuan-march | none (default: audio-plan LLM picks, usually calm)",
+      "BGM track tag from the library in assets/bgm/ (e.g. upbeat-your-love, light-gravity, classical-gymnopedie-no-3), or none for silence. Default: the audio planner picks from the catalogue. See assets/bgm/README.md",
     )
     .option(
       "--from <file>",

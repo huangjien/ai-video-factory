@@ -119,13 +119,78 @@ export function loadImageStylePresets(): Record<string, ImageStylePreset> {
   });
 }
 
-/** `music.json` — BGM tag → generation prompt (free-text passthrough
- * handles tags not listed, so this map only grows the vocabulary). */
-export function loadMusicPrompts(): Record<string, string> {
+/** One entry of the curated BGM library (`assets/bgm/<tag>.<ext>`).
+ *
+ *  The measurements are real: `duration_sec` from ffprobe, `loudness_lufs_i`
+ *  and `dynamic_range_lu` from `ffmpeg -af ebur128`. They are here because
+ *  two of them change the choice, and a filename does not tell you either:
+ *
+ *  - `loudness_lufs_i` spans ~8 dB across the library while the mixer
+ *    applies ONE fixed bed attenuation (-18 dB by default), so a quiet
+ *    master lands several dB under the narration and a loud one swamps it.
+ *  - `dynamic_range_lu` above ~8 means the track breathes, so the bed
+ *    swells in the gaps between narration.
+ *  - `needs_loop_under_300s` marks tracks shorter than a typical runtime,
+ *    which loop with an audible seam unless the track ends cleanly.
+ */
+export interface BgmCatalogueEntry {
+  track: string;
+  artist: string;
+  /** File name inside `assets/bgm/`. */
+  file: string;
+  duration_sec: number;
+  loudness_lufs_i: number;
+  dynamic_range_lu: number;
+  /** Scenario guidance for the audio planner. */
+  use_when: string;
+  avoid_when: string;
+  needs_loop_under_300s: boolean;
+  quiet_master: boolean;
+  wide_dynamics: boolean;
+  note?: string;
+}
+
+export type BgmCatalogue = Record<string, BgmCatalogueEntry>;
+
+/** `music.json` — the curated BGM library index: tag → entry. Replaces the
+ *  old tag → generation-prompt map, which only existed to feed the
+ *  (now removed) music-generation API. */
+export function loadBgmCatalogue(): BgmCatalogue {
   return loadStructured(
     "music.json",
-    (text) => JSON.parse(text) as Record<string, string>,
+    (text) => JSON.parse(text) as BgmCatalogue,
   );
+}
+
+/** Render the catalogue as the compact table the audio planner reads.
+ *
+ *  Deliberately one line per track: the planner needs the scenario, the
+ *  two measurements that change the choice, and nothing else. Duration and
+ *  loudness are inlined because "does this loop?" and "will this be
+ *  audible under the narration?" are the questions a track title cannot
+ *  answer.
+ */
+export function renderBgmCatalogue(catalogue?: BgmCatalogue): string {
+  const cat = catalogue ?? loadBgmCatalogue();
+  return Object.entries(cat)
+    .map(([tag, e]) => {
+      const flags = [
+        e.needs_loop_under_300s ? "loops under 300s" : null,
+        e.quiet_master ? "QUIET master" : null,
+        e.wide_dynamics ? "wide dynamics" : null,
+      ]
+        .filter((f): f is string => f !== null)
+        .join(", ");
+      const tail = flags.length > 0 ? ` [${flags}]` : "";
+      return (
+        `- ${tag} — "${e.track}" (${e.artist}), ${e.duration_sec}s, ` +
+        `${e.loudness_lufs_i} LUFS, ${e.dynamic_range_lu} LU${tail}\n` +
+        `    use when: ${e.use_when}\n` +
+        `    avoid when: ${e.avoid_when}` +
+        (e.note !== undefined ? `\n    note: ${e.note}` : "")
+      );
+    })
+    .join("\n");
 }
 
 function loadStructured<T>(file: string, parse: (text: string) => T): T {

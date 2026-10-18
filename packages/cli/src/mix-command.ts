@@ -8,6 +8,13 @@ import path from "node:path";
 import { resolveProjectDir } from "./project-path.js";
 import { mixTracks, mixTracksWithSpec, parseMixYaml } from "@video/audio-mix";
 import { formatRunId } from "@video/workflow";
+import {
+  curatedBgmDirectory,
+  resolveBgmTag,
+  SUPPORTED_AUDIO_EXTENSIONS,
+  type LocalBgmEntry,
+  type ResolvedBgm,
+} from "@video/audio-assets";
 
 const execFileAsync = promisify(execFile);
 
@@ -29,22 +36,136 @@ function safeGitHead(cwd: string): string {
   }
 }
 
+/** First .wav/.mp3/.m4a in the curated BGM library (assets/bgm/), or the
+ *  project-local override (assets/audio-assets/bgm/), in priority order.
+ *  Since v2026-10-18 the curated library ships as mp3 (matches the
+ *  existing assets/brand/ convention) and any single supported extension
+ *  is accepted here. */
 function pickBgm(projectRoot: string, explicit?: string): string {
   if (explicit) return explicit;
-  const bgmDir = path.join(projectRoot, "assets", "audio-assets", "bgm");
-  if (!existsSync(bgmDir)) {
-    throw new Error(
-      `no BGM found: pass --bgm <path> or run \`video audio-asset --bgm <tag>\` first`,
-    );
+  const projectDir = path.join(projectRoot, "assets", "audio-assets", "bgm");
+  const repoRoot = repoRootOf(projectRoot);
+  const curatedDir = curatedBgmDirectory(repoRoot);
+
+  // Project-local first: a project's own generated/mixed BGM shadows the
+  // curated library without deleting the canonical file.
+  const localCandidates = existsSync(projectDir)
+    ? readdirSync(projectDir)
+        .filter((f) =>
+          SUPPORTED_AUDIO_EXTENSIONS.some((ext) =>
+            f.toLowerCase().endsWith(ext),
+          ),
+        )
+        .map((f) => path.join(projectDir, f))
+        .sort()
+    : [];
+  if (localCandidates.length > 0) return localCandidates[0] ?? "";
+
+  // Curated fallback. The library is the project's single source of
+  // truth for BGM — every project should resolve to one of these tags.
+  if (existsSync(curatedDir)) {
+    const curated = readdirSync(curatedDir)
+      .filter((f) =>
+        SUPPORTED_AUDIO_EXTENSIONS.some((ext) =>
+          f.toLowerCase().endsWith(ext),
+        ),
+      )
+      .map((f) => path.join(curatedDir, f))
+      .sort();
+    if (curated.length > 0) return curated[0] ?? "";
   }
-  const candidates = readdirSync(bgmDir)
-    .filter((f) => f.toLowerCase().endsWith(".wav"))
-    .map((f) => path.join(bgmDir, f))
-    .sort();
-  if (candidates.length === 0) {
-    throw new Error(`no .wav files in ${bgmDir}`);
+  throw new Error(
+    `no BGM found: pass --bgm <path>, drop a file in ${curatedDir}, or run \`video audio-asset --bgm <tag>\` first`,
+  );
+}
+
+/** Walk up from the project root to find the repo root (the directory
+ *  that owns `package.json`). Falls back to the project root when not
+ *  found (e.g. when the CLI is run outside the monorepo). */
+function repoRootOf(projectRoot: string): string {
+  let dir = projectRoot;
+  for (let i = 0; i < 6; i++) {
+    if (existsSync(path.join(dir, "package.json"))) return dir;
+    const parent = path.dirname(dir);
+    if (parent === dir) break;
+    dir = parent;
   }
-  return candidates[0] ?? "";
+  return projectRoot;
+}
+
+/** Resolve a BGM *tag* (e.g. "calm", "ambient-take-your-pick") to a real
+ *  file path. Used by the BGM-by-tag resolution path: `audio-config.yaml`
+ *  `bgm:` and the first entry of `bgm_tracks[*].track` may carry either a
+ *  bare tag or a path; this helper handles the tag case. */
+export function resolveBgmByTag(
+  projectRoot: string,
+  tag: string,
+): ResolvedBgm {
+  const repoRoot = repoRootOf(projectRoot);
+  return resolveBgmTag({
+    tag,
+    projectDir: path.join(projectRoot, "assets", "audio-assets", "bgm"),
+    curatedDir: curatedBgmDirectory(repoRoot),
+  });
+}
+
+/** List the curated library and project-local library, deduplicating by
+ *  tag with project-local first. Tests + future `video audio list-bgms`
+ *  commands pull this. */
+export function listAvailableBgms(projectRoot: string): LocalBgmEntry[] {
+  const repoRoot = repoRootOf(projectRoot);
+  const projectLibrary = loadLibraryAllowingMissing(
+    path.join(projectRoot, "assets", "audio-assets", "bgm"),
+  );
+  const curatedLibrary = loadLibraryAllowingMissing(
+    curatedBgmDirectory(repoRoot),
+  );
+  const seen = new Set<string>();
+  const out: LocalBgmEntry[] = [];
+  for (const e of projectLibrary) {
+    if (!seen.has(e.tag)) {
+      seen.add(e.tag);
+      out.push(e);
+    }
+  }
+  for (const e of curatedLibrary) {
+    if (!seen.has(e.tag)) {
+      seen.add(e.tag);
+      out.push(e);
+    }
+  }
+  return out;
+}
+
+function loadLibraryAllowingMissing(directory: string): LocalBgmEntry[] {
+  if (!existsSync(directory)) return [];
+  // Lightweight reimplementation that does NOT depend on the
+  // audio-assets package internals to avoid a circular import boundary
+  // (the CLI is the integrator; the package owns the parser). Keeps the
+  // shape identical to `loadLocalBgmLibrary` in local-library.ts.
+  const seen = new Set<string>();
+  const out: LocalBgmEntry[] = [];
+  for (const file of readdirSync(directory).sort()) {
+    const ext = file.slice(file.lastIndexOf(".")).toLowerCase();
+    if (
+      ext !== ".wav" &&
+      ext !== ".mp3" &&
+      ext !== ".m4a"
+    ) {
+      continue;
+    }
+    const tag = file.slice(0, -ext.length);
+    if (seen.has(tag)) continue;
+    seen.add(tag);
+    const dashIdx = tag.indexOf("-");
+    out.push({
+      tag,
+      mood: dashIdx > 0 ? tag.slice(0, dashIdx) : "uncategorized",
+      path: path.join(directory, file),
+      durationSec: null,
+    });
+  }
+  return out;
 }
 
 /** Scene number from a narration wav name — the numeric sort key.

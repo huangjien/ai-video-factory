@@ -719,7 +719,7 @@ CLI 会把一份机器可读的问题集写到 stdout，然后以退出码 **2**
 | ------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `--ask`             | 强制走代理问题协议，即使没有检测到 agent 环境                                                                                                      |
 | `--no-ask`          | 永不提问——直接用默认值跑（无人值守子跑的正确选择）                                                                                                 |
-| `--bgm <tag\|none>` | 把 BGM tag 写进新生的 `audio-config.yaml`：`calm`、`epic`、`guofeng`、`liubang-xiaodiao`、`fanzhuan-march`、`none`（默认：由 audio-plan LLM 自选） |
+| `--bgm <tag\|none>` | 从 `assets/bgm/` 曲库里选一个 tag（如 `upbeat-your-love`、`light-gravity`、`classical-gymnopedie-no-3`），`none` 表示无 BGM。默认由 audio-plan LLM 自选，曲目清单见 `assets/bgm/README.md` |
 
 **实时进度（v0.7.1）**——`video make` 和 `video draft` 运行时把
 步骤/场景进度和心跳打到 **stderr**（stdout 保持干净）：形如

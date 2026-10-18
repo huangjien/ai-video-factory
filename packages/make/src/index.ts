@@ -32,9 +32,12 @@ import {
 } from "@video/media";
 import { planBgmWindows, renderBgmTimeline } from "@video/audio-mix";
 import {
+  curatedBgmDirectory,
   FileBasedAudioAssetProvider,
-  MiniMaxMusicProvider,
+  listMoods,
+  loadLocalBgmLibrary,
   MockAudioAssetProvider,
+  resolveBgmTag,
   type AudioAssetProvider,
 } from "@video/audio-assets";
 import {
@@ -151,7 +154,7 @@ export interface MakeOptions {
   sfxDir?: string;
   /** BGM generation backend: "auto" (default) uses MiniMax music
    * generation when MINIMAX_API_KEY is set, else silent mock. */
-  musicProvider?: "auto" | "minimax" | "mock";
+
   /** v0.7.1 (video-progress/1): live progress events (step start/done,
    * per-scene items, heartbeats). Default noop — the CLI passes a
    * stderr printer. */
@@ -312,9 +315,6 @@ export async function runMake(
       runAudioAssets(opts.projectRoot, audioConfig, {
         ...(opts.bgmDir !== undefined ? { bgmDir: opts.bgmDir } : {}),
         ...(opts.sfxDir !== undefined ? { sfxDir: opts.sfxDir } : {}),
-        ...(opts.musicProvider !== undefined
-          ? { musicProvider: opts.musicProvider }
-          : {}),
       }),
     );
 
@@ -949,13 +949,6 @@ function formatSrtTime(sec: number): string {
 export interface AudioAssetDirs {
   bgmDir?: string;
   sfxDir?: string;
-  /** BGM generation backend (branding 2026-10-05). "auto" (default) uses
-   * MiniMax music generation when MINIMAX_API_KEY is set, else mock.
-   * "minimax" forces it (fails loudly without a key); "mock" disables.
-   * bgmDir always wins over all of these. */
-  musicProvider?: "auto" | "minimax" | "mock";
-  /** Test seam — overrides the constructed MiniMax music provider. */
-  minimaxProvider?: Pick<AudioAssetProvider, "pickBackgroundMusic">;
 }
 
 /** Materialize the BGM/SFX tags declared in audio-config.yaml into
@@ -980,37 +973,17 @@ export async function runAudioAssets(
       sfxDirectory: dirs.sfxDir ?? dirs.bgmDir ?? ".",
     });
 
-  const useMinimax = (() => {
-    const mode = dirs.musicProvider ?? "auto";
-    if (mode === "mock") return false;
-    if (dirs.bgmDir) return false; // user library wins
-    if (mode === "minimax") return true;
-    return Boolean(process.env["MINIMAX_API_KEY"]);
-  })();
-  const minimax = () => dirs.minimaxProvider ?? new MiniMaxMusicProvider();
-
-  /** Generate one named BGM tag: file-based library → MiniMax music gen
-   * (degrading to mock on failure so the pipeline keeps moving) → mock. */
+  /** BGM tags are resolved, not generated: there is no music service any
+   *  more. This step no longer materialises BGM at all — `runMix` resolves
+   *  the tag against the curated library and hands ffmpeg the real file.
+   *  Copying it here would write an mp3 under a .wav name and duplicate
+   *  ~6 MB into every project. Only a legacy user-supplied `bgmDir` of
+   *  .wav files is still worth staging, and that path is unchanged. */
   const materializeBgm = async (tag: string): Promise<string | null> => {
+    if (!dirs.bgmDir) return null;
     const out = path.join(assetsDir, "bgm", `${tag}.wav`);
     if (existsSync(out)) return null;
-    if (dirs.bgmDir) {
-      const r = await fileBased().pickBackgroundMusic({ tag });
-      await writeFile(out, r.bytes);
-      return `assets/audio-assets/bgm/${tag}.wav (${r.source}, ${r.license})`;
-    }
-    if (useMinimax) {
-      try {
-        const r = await minimax().pickBackgroundMusic({ tag });
-        await writeFile(out, r.bytes);
-        return `assets/audio-assets/bgm/${tag}.wav (${r.source}, ${r.license})`;
-      } catch (err) {
-        console.error(
-          `  ! minimax music gen failed for "${tag}" — falling back to mock: ${(err as Error).message.slice(0, 120)}`,
-        );
-      }
-    }
-    const r = await mock().pickBackgroundMusic({ tag });
+    const r = await fileBased().pickBackgroundMusic({ tag });
     await writeFile(out, r.bytes);
     return `assets/audio-assets/bgm/${tag}.wav (${r.source}, ${r.license})`;
   };
@@ -1041,6 +1014,60 @@ export async function runAudioAssets(
   return outputs;
 }
 
+/** Resolve a BGM tag to a real audio file: the project's own
+ *  `assets/audio-assets/bgm/` first, then the curated library at
+ *  `<repo>/assets/bgm/`. Falls back to a silent placeholder so the mix
+ *  still produces an output — an unknown tag is a planning mistake, not a
+ *  reason to fail the whole render.
+ *
+ *  `assets/brand/` is also scanned: it predates the library and holds
+ *  channel-level audio a project may already reference by path.
+ */
+export async function resolveLibraryBgm(
+  projectRoot: string,
+  tag: string,
+): Promise<string> {
+  const wsRoot = workspaceRootFor(projectRoot);
+  const dirs = [
+    path.join(projectRoot, "assets", "audio-assets", "bgm"),
+    ...(wsRoot
+      ? [curatedBgmDirectory(wsRoot), path.join(wsRoot, "assets", "brand")]
+      : []),
+  ].filter((d) => existsSync(d));
+  try {
+    return resolveBgmTag({
+      tag,
+      ...(dirs[0] !== undefined ? { projectDir: dirs[0] } : {}),
+      ...(dirs[1] !== undefined ? { curatedDir: dirs[1] } : {}),
+    }).path;
+  } catch {
+    // An unresolvable tag is a planning mistake, not a reason to fail the
+    // render. Write the same silent placeholder the old mock provider did so
+    // ffmpeg always receives a real file — passing it a missing path fails
+    // the whole mix.
+    const placeholder = path.join(
+      projectRoot,
+      "assets",
+      "audio-assets",
+      "bgm",
+      `${tag}.wav`,
+    );
+    await mkdir(path.dirname(placeholder), { recursive: true });
+    const r = await new MockAudioAssetProvider().pickBackgroundMusic({ tag });
+    await writeFile(placeholder, r.bytes);
+    const available = dirs
+      .flatMap((d) => loadLocalBgmLibrary(d))
+      .map((e) => e.tag);
+    console.error(
+      `  ! bgm tag "${tag}" not found — mixing silence. Add it to assets/bgm/,`,
+    );
+    console.error(
+      `    or pick one of: ${available.join(", ") || "<library empty>"}`,
+    );
+    return placeholder;
+  }
+}
+
 async function runRenderPreview(
   projectRoot: string,
   _article: ParsedArticle,
@@ -1069,14 +1096,12 @@ async function runMix(
   // duplicating the existing pipeline.
   const mixArgs: string[] = ["node", "packages/cli/dist/index.js", "mix", slug];
   if (config.bgm && typeof config.bgm === "string") {
-    const bgmAbs = path.join(
-      projectRoot,
-      "assets",
-      "audio-assets",
-      "bgm",
-      `${config.bgm}.wav`,
-    );
-    mixArgs.push("--bgm", bgmAbs);
+    // Resolve the tag against the curated library (`assets/bgm/`) with the
+    // project's own `assets/audio-assets/bgm/` shadowing it. The file is
+    // passed straight to ffmpeg — it is NOT copied to
+    // `assets/audio-assets/bgm/<tag>.wav`, which would write an mp3 under a
+    // .wav name (the library is mp3) and duplicate ~6 MB per project.
+    mixArgs.push("--bgm", await resolveLibraryBgm(projectRoot, config.bgm));
   }
   if (config.bgm_tracks && config.bgm_tracks.length > 0) {
     // Multi-BGM timeline (branding 2026-10-05): pre-render the ordered

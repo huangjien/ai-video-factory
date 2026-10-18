@@ -24,7 +24,6 @@ export interface MakeOptions {
   /** Local SFX library dir — same lookup rule as bgmDir. */
   sfxDir?: string;
   /** BGM generation: auto (MiniMax when key present) | minimax | mock. */
-  musicProvider?: "auto" | "minimax" | "mock";
 }
 
 export async function runMakeCli(opts: MakeOptions): Promise<number> {
@@ -54,9 +53,6 @@ export async function runMakeCli(opts: MakeOptions): Promise<number> {
       : {}),
     ...(opts.bgmDir !== undefined ? { bgmDir: opts.bgmDir } : {}),
     ...(opts.sfxDir !== undefined ? { sfxDir: opts.sfxDir } : {}),
-    ...(opts.musicProvider !== undefined
-      ? { musicProvider: opts.musicProvider }
-      : {}),
   });
 
   // Pretty-print the report. Marks come from the shared ui module so the
@@ -126,18 +122,6 @@ export function registerMake(program: Command): void {
       "--sfx-dir <dir>",
       "local SFX library dir — sfx cue tags resolve to {tag}.wav inside it (default: mock silent placeholder)",
     )
-    .option(
-      "--music-provider <mode>",
-      "BGM generation: auto (MiniMax music gen when MINIMAX_API_KEY set, else mock) | minimax | mock",
-      (v) => {
-        if (v !== "auto" && v !== "minimax" && v !== "mock") {
-          throw new Error(
-            `--music-provider must be auto|minimax|mock, got: ${v}`,
-          );
-        }
-        return v as "auto" | "minimax" | "mock";
-      },
-    )
 .option("--dry-run", "log which steps would run without executing them")
     .action(
       async (
@@ -148,7 +132,6 @@ export function registerMake(program: Command): void {
           imageProvider?: "minimax" | "openai" | "gemini" | "mock" | "none";
           bgmDir?: string;
           sfxDir?: string;
-          musicProvider?: "auto" | "minimax" | "mock";
           dryRun?: boolean;
         },
       ) => {
@@ -161,9 +144,6 @@ export function registerMake(program: Command): void {
             : {}),
           ...(opts.bgmDir !== undefined ? { bgmDir: opts.bgmDir } : {}),
           ...(opts.sfxDir !== undefined ? { sfxDir: opts.sfxDir } : {}),
-          ...(opts.musicProvider !== undefined
-            ? { musicProvider: opts.musicProvider }
-            : {}),
           ...(opts.dryRun !== undefined ? { dryRun: opts.dryRun } : {}),
         });
       },

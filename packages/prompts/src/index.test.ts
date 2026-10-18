@@ -2,7 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   fillPrompt,
   loadImageStylePresets,
-  loadMusicPrompts,
+  loadBgmCatalogue,
+  renderBgmCatalogue,
   loadPrompt,
   promptFilePath,
 } from "./index.js";
@@ -128,9 +129,27 @@ describe("structured prompt files", () => {
     }
   });
 
-  it("music.json maps tags to Chinese prompts", () => {
-    const music = loadMusicPrompts();
-    expect(music["calm"]).toContain("平静舒缓");
-    expect(music["liubang-xiaodiao"]).toContain("琵琶");
+  it("music.json indexes the curated BGM library with real measurements", () => {
+    const cat = loadBgmCatalogue();
+    const keys = Object.keys(cat);
+    expect(keys.length).toBeGreaterThan(0);
+    for (const tag of keys) {
+      const e = cat[tag]!;
+      expect(e.file).toBe(`${tag}.mp3`);
+      expect(e.track.length).toBeGreaterThan(0);
+      expect(e.use_when.length).toBeGreaterThan(10);
+      expect(e.avoid_when.length).toBeGreaterThan(5);
+      expect(e.duration_sec).toBeGreaterThan(0);
+      // Loudness is a real ebur128 reading, not a placeholder.
+      expect(e.loudness_lufs_i).toBeLessThan(0);
+      expect(e.loudness_lufs_i).toBeGreaterThan(-40);
+    }
+  });
+
+  it("the rendered catalogue carries the numbers the planner needs", () => {
+    const out = renderBgmCatalogue();
+    expect(out).toContain("LUFS");
+    expect(out).toContain("use when:");
+    expect(out).toContain("avoid when:");
   });
 });

@@ -29,7 +29,13 @@ export const AssetResultSchema = z
     // are byte-compatible. Custom validator is more portable than
     // `z.instanceof(Uint8Array)` which forces the default variant.
     bytes: z.custom<Uint8Array>((v) => v instanceof Uint8Array),
-    contentType: z.enum(["audio/wav", "audio/mpeg", "audio/ogg"]),
+    contentType: z.enum([
+      "audio/wav",
+      "audio/mpeg",
+      "audio/mp4",
+      "audio/ogg",
+      "audio/x-m4a",
+    ]),
     durationSec: z.number().positive(),
     license: z.string().min(1),
     source: z.string().min(1),

@@ -1,5 +1,5 @@
 import type { ChatMessage } from "@video/llm";
-import { loadPrompt } from "@video/prompts";
+import { fillPrompt, loadPrompt, renderBgmCatalogue } from "@video/prompts";
 import type { ParsedArticle } from "@video/draft";
 
 export interface AudioPlanInput {
@@ -9,8 +9,13 @@ export interface AudioPlanInput {
   language: "zh-CN" | "en-US";
 }
 
-/** Body lives in `packages/prompts/prompts/audio-plan.md` — edit it there. */
-export const SYSTEM_PROMPT = loadPrompt("audio-plan");
+/** Body lives in `packages/prompts/prompts/audio-plan.md` — edit it there.
+ *  `{{BGM_CATALOGUE}}` is filled from `music.json`, which indexes the real
+ *  files in `assets/bgm/`; the planner must choose a tag from it rather
+ *  than invent one, because no music is generated any more. */
+export const SYSTEM_PROMPT = fillPrompt(loadPrompt("audio-plan"), {
+  BGM_CATALOGUE: renderBgmCatalogue(),
+});
 
 export function buildMessages(input: AudioPlanInput): ChatMessage[] {
   const sceneSummary = input.article.scenes

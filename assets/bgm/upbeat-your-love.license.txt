@@ -1,0 +1,13 @@
+Source:    https://www.youtube.com/watch?v=PuCWn_OVga8
+Track:     Your Love
+Artist:    Niwel
+Mood/type: upbeat
+Playlist:  https://www.youtube.com/playlist?list=PL_k9bFPONrNfrmOXvxU3FijljSFUCc-Rm
+Extracted: 2026-10-18, yt-dlp bestaudio -> mp3 (best available, ~252 kbps)
+
+STATUS: NCS (NoCopyrightSounds) release. The playlist title declares the
+tracks free for use. YouTube's own `license` field on the source video is
+`NA` — the uploader did not formally declare a licence there — so the
+clearance rests on Niwel/NCS's standing NCS licence rather than on this
+particular video. Credit the artist; the NCS licence permits use in
+published video including monetised channels.

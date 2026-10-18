@@ -68,7 +68,6 @@ describe("runMakeCli", () => {
       cwd: projectsRoot,
       fake: true,
       dryRun: true,
-      musicProvider: "mock",
     });
     expect(code).toBe(0);
     // Dry-run must not materialize any pipeline outputs.

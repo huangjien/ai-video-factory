@@ -18,7 +18,7 @@ import { captionWiring, sceneCaptionOwner } from "./Root.js";
  */
 
 const IMAGE = "ImageBackground";
-const OTHER = "Comparison";
+const OTHER = "Callout";
 const CAPTIONS = {
   lines: ["一段很长的旁白字幕"],
 } as RenderPlanScene["captions"];

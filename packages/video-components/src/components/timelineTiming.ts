@@ -1,9 +1,7 @@
 /**
  * Shared helper for reading `scene.animations[]` into per-element timing.
- * Mirrors `svgSceneLogic.resolveElementTiming` but is intentionally
- * simpler — non-SvgScene components only need a flat target → {start,
- * duration, easing, type} lookup so they can replace their baked-in
- * animations with the same contract.
+ * A flat target → {start, duration, easing, type} lookup so components
+ * can replace their baked-in animations with the same contract.
  */
 
 export interface TimelineAnim {
@@ -54,9 +52,7 @@ export function progressFor(
   return easeOut(t);
 }
 
-/** Generic tween used by non-SvgScene components. Sub-classes may
- *  override (e.g. the SvgScene component uses its own per-element
- *  timing math). */
+/** Generic ease-out tween shared by every component. */
 export function easeOut(t: number): number {
   return 1 - Math.pow(1 - t, 3);
 }

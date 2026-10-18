@@ -54,21 +54,6 @@ describe("REGISTRY accepts LLM-drifted component props (loose schemas)", () => {
     }
   });
 
-  it("Comparison accepts left_title/right_title/etc. as alias for title", () => {
-    const r = validate("Comparison", {
-      left_title: "Pros",
-      left_items: ["a", "b"],
-      right_title: "Cons",
-      right_items: ["c", "d"],
-    });
-    expect(r.success).toBe(true);
-  });
-
-  it("Comparison accepts missing left/right (default to empty side)", () => {
-    const r = validate("Comparison", {});
-    expect(r.success).toBe(true);
-  });
-
   it("EndCard accepts cta_text/cta_url/disclaimer (alias for cta + ignore)", () => {
     const r = validate("EndCard", {
       title: "Done",

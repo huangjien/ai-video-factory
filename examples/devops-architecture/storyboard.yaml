@@ -36,37 +36,14 @@ scenes:
       text: "提交触发构建服务器编译与打包。"
       audio: "assets/audio/scene-02.wav"
     visual:
-      component: SvgScene
-      renderer: svg
+      component: FlowChart
+      renderer: remotion
       props:
-        title: "Commit → Build"
         nodes:
-          - id: commit
-            kind: circle
-            x: 140
-            y: 280
-            w: 220
-            h: 160
-            text: "commit"
-          - id: build
-            kind: rect
-            x: 960
-            y: 260
-            w: 560
-            h: 200
-            text: "Build Server"
+          - "commit"
+          - "Build Server (webhook)"
         edges:
-          - id: trigger
-            from: commit
-            to: build
-            label: "webhook"
-    animations:
-      - id: draw-trigger
-        target: trigger
-        type: draw
-        start: 1
-        duration: 1.2
-        easing: easeInOut
+          - [0, 1]
     transition:
       in: cut
       out: cut
@@ -77,43 +54,14 @@ scenes:
       text: "构建产物进入测试环境，自动跑完整测试。"
       audio: "assets/audio/scene-03.wav"
     visual:
-      component: SvgScene
-      renderer: svg
+      component: FlowChart
+      renderer: remotion
       props:
-        title: "Automated Tests"
         nodes:
-          - id: build
-            kind: rect
-            x: 120
-            y: 280
-            w: 420
-            h: 180
-            text: "Build"
-          - id: tests
-            kind: rect
-            x: 1020
-            y: 260
-            w: 520
-            h: 220
-            text: "Test Env ✓ ✓ ✓"
+          - "Build"
+          - "Test Env ✓ ✓ ✓ (artifact)"
         edges:
-          - id: promote
-            from: build
-            to: tests
-            label: "artifact"
-    animations:
-      - id: camera-tests
-        target: tests
-        type: camera
-        start: 4
-        duration: 2
-        easing: easeInOut
-      - id: draw-promote
-        target: promote
-        type: draw
-        start: 1
-        duration: 1.2
-        easing: easeInOut
+          - [0, 1]
     transition:
       in: cut
       out: cut
@@ -124,74 +72,19 @@ scenes:
       text: "测试通过后，发布到三台生产实例。"
       audio: "assets/audio/scene-04.wav"
     visual:
-      component: SvgScene
-      renderer: svg
+      component: FlowChart
+      renderer: remotion
       props:
-        title: "Deploy to Production"
         nodes:
-          - id: gate
-            kind: rect
-            x: 120
-            y: 300
-            w: 380
-            h: 160
-            text: "Tests ✓"
-          - id: prod-1
-            kind: rect
-            x: 1020
-            y: 80
-            w: 480
-            h: 150
-            text: "prod-1"
-          - id: prod-2
-            kind: rect
-            x: 1020
-            y: 290
-            w: 480
-            h: 150
-            text: "prod-2"
-          - id: prod-3
-            kind: rect
-            x: 1020
-            y: 500
-            w: 480
-            h: 150
-            text: "prod-3"
+          - "Tests ✓"
+          - "prod-1"
+          - "prod-2"
+          - "prod-3"
         edges:
-          - id: d1
-            from: gate
-            to: prod-1
-          - id: d2
-            from: gate
-            to: prod-2
-          - id: d3
-            from: gate
-            to: prod-3
-    animations:
-      - id: camera-prod
-        target: prod-2
-        type: camera
-        start: 5
-        duration: 2
-        easing: easeInOut
-      - id: draw-d1
-        target: d1
-        type: draw
-        start: 1
-        duration: 1
-        easing: easeInOut
-      - id: draw-d2
-        target: d2
-        type: draw
-        start: 2.5
-        duration: 1
-        easing: easeInOut
-      - id: draw-d3
-        target: d3
-        type: draw
-        start: 4
-        duration: 1
-        easing: easeInOut
+          - [0, 1]
+          - [0, 2]
+          - [0, 3]
+        direction: "top-down"
     transition:
       in: cut
       out: cut
@@ -202,43 +95,14 @@ scenes:
       text: "监控盯着每一台实例的指标。"
       audio: "assets/audio/scene-05.wav"
     visual:
-      component: SvgScene
-      renderer: svg
+      component: FlowChart
+      renderer: remotion
       props:
-        title: "Monitor Everything"
         nodes:
-          - id: cluster
-            kind: rect
-            x: 200
-            y: 300
-            w: 520
-            h: 200
-            text: "prod cluster"
-          - id: metrics
-            kind: rect
-            x: 1100
-            y: 280
-            w: 440
-            h: 240
-            text: "Metrics / Alerts"
+          - "prod cluster"
+          - "Metrics / Alerts (telemetry)"
         edges:
-          - id: feed
-            from: cluster
-            to: metrics
-            label: "telemetry"
-    animations:
-      - id: camera-metrics
-        target: metrics
-        type: camera
-        start: 3
-        duration: 2
-        easing: easeInOut
-      - id: draw-feed
-        target: feed
-        type: draw
-        start: 1
-        duration: 1.4
-        easing: easeInOut
+          - [0, 1]
     transition:
       in: cut
       out: fade

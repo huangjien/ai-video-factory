@@ -14,7 +14,7 @@ from `skills-lock.json`).
 2. **As machine tables.** The `animation-principles` skill's numbers are
    transcribed into `@video/motion/src/heuristics.ts` (entrance 0.3–0.8 s
    ease-out, stagger 40–80 ms capped 0.7 s, beat quantization) and
-   `svgSceneLogic.ts`/`doodleLogic.ts` defaults — so the pipeline behaves
+   `timelineTiming.ts`/`doodleLogic.ts` defaults — so the pipeline behaves
    identically when the skills directory is absent (contract-tested).
 3. **Never as data.** Skill formats never appear in VDSL; the Motion Agent
    translates skill guidance into schema-valid `animations[]`, and the

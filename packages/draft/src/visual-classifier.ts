@@ -16,12 +16,11 @@
  *   venn / overlap / 交集 / 重叠                  → VennDiagram
  *   key insight / takeaway / 核心观点 / 一句话    → BigIdea
  *   database / 表 / schema / 存储 / sql / query   → Callout
- *   network / 网络 / flow / pipeline / 流水线     → SvgScene  (draw-on diagram)
- *   compare / 对比 / versus / vs / 差异            → Comparison
+ *   network / 网络 / flow / pipeline / 流水线     → FlowChart (boxes + arrows)
  *   code / terminal / 代码 / console / command      → Terminal
  *   timeline / 年表 / 历史 / 年代 / chronology     → Timeline
  *   formula / 公式 / equation / math               → Callout
- *   process / step / 步骤                            → SvgScene
+ *   process / step / 步骤                            → FlowChart
  *   list / 列表 / bullet / 要点 / list of           → Checklist
  *   first scene                                    → Title
  *   fall-through                                   → AnimatedIllustration
@@ -44,10 +43,8 @@ export type ComponentName =
   | "AnimatedIllustration"
   | "Callout"
   | "FlowChart"
-  | "Comparison"
   | "Terminal"
   | "Timeline"
-  | "SvgScene"
   | "DoodleScene"
   | "QuoteBlock"
   | "StatGrid"
@@ -136,17 +133,10 @@ const RULES: ClusterRule[] = [
     ],
   },
   {
-    component: "SvgScene",
+    component: "FlowChart",
     patterns: [
       /\b(network|networks|flow|flows|pipeline|pipelines|pipe|step|steps|process|workflow|workflows|diagram|flowchart|node|nodes|edge|edges)/i,
       /(网络|流水线|流程|步骤|节点|连线|拓扑|链路)/,
-    ],
-  },
-  {
-    component: "Comparison",
-    patterns: [
-      /\b(compare|comparison|versus|vs\.?|difference|differences|trade[- ]off|pros and cons|before and after)/i,
-      /(对比|比较|差异|区别|不同|相比|权衡|优缺点|前后)/,
     ],
   },
   {
@@ -191,10 +181,8 @@ const COMPONENT_NAMES: readonly ComponentName[] = [
   "AnimatedIllustration",
   "Callout",
   "FlowChart",
-  "Comparison",
   "Terminal",
   "Timeline",
-  "SvgScene",
   "DoodleScene",
   "QuoteBlock",
   "StatGrid",

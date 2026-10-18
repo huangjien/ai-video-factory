@@ -6,16 +6,15 @@
  * that drives per-element choreography inside the scene. The shape
  * matches `vdsl.timelineAnimationSchema` (`packages/vdsl/src/schema.ts:413-431`).
  *
- * Today only `SvgScene` reads these, but the schema is component-agnostic,
+ * Today only `DoodleScene` reads these, but the schema is component-agnostic,
  * so the same emitted list is the contract that future FlowChart /
- * Terminal / Timeline / Comparison renderers will honour (see T19).
+ * Terminal / Timeline renderers will honour (see T19).
  *
  * Strategy
  *   - **Stagger** elements across the scene's duration with a small gap.
- *   - **Draw-on** for sequential content (FlowChart/SvgScene edges).
+ *   - **Draw-on** for sequential content (FlowChart edges).
  *   - **Highlight** for emphasis rows and milestone events.
  *   - **Write** for typewriter content (Terminal lines).
- *   - **Move** for paired-card entrances (Comparison).
  *
  * Deterministic (no LLM), idempotent, free. Runs at YAML-build time.
  */
@@ -23,7 +22,7 @@
 export interface TimelineAnimation {
   id: string;
   target: string;
-  type: "draw" | "write" | "fade" | "move" | "scale" | "rotate" | "highlight" | "camera";
+  type: "draw" | "write" | "fade" | "move" | "scale" | "rotate" | "highlight";
   /** Scene-relative seconds. */
   start: number;
   duration: number;
@@ -48,16 +47,12 @@ export function emitSceneAnimations(
       return emitFlowChartAnimations(props, ctx);
     case "Terminal":
       return emitTerminalAnimations(props, ctx);
-    case "Comparison":
-      return emitComparisonAnimations(props, ctx);
     case "Timeline":
       return emitTimelineAnimations(props, ctx);
     case "Callout":
       return emitCalloutAnimations(props, ctx);
     case "Title":
       return emitTitleAnimations(props, ctx);
-    case "SvgScene":
-      return emitSvgSceneAnimations(props, ctx);
     case "QuoteBlock":
       return emitQuoteBlockAnimations(ctx);
     case "StatGrid":
@@ -150,62 +145,6 @@ function emitTerminalAnimations(
 }
 
 // ---------------------------------------------------------------------------
-// Comparison — slide the two cards in from each direction.
-// ---------------------------------------------------------------------------
-function emitComparisonAnimations(
-  props: Record<string, unknown>,
-  ctx: EmitContext,
-): TimelineAnimation[] {
-  const left = props.left as { items?: unknown[] } | undefined;
-  const right = props.right as { items?: unknown[] } | undefined;
-  const leftCount = left?.items?.length ?? 0;
-  const rightCount = right?.items?.length ?? 0;
-  const half = ctx.sceneDurationSec / 2;
-  const out: TimelineAnimation[] = [
-    {
-      id: "left-card",
-      target: "__left__",
-      type: "move",
-      start: 0.1,
-      duration: round2(half - 0.2),
-      easing: EASING,
-    },
-    {
-      id: "right-card",
-      target: "__right__",
-      type: "move",
-      start: round2(half),
-      duration: round2(half - 0.2),
-      easing: EASING,
-    },
-  ];
-  // Highlight each item as the card reveals.
-  const leftSec = (half - 0.2) / Math.max(1, leftCount);
-  left?.items?.forEach?.((_, i) => {
-    out.push({
-      id: `left-item-${i}`,
-      target: `left-item-${i}`,
-      type: "highlight",
-      start: round2(0.2 + i * leftSec),
-      duration: round2(leftSec),
-      easing: EASING,
-    });
-  });
-  const rightSec = (half - 0.2) / Math.max(1, rightCount);
-  right?.items?.forEach?.((_, i) => {
-    out.push({
-      id: `right-item-${i}`,
-      target: `right-item-${i}`,
-      type: "highlight",
-      start: round2(half + i * rightSec),
-      duration: round2(rightSec),
-      easing: EASING,
-    });
-  });
-  return out;
-}
-
-// ---------------------------------------------------------------------------
 // Timeline — scale-up per event, evenly spaced.
 // ---------------------------------------------------------------------------
 function emitTimelineAnimations(
@@ -270,50 +209,6 @@ function emitTitleAnimations(
       easing: EASING,
     },
   ];
-}
-
-// ---------------------------------------------------------------------------
-// SvgScene — staggered draw-on for each node + each edge, with the same
-// timing contract `resolveElementTiming` already understands.
-// ---------------------------------------------------------------------------
-function emitSvgSceneAnimations(
-  props: Record<string, unknown>,
-  ctx: EmitContext,
-): TimelineAnimation[] {
-  const nodes = (props.nodes as unknown[]) ?? [];
-  const edges = (props.edges as unknown[]) ?? [];
-  const total = nodes.length + edges.length;
-  const per = ctx.sceneDurationSec / Math.max(1, total);
-  const out: TimelineAnimation[] = [];
-  let cursor = 0;
-  nodes.forEach((n, i) => {
-    out.push({
-      id: `node-${nodeId(n, i)}`,
-      target: nodeId(n, i),
-      type: "highlight",
-      start: round2(cursor),
-      duration: fitWithin(round2(per * 1.2), cursor, ctx.sceneDurationSec),
-      easing: EASING,
-    });
-    cursor += per;
-  });
-  edges.forEach((e, i) => {
-    out.push({
-      id: `edge-${edgeId(e, i)}`,
-      target: edgeId(e, i),
-      type: "draw",
-      start: round2(cursor),
-      duration: fitWithin(round2(per * 1.2), cursor, ctx.sceneDurationSec),
-      easing: EASING,
-    });
-    cursor += per;
-  });
-  return out;
-}
-
-function edgeId(e: unknown, i: number): string {
-  if (isObjectWithStringProp(e, "id")) return e.id;
-  return `edge-${i}`;
 }
 
 // ---------------------------------------------------------------------------

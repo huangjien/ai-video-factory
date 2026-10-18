@@ -334,7 +334,7 @@ style:
 
 assets: # 0.2: optional project-level manifest
   - id: asset-logo
-    type: svg # svg|png|jpg|webp|excalidraw|canvas|audio|video|font
+    type: svg # svg|png|jpg|webp|canvas|audio|video|font
     source: generated # generated|user|external
     path: assets/svg/logo.svg
 
@@ -345,8 +345,8 @@ scenes:
       text: "AI Agent 为什么需要 Memory？"
       audio: assets/audio/scene-01.wav # optional; mounted by video audio flows
     visual:
-      component: SvgScene
-      renderer: svg # remotion (default) | svg | canvas | excalidraw
+      component: FlowChart
+      renderer: remotion # remotion (default) | canvas
       props: { … } # validated against the component's REGISTRY props schema
     animation: # v0.1 entrance model (still honored)
       entrance: fade
@@ -355,7 +355,7 @@ scenes:
     animations: # 0.2 timeline model (scene-relative)
       - id: draw-arrow
         target: arrow-1
-        type: draw # draw|write|fade|move|scale|rotate|highlight|morph|camera
+        type: draw # draw|write|fade|move|scale|rotate|highlight|morph
         start: 1.2
         duration: 0.8
         easing: easeInOut # linear|easeIn|easeOut|easeInOut (+synonyms)
@@ -388,9 +388,7 @@ duration`).
 | renderer     | Component                      | Notes                                                        |
 | ------------ | ------------------------------ | ------------------------------------------------------------ |
 | `remotion`   | any classic REGISTRY component | default                                                      |
-| `svg`        | `SvgScene`                     | whiteboard/diagram, draw-on + target-driven camera           |
 | `canvas`     | `DoodleScene`                  | hand-drawn ink, seeded wobble, `bpm` beat-sync               |
-| `excalidraw` | —                              | asset generator only (`video excalidraw`); not a render path |
 
 Unwired renderer/component combinations fail loudly at render time.
 
@@ -433,12 +431,12 @@ workspace dependencies plus FFmpeg. The installed skill packs
 (`.agents/skills/`, inventoried in `skills/INVENTORY.md`) only feed LLM
 agents (chiefly `video motion`); they are never read on the render path.
 
-The 24 scene components in `REGISTRY`: `Title`, `Paragraph`,
+The 22 scene components in `REGISTRY`: `Title`, `Paragraph`,
 `AnimatedIllustration`, `CodeBlock`, `Terminal`, `Image`,
-`ImageBackground`, `Character`, `FlowChart`, `Comparison`, `Timeline`,
+`ImageBackground`, `Character`, `FlowChart`, `Timeline`,
 `Callout`, `EndCard`, `QuoteBlock`, `StatGrid`, `BarChart`, `Leaderboard`,
 `Checklist`, `BigIdea`, `PyramidDiagram`, `VennDiagram`, `CycleDiagram`,
-`SvgScene`, `DoodleScene`. Plus the chrome overlays `CaptionsOverlay`,
+`DoodleScene`. Plus the chrome overlays `CaptionsOverlay`,
 `BrandWatermark`, `BrandIntro` — registered separately because they
 overlay the timeline rather than own a scene.
 
@@ -968,7 +966,6 @@ video storyboard "<topic>" --from-research … --from-script …
 video approve storyboard --cwd projects/<slug>     # 🚪 HUMAN GATE 1
 video motion <slug> [--bpm 100]                    # Motion Agent (LLM + deterministic fallback)
 video audio <slug>                                 # TTS → per-scene WAVs + captions
-video excalidraw <slug>                            # diagram scenes → .excalidraw + animated SVG assets
 video review <slug>                                # read-only Content/Visual/Technical review
 video preview --cwd projects/<slug>                # QA report + contact sheet (WAITING_REVIEW)
 video qa <slug>                                    # rebuild the report; exits 1 on errors
@@ -994,13 +991,6 @@ Works with or without the installed skill packs: when `.agents/skills/`
 is absent, `IartSkillAdapter` degrades to null and planning falls back
 to the deterministic heuristics — the installed `iart-ai` packs simply
 make the LLM's plans better.
-
-### `video excalidraw` — diagram asset generator
-
-Converts every `svg`/`SvgScene` scene in the storyboard into a
-**hand-editable** `.excalidraw` file plus a standalone animated SVG
-(under `assets/excalidraw/`): `video excalidraw my-topic [--duration 8]`.
-Exits with a hint when the storyboard has no diagram scenes.
 
 ### `video qa` — QA re-check
 
@@ -1331,8 +1321,7 @@ projects/<slug>/
 │   ├── audio/scene_*.wav           per-scene TTS (video make writes)
 │   ├── audio-assets/{bgm,sfx}/     BGM/SFX assets (video make writes)
 │   ├── images/scene_N.jpg          scene image + scene_N.cache.json input-key sidecar (v0.8)
-│   ├── images/contact-sheet.png    v0.8: `video visuals` review grid
-│   └── excalidraw/                 video excalidraw writes: .excalidraw + animated SVG
+│   └── images/contact-sheet.png    v0.8: `video visuals` review grid
 ├── captions/<lang>.srt              subtitles (video make writes)
 ├── youtube/                         publishing package from video youtube / thumbnail / shorts
 ├── bilibili/                        video bilibili: package.yaml + cover-prompt.txt + CHECKLIST.md (manual upload)
@@ -1697,9 +1686,9 @@ capability with no API keys required — copy them and render:
 
 | Example                        | Length | Exercises                                                                                                                                                                      |
 | ------------------------------ | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `examples/mcp-explainer`       | 45 s   | full pipeline: SvgScene diagram draw-on, explicit `animations[]`, DoodleScene hand-drawn ink, duration sync, scene versioning, the QA report/gate, Excalidraw asset generation |
+| `examples/mcp-explainer`       | 45 s   | full pipeline: FlowChart diagrams, explicit `animations[]`, DoodleScene hand-drawn ink, duration sync, scene versioning, the QA report/gate |
 | `examples/ai-concept`          | 60 s   | hand-drawn canvas + beat-sync (100 BPM grid)                                                                                                                                   |
-| `examples/devops-architecture` | 90 s   | diagrams, target-driven camera, cut/fade transitions, timeline choreography, Excalidraw                                                                                        |
+| `examples/devops-architecture` | 90 s   | diagrams, cut/fade transitions, timeline choreography                                                                                        |
 
 Running the MCP Explainer for real (full sequence in its `README.md`):
 
@@ -1714,7 +1703,6 @@ for i in 01 02 03 04 05; do
 done
 node packages/cli/dist/index.js approve storyboard --cwd projects/mcp-explainer   # 🚪 gate 1
 node packages/cli/dist/index.js preview --cwd projects/mcp-explainer              # QA report + contact sheet
-node packages/cli/dist/index.js excalidraw mcp-explainer
 node packages/cli/dist/index.js qa mcp-explainer
 node packages/cli/dist/index.js approve review --cwd projects/mcp-explainer       # 🚪 gate 2
 node packages/cli/dist/index.js final --cwd projects/mcp-explainer                # 🚪 gate 3 (QA gate)
@@ -1723,6 +1711,5 @@ node packages/cli/dist/index.js final --cwd projects/mcp-explainer              
 Each example's `README.md` documents the scenes (component family ×
 pipeline feature), and the committed integration tests
 (`packages/cli/src/demo-*.test.ts`) run this exact sequence against a
-temp project. To see how the new components (`SvgScene` / `DoodleScene`),
-timeline animations, and camera moves are written, start from these
-three storyboards.
+temp project. To see how the components (`FlowChart` / `DoodleScene`) and
+timeline animations are written, start from these three storyboards.

@@ -7,7 +7,6 @@ import { Callout } from "./components/Callout.js";
 import { Character } from "./components/Character.js";
 import { Checklist } from "./components/Checklist.js";
 import { CodeBlock } from "./components/CodeBlock.js";
-import { Comparison } from "./components/Comparison.js";
 import { CycleDiagram } from "./components/CycleDiagram.js";
 import { DoodleScene, DoodleScenePropsSchema } from "./components/DoodleScene.js";
 import { EndCard } from "./components/EndCard.js";
@@ -19,7 +18,6 @@ import { Paragraph } from "./components/Paragraph.js";
 import { PyramidDiagram } from "./components/PyramidDiagram.js";
 import { QuoteBlock } from "./components/QuoteBlock.js";
 import { StatGrid } from "./components/StatGrid.js";
-import { SvgScene, SvgScenePropsSchema } from "./components/SvgScene.js";
 import { Terminal } from "./components/Terminal.js";
 import { Timeline } from "./components/Timeline.js";
 import { Title } from "./components/Title.js";
@@ -97,20 +95,6 @@ const flowChartProps = z
       )
       .default([]),
     direction: z.enum(["left-to-right", "top-down"]).default("left-to-right"),
-  })
-  .passthrough();
-
-const comparisonSide = z
-  .object({
-    title: z.string().default(""),
-    items: z.array(z.string().min(1)).default([]),
-  })
-  .passthrough();
-
-const comparisonProps = z
-  .object({
-    left: comparisonSide.default({ title: "", items: [] }),
-    right: comparisonSide.default({ title: "", items: [] }),
   })
   .passthrough();
 
@@ -247,12 +231,6 @@ const CALL_OUT_ALIAS: Record<string, string> = {
   icon: "kind",
   content: "text",
 };
-const COMPARISON_ALIAS: Record<string, string> = {
-  left_title: "left.title",
-  left_items: "left.items",
-  right_title: "right.title",
-  right_items: "right.items",
-};
 const END_CARD_ALIAS: Record<string, string> = {
   cta_text: "cta",
   disclaimer: "subtitle",
@@ -264,7 +242,6 @@ const QUOTE_ALIAS: Record<string, string> = {
 };
 const ALIASES_BY_COMPONENT: Record<string, Record<string, string>> = {
   Callout: CALL_OUT_ALIAS,
-  Comparison: COMPARISON_ALIAS,
   EndCard: END_CARD_ALIAS,
   QuoteBlock: QUOTE_ALIAS,
 };
@@ -332,10 +309,6 @@ export const REGISTRY: Record<string, RegistryEntry> = {
     propsSchema: withAlias("FlowChart", flowChartProps),
     component: FlowChart as ComponentType<unknown>,
   },
-  Comparison: {
-    propsSchema: withAlias("Comparison", comparisonProps),
-    component: Comparison as ComponentType<unknown>,
-  },
   Timeline: {
     propsSchema: timelineProps,
     component: Timeline as ComponentType<unknown>,
@@ -355,10 +328,6 @@ export const REGISTRY: Record<string, RegistryEntry> = {
   ImageBackground: {
     propsSchema: imageBackgroundProps,
     component: ImageBackground as ComponentType<unknown>,
-  },
-  SvgScene: {
-    propsSchema: SvgScenePropsSchema,
-    component: SvgScene as ComponentType<unknown>,
   },
   DoodleScene: {
     propsSchema: DoodleScenePropsSchema,
@@ -415,10 +384,6 @@ export type RegistryPropsByName = {
     nodes: string[];
     edges?: [number, number][];
     direction?: string;
-  };
-  Comparison: {
-    left: { title: string; items: string[] };
-    right: { title: string; items: string[] };
   };
   Timeline: { events: { label: string; description?: string }[] };
   Callout: {

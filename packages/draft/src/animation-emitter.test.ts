@@ -49,22 +49,6 @@ describe("emitSceneAnimations (T17)", () => {
     expect(out.at(-1)?.target).toBe("line-2");
   });
 
-  it("Comparison emits two card slides plus per-item highlights", () => {
-    const out = emitSceneAnimations(
-      "Comparison",
-      {
-        left: { title: "L", items: ["a", "b"] },
-        right: { title: "R", items: ["x"] },
-      },
-      ctx,
-    );
-    const targets = out.map((a) => a.target);
-    expect(targets).toContain("__left__");
-    expect(targets).toContain("__right__");
-    expect(targets).toContain("left-item-0");
-    expect(targets).toContain("left-item-1");
-    expect(targets).toContain("right-item-0");
-  });
 
   it("Timeline emits one highlight per event keyed by label", () => {
     const out = emitSceneAnimations(
@@ -87,23 +71,6 @@ describe("emitSceneAnimations (T17)", () => {
     expect(out[0]?.type).toBe("highlight");
   });
 
-  it("SvgScene emits per-node and per-edge animations", () => {
-    const out = emitSceneAnimations(
-      "SvgScene",
-      {
-        nodes: [
-          { id: "n1", kind: "rect", x: 0, y: 0 },
-          { id: "n2", kind: "rect", x: 100, y: 0 },
-        ],
-        edges: [{ id: "e1", from: "n1", to: "n2" }],
-      },
-      ctx,
-    );
-    expect(out.length).toBe(3);
-    expect(out[0]?.target).toBe("n1");
-    expect(out[1]?.target).toBe("n2");
-    expect(out[2]?.target).toBe("e1");
-  });
 
   it("returns empty list for components that don't have a known mapping", () => {
     expect(

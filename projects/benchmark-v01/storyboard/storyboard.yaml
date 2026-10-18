@@ -80,12 +80,13 @@ scenes:
       text: "加入思维链后，模型的推理能力和可解释性都明显提高。"
       audio: assets/audio/scene-05.wav
     visual:
-      component: Comparison
+      component: Checklist
       props:
-        left:
-          { title: "无 CoT", items: ["直接给答案", "难以解释", "复杂问题易错"] }
-        right:
-          { title: "有 CoT", items: ["逐步推理", "过程可见", "准确率提升"] }
+        title: "无 CoT → 有 CoT"
+        items:
+          - text: "逐步推理"
+          - text: "过程可见"
+          - text: "准确率提升"
     animation:
       entrance: slide
     captions:

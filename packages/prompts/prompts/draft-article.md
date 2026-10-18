@@ -287,8 +287,7 @@ Style keywords — include exactly one in every visual line. The
 classifier picks a VDSL component from the keyword; the renderer
 ignores the rest of the line beyond it.
 
-- comparison / compare / versus / before after / 对比 / 前后      → Comparison
-- network / nodes / pipeline / edges / 流程 / 流水线 / 节点     → FlowChart (SvgScene)
+- network / nodes / pipeline / edges / 流程 / 流水线 / 节点     → FlowChart
 - code / terminal / command / script / 代码 / 命令 / 终端       → Terminal
 - timeline / chronology / years / decades / 时间线 / 历史 / 年表 → Timeline
 - formula / equation / derivation / 公式 / 推导 / 表达式        → Callout (formula)

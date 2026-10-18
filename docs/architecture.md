@@ -54,8 +54,7 @@ flowchart TD
     videoStoryboard --> gate1["video approve storyboard<br/>🚪 human gate 1"]
     gate1 -->|"approved"| videoMotion["video motion"]
     videoMotion --> videoAudio["video audio"]
-    videoAudio --> videoExcalidraw["video excalidraw<br/>(diagram assets)"]
-    videoExcalidraw --> videoReview["video review"]
+    videoAudio --> videoReview["video review"]
     videoReview --> videoPreview["video preview<br/>(QA report + contact sheet)"]
     videoPreview --> gate2["video approve review<br/>🚪 human gate 2"]
     gate2 -->|"approved"| videoFinal["video final<br/>(final QA gate)"]
@@ -69,7 +68,7 @@ flowchart TD
 
 ```text
 video new → (research → script →) storyboard → approve storyboard (GATE)
-      → motion → audio → excalidraw (assets) → review
+      → motion → audio → review
       → preview (QA report + contact sheet) → approve review (GATE)
       → final (QA gate) → FINAL_APPROVED → youtube / thumbnail / shorts
 ```
@@ -136,7 +135,7 @@ parentheses; v0.5.2 additions marked):
 | `@video/audio-plan` | audio-plan | Audio Planner agent (audio-config.yaml proposals from a parsed article) |
 | `@video/agent-storyboard`, `@video/research`, `@video/script`, `@video/review`, `@video/youtube` | agent | LLM agents (per-role provider routing incl. `motion`, transient retry, quota fallback) |
 | `@video/bilibili` | agent | Bilibili submission metadata. Packaging only — no public upload API exists, so there is no uploader here. Degrades to a deterministic package instead of failing. |
-| `@video/video-components` | renderer | 24 scene components in `REGISTRY` incl. `SvgScene` (whiteboard/diagram + camera) and `DoodleScene` (canvas hand-drawn + beat-sync); chrome overlays (`CaptionsOverlay`, `BrandWatermark`, `BrandIntro`); 9 `style.theme` palettes; 5 intro gradients; animation/easing/doodle/excalidraw logic. |
+| `@video/video-components` | renderer | 22 scene components in `REGISTRY` incl. `DoodleScene` (canvas hand-drawn + beat-sync); chrome overlays (`CaptionsOverlay`, `BrandWatermark`, `BrandIntro`); 9 `style.theme` palettes; 5 intro gradients; animation/easing/doodle logic. |
 | `@video/video-renderer` | remotion | scene-isolated Remotion rendering (`renderSceneToVideo`, `concatScenes`), draft mode, studio workspace generator |
 | `@video/media` | assets | CJK caption wrap, ffprobe, duration sync (`syncSceneDurations`), scene-timing reader |
 | `@video/media-generators` | images | `ImageProvider` + `VideoProvider` abstractions; `MockImageProvider`, `MiniMaxImageProvider` (**default since v0.8.1**), the OpenAI and Gemini image providers, `MiniMaxVideoProvider`. |
@@ -152,9 +151,7 @@ parentheses; v0.5.2 additions marked):
 | `visual.renderer` | Components | Status |
 |---|---|---|
 | `remotion` | all classic REGISTRY components | wired |
-| `svg` | `SvgScene` (diagram spec: nodes/edges, draw-on, target-driven camera) | wired (T4.3) |
 | `canvas` | `DoodleScene` (ink strokes, seeded wobble, beat-sync) | wired (T4.4) |
-| `excalidraw` | — | asset generator only (`video excalidraw` → `.excalidraw` + animated `.svg`, T7.1); not a render path |
 
 Unwired renderer/component combinations fail loudly at render time.
 
@@ -174,6 +171,6 @@ Unwired renderer/component combinations fail loudly at render time.
 
 | Demo | Example | Exercises |
 |---|---|---|
-| MCP Explainer (45 s) | `examples/mcp-explainer` | full pipeline, svg diagrams, canvas, QA, excalidraw, final gate |
+| MCP Explainer (45 s) | `examples/mcp-explainer` | full pipeline, FlowChart diagrams, canvas, QA, final gate |
 | AI Concept (60 s) | `examples/ai-concept` | hand-drawn canvas, beat-sync (100 BPM grid) |
-| DevOps Architecture (90 s) | `examples/devops-architecture` | diagrams, target-driven camera, cut/fade transitions, timeline choreography, excalidraw |
+| DevOps Architecture (90 s) | `examples/devops-architecture` | diagrams, cut/fade transitions, timeline choreography |

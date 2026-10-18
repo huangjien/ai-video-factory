@@ -18,6 +18,17 @@ export interface VoiceboxTTSProviderOptions {
   timeoutMs?: number;
   /** Injectable fetch for tests. */
   fetchImpl?: typeof fetch;
+  /** Playback rate passed to voice_setting.speed. Default 1.
+   *  0.9 = slightly slower (more intelligible narration); Qwen3-TTS honors it. */
+  speed?: number;
+  /** When > 0, the narration is split on sentence-ending punctuation
+   *  (keeping the punctuation on each sentence) and each sentence is
+   *  synthesized as a separate backend call. The pieces are ffmpeg-concat'd
+   *  with `apad` inserting this many seconds of silence between sentences.
+   *  Qwen3-TTS has no native pause marker, so this is the only way to get
+   *  inter-sentence breathing room while keeping the cloned voice. Cost:
+   *  one backend round-trip per sentence (each ~7x realtime on MLX). */
+  sentencePauseSec?: number;
 }
 
 interface VoiceboxProfile {
@@ -111,6 +122,8 @@ export function parseTtsChoice(
  * reads them.
  */
 export class VoiceboxTTSProvider implements TTSProvider {
+  private readonly speed: number | undefined;
+  private readonly sentencePauseSec: number;
   readonly name = "voicebox";
   private readonly baseUrl: string;
   private readonly modelSize: string | undefined;
@@ -131,20 +144,46 @@ export class VoiceboxTTSProvider implements TTSProvider {
     this.pollIntervalMs = opts.pollIntervalMs ?? 2000;
     this.timeoutMs = opts.timeoutMs ?? 600_000;
     this.fetchImpl = opts.fetchImpl ?? fetch;
-  }
+      this.speed = opts.speed;
+    this.sentencePauseSec = opts.sentencePauseSec ?? 0;
+}
 
   async synthesize(req: TTSRequest): Promise<TTSResult> {
     const profileId = await this.resolveProfileId(req.voice);
 
+    // When sentencePauseSec is set, split on sentence-ending punctuation
+    // (keeping the punctuation on each sentence) and stitch the per-sentence
+    // audio with this many seconds of silence between. Qwen3-TTS has no
+    // native pause marker — this is the only way to get inter-sentence
+    // breathing room while keeping the cloned voice.
+    const sentences = this.sentencePauseSec > 0 ? splitSentences(req.text) : null;
+
+    if (sentences !== null) {
+      const pieces: Array<{ audio: Uint8Array; durationMs: number }> = [];
+      for (const s of sentences) {
+        pieces.push(await this.generateOne(s, profileId, req.language));
+      }
+      return stitchWithPauses(pieces, this.sentencePauseSec, this.timeoutMs);
+    }
+
+    const one = await this.generateOne(req.text, profileId, req.language);
+    return { audio: one.audio, durationMs: one.durationMs, words: [] };
+  }
+
+  /** One full round-trip: POST /generate, poll /history, GET /audio. */
+  private async generateOne(
+    text: string,
+    profileId: string,
+    language: string,
+  ): Promise<{ audio: Uint8Array; durationMs: number }> {
     const body: Record<string, unknown> = {
       profile_id: profileId,
-      text: req.text,
-      // GenerationRequest.language accepts region-less codes ("zh", "en", …);
-      // the article schema's "zh-CN"/"en-US" would 422.
-      language: req.language.split("-")[0]!.toLowerCase(),
+      text,
+      language: language.split("-")[0]!.toLowerCase(),
     };
     if (this.modelSize !== undefined) body.model_size = this.modelSize;
     if (this.engine !== undefined) body.engine = this.engine;
+    if (this.speed !== undefined) body.speed = this.speed;
 
     const deadline = Date.now() + this.timeoutMs;
     const gen = await this.requestJson<{ id: string }>(
@@ -154,9 +193,6 @@ export class VoiceboxTTSProvider implements TTSProvider {
       deadline,
     );
 
-    // Poll the history row — NOT GET /generate/{id}/status, which is an SSE
-    // stream that never yields a plain JSON body (verified on v0.5.0: a naive
-    // curl poll reads nothing and spins forever).
     let entry: VoiceboxHistoryEntry;
     for (;;) {
       entry = await this.requestJson<VoiceboxHistoryEntry>(
@@ -188,7 +224,6 @@ export class VoiceboxTTSProvider implements TTSProvider {
     return {
       audio,
       durationMs: Math.round((entry.duration ?? 0) * 1000),
-      words: [],
     };
   }
 
@@ -295,5 +330,83 @@ export class VoiceboxTTSProvider implements TTSProvider {
         this.name,
       );
     }
+  }
+}
+
+
+/** Split narration on sentence-ending punctuation (keeping the punctuation
+ *  on each sentence). Returns a non-empty array of trimmed sentence strings
+ *  in source order. */
+export function splitSentences(text: string): string[] {
+  const parts = text.split(/([\u3002\uff01\uff1f.!?]+\s*)/);
+  const out: string[] = [];
+  for (let i = 0; i < parts.length; i += 2) {
+    const body = (parts[i] ?? "").trim();
+    const sep = parts[i + 1] ?? "";
+    if (body.length === 0 && sep.length === 0) continue;
+    out.push((body + sep).trim());
+  }
+  return out.filter((s) => s.length > 0);
+}
+
+/** Concat pre-synthesized sentence WAVs into one stream, padding each with
+ *  `pauseSec` of silence (the last segment is NOT padded). All pieces come
+ *  from the same voicebox backend so they share format/encoding. */
+async function stitchWithPauses(
+  pieces: Array<{ audio: Uint8Array; durationMs: number }>,
+  pauseSec: number,
+  timeoutMs: number,
+): Promise<TTSResult> {
+  if (pieces.length === 0) {
+    throw new TTSError("stitchWithPauses: no pieces", "voicebox");
+  }
+  if (pieces.length === 1) {
+    return {
+      audio: pieces[0]!.audio,
+      durationMs: pieces[0]!.durationMs,
+      words: [],
+    };
+  }
+  const { execFile } = await import("node:child_process");
+  const { promisify } = await import("node:util");
+  const { mkdtemp, writeFile, readFile, rm } = await import("node:fs/promises");
+  const { tmpdir } = await import("node:os");
+  const { join } = await import("node:path");
+  const execFileAsync = promisify(execFile);
+  const dir = await mkdtemp(join(tmpdir(), "voicebox-tts-"));
+  try {
+    const inputs: string[] = [];
+    const filterParts: string[] = [];
+    const labels: string[] = [];
+    for (let i = 0; i < pieces.length; i++) {
+      const p = join(dir, `s${i}.wav`);
+      await writeFile(p, pieces[i]!.audio);
+      inputs.push("-i", p);
+      const dur =
+        pieces[i]!.durationMs / 1000 + (i < pieces.length - 1 ? pauseSec : 0);
+      filterParts.push(`[${i}:a]apad=pad_dur=${dur.toFixed(3)}[s${i}]`);
+      labels.push(`[s${i}]`);
+    }
+    await execFileAsync(
+      "ffmpeg",
+      [
+        "-y",
+        ...inputs,
+        "-filter_complex",
+        `${filterParts.join(";")};${labels.join("")}concat=n=${pieces.length}:v=0:a=1[out]`,
+        "-map", "[out]",
+        join(dir, "out.wav"),
+      ],
+      { timeout: timeoutMs },
+    );
+    const audio = await readFile(join(dir, "out.wav"));
+    const totalMs = pieces.reduce(
+      (acc, p, i) =>
+        acc + p.durationMs + (i < pieces.length - 1 ? pauseSec * 1000 : 0),
+      0,
+    );
+    return { audio, durationMs: Math.round(totalMs), words: [] };
+  } finally {
+    await rm(dir, { recursive: true, force: true }).catch(() => undefined);
   }
 }

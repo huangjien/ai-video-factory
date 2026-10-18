@@ -98,23 +98,24 @@ scenes:
     narration:
       text: "x"
     visual:
-      component: Comparison
-      props: {}
+      component: FlowChart
+      props:
+        nodes: ["a", "b"]
     animations:
-      - id: "left-card"
-        target: "__left__"
+      - id: "node-0"
+        target: "node-0"
         type: move
         start: 0.1
         duration: 2.8
         easing: easeOut
-      - id: "right-card"
-        target: "__right__"
+      - id: "node-1"
+        target: "node-1"
         type: move
         start: 3
         duration: 2.8
         easing: easeOut
       - id: "too-late"
-        target: "__left__"
+        target: "node-0"
         type: highlight
         start: 4.5
         duration: 1
@@ -135,7 +136,7 @@ scenes:
     expect(outputs).toContain("storyboard.yaml: scene_1 duration=4.00s");
     expect(
       outputs.some(
-        (o) => o.includes("right-card") && o.includes("clamped 2.80→1.00s"),
+        (o) => o.includes("node-1") && o.includes("clamped 2.80→1.00s"),
       ),
     ).toBe(true);
     expect(
@@ -157,8 +158,8 @@ scenes:
     const scene = doc.scenes[0]!;
     expect(scene.duration).toBe(4);
     const byId = new Map(scene.animations.map((a) => [a.id, a]));
-    expect(byId.get("left-card")?.duration).toBe(2.8);
-    expect(byId.get("right-card")?.duration).toBe(1);
+    expect(byId.get("node-0")?.duration).toBe(2.8);
+    expect(byId.get("node-1")?.duration).toBe(1);
     expect(byId.has("too-late")).toBe(false);
   });
 });

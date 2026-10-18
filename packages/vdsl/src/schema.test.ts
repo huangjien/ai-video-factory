@@ -96,22 +96,22 @@ project: {id: t, language: zh-CN, fps: 30, width: 1920, height: 1080}
 scenes:
   - id: a
     duration: 8
-    visual: {component: SvgScene, props: {}}
+    visual: {component: DoodleScene, props: {}}
   - id: b
     duration: 4
     visual: {component: Title, props: {text: b}, renderer: remotion}
 `;
 
   it("applies defaults.renderer to scenes that omit visual.renderer", () => {
-    const result = validateStoryboard(withDefaults("svg"), "storyboard.yaml");
+    const result = validateStoryboard(withDefaults("canvas"), "storyboard.yaml");
     expect(result.ok).toBe(true);
     if (result.ok) {
-      expect(result.data.scenes[0]?.visual.renderer).toBe("svg");
+      expect(result.data.scenes[0]?.visual.renderer).toBe("canvas");
     }
   });
 
   it("per-scene renderer overrides the project default", () => {
-    const result = validateStoryboard(withDefaults("svg"), "storyboard.yaml");
+    const result = validateStoryboard(withDefaults("canvas"), "storyboard.yaml");
     expect(result.ok).toBe(true);
     if (result.ok) {
       expect(result.data.scenes[1]?.visual.renderer).toBe("remotion");
@@ -146,7 +146,7 @@ scenes:
   });
 
   it("rejects unknown keys inside defaults (strict)", () => {
-    const yamlText = withDefaults("svg").replace(
+    const yamlText = withDefaults("canvas").replace(
       "defaults:\n",
       "defaults:\n  bogus: 1\n",
     );

@@ -1,18 +1,13 @@
-# Demo 3 — DevOps Architecture (90 s, SVG + camera + excalidraw)
+# Demo 3 — DevOps Architecture (90 s, FlowChart + canvas)
 
 Plan §35 Demo 3: a deployment-pipeline explainer in six 15 s diagram
 scenes, exercising §35's acceptance list end to end:
 
-- **Diagram** — five `SvgScene` scenes (commit → build → test → 3-way
-  prod deploy → monitor), drawn on with explicit `animations[]`
-- **Camera** — target-driven camera moves (`type: camera` on a node
-  pans/zooms to focus it; T7.4), verified mechanically in
-  `svgSceneLogic.test.ts` and by a before/hold pixel-diff in
-  `packages/cli/src/demo-devops.test.ts`
+- **Diagram** — five `FlowChart` scenes (commit → build → test → 3-way
+  prod deploy → monitor), with the hand-drawn `DoodleScene` closer
 - **Transitions** — `cut` between stages, `fade` in/out at the ends
-- **Timeline** — absolute-start choreography (`draw` at 1s/2.5s/4s…)
-- **Excalidraw** — `video excalidraw` emits hand-editable `.excalidraw` +
-  animated `.svg` for every diagram scene (T7.1)
+- **Timeline** — the fifth scene is a hand-drawn canvas scene; the
+  diagram scenes carry their own choreography
 
 ## Run it for real
 
@@ -26,7 +21,6 @@ for i in 01 02 03 04 05 06; do
 done
 node packages/cli/dist/index.js approve storyboard --cwd projects/devops-architecture
 node packages/cli/dist/index.js preview --cwd projects/devops-architecture
-node packages/cli/dist/index.js excalidraw devops-architecture
 node packages/cli/dist/index.js qa devops-architecture
 node packages/cli/dist/index.js approve review --cwd projects/devops-architecture
 node packages/cli/dist/index.js final --cwd projects/devops-architecture

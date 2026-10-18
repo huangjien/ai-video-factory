@@ -20,10 +20,10 @@ style:
   theme: paper-light # paper-light (default) | dark-tech | ocean-deep | dusk-warm | forest-moss | sunset-pop | terminal-vintage | paper-cream | ai-red
   #                       packages/video-components/src/theme.ts)
 defaults: # 0.2, optional project-level defaults
-  renderer: svg # scenes that omit visual.renderer inherit this
+  renderer: remotion # scenes that omit visual.renderer inherit this
 assets: # 0.2, optional project-level manifest
   - id: asset-logo
-    type: svg # svg|png|jpg|webp|excalidraw|canvas|audio|video|font
+    type: svg # svg|png|jpg|webp|canvas|audio|video|font
     source: generated # generated|user|external
     path: assets/svg/logo.svg
 scenes:
@@ -33,8 +33,8 @@ scenes:
       text: "……"
       audio: assets/audio/scene-01.wav # optional; mounted by video audio flows
     visual:
-      component: SvgScene
-      renderer: svg # remotion (default) | svg | canvas | excalidraw
+      component: FlowChart
+      renderer: remotion # remotion (default) | canvas
       props: { … } # validated against the REGISTRY props schema
     animation: # legacy v0.1 entrance model (still honored)
       entrance: fade # none|fade|slide|scale|draw|typewriter (+synonyms)
@@ -43,7 +43,7 @@ scenes:
     animations: # 0.2 timeline model (plan §10), scene-relative
       - id: draw-arrow
         target: arrow-1
-        type: draw # draw|write|fade|move|scale|rotate|highlight|morph|camera
+        type: draw # draw|write|fade|move|scale|rotate|highlight|morph
         start: 1.2
         duration: 0.8
         easing: easeInOut # linear|easeIn|easeOut|easeInOut (+synonyms)
@@ -73,8 +73,8 @@ typo never crashes a render. Pre-v0.4.3 storyboards defaulted to
 
 Notes: `DoodleScene`'s `background: paper` always uses its own light
 paper regardless of theme (ink-on-paper is the look), so light themes are
-safe alongside canvas scenes. The burned-in captions, camera
-highlight rings, node fills and arrows all follow the resolved theme.
+safe alongside canvas scenes. The burned-in captions, node fills
+and arrows all follow the resolved theme.
 Adding a theme = one new entry in the `THEMES` registry (full token set
 validated by `isValidTheme` — see `theme.ts` for the contrast rules).
 
@@ -86,23 +86,21 @@ it). Current pairings:
 
 | renderer     | component(s)                                                                                                                                                                                                                                                                      | look                                                                                                                                                                |
 | ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `remotion`   | Title, Paragraph, CodeBlock, Terminal, FlowChart, Comparison, Timeline, Callout, EndCard, Character, Image, ImageBackground, AnimatedIllustration + v0.4.2: QuoteBlock, StatGrid (count-up), BarChart, Leaderboard, Checklist, BigIdea, PyramidDiagram, VennDiagram, CycleDiagram | classic motion graphics on the theme background                                                                                                                     |
-| `svg`        | `SvgScene`                                                                                                                                                                                                                                                                        | whiteboard/diagram: `nodes` + labeled `edges` that DRAW ON (stroke draw-on), a target-driven camera, automatic stagger                                              |
+| `remotion`   | Title, Paragraph, CodeBlock, Terminal, FlowChart, Timeline, Callout, EndCard, Character, Image, ImageBackground, AnimatedIllustration + v0.4.2: QuoteBlock, StatGrid (count-up), BarChart, Leaderboard, Checklist, BigIdea, PyramidDiagram, VennDiagram, CycleDiagram | classic motion graphics on the theme background                                                                                                                     |
 | `canvas`     | `DoodleScene`                                                                                                                                                                                                                                                                     | hand-drawn ink: procedural strokes (circle / star / zigzag / spiral) with seeded wobble, sequential pen-draw, optional `bpm` beat-sync, `background: paper \| dark` |
-| `excalidraw` | —                                                                                                                                                                                                                                                                                 | asset generation only (`video excalidraw` → `.excalidraw` + animated `.svg`); not a render path                                                                     |
 
 `props` are validated against the component's own registry schema, so each
-component documents its own shape — `SvgScene` wants `nodes[]` (id, kind
-rect/circle/label, x/y/w/h in 1920×1080 canvas space, text) and `edges[]`
-(id, from, to, label); `Title` wants `text` + optional `subtext`. Synonyms
-are coerced for `renderer` before validation (`hand-drawn`/`doodle` →
-`canvas`, `diagram`/`whiteboard` → `svg`); unknown values fail loudly at
-render time rather than silently substituting a different look.
+component documents its own shape — `FlowChart` wants `nodes[]` (strings)
+and optional `edges[]` ([from, to] index pairs) plus `direction`;
+`Title` wants `text` + optional `subtext`. Synonyms are coerced for
+`renderer` before validation (`hand-drawn`/`doodle` → `canvas`); unknown
+values fail loudly at render time rather than silently substituting a
+different look.
 
-The scene family also decides the animation fallback: `svg`/`canvas`
-scenes auto-draw sequentially (nodes then edges/strokes, ease-out, ~0.25 s
-stagger) so a minimal storyboard still animates; `remotion` components
-fall back to their `animation.entrance` model.
+The scene family also decides the animation fallback: `canvas` scenes
+auto-draw sequentially (strokes, ease-out, ~0.25 s stagger) so a minimal
+storyboard still animates; `remotion` components fall back to their
+`animation.entrance` model.
 
 ## The `animations[]` timeline — the scene's choreography
 
@@ -113,19 +111,17 @@ inside the scene), eased by `easing` (`linear` / `easeIn` / `easeOut` /
 
 What each `type` does per scene family:
 
-| type                        | svg (`SvgScene`)                                                                                  | canvas (`DoodleScene`)         | remotion          |
-| --------------------------- | ------------------------------------------------------------------------------------------------- | ------------------------------ | ----------------- |
-| `draw`                      | stroke draw-on of the node/edge                                                                   | pen strokes draw progressively | wipe-style reveal |
-| `write`                     | text appears as if written/typed                                                                  | —                              | typewriter reveal |
-| `fade`                      | opacity fade-in                                                                                   | opacity fade-in                | opacity fade-in   |
-| `move` / `scale` / `rotate` | reserved (fall back to fade)                                                                      | reserved                       | reserved          |
-| `highlight`                 | marker ring around the target while the window lasts                                              | —                              | —                 |
-| `camera`                    | pans/zooms the VIEW to focus `target` (a NODE id); does not affect that element's own draw timing | —                              | —                 |
-| `morph`                     | reserved                                                                                          | reserved                       | reserved          |
+| type                        | canvas (`DoodleScene`)         | remotion          |
+| --------------------------- | ------------------------------ | ----------------- |
+| `draw`                      | pen strokes draw progressively | wipe-style reveal |
+| `write`                     | —                              | typewriter reveal |
+| `fade`                      | opacity fade-in                | opacity fade-in   |
+| `move` / `scale` / `rotate` | reserved                       | reserved          |
+| `highlight`                 | —                              | —                 |
+| `morph`                     | reserved                       | reserved          |
 
-`target` refers to an element id inside the scene's props (SvgScene
-node/edge id, DoodleScene stroke id); `type: camera` targets a NODE id.
-Elements with no explicit entry use the family's sequential auto-draw
+`target` refers to an element id inside the scene's props (DoodleScene
+stroke id). Elements with no explicit entry use the family's sequential auto-draw
 default, so choreography is additive: declare only the beats you care
 about (e.g. one arrow draw + one highlight) and let the rest flow.
 
@@ -271,21 +267,12 @@ line to the prompt in code — so the match holds even for a
 `youtube/thumbnail-prompt.txt` written before this existed. A video rendered
 as editorial illustration no longer ships a cinematic-35mm thumbnail.
 
-## Camera (T7.4)
-
-A `type: camera` animation targets a NODE of an `SvgScene` scene; the node
-rect is the parameter — the view pans/zooms to make that node ~60% of the
-frame, eases over `duration`, holds until the next camera. Camera
-animations do not affect element draw timing.
-
 ## Renderer families (plan §9)
 
 | renderer     | component              | notes                                                      |
 | ------------ | ---------------------- | ---------------------------------------------------------- |
 | `remotion`   | any REGISTRY component | default                                                    |
-| `svg`        | `SvgScene`             | draw-on diagrams; target-driven camera                     |
 | `canvas`     | `DoodleScene`          | hand-drawn ink; `bpm` quantizes stroke onsets              |
-| `excalidraw` | —                      | generator only (`video excalidraw`); renders are not wired |
 
 ## Compiler contract
 

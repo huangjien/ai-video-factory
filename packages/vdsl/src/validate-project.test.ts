@@ -23,7 +23,7 @@ const registry: ComponentRegistry = {
       .object({ src: z.string().min(1), caption: z.string().optional() })
       .strict(),
   },
-  SvgScene: { propsSchema: z.object({}).passthrough() },
+  DoodleScene: { propsSchema: z.object({}).passthrough() },
 };
 
 function fixtureProject(): string {
@@ -210,29 +210,7 @@ describe("validateProject — §21.1 lines 926-930", () => {
     }
   });
 
-  it("rejects renderer: excalidraw (asset-generation only)", async () => {
-    const yamlText = validStoryboardYaml.replace(
-      "component: Paragraph",
-      "component: Paragraph\n      renderer: excalidraw",
-    );
-    const result = await validateProject(yamlText, "storyboard.yaml", {
-      projectRoot: fixtureProject(),
-      registry,
-      probeAudio: okProbe,
-    });
-    expect(result.ok).toBe(false);
-    if (!result.ok) {
-      expect(
-        result.errors.some(
-          (e) =>
-            e.field.endsWith("visual.renderer") &&
-            e.message.includes("excalidraw"),
-        ),
-      ).toBe(true);
-    }
-  });
-
-  const svgSceneYaml = (target: string): string => `schema_version: "0.1"
+  const doodleSceneYaml = (target: string): string => `schema_version: "0.1"
 project:
   id: t
   language: zh-CN
@@ -243,17 +221,15 @@ scenes:
   - id: scene-01
     duration: 5
     visual:
-      component: SvgScene
-      renderer: svg
+      component: DoodleScene
+      renderer: canvas
       props:
-        nodes:
-          - id: n1
-            kind: rect
-            x: 100
-            y: 200
-            w: 300
-            h: 120
-            text: "节点"
+        strokes:
+          - id: d1
+            shape: circle
+            x: 400
+            y: 300
+            size: 150
     animations:
       - id: draw-1
         target: ${target}
@@ -262,9 +238,9 @@ scenes:
         duration: 1
 `;
 
-  it("rejects an animations[].target that names no svg element id", async () => {
+  it("rejects an animations[].target that names no canvas element id", async () => {
     const result = await validateProject(
-      svgSceneYaml("node-1"),
+      doodleSceneYaml("stroke-1"),
       "storyboard.yaml",
       { projectRoot: fixtureProject(), registry, probeAudio: okProbe },
     );
@@ -274,15 +250,15 @@ scenes:
         result.errors.some(
           (e) =>
             e.field.endsWith("animations.0.target") &&
-            e.message.includes("node-1") &&
-            e.message.includes("n1"),
+            e.message.includes("stroke-1") &&
+            e.message.includes("d1"),
         ),
       ).toBe(true);
     }
   });
 
-  it("accepts an animations[].target that names a real svg element id", async () => {
-    const result = await validateProject(svgSceneYaml("n1"), "storyboard.yaml", {
+  it("accepts an animations[].target that names a real canvas element id", async () => {
+    const result = await validateProject(doodleSceneYaml("d1"), "storyboard.yaml", {
       projectRoot: fixtureProject(),
       registry,
       probeAudio: okProbe,

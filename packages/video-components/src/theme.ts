@@ -6,7 +6,7 @@ import { z } from "zod";
  *
  * A theme is a flat token set consumed by every rendering layer:
  *   - `colors.background` — Root's wrap layer and DoodleScene's dark mode
- *   - `colors.surface`    — node/panel fills (SvgScene, Terminal, …)
+ *   - `colors.surface`    — node/panel fills (FlowChart, Terminal, …)
  *   - `colors.primary`    — main text/ink on the background
  *   - `colors.secondary`  — muted text (captions labels, edge labels)
  *   - `colors.accent`     — arrows, links, highlights that must pop

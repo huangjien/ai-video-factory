@@ -9,7 +9,6 @@ import { registerMake } from "./make-command.js";
 import { registerScript } from "./script-command.js";
 import { registerStoryboard } from "./storyboard-command.js";
 import { registerMotion } from "./motion-command.js";
-import { registerExcalidraw } from "./excalidraw-command.js";
 import { registerAudio } from "./audio-command.js";
 import { registerAudioAsset } from "./audio-asset-command.js";
 import { registerReview } from "./review-command.js";
@@ -60,7 +59,6 @@ for (const register of [
   registerScript,
   registerStoryboard,
   registerMotion,
-  registerExcalidraw,
   registerAudio,
   registerAudioAsset,
   registerReview,

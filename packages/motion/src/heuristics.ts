@@ -58,7 +58,7 @@ const COMPONENT_ENTRANCE: ReadonlyArray<{
   match: RegExp;
   type: "draw" | "write" | "fade" | "scale";
 }> = [
-  { match: /^(FlowChart|Timeline|Comparison|ImageBackground|Image)$/, type: "draw" },
+  { match: /^(FlowChart|Timeline|ImageBackground|Image)$/, type: "draw" },
   { match: /^(CodeBlock|Terminal)$/, type: "write" },
   { match: /^(Character|EndCard)$/, type: "scale" },
 ];

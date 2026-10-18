@@ -37,6 +37,8 @@ export function resolveNarration(input: {
   language: string;
   voiceboxHealthy: boolean;
   minimaxKey: boolean;
+  voiceboxSpeed?: number | undefined;
+  voiceboxSentencePauseSec?: number | undefined;
 }): NarrationDecision {
   const warnings: string[] = [];
   if (input.fake) {
@@ -47,7 +49,14 @@ export function resolveNarration(input: {
 
   if (input.ttsProvider === "voicebox") {
     if (input.voiceboxHealthy) {
-      return { provider: new VoiceboxTTSProvider(), voice: input.voice, warnings };
+      return {
+        provider: new VoiceboxTTSProvider({
+          ...(input.voiceboxSpeed !== undefined ? { speed: input.voiceboxSpeed } : {}),
+          ...(input.voiceboxSentencePauseSec !== undefined ? { sentencePauseSec: input.voiceboxSentencePauseSec } : {}),
+        }),
+        voice: input.voice,
+        warnings,
+      };
     }
     warnings.push(
       `voicebox-server unreachable (VOICEBOX_URL) — falling back to MiniMax system voice`,

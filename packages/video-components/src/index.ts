@@ -37,7 +37,6 @@ export { CodeBlock, type CodeBlockProps } from "./components/CodeBlock.js";
 export { Terminal, type TerminalProps } from "./components/Terminal.js";
 export { Image, type ImageProps } from "./components/Image.js";
 export { FlowChart, type FlowChartProps } from "./components/FlowChart.js";
-export { Comparison, type ComparisonProps } from "./components/Comparison.js";
 export { Timeline, type TimelineProps } from "./components/Timeline.js";
 export { Callout, type CalloutProps } from "./components/Callout.js";
 export { EndCard, type EndCardProps } from "./components/EndCard.js";
@@ -82,17 +81,10 @@ export {
   type BrandIntroProps,
   type BrandWatermarkProps,
 } from "./components/BrandOverlay.js";
-export { SvgScene, SvgScenePropsSchema } from "./components/SvgScene.js";
 export {
   DoodleScene,
   DoodleScenePropsSchema,
 } from "./components/DoodleScene.js";
-export {
-  ExcalidrawSpecSchema,
-  svgSpecToAnimatedSvg,
-  svgSpecToExcalidraw,
-  type ExcalidrawSpec,
-} from "./components/excalidraw.js";
 export {
   buildStrokePlan,
   drawDoodleFrame,
@@ -106,12 +98,3 @@ export {
   type DoodleStyle,
   type StrokePlanEntry,
 } from "./components/doodleLogic.js";
-export {
-  easeAtProgress,
-  resolveElementTiming,
-  elementProgress,
-  type ElementTiming,
-  type SceneElementRef,
-  type TimelineAnim,
-  type VdslEasing,
-} from "./components/svgSceneLogic.js";

@@ -580,8 +580,8 @@ export async function generateSceneVisuals(
       `image prompts: applying ${learnedImageRules.split("\n").filter((l) => l.startsWith("- ")).length} human-review lesson(s)`,
     );
   }
-  // Scenes rendered by their own visual families (svg/canvas/excalidraw
-  // components, or already ImageBackground) never consume the generated
+  // Scenes rendered by their own visual families (canvas components,
+  // or already ImageBackground) never consume the generated
   // JPG — skip them so image quota is spent only where it lands on screen.
   const selfRendered = selfRenderedSceneNumbers(projectRoot);
   const emit = opts.onEvent ?? noopEmit;
@@ -858,6 +858,14 @@ async function runTts(
     language: article.frontmatter.language,
     voiceboxHealthy,
     minimaxKey: Boolean(process.env["MINIMAX_API_KEY"]),
+    voiceboxSpeed:
+      typeof article.frontmatter.tts_speed === "number"
+        ? article.frontmatter.tts_speed
+        : undefined,
+    voiceboxSentencePauseSec:
+      typeof article.frontmatter.tts_sentence_pause_sec === "number"
+        ? article.frontmatter.tts_sentence_pause_sec
+        : undefined,
   });
   const provider: TTSProvider = decision.provider;
   const voice = decision.voice;

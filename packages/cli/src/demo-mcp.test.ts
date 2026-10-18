@@ -8,7 +8,6 @@ import { runNew } from "./new-command.js";
 import { runApprove } from "./workflow-commands.js";
 import { runPreview, runFinal } from "./render-command.js";
 import { runQa } from "./qa-command.js";
-import { runExcalidraw } from "./excalidraw-command.js";
 import { runMotion } from "./motion-command.js";
 import { listSceneVersions } from "@video/workflow";
 
@@ -17,7 +16,7 @@ import { listSceneVersions } from "@video/workflow";
  * END TO END with real Remotion/ffmpeg renders and checks the §36 DoD
  * items that can be verified mechanically:
  *   storyboard → motion → approve gate → preview (incremental) → QA ok →
- *   excalidraw assets → approve review → QA-gated final → FINAL_APPROVED.
+ *   approve review → QA-gated final → FINAL_APPROVED.
  * Deterministic: hand-authored storyboard, silent narration WAVs.
  */
 
@@ -50,7 +49,7 @@ describe("Demo 1 — MCP Explainer end to end (T7.2, plan §35)", () => {
   it("renders the committed example through the full pipeline", async () => {
     // §36: storyboard can be human-authored and validated.
     const storyboard = readFileSync(path.join(EXAMPLE_DIR, "storyboard.yaml"), "utf8");
-    expect(storyboard).toContain("SvgScene");
+    expect(storyboard).toContain("FlowChart");
 
     cwd = mkdtempSync(path.join(tmpdir(), "video-demo-mcp-"));
     await runNew({ projectId: "mcp-explainer", cwd });
@@ -80,7 +79,7 @@ describe("Demo 1 — MCP Explainer end to end (T7.2, plan §35)", () => {
     expect(unapproved).toBe(1);
     expect(await runApprove("mcp-explainer", "storyboard", cwd)).toBe(0);
 
-    // Preview renders all five scenes (svg + canvas + remotion families)
+    // Preview renders all five scenes (canvas + remotion families)
     // and produces the QA report + contact sheet.
     expect(await runPreview("mcp-explainer", cwd)).toBe(0);
     expect(existsSync(path.join(projectDir, "qa", "render-report.json"))).toBe(true);
@@ -115,14 +114,6 @@ describe("Demo 1 — MCP Explainer end to end (T7.2, plan §35)", () => {
     const ymin = Number(stats.match(/YMIN=([\d.]+)/)?.[1]);
     const ymax = Number(stats.match(/YMAX=([\d.]+)/)?.[1]);
     expect(ymax - ymin).toBeGreaterThan(30);
-
-    // Excalidraw assets for the three diagram scenes (T7.1).
-    expect(await runExcalidraw({ project: "mcp-explainer", cwd })).toBe(0);
-    for (const sceneId of ["scene-02", "scene-03", "scene-04"]) {
-      expect(
-        existsSync(path.join(projectDir, "assets", "excalidraw", `${sceneId}.excalidraw`)),
-      ).toBe(true);
-    }
 
     // Final render is QA-gated (T6.2) and reaches FINAL_APPROVED.
     expect(await runApprove("mcp-explainer", "review", cwd)).toBe(0);

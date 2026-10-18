@@ -314,7 +314,7 @@ style:
 
 assets: # 0.2：可选的项目级素材清单
   - id: asset-logo
-    type: svg # svg|png|jpg|webp|excalidraw|canvas|audio|video|font
+    type: svg # svg|png|jpg|webp|canvas|audio|video|font
     source: generated # generated|user|external
     path: assets/svg/logo.svg
 
@@ -325,8 +325,8 @@ scenes:
       text: "AI Agent 为什么需要 Memory？"
       audio: assets/audio/scene-01.wav # 可选；video audio 流程会挂载
     visual:
-      component: SvgScene
-      renderer: svg # remotion（默认）| svg | canvas | excalidraw
+      component: FlowChart
+      renderer: remotion # remotion（默认）| canvas
       props: { … } # 按 REGISTRY 中该组件的 props schema 校验
     animation: # v0.1 入场模型（仍然有效）
       entrance: fade
@@ -335,7 +335,7 @@ scenes:
     animations: # 0.2 时间线模型（场景内相对时间）
       - id: draw-arrow
         target: arrow-1
-        type: draw # draw|write|fade|move|scale|rotate|highlight|morph|camera
+        type: draw # draw|write|fade|move|scale|rotate|highlight|morph
         start: 1.2
         duration: 0.8
         easing: easeInOut # linear|easeIn|easeOut|easeInOut（含同义词）
@@ -363,9 +363,7 @@ scenes:
 | renderer     | 组件                    | 说明                                             |
 | ------------ | ----------------------- | ------------------------------------------------ |
 | `remotion`   | REGISTRY 中任意经典组件 | 默认                                             |
-| `svg`        | `SvgScene`              | 白板/示意图，draw-on 描画 + target 驱动运镜      |
 | `canvas`     | `DoodleScene`           | 手写墨迹笔画，种子化抖动，`bpm` 对齐节拍         |
-| `excalidraw` | —                       | 仅素材生成器（`video excalidraw`），不是渲染路径 |
 
 未接线的 renderer/组件组合会在渲染时响亮报错。
 
@@ -400,10 +398,10 @@ workspace 依赖和 FFmpeg。已安装的技能包（`.agents/skills/`，清单�
 `skills/INVENTORY.md`）只服务于 LLM agent（主要是 `video motion`），
 渲染路径从不读取它们。
 
-当前注册的 24 个组件：`Title`、`Paragraph`、`AnimatedIllustration`、
+当前注册的 22 个组件：`Title`、`Paragraph`、`AnimatedIllustration`、
 `CodeBlock`、`Terminal`、`Image`、`ImageBackground`、`FlowChart`、
-`Comparison`、`Timeline`、`Callout`、`EndCard`、`Character`、
-`SvgScene`、`DoodleScene`、`QuoteBlock`、`StatGrid`、`BarChart`、
+`Timeline`、`Callout`、`EndCard`、`Character`、
+`DoodleScene`、`QuoteBlock`、`StatGrid`、`BarChart`、
 `Leaderboard`、`Checklist`、`BigIdea`、`PyramidDiagram`、`VennDiagram`、
 `CycleDiagram`。
 
@@ -820,8 +818,8 @@ cron/launchd shell 应设 `VIDEO_ASK=off`。
 
 ### 完整 agent 流水线（细粒度，含 v0.2 新动词）
 
-想逐阶段控制（或使用 `video make` 覆盖不到的能力——运镜规划、图表
-素材、QA 复检）时，规范顺序是：
+想逐阶段控制（或使用 `video make` 覆盖不到的能力——动画规划、QA
+复检）时，规范顺序是：
 
 ```bash
 video new "<slug>"
@@ -831,7 +829,6 @@ video storyboard "<topic>" --from-research … --from-script …
 video approve storyboard --cwd projects/<slug>     # 🚪 人工门 1
 video motion <slug> [--bpm 100]                    # Motion Agent（LLM + 确定性兜底）
 video audio <slug>                                 # TTS → 逐场景 WAV + 字幕
-video excalidraw <slug>                            # 图表场景 → .excalidraw + 动画 SVG
 video review <slug>                                # 只读 Content/Visual/Technical 评审
 video preview --cwd projects/<slug>                # QA 报告 + 接触表（进入 WAITING_REVIEW）
 video qa <slug>                                    # 重建 QA 报告；错误级发现退出码 1
@@ -856,12 +853,6 @@ video motion my-topic --baseline       # 跳过 LLM，直接套确定性启发�
 装没装技能包都能跑：`.agents/skills/` 不存在时，`IartSkillAdapter`
 返回 null，规划退回确定性启发式——已安装的 `iart-ai` 技能包只是让
 LLM 的规划更好。
-
-### `video excalidraw` — 图表素材生成器
-
-把 storyboard 里每个 `svg`/`SvgScene` 场景转成**可手工编辑**的
-`.excalidraw` 文件 + 独立动画 SVG（落到 `assets/excalidraw/`）：
-`video excalidraw my-topic [--duration 8]`。没有图表场景时会提示并退出。
 
 ### `video qa` — QA 复检
 
@@ -1084,8 +1075,7 @@ projects/<slug>/
 │   ├── audio/scene_*.wav           逐场景 TTS（video make 写）
 │   ├── audio-assets/{bgm,sfx}/     BGM/SFX 素材（video make 写）
 │   ├── images/scene_N.jpg          场景图 + scene_N.cache.json 输入键副文件（v0.8）
-│   ├── images/contact-sheet.png    v0.8：`video visuals` 生成的联系表
-│   └── excalidraw/                 video excalidraw 写：.excalidraw + 动画 SVG
+│   └── images/contact-sheet.png    v0.8：`video visuals` 生成的联系表
 ├── captions/<lang>.srt              字幕（video make 写）
 ├── youtube/                         video youtube / thumbnail / shorts 的发布包
 ├── bilibili/                        video bilibili 的产物：package.yaml + cover-prompt.txt + CHECKLIST.md（人工投稿）
@@ -1439,9 +1429,9 @@ npm run acceptance
 
 | 示例                           | 时长  | 演示什么                                                                                                                      |
 | ------------------------------ | ----- | ----------------------------------------------------------------------------------------------------------------------------- |
-| `examples/mcp-explainer`       | 45 秒 | 完整流水线：SvgScene 图表 draw-on、显式 `animations[]`、DoodleScene 手绘、时长同步、场景版本、QA 报告/门、Excalidraw 素材生成 |
+| `examples/mcp-explainer`       | 45 秒 | 完整流水线：FlowChart 图表、显式 `animations[]`、DoodleScene 手绘、时长同步、场景版本、QA 报告/门 |
 | `examples/ai-concept`          | 60 秒 | 手绘 canvas + 节拍同步（100 BPM 网格）                                                                                        |
-| `examples/devops-architecture` | 90 秒 | 图表、target 驱动运镜（camera）、cut/fade 转场、时间线编排、Excalidraw                                                        |
+| `examples/devops-architecture` | 90 秒 | 图表、cut/fade 转场、时间线编排                                                                                        |
 
 以 MCP Explainer 为例（完整序列见其 `README.md`）：
 
@@ -1456,7 +1446,6 @@ for i in 01 02 03 04 05; do
 done
 node packages/cli/dist/index.js approve storyboard --cwd projects/mcp-explainer   # 🚪 门 1
 node packages/cli/dist/index.js preview --cwd projects/mcp-explainer              # QA 报告 + 接触表
-node packages/cli/dist/index.js excalidraw mcp-explainer
 node packages/cli/dist/index.js qa mcp-explainer
 node packages/cli/dist/index.js approve review --cwd projects/mcp-explainer       # 🚪 门 2
 node packages/cli/dist/index.js final --cwd projects/mcp-explainer                # 🚪 门 3（QA 门）
@@ -1464,5 +1453,5 @@ node packages/cli/dist/index.js final --cwd projects/mcp-explainer              
 
 每个示例的 `README.md` 里有逐场景说明（组件家族 × 流水线特性），提交
 的集成测试（`packages/cli/src/demo-*.test.ts`）会对临时项目跑同一序列。
-想看新组件（`SvgScene` / `DoodleScene`）、时间线动画和运镜怎么写，
+想看组件（`FlowChart` / `DoodleScene`）和时间线动画怎么写，
 从这三个 storyboard 入手最快。

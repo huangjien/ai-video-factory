@@ -61,7 +61,7 @@ export const REVIEW_QUESTIONS: readonly ReviewQuestion[] = [
       "blank or frozen frames",
       "did not notice",
     ],
-    hint: "Scenes drawn by Comparison/Checklist/QuoteBlock never generate images by design — say if that choice read wrong.",
+    hint: "Scenes drawn by Checklist/QuoteBlock never generate images by design — say if that choice read wrong.",
   }),
   question({
     id: "narration_fit",

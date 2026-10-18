@@ -373,12 +373,7 @@ function safeCoerce<T extends readonly string[]>(
 // fields are OPTIONAL so every 0.1 storyboard validates unchanged.
 // ---------------------------------------------------------------------------
 
-const VISUAL_RENDERER_CANONICAL = [
-  "remotion",
-  "svg",
-  "canvas",
-  "excalidraw",
-] as const;
+const VISUAL_RENDERER_CANONICAL = ["remotion", "canvas"] as const;
 const VISUAL_RENDERER_SYNONYMS: Record<
   string,
   (typeof VISUAL_RENDERER_CANONICAL)[number]
@@ -386,15 +381,10 @@ const VISUAL_RENDERER_SYNONYMS: Record<
   remotion: "remotion",
   react: "remotion",
   component: "remotion",
-  svg: "svg",
-  whiteboard: "svg",
-  diagram: "svg",
   canvas: "canvas",
   handdrawn: "canvas",
   "hand-drawn": "canvas",
   doodle: "canvas",
-  excalidraw: "excalidraw",
-  "excalidraw-asset": "excalidraw",
 };
 
 export function coerceVisualRenderer(
@@ -425,7 +415,6 @@ const ANIMATION_TYPE_CANONICAL = [
   "rotate",
   "highlight",
   "morph",
-  "camera",
 ] as const;
 const ANIMATION_TYPE_SYNONYMS: Record<
   string,
@@ -455,8 +444,6 @@ const ANIMATION_TYPE_SYNONYMS: Record<
   marker: "highlight",
   morph: "morph",
   morphing: "morph",
-  camera: "camera",
-  pan: "camera",
 };
 
 export function coerceAnimationType(
@@ -509,7 +496,6 @@ const ASSET_TYPE_CANONICAL = [
   "png",
   "jpg",
   "webp",
-  "excalidraw",
   "canvas",
   "audio",
   "video",
@@ -623,17 +609,15 @@ const visualSchema = z
      *
      * | renderer   | component      | look |
      * |------------|----------------|------|
-     * | remotion   | Title, Paragraph, CodeBlock, Terminal, FlowChart, Comparison, Timeline, Callout, EndCard, Character, Image, ImageBackground, AnimatedIllustration | classic motion graphics on the theme background |
-     * | svg        | SvgScene       | whiteboard/diagram: nodes + labeled arrows that DRAW ON, target-driven camera, automatic stagger |
+     * | remotion   | Title, Paragraph, CodeBlock, Terminal, FlowChart, Timeline, Callout, EndCard, Character, Image, ImageBackground, AnimatedIllustration | classic motion graphics on the theme background |
      * | canvas     | DoodleScene    | hand-drawn ink: procedural strokes (circle/star/zigzag/spiral) with seeded wobble, sequential pen-draw, optional BPM beat-sync |
-     * | excalidraw | —              | asset generation only (`video excalidraw`); not a render path |
      *
      * `props` are validated against the component's own registry schema,
-     * so each component documents its own shape (SvgScene wants `nodes[]`
-     * + `edges[]`; Title wants `text` + optional `subtext`). Synonyms are
-     * coerced for `renderer` (e.g. "hand-drawn"/"doodle" → canvas,
-     * "diagram"/"whiteboard" → svg); unknown renderers fail loudly at
-     * render time rather than silently substituting a different look.
+     * so each component documents its own shape (Title wants `text` +
+     * optional `subtext`). Synonyms are coerced for `renderer`
+     * (e.g. "hand-drawn"/"doodle" → canvas); unknown renderers fail
+     * loudly at render time rather than silently substituting a
+     * different look.
      */
     component: z.string().min(1),
     props: z.record(z.unknown()),
@@ -730,26 +714,22 @@ const sceneSchema = z
      * enforces this), eased by `easing`.
      *
      * What each type does per scene family:
-     * - `draw`      — svg: stroke draw-on of a node/edge; canvas: pen
-     *                 strokes; remotion components: wipe-style reveal
+     * - `draw`      — canvas: pen strokes; remotion components:
+     *                 wipe-style reveal
      * - `write`     — text appears as if written/typed (Terminals,
      *                 CodeBlocks, labels)
      * - `fade`      — opacity fade-in (the gentle default)
      * - `move`      — translate from off/offset position into place
      * - `scale`     — grow/pop into place
      * - `rotate`    — rotation reveal
-     * - `highlight` — svg: a marker ring while the window lasts; a good
+     * - `highlight` — a marker ring while the window lasts; a good
      *                 "this part matters" beat mid-scene
      * - `morph`     — reserved (not yet drawn differently from fade)
-     * - `camera`    — svg only: pans/zooms the VIEW to focus `target`
-     *                 (the node rect is the camera parameter); does NOT
-     *                 affect that element's own draw timing
      *
      * Elements with no explicit entry fall back to the family default —
-     * svg/canvas scenes auto-draw sequentially (nodes then edges,
-     * ease-out) so a minimal storyboard still animates. `target` refers
-     * to an element id inside the scene's props (SvgScene node/edge id,
-     * DoodleScene stroke id); `type: camera` targets a NODE id.
+     * canvas scenes auto-draw sequentially so a minimal storyboard
+     * still animates. `target` refers to an element id inside the
+     * scene's props (DoodleScene stroke id).
      */
     animations: z.array(timelineAnimationSchema).optional(),
     captions: captionsSchema.optional(),

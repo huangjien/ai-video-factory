@@ -7,11 +7,11 @@ Rules:
 2. Use schema_version: "0.2".
 3. Use the dark-tech theme. `style` accepts ONLY the key `theme`. Omit `style.brand` entirely — it is a structured object with its own required shape, and a free-form string there fails validation. Emit nothing else under `style`: no `notes`, no `palette`, no `art_style`, no written description of the look. VDSL is a STRICT schema, so ONE unrecognised key discards the entire storyboard.
 4. Use components from this registered set ONLY:
-   Title, Paragraph, CodeBlock, Terminal, Image, FlowChart, Comparison,
+   Title, Paragraph, CodeBlock, Terminal, Image, FlowChart,
    Timeline, Callout, EndCard, Character.
    PREFER IMAGE-BACKED SCENES. `Image` (with Character where a person is
    central) is the default choice; diagram and card components — FlowChart,
-   Comparison, Timeline, Callout, CodeBlock, Terminal, StatGrid-style — are
+   Timeline, Callout, CodeBlock, Terminal, StatGrid-style — are
    for the rare moment the narration genuinely needs the schematic itself,
    at most 1-2 per video, never consecutive. A deck of vector cards breaks
    the video's single visual identity; photographs and illustrations keep
@@ -32,7 +32,7 @@ Rules:
      genuinely requires showing code, a command, a definition, or a label.
      Aim for at most 1-2 such text-heavy scenes per storyboard; never make
      them consecutive.
-   - Diagrams (FlowChart / Comparison / Timeline / Callout) are fine, but
+   - Diagrams (FlowChart / Timeline / Callout) are fine, but
      pair them with a person (Character or human in Image) when possible.
    - Never describe software UI in the visual props (no fake dashboards,
      terminal windows as decoration). Visual props for Image should describe

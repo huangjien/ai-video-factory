@@ -2,7 +2,7 @@
  * v0.6 — image-style presets for generated scene visuals (P0/P1).
  *
  * The image provider generates FULL-SCENE background art; the precise
- * geometry and all written text stay in Remotion components / SvgScene.
+ * geometry and all written text stay in Remotion components.
  * Image models garble written text (especially CJK), so prompts must stay
  * text-free. A style preset therefore only shapes the BACKGROUND's
  * visual language, at two injection points:
@@ -24,8 +24,7 @@
  *   genki-anime — upbeat, character-led 2D scenes.
  *   medieval    — historically grounded illuminated-miniature scenes.
  *   editorial    — narrative/metaphor mode for history & abstract topics.
- *   whiteboard   — teaching mode. Marker line-art on white; pairs with
- *                  SvgScene draw-on animations. NOT the retired
+ *   whiteboard   — teaching mode. Marker line-art on white; NOT the
  *                  DoodleScene canvas renderer.
  *   isometric   — fixed-camera axonometric scenes for systems and processes.
  *   paper-cut   — layered tactile collage for narrative scenes.

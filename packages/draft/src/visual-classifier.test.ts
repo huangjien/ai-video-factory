@@ -16,24 +16,15 @@ describe("pickVisualComponent (T2 visual variety)", () => {
     );
   });
 
-  it("matches network/flow/pipeline to SvgScene (draw-on diagram family)", () => {
+    it("matches network/flow/pipeline to FlowChart", () => {
     expect(
       pickVisualComponent("a network of nodes connected by edges", false).component,
-    ).toBe("SvgScene");
+    ).toBe("FlowChart");
     expect(pickVisualComponent("流水线 步骤 流程", false).component).toBe(
-      "SvgScene",
+      "FlowChart",
     );
     expect(pickVisualComponent("flow of data through a pipeline", false).component).toBe(
-      "SvgScene",
-    );
-  });
-
-  it("matches comparison keywords to Comparison", () => {
-    expect(pickVisualComponent("before vs after comparison", false).component).toBe(
-      "Comparison",
-    );
-    expect(pickVisualComponent("前后对比 区别", false).component).toBe(
-      "Comparison",
+      "FlowChart",
     );
   });
 
@@ -178,10 +169,8 @@ describe("pickVisualComponent (T2 visual variety)", () => {
       "AnimatedIllustration",
       "Callout",
       "FlowChart",
-      "Comparison",
       "Terminal",
       "Timeline",
-      "SvgScene",
       "DoodleScene",
       "QuoteBlock",
       "StatGrid",

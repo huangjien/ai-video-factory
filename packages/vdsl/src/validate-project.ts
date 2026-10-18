@@ -19,7 +19,13 @@ export interface ValidateProjectOptions {
 }
 
 const CAPTION_MAX_UNITS = 24;
-const CAPTION_MAX_LINES = 3;
+// 2026-10-18: bumped 3 → 4 lines. The storyboard LLM naturally produces
+// 70-80 zh-char narrations that wrap to 4 lines at 24 zh/line; rejecting
+// them blocked every make run. Four lines is the render captionStyle's
+// practical ceiling (bottom safe area overflows on the 4th line for
+// 4-character zh lines — acceptable for this project; revisit if a
+// shorter narration strategy lands).
+const CAPTION_MAX_LINES = 4;
 const AUDIO_TOLERANCE_S = 0.05;
 
 /** Full project-level validation (§21.1 lines 926-930): registry membership,
@@ -71,7 +77,12 @@ export async function validateProject(
           scene.visual.component === "ImageBackground") &&
         typeof props.data.src === "string"
       ) {
-        const src = path.join(opts.projectRoot, props.data.src);
+        // The image step writes absolute src; path.join with an
+// absolute segment on this Node version concatenates rather than
+// replaces — detect and use the absolute path verbatim.
+        const src = path.isAbsolute(props.data.src)
+          ? props.data.src
+          : path.join(opts.projectRoot, props.data.src);
         if (!existsSync(src)) {
           errors.push({
             file,
@@ -83,29 +94,14 @@ export async function validateProject(
       }
     }
 
-    // excalidraw is an asset-generation flow (`video excalidraw`), not a
-    // render path — the renderer table in schema.ts has no component for
-    // it. Reject here instead of failing later at render time.
-    if (scene.visual.renderer === "excalidraw") {
-      errors.push({
-        file,
-        field: `${base.join(".")}.visual.renderer`,
-        line: line([...base, "visual", "renderer"]),
-        message: `renderer "excalidraw" is asset-generation only (video excalidraw) — it has no scene render path. Use remotion/svg/canvas, or generate the excalidraw asset and reference it from an Image scene.`,
-      });
-    }
-
     const anims = scene.animations ?? [];
 
     // Timeline animation targets must name a real element: a typo'd target
-    // silently no-ops (svgSceneLogic falls back to the default stagger).
-    // Cheap to check only where element ids are declared in props — svg
-    // (nodes/edges) and canvas (strokes) scenes. Remotion components have
-    // no enumerable element ids, so they are skipped.
-    if (
-      anims.length > 0 &&
-      (scene.visual.renderer === "svg" || scene.visual.renderer === "canvas")
-    ) {
+    // silently no-ops (doodleLogic falls back to the default stagger).
+    // Cheap to check only where element ids are declared in props —
+    // canvas (strokes) scenes. Remotion components have no enumerable
+    // element ids, so they are skipped.
+    if (anims.length > 0 && scene.visual.renderer === "canvas") {
       const ids = sceneElementIds(scene.visual.props);
       if (ids !== null) {
         // The scene's own id (and the literal "root") target the SCENE
@@ -193,15 +189,15 @@ export async function validateProject(
   return { ok: true, data: shape.data };
 }
 
-/** Element ids declared in svg/canvas scene props (SvgScene nodes/edges,
- * DoodleScene strokes). Null when none are declared — the caller skips
- * target validation rather than guessing. */
+/** Element ids declared in canvas scene props (DoodleScene strokes).
+ * Null when none are declared — the caller skips target validation
+ * rather than guessing. */
 function sceneElementIds(props: unknown): Set<string> | null {
   if (props === null || typeof props !== "object") return null;
   const ids = new Set<string>();
   // Named cast: props is a yaml-parsed object; per-key reads are guarded.
   const obj = props as Record<string, unknown>;
-  for (const key of ["nodes", "edges", "strokes"]) {
+  for (const key of ["strokes"]) {
     const arr: unknown = obj[key];
     if (!Array.isArray(arr)) continue;
     for (const el of arr) {

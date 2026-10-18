@@ -175,8 +175,8 @@ export function articleToStoryboardYaml(
     lines.push(`      text: ${yamlStr(s.narration ?? "")}`);
     lines.push(`    visual:`);
     lines.push(`      component: ${component}`);
-    if (component === "SvgScene" || component === "DoodleScene") {
-      lines.push(`      renderer: ${component === "SvgScene" ? "svg" : "canvas"}`);
+    if (component === "DoodleScene") {
+      lines.push(`      renderer: canvas`);
     }
     lines.push(`      props:`);
     for (const pl of propsLines) lines.push(pl);

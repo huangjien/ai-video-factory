@@ -73,12 +73,12 @@ scenes:
   it("emits explicit per-scene renderers after defaults inheritance (and stays byte-identical on recompile)", async () => {
     const inherited = `schema_version: "0.2"
 defaults:
-  renderer: svg
+  renderer: canvas
 project: {id: t, language: zh-CN, fps: 30, width: 1920, height: 1080}
 scenes:
   - id: a
     duration: 8
-    visual: {component: SvgScene, props: {}}
+    visual: {component: DoodleScene, props: {}}
   - id: b
     duration: 4
     visual: {component: Title, props: {text: b}, renderer: remotion}
@@ -87,9 +87,9 @@ scenes:
     const { renderPlan, yaml, write } = compileStoryboard(inherited, root);
     await write();
     const emitted = readFileSync(path.join(root, "vdsl", "vdsl.yaml"), "utf8");
-    expect(renderPlan.scenes[0]?.renderer).toBe("svg");
+    expect(renderPlan.scenes[0]?.renderer).toBe("canvas");
     expect(renderPlan.scenes[1]?.renderer).toBe("remotion");
-    expect(yaml).toContain("renderer: svg");
+    expect(yaml).toContain("renderer: canvas");
     expect(emitted).toContain("renderer: remotion");
     const { write: write2 } = compileStoryboard(emitted, root);
     await write2();

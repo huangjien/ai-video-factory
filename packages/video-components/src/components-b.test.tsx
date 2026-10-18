@@ -1,7 +1,6 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { Callout } from "./components/Callout.js";
-import { Comparison } from "./components/Comparison.js";
 import { EndCard } from "./components/EndCard.js";
 import { FlowChart } from "./components/FlowChart.js";
 import { Timeline } from "./components/Timeline.js";
@@ -27,18 +26,6 @@ describe("Todo 9 — components batch B (renders without throwing)", () => {
     expect(html).toContain("Step 1");
     expect(html).toContain("Q");
     expect(html).toContain("A");
-  });
-
-  it("Comparison renders left and right cards", () => {
-    const html = renderToStaticMarkup(
-      <Comparison
-        left={{ title: "无 CoT", items: ["错误率高", "无法分解"] }}
-        right={{ title: "有 CoT", items: ["准确", "可解释"] }}
-        {...baseScene(15)}
-      />,
-    );
-    expect(html).toContain("无 CoT");
-    expect(html).toContain("有 CoT");
   });
 
   it("Timeline renders 4 events within 1920px width", () => {
@@ -79,15 +66,9 @@ describe("Todo 9 — components batch B (renders without throwing)", () => {
     expect(html).toContain("AI 视频工厂");
   });
 
-  it("renders all 5 batch-B components without throwing", () => {
+  it("renders all 4 batch-B components without throwing", () => {
     const items = [
       <FlowChart key="f" nodes={["a"]} {...baseScene(0)} />,
-      <Comparison
-        key="c"
-        left={{ title: "l", items: ["x"] }}
-        right={{ title: "r", items: ["y"] }}
-        {...baseScene(0)}
-      />,
       <Timeline key="t" events={[{ label: "now" }]} {...baseScene(0)} />,
       <Callout key="ca" kind="info" text="hi" {...baseScene(0)} />,
       <EndCard key="e" title="end" {...baseScene(0)} />,

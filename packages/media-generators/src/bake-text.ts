@@ -9,7 +9,7 @@ import { resolvePythonDir } from "./contact-sheet.js";
 /**
  * Scene-text baking (v0.10.5): titles and quotes are typeset onto the
  * generated scene images with Pillow instead of being rendered as
- * SvgScene-family card components. Requested after review of projects/玄武门 —
+ * vector card components. Requested after review of projects/玄武门 —
  * the vector card scenes were the weakest frames in the video, and a baked
  * title keeps the whole video in one medium (photographed/illustrated frames)
  * with typography as part of the image.

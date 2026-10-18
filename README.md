@@ -133,7 +133,7 @@ that actually served is recorded in `runs/<id>.yaml` under
 routing per-command with `--model <provider>` or globally via the
 `LL_CONFIG` YAML file.
 
-The fine-grained per-stage verbs (`video research`, `video script`, `video storyboard`, `video audio`, `video audio-asset`, `video mix`, `video motion`, `video qa`, `video scene`, `video final`, `video preview`, `video approve`/`reject`/`rollback`, `video review`, `video youtube`, `video thumbnail`, `video shorts`, `video bilibili`, `video status`/`video resume`, `video validate`, `video excalidraw`, `video studio`, `video theme`, `video laya`, `video learn`, `video prompts`) remain wired for back-compat with projects created before the minimal API but are not part of the recommended path.
+The fine-grained per-stage verbs (`video research`, `video script`, `video storyboard`, `video audio`, `video audio-asset`, `video mix`, `video motion`, `video qa`, `video scene`, `video final`, `video preview`, `video approve`/`reject`/`rollback`, `video review`, `video youtube`, `video thumbnail`, `video shorts`, `video bilibili`, `video status`/`video resume`, `video validate`, `video studio`, `video theme`, `video laya`, `video learn`, `video prompts`) remain wired for back-compat with projects created before the minimal API but are not part of the recommended path.
 
 ### Theme presets
 
@@ -756,7 +756,7 @@ Seven quality wins shipped under the same human-gate principle:
   itself. `no_captions: true` still turns the overlay off entirely.
 - **Visual variety** (`packages/draft/src/visual-classifier.ts`): the
   article's `visual:` field is now classified into the right VDSL
-  component (FlowChart / Comparison / Terminal / Timeline / Callout /
+  component (FlowChart / Terminal / Timeline / Callout /
   Illustration) instead of every scene being `AnimatedIllustration`.
 - **Image prompt expansion** (any non-mock provider — `minimax` is the default):
   the article's 80-char `visual:` is rewritten into a 2-3 sentence

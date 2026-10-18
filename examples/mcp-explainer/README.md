@@ -1,6 +1,6 @@
 # Demo 1 — MCP Explainer (45 s, 5 scenes)
 
-Plan §17/§35 Demo 1: diagram + whiteboard explainer of how the Model
+Plan §17/§35 Demo 1: diagram + hand-drawn explainer of how the Model
 Context Protocol works, built deterministically (no LLM, no network) so
 the integration test can render it end to end.
 
@@ -9,13 +9,13 @@ the integration test can render it end to end.
 | Scene | Component family | Pipeline feature |
 |---|---|---|
 | 1 — MCP title | `Title` (remotion) | entrance animation, narration WAV |
-| 2 — Agent → MCP Client | `SvgScene` (svg) | T4.3 diagram draw-on |
-| 3 — Client → MCP Server | `SvgScene` (svg) | explicit `animations[]` (draw + highlight) |
-| 4 — Server hub | `SvgScene` (svg) | staggered arrow draws, 4-node hub |
+| 2 — Agent → MCP Client | `FlowChart` (remotion) | two-node diagram with an arrow |
+| 3 — Client → MCP Server | `FlowChart` (remotion) | protocol label inside the node |
+| 4 — Server hub | `FlowChart` (remotion) | top-down 4-node hub |
 | 5 — structured result | `DoodleScene` (canvas) | T4.4 hand-drawn ink |
 
 Plus: duration sync against real narration WAVs, captions, scene
-versioning, the QA report/gate, and Excalidraw asset generation.
+versioning, and the QA report/gate.
 
 ## Run it for real
 
@@ -30,7 +30,6 @@ for i in 01 02 03 04 05; do
 done
 node packages/cli/dist/index.js approve storyboard --cwd projects/mcp-explainer
 node packages/cli/dist/index.js preview --cwd projects/mcp-explainer
-node packages/cli/dist/index.js excalidraw mcp-explainer
 node packages/cli/dist/index.js qa mcp-explainer
 node packages/cli/dist/index.js approve review --cwd projects/mcp-explainer
 node packages/cli/dist/index.js final --cwd projects/mcp-explainer --mix   # --mix needs BGM, see video audio-asset

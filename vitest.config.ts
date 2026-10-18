@@ -72,6 +72,11 @@ export default defineConfig({
       // v8 coverages hit thresholds below; the threshold is intentionally
       // lenient to start — tighten over time as more code is covered.
       // Ratcheted 2026-10-18 to the then-current values (lines/statements 80%, branches 62%, functions 78%) — slightly under the snapshot so a small regression does not immediately fail. Tighten incrementally as the suite matures. `**/index.ts` stays excluded — those are pure re-exports and the inflated numbers are intentional (a self-reporting metric is worse than a slightly padded one).
+      //
+      // Scoped runs (e.g. `pnpm vitest run packages/<name>`) include EVERY file
+      // in the include glob with `coverage.all: true` (v8 default) — packages you did NOT exercise report 0% and drag the totals below this gate. For partial work, override the gate for that one run:
+      //   pnpm vitest run packages/<name> --coverage --coverage.thresholds.lines=0
+      // The ratchet still guards the canonical full run (`pnpm test`).
       thresholds: { lines: 80, functions: 78, branches: 62, statements: 80 },
     },
   },

@@ -1,10 +1,10 @@
 case: feedback-revision-addresses-web-context
 agent: draft
-prompt_hash: sha256:60af87a18c34b950eec588c56b1f63207113136c0d24d50bb70cbec504da355d
+prompt_hash: sha256:4ffccf8671ae86076031e10426978ce1eafd2ed0056bedf7f8d76c50bb65a2db
 messages:
   - role: system
-    bytes: 15479
-    content_sha256: sha256:c5223e0a59a63fa5efc672a5e672b42495edae8860bb5f4aeee78ec148181c38
+    bytes: 20015
+    content_sha256: sha256:86242871d23e900176a26d439d5407cb941f9d7da435024ccf3d25fc2588c925
     blocks:
       - "Prioritize:"
       - "Avoid:"
@@ -19,7 +19,7 @@ messages:
       - "Narration must:"
       - "Prefer:"
       - "Do NOT begin with:"
-      - "Use one of these short category phrases:"
+      - "What the visual MUST NOT contain:"
       - "Normally use:"
       - "Good captions communicate:"
       - "Use transitions such as:"

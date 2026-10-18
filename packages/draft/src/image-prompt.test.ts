@@ -319,10 +319,11 @@ describe("setting participates in the brief cache identity", () => {
 
   it("revision is bumped so paragraph-era briefs are never reused", () => {
     // v3 = era anchoring, v4 = the six labelled output lines, v5 = the
-    // assembled-prompt ceiling, v6 = the flat-vector contract merge. Without
-    // each bump, briefs cached by the previous expander wording outlive the
-    // change.
-    expect(IMAGE_PROMPT_REVISION).toBe("6");
+    // assembled-prompt ceiling, v6 = the flat-vector contract merge,
+    // v7 = the visual direction is now a vivid art-direction line, not a
+    // thin category hint. Without each bump, briefs cached by the previous
+    // expander wording outlive the change.
+    expect(IMAGE_PROMPT_REVISION).toBe("7");
   });
 });
 

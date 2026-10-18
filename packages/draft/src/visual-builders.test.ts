@@ -657,3 +657,106 @@ describe("card bullets survive dotted abbreviations", () => {
     expect(items.some((i) => i.includes("1 a.m."))).toBe(true);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Regression: Comparison titles must derive content, never positional
+// placeholders like "左" / "右" / "Left" / "Right".
+// ---------------------------------------------------------------------------
+
+const POSITIONAL_PLACEHOLDERS = /^(?:左|右|Left|Right|left|right)$/;
+
+describe("buildComparison titles are content-derived", () => {
+  it("never emits a positional placeholder when the caption carries a 'vs' split", () => {
+    const props = VISUAL_BUILDERS.Comparison!(
+      scene({
+        id: "scene_1",
+        duration: 8,
+        caption: "Tools vs Skills",
+        visual: "compare: tools vs skills",
+        narration:
+          "Tools hand over a hundred phone lines. Skills hand over one manual.",
+      }),
+      { section: null, language: "en-US" },
+    ) as { left: { title: string }; right: { title: string } };
+    expect(props.left.title).not.toMatch(POSITIONAL_PLACEHOLDERS);
+    expect(props.right.title).not.toMatch(POSITIONAL_PLACEHOLDERS);
+  });
+
+  it("never emits a positional placeholder on the half-split last-resort path", () => {
+    // No contrast marker, no H3, no caption colon — exercises path 4,
+    // which previously hard-coded `loc(language, "左", "Left")` /
+    // `loc(language, "右", "Right")` and rendered them verbatim on screen.
+    const props = VISUAL_BUILDERS.Comparison!(
+      scene({
+        id: "scene_1",
+        duration: 8,
+        caption: "Agents vs Skills",
+        visual: "compare before vs after, behavior on each side",
+        narration:
+          "Tools hand over a hundred phone lines. Skills hand over one manual.",
+      }),
+      { section: null, language: "en-US" },
+    ) as { left: { title: string }; right: { title: string } };
+    expect(props.left.title).not.toMatch(POSITIONAL_PLACEHOLDERS);
+    expect(props.right.title).not.toMatch(POSITIONAL_PLACEHOLDERS);
+  });
+
+  it("never emits a positional placeholder for a zh-CN scene on the half-split path", () => {
+    const props = VISUAL_BUILDERS.Comparison!(
+      scene({
+        id: "scene_5",
+        duration: 8,
+        caption: "对比",
+        visual: "对比图",
+        narration: "句一。句二。句三。句四。",
+      }),
+      { section: null, language: "zh-CN" },
+    ) as { left: { title: string }; right: { title: string } };
+    expect(props.left.title).not.toMatch(POSITIONAL_PLACEHOLDERS);
+    expect(props.right.title).not.toMatch(POSITIONAL_PLACEHOLDERS);
+  });
+
+  it("derives titles from the caption's contrast halves when both are present", () => {
+    const props = VISUAL_BUILDERS.Comparison!(
+      scene({
+        id: "scene_1",
+        duration: 8,
+        caption: "Not a bug — a wrong container",
+        visual: "compare: bug vs wrong container",
+        narration: "Bug. Container.",
+      }),
+      { section: null, language: "en-US" },
+    ) as { left: { title: string }; right: { title: string } };
+    expect(props.left.title.toLowerCase()).toContain("bug");
+    expect(props.right.title.toLowerCase()).toMatch(/container|wrong/);
+  });
+
+  it("derives titles from the visual direction's contrast halves", () => {
+    const props = VISUAL_BUILDERS.Comparison!(
+      scene({
+        id: "scene_1",
+        duration: 8,
+        caption: "Compare",
+        visual: "compare: Friday's deploy vs Saturday's deploy",
+        narration: "Friday failed at step nine. Saturday passed.",
+      }),
+      { section: null, language: "en-US" },
+    ) as { left: { title: string }; right: { title: string } };
+    expect(props.left.title.toLowerCase()).toMatch(/friday/);
+    expect(props.right.title.toLowerCase()).toMatch(/saturday/);
+  });
+
+  it("falls through to an em-dash (never a positional word) only when nothing is available", () => {
+    const props = VISUAL_BUILDERS.Comparison!(
+      scene({
+        id: "scene_1",
+        duration: 8,
+        caption: "",
+        visual: "",
+        narration: "",
+      }),
+      { section: null, language: "en-US" },
+    ) as { left: { title: string }; right: { title: string } };
+    expect([props.left.title, props.right.title]).toEqual(["—", "—"]);
+  });
+});

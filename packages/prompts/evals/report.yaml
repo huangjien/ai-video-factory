@@ -1,23 +1,38 @@
 schema: prompt-evals-report/1
 cases:
+  - case: critical-finding-blocks-passing
+    agent: article-review
+    prompt_hash: sha256:08e28640bdbdee906f97147c10b1c8eddc6d570a2e61979b8cba6ee9721091a3
+    structural: pass
+    judged: skipped
+  - case: missing-h-flagged
+    agent: article-review
+    prompt_hash: sha256:f05ddde90f4dfb366a8b00e9782cecba40aa08d95afbb03522312a9338ac2d5d
+    structural: pass
+    judged: skipped
+  - case: perfect-draft-grade-a
+    agent: article-review
+    prompt_hash: sha256:7fdd3188df4a9931a8e2f8fcfa758764e1c07ff2132af87ca228ae686492b69d
+    structural: pass
+    judged: skipped
   - case: feedback-revision-addresses-web-context
     agent: draft
-    prompt_hash: sha256:60af87a18c34b950eec588c56b1f63207113136c0d24d50bb70cbec504da355d
+    prompt_hash: sha256:4ffccf8671ae86076031e10426978ce1eafd2ed0056bedf7f8d76c50bb65a2db
     structural: pass
     judged: skipped
   - case: history-topic-opens-with-tension
     agent: draft
-    prompt_hash: sha256:6cb9721df846d28191732497afb7d6e34c10b17c3ad57bdc7af56b3f8b6c4adb
+    prompt_hash: sha256:ff930cc88dfbe7ac128200d1457cfb0fe09629bc4916b1fdae4d964f4a329d97
     structural: pass
     judged: skipped
   - case: user-idea-seed-preserved
     agent: draft
-    prompt_hash: sha256:4499c0ccb703e5daac7929c47bade0c17db840acd3d4966ad271fabad2b4a521
+    prompt_hash: sha256:a99d1f9504cf24062c8d7688dcf5624a04bb56cd488bded3492508983df09ed1
     structural: pass
     judged: skipped
   - case: era-poor-scene-stays-in-tang
     agent: image-prompt
-    prompt_hash: sha256:e8ad34eac8e43c69d340c159e89df999dda4ea5b29af89f2b9a6fc904bc882fd
+    prompt_hash: sha256:ea39ea2c0da83c100619eb038708718a84a86e510add3c335ffc8939a1dacce1
     structural: pass
     judged: skipped
   - case: script-and-research-context-order

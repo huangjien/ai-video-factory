@@ -79,13 +79,16 @@ export interface DraftOptions {
    *  `captions: { source: narration }` block (render-time caption
    *  overlay is skipped). */
   noCaptions?: boolean;
-  /** Quality gate (2026-10-03): after each draft, an LLM judge rates the
-   *  article attractive/interesting/useful (0-10 each). Below `minScore`
-   *  the draft is regenerated with the judge's feedback, up to
-   *  `maxAttempts` drafts total; the best-scoring candidate wins.
-   *  Disable with --no-review. */
+  /** Quality gate (2026-10-03, refined 2026-11): after each draft, an LLM
+   *  judge rates the article across 8 dimensions × 24 indicators on the
+   *  `general_article_v1` profile. Below `minScore` (or when a Critical
+   *  finding sits in `risk_flags`) the draft is regenerated with the
+   *  judge's feedback, up to `maxAttempts` drafts total; the
+   *  best-scoring candidate wins. Disable with --no-review. */
   noReview?: boolean;
-  /** Acceptance bar of the article review loop, of 30. Default 25. */
+  /** Acceptance bar of the article review loop, of 100. Default 70
+   *  (C grade on the framework's bands). A Critical finding always
+   *  blocks regardless of this number. */
   minScore?: number;
   /** Total draft attempts in the review loop (not extra retries). Default 3. */
   maxAttempts?: number;
@@ -327,7 +330,7 @@ export async function runDraft(opts: DraftOptions): Promise<number> {
       callDraft(draftInput, provider, fallback),
     ));
   } else {
-    const minScore = opts.minScore ?? 25;
+    const minScore = opts.minScore ?? 70;
     const maxAttempts = opts.maxAttempts ?? 3;
     const result = await withProgress(
       `drafting article (${chosenName}, judged)`,
@@ -343,8 +346,13 @@ export async function runDraft(opts: DraftOptions): Promise<number> {
                 : a.attempt < total
                   ? `→ below ${minScore}, regenerating with judge feedback`
                   : `→ still below ${minScore} after ${total} attempts`;
+              const blockers = s.raw.risk_flags.filter(
+                (r) => r.severity === "Critical",
+              );
+              const blockerNote =
+                blockers.length > 0 ? ` [blocker: ${blockers.map((r) => r.code).join(", ")}]` : "";
               console.log(
-                `  review ${a.attempt}/${total}: attractive=${s.attractive} interesting=${s.interesting} useful=${s.useful} → ${s.total}/30  ${verdict}`,
+                `  review ${a.attempt}/${total}: overall=${s.computed.overall_score} grade=${s.computed.grade} coverage=${s.computed.coverage}% → ${s.total}/100${blockerNote}  ${verdict}`,
               );
             } else {
               console.error(
@@ -366,7 +374,7 @@ export async function runDraft(opts: DraftOptions): Promise<number> {
     }
     if (!result.passing && result.score) {
       console.error(
-        `  ! best draft scored ${result.score.total}/30 (bar: ${minScore}) — edit article.md or raise --max-attempts / lower --min-score`,
+        `  ! best draft scored ${result.score.total}/100 grade ${result.score.computed.grade} (bar: ${minScore}) — edit article.md or raise --max-attempts / lower --min-score`,
       );
     }
     const reviewPath = path.join(projectRoot, "article-review.yaml");

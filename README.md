@@ -133,7 +133,7 @@ that actually served is recorded in `runs/<id>.yaml` under
 routing per-command with `--model <provider>` or globally via the
 `LL_CONFIG` YAML file.
 
-The fine-grained per-stage verbs (`video research`, `video script`, `video storyboard`, `video audio`, `video audio-asset`, `video mix`, `video motion`, `video qa`, `video scene`, `video final`, `video preview`, `video approve`/`reject`/`rollback`, `video review`, `video youtube`, `video thumbnail`, `video shorts`, `video status`/`video resume`, `video validate`, `video excalidraw`, `video studio`, `video theme`, `video laya`, `video learn`, `video prompts`) remain wired for back-compat with projects created before the minimal API but are not part of the recommended path.
+The fine-grained per-stage verbs (`video research`, `video script`, `video storyboard`, `video audio`, `video audio-asset`, `video mix`, `video motion`, `video qa`, `video scene`, `video final`, `video preview`, `video approve`/`reject`/`rollback`, `video review`, `video youtube`, `video thumbnail`, `video shorts`, `video bilibili`, `video status`/`video resume`, `video validate`, `video excalidraw`, `video studio`, `video theme`, `video laya`, `video learn`, `video prompts`) remain wired for back-compat with projects created before the minimal API but are not part of the recommended path.
 
 ### Theme presets
 
@@ -435,6 +435,46 @@ node packages/cli/dist/index.js youtube "<topic>"
 Thumbnail generation (`video thumbnail` is mock-only by default) and Shorts
 clipping (`video shorts`) are part of v0.2 phase 8 (Advanced Media §60) and
 ship separately.
+
+## Bilibili packaging
+
+`video bilibili` produces the submission metadata for the Bilibili web form:
+title, 简介, up to 10 tags, a suggested 分区, and a cover-image brief.
+
+```bash
+node packages/cli/dist/index.js bilibili "<topic>"
+# → projects/<slug>/bilibili/package.yaml    (structured metadata)
+# → projects/<slug>/bilibili/cover-prompt.txt
+# → projects/<slug>/bilibili/CHECKLIST.md    (the manual upload steps)
+```
+
+**This command does not upload, and cannot.** Bilibili exposes no public
+video-upload API for third-party tools — the `openhome.bilibili.com` platform
+covers games, live, and content-partner integrations, not generic submission.
+The web form posts to undocumented internal endpoints that require a signed
+request and session cookies, and are actively hardened against automation.
+So `CHECKLIST.md` is the deliverable: every field the form asks for, with the
+ones a machine can know already filled in.
+
+Field limits are enforced by schema before you reach the form (title ≤ 80
+characters, 简介 ≤ 2000, ≤ 10 tags of ≤ 20 characters each) — the form
+silently truncates past them.
+
+Three deliberate choices worth knowing:
+
+- **`suggested_category` is a name, not a numeric `tid`.** A wrong `tid` does
+  not error — it files the video into an unrelated section and nobody notices
+  until after publishing. A name a human can check against the dropdown fails
+  loudly instead. `null` means "no confident pick"; the checklist then asks
+  you to choose.
+- **A failed model call degrades, it does not fail.** A provider outage, a
+  content filter, malformed YAML, or a schema violation all fall back to a
+  deterministic package derived from `article.md` — plain, but valid, with a
+  warning printed and written into the checklist. `video youtube` hard-fails
+  on the same conditions.
+- **The cover prompt is reused from `video youtube`** when that package
+  already exists, so the Bilibili cover and the YouTube thumbnail show the
+  same video.
 
 ## Harness adapters (v0.4.1)
 

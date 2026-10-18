@@ -252,41 +252,130 @@ The hook should correspond to the beginning of the first scene's narration.
 
 10. VISUAL DIRECTION
 
-The visual field is a high-level category hint. It names ONE of the
-visual treatments below — the renderer fills in the structured props
-itself by reading the narration, so the visual field must match the
-narration's substance (numbers, lists, code, years, contrast, sequence).
+The visual field is a vivid, concrete image description that the
+downstream stages will read, classify, expand, and render. It is NOT
+a thin category hint. Treat it as the art-direction line on a story-
+board frame: a downstream image generator will expand it into a full
+still, a renderer will classify it to pick the right animated
+component, and a human reader should be able to picture the shot
+from the line alone.
 
-Use one of these short category phrases:
+Every visual field MUST be a single sentence (occasionally two short
+clauses joined by a comma or colon), 80-220 characters, written in
+the same language as the narration. Aim for ~120 characters.
 
-- database / 表 / schema / 存储       → Callout or FlowChart
-- network / 流程 / 流水线 / 节点       → FlowChart
-- compare / 对比 / vs / 差异           → Comparison
-- code / terminal / 命令行 / 代码      → Terminal
-- timeline / 历史 / 年表 / 沿革       → Timeline
-- formula / 公式 / 推导                → Callout (formula)
-- list / 列表 / 要点                   → Illustration
-- quote / 引用 / 引文                  → Callout (quote)
-- (anything else)                      → AnimatedIllustration
+Mandatory structure — write each visual in this order, in one
+sentence:
 
-Keep the visual field under 40 characters — it is a category hint, not
-a description. Example: "网络节点流程图", "对比 vs 之前",
-"时间线展示", "代码片段".
+  1. SUBJECT — the concrete thing on screen (a node, a counter, a
+     hand, a screen, a clock face, a card). Name it specifically;
+     "a thing" or "an item" is not a subject.
+  2. ACTION or STATE — what the subject is doing right now, or what
+     condition the viewer sees (cracks spreading, cards fanning out,
+     the bar climbing, hands lifting the lid). Static nouns are
+     fine only when the scene is genuinely a still.
+  3. SETTING / FRAMING — where it sits in the frame and one named
+     anchor (the upper-left quadrant; on a deep navy ground; inside
+     a glowing terminal pane; on a flat oak countertop). One named
+     spatial anchor is enough.
+  4. STYLE HINT — one of the category keywords below, in English
+     (the downstream classifier only reads English + a small set of
+     Chinese cues). The keyword MUST appear inside the visual
+     line, not only in the narration.
 
-The visual category must match the scene's actual content. If the
-narration lists 3 steps, the visual should signal a FlowChart ("流程图"
-or "网络节点流程图"); if it contrasts two states, the visual should
-signal a Comparison ("对比 vs 之前"); if it cites a year, the visual
-should signal a Timeline ("时间线展示").
+Style keywords — include exactly one in every visual line. The
+classifier picks a VDSL component from the keyword; the renderer
+ignores the rest of the line beyond it.
 
-The renderer ignores everything in the visual field beyond the keyword
-above. Substance must live in the narration field, where the renderer
-can extract concrete items, year tokens, code lines, and contrast
-clauses to populate the visual props.
+- comparison / compare / versus / before after / 对比 / 前后      → Comparison
+- network / nodes / pipeline / edges / 流程 / 流水线 / 节点     → FlowChart (SvgScene)
+- code / terminal / command / script / 代码 / 命令 / 终端       → Terminal
+- timeline / chronology / years / decades / 时间线 / 历史 / 年表 → Timeline
+- formula / equation / derivation / 公式 / 推导 / 表达式        → Callout (formula)
+- quote / cited / excerpt / 引用 / 引文 / 名言                  → QuoteBlock
+- cycle / loop / iteration / flywheel / 循环 / 闭环 / 迭代     → CycleDiagram
+- rank / leaderboard / top-N / champion / 排名 / 榜单           → Leaderboard
+- chart / distribution / breakdown / 柱状图 / 分布 / 占比       → BarChart
+- stat / percent / metric / growth / 百分比 / 关键数据          → StatGrid
+- list / checklist / bullets / pitfalls / 列表 / 要点 / 清单    → Checklist
+- pyramid / hierarchy / layers / 金字塔 / 层级                  → PyramidDiagram
+- venn / overlap / 维恩 / 交集 / 重叠                           → VennDiagram
+- takeaway / key insight / 核心观点 / 一句话                     → BigIdea
+- database / table / schema / sql / 字段 / 列存                  → Callout
+- (no keyword match — fall through)                              → AnimatedIllustration
 
-The visual should directly support the narration.
+The keyword MATCHES THE SCENE'S ACTUAL CONTENT. If the narration
+contrasts two states, embed "compare" or "vs"; if it lists steps,
+embed "pipeline" or "nodes"; if it cites a year, embed "timeline".
 
-Do NOT introduce visual information that contradicts the narration.
+The visual MUST match the narration's substance. Contradicting the
+narration (showing a chart while the narration talks about history)
+is a hard error.
+
+What the visual MUST contain beyond the keyword:
+
+- a SPECIFIC subject (no "thing", "item", "scene", "shot")
+- a named ACTION or visible STATE — verbs beat adjectives
+- at least one concrete spatial anchor (quadrant, named ground,
+  surrounded by what)
+- one or two sensory details when natural (a warm amber line on a
+  cool slate ground; the cursor's blinking caret; the chalk dust
+  drifting)
+
+What the visual MUST NOT contain:
+
+- abstract praise ("beautiful", "stunning", "cinematic", "perfect")
+- vague gestures ("a representation of", "depicts")
+- narrative that belongs in the narration caption (the visual is
+  the SHOT, not the STORY)
+- more than one style keyword (one keyword wins, pick the strongest)
+- any text the viewer must read (the caption is for that)
+
+The visual should directly support the narration but need not repeat
+it. The narration carries numbers, names, steps, and facts. The
+visual carries the PICTURE — what the camera shows while those
+numbers are spoken.
+
+Examples of rich, vivid visuals:
+
+GOOD (specific, vivid, keyword-present):
+
+  - "a glass counter, twelve white deploy cards fanned across the
+    surface in a clean spread on a deep navy ground, the failed
+    step glowing a quiet amber; pipeline keyword, top-down shot"
+
+  - "the same counter shrunk to a single card lifted in the centre
+    while three scripts sit beside it as small icon tiles; pipeline
+    keyword, forty lines versus four hundred lines"
+
+  - "two halves of a split card, left side stamped 'bug' in faded
+    red and right side stamped 'wrong container' in cool teal;
+    compare keyword, the dividing line bright amber"
+
+  - "a wide terminal window, four hundred lines of skill markdown
+    sliding off the right edge into a faint blur, the cursor
+    blinking at line nine; terminal keyword, monospace"
+
+  - "a midnight-blue overhead card with one sentence stamped in the
+    centre in serif white: 'agents decide, skills know', set on a
+    slate field; quote keyword, the line a quotation"
+
+BAD (thin category hints, no picture — do NOT write like this):
+
+  - "list: twelve deploy steps"
+  - "compare: bug vs wrong container"
+  - "code: before/after file tree"
+  - "flowchart: split know vs do"
+  - "terminal: false green logs"
+
+The thin versions classify correctly but produce visuals that read as
+a list of words, not a picture. Rewrite them into full visual lines
+before output.
+
+If the narration already supplied concrete nouns and the visual is
+naturally spare (a quote card, a single statistic), the visual can
+be short-but-still-vivid — quote a phrase, name a number, anchor a
+shape. Never below ~80 characters; never a bare noun.
 
 11. VISUAL VARIETY
 
@@ -501,7 +590,7 @@ Before producing the final JSON, silently verify all of the following:
 8. Every scene has duration, caption, visual, and narration.
 9. Every scene has substantive narration.
 10. Narration is TTS-friendly.
-11. Visual descriptions are specific and useful to a video-generation system.
+11. Visual descriptions are vivid art-direction lines (80-220 chars) with a specific subject, named action or visible state, a spatial anchor, and exactly one style keyword — never bare category hints.
 12. Visuals are not unnecessarily repetitive.
 13. Captions are concise.
 14. Scene order follows the article structure.

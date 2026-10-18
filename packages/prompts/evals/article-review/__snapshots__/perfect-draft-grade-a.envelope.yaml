@@ -1,0 +1,33 @@
+case: perfect-draft-grade-a
+agent: article-review
+prompt_hash: sha256:7fdd3188df4a9931a8e2f8fcfa758764e1c07ff2132af87ca228ae686492b69d
+messages:
+  - role: system
+    bytes: 11075
+    content_sha256: sha256:123265280a9304c7df1000b28bfea889fa53a35027e7045e8841944ec3ea9074
+    blocks:
+      - § A. Content Quality — weight 15
+      - "Finding codes:"
+      - § B. Logic & Coherence — weight 15
+      - § C. Structure & Organization — weight 12
+      - § D. Language & Expression — weight 15
+      - § E. Readability & Reader Experience — weight 12
+      - § F. Originality & Information Delta — weight 10
+      - § G. Facts & Internal Consistency — weight 13
+      - "Honest scoping:"
+      - § H. Instruction Compliance — weight 8
+      - "Finding shape:"
+      - "Hard rules on the JSON:"
+  - role: user
+    bytes: 2927
+    content_sha256: sha256:e085b719b7ea48ea3a00fb957a63611e8c2d08d4a135fe7dbe6771a472c8730e
+    blocks:
+      - § Article to judge
+      - § 1. The call at 6 p.m.
+      - "The phone rang at 5:"
+      - § 2. What the postmortem found
+      - "The pipeline ran twelve steps total:"
+      - § 3. Why the green light was a lie
+      - § 4. The move that fixed it
+      - § 5. Why release notes are a different problem
+      - § 6. How to audit your own skills folder tonight

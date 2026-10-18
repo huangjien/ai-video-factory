@@ -465,6 +465,7 @@ describe("renderReportYaml", () => {
 describe("EVAL_AGENTS", () => {
   it("wires every agent with a fixture directory and nothing dangling", () => {
     expect(Object.keys(EVAL_AGENTS).sort()).toEqual([
+      "article-review",
       "draft",
       "image-prompt",
       "storyboard",

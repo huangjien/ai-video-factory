@@ -64,7 +64,10 @@ const MAX_BRIEF_CHARS = 1400;
 // no glossy surfaces" in the suffix, and the flat-shadow nuance in the system
 // block. The suffix is stored inside every cached brief, so a preset change
 // must invalidate the cache the same way an expander change does.
-export const IMAGE_PROMPT_REVISION = "6";
+// v7 — visual direction is now a vivid art-direction line (~80-220 chars),
+// not a thin category hint. Briefs written from sparse directions need to be
+// re-expanded under the new contract so the still matches the article.
+export const IMAGE_PROMPT_REVISION = "7";
 
 /** Remove the reasoning scaffold that reasoning-enabled chat models emit
  *  ahead of their answer (`<think>…</think>`, an unterminated `<think>`,

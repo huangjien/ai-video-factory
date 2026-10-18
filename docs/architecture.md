@@ -135,6 +135,7 @@ parentheses; v0.5.2 additions marked):
 | `@video/make` | make | `video make` pipeline: TTS → audio assets → scene visuals → scene-isolated render → mix; impact analysis, content-keyed caches |
 | `@video/audio-plan` | audio-plan | Audio Planner agent (audio-config.yaml proposals from a parsed article) |
 | `@video/agent-storyboard`, `@video/research`, `@video/script`, `@video/review`, `@video/youtube` | agent | LLM agents (per-role provider routing incl. `motion`, transient retry, quota fallback) |
+| `@video/bilibili` | agent | Bilibili submission metadata. Packaging only — no public upload API exists, so there is no uploader here. Degrades to a deterministic package instead of failing. |
 | `@video/video-components` | renderer | 24 scene components in `REGISTRY` incl. `SvgScene` (whiteboard/diagram + camera) and `DoodleScene` (canvas hand-drawn + beat-sync); chrome overlays (`CaptionsOverlay`, `BrandWatermark`, `BrandIntro`); 9 `style.theme` palettes; 5 intro gradients; animation/easing/doodle/excalidraw logic. |
 | `@video/video-renderer` | remotion | scene-isolated Remotion rendering (`renderSceneToVideo`, `concatScenes`), draft mode, studio workspace generator |
 | `@video/media` | assets | CJK caption wrap, ffprobe, duration sync (`syncSceneDurations`), scene-timing reader |

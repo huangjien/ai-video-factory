@@ -31,6 +31,7 @@
     "@video/audio-assets": "workspace:*",
     "@video/audio-mix": "workspace:*",
     "@video/audio-plan": "workspace:*",
+    "@video/bilibili": "workspace:*",
     "@video/draft": "workspace:*",
     "@video/learn": "workspace:*",
     "@video/llm": "workspace:*",

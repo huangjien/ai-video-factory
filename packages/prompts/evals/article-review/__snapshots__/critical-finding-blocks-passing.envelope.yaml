@@ -1,0 +1,30 @@
+case: critical-finding-blocks-passing
+agent: article-review
+prompt_hash: sha256:08e28640bdbdee906f97147c10b1c8eddc6d570a2e61979b8cba6ee9721091a3
+messages:
+  - role: system
+    bytes: 11075
+    content_sha256: sha256:123265280a9304c7df1000b28bfea889fa53a35027e7045e8841944ec3ea9074
+    blocks:
+      - § A. Content Quality — weight 15
+      - "Finding codes:"
+      - § B. Logic & Coherence — weight 15
+      - § C. Structure & Organization — weight 12
+      - § D. Language & Expression — weight 15
+      - § E. Readability & Reader Experience — weight 12
+      - § F. Originality & Information Delta — weight 10
+      - § G. Facts & Internal Consistency — weight 13
+      - "Honest scoping:"
+      - § H. Instruction Compliance — weight 8
+      - "Finding shape:"
+      - "Hard rules on the JSON:"
+  - role: user
+    bytes: 2180
+    content_sha256: sha256:7fa5cfd268be46d086cc2265283ff0c477bef5f9031fd3ca3038d1e849df67a8
+    blocks:
+      - § Article to judge
+      - § 1. The story people tell about AI at work
+      - § 2. What actually happened in the three teams I tracked
+      - § 3. Why AI tools are universally transformative
+      - § 4. The one condition that makes AI tools work
+      - § 5. The takeaway

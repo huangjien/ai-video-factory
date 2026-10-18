@@ -15,6 +15,7 @@ export default defineConfig({
       "@video/tts": path.resolve("packages/tts/src"),
       "@video/review": path.resolve("packages/review/src"),
       "@video/youtube": path.resolve("packages/youtube/src"),
+      "@video/bilibili": path.resolve("packages/bilibili/src"),
       "@video/media-generators": path.resolve("packages/media-generators/src"),
       "@video/audio-assets": path.resolve("packages/audio-assets/src"),
       "@video/audio-mix": path.resolve("packages/audio-mix/src"),

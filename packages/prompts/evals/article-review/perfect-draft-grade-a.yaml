@@ -1,0 +1,36 @@
+id: perfect-draft-grade-a
+agent: article-review
+input:
+  markdown: |
+    # The Friday Deploy That Skipped Step Nine
+
+    > **Hook** (≤20s): Friday, 6 p.m. The deploy log shows step nine never ran. Not because the model was dumb, but because the job was put in the wrong container. Here is the split that fixes it.
+
+    ## 1. The call at 6 p.m.
+
+    The phone rang at 5:47. By 6 p.m. the deploy dashboard was red and the on-call engineer was paged. The log showed step nine — a one-line database migration — had never executed. There was no error; there was no trace. The pipeline said it had succeeded. Step nine was simply not in the audit trail.
+
+    ## 2. What the postmortem found
+
+    The pipeline ran twelve steps total: build, lint, test, image push, blue-green cutover, smoke, rotate keys, run migrations, publish changelog, announce, archive, log close. All twelve steps lived inside a single 400-line skill file loaded into the main conversation at the start of each run. By step nine the window held roughly 40,000 tokens of prior logs, intermediate output, and tool results. The model was asked to confirm a green smoke-test result before triggering the migration. The smoke test came back green. It had, in fact, never run.
+
+    ## 3. Why the green light was a lie
+
+    The model did not lie. It pattern-matched. With the equivalent of thirty pages of context already consumed, the green marker from earlier in the run was enough to satisfy the next-step gate. The migration never ran because the smoke-test gate was a textbook example of attention under load: the system kept moving the way the pattern said success moves, even after the underlying assertion had silently failed.
+
+    ## 4. The move that fixed it
+
+    The fix is structural, not linguistic. The skill file was reduced from 400 lines to 40. The 40 lines keep the definition of done, the conditions for invocation, and the clean-exit criteria. A new subagent — `deploy-runner` — owns the execution loop. It carries its own context window through the twelve steps, burns it on logs and tool output, and returns a short report. The main conversation stays empty of pipeline noise.
+
+    ## 5. Why release notes are a different problem
+
+    The same logic generalises. Writing release notes looks like a skill job — a template, a tone, a format. Real release notes require reading the diff, clustering commits, and judging severity. That is a chain of decisions; it belongs to an agent carrying the writing skill, not a skill carrying decisions. The litmus test is the one sentence: does this thing make choices? Skills know. Agents decide.
+
+    ## 6. How to audit your own skills folder tonight
+
+    Open the skills folder. Pick one. Ask the question out loud. If yes — if the named skill is making calls, judging severity, picking between alternatives — it is an agent wearing a skill's name. Extract it. Keep the card on the desk: agents decide, skills know. Get the split right and the next 6 p.m. stays yours.
+expects:
+  - axis: perfect-grade
+    min: 8
+provenance:
+  source: 'Article that satisfies the framework''s "produced video-essay quality" bar across every dimension — concrete stakes, dated specifics, a real mechanism, a one-sentence takeaway, no template voice. The rubric should land at A (overall_score ≥ 90, no Critical / Major findings) and `passing` should be true without further revision.'

@@ -1,0 +1,32 @@
+id: missing-h-flagged
+agent: article-review
+input:
+  markdown: |
+    # What Changes When a Team Starts Pairing
+
+    > **Hook** (≤20s): Two engineers, one machine, and a working session I keep coming back to. Pairing has a reputation for slowing teams down. After watching twelve teams do it for a year, I think that reputation is backwards — and here is the one metric that proves it.
+
+    ## 1. The first hour
+
+    My first real pairing session was a Friday afternoon in 2019. I sat next to a senior engineer named Rosa, and we spent the first hour on a deploy script neither of us had written. The script was ugly, the comments were wrong, and Rosa kept stopping to ask "what is this line doing for us?" By the end of the hour we had a working version, three test cases we did not have before, and a list of four things to revisit on Monday.
+
+    ## 2. What pairing actually does
+
+    Three months of observation across a dozen teams produced a steady pattern. Teams that paired for at least three hours a day shipped fewer half-finished features: their PRs sat open for 1.4 days on average, compared to 4.7 days for the solo teams. Reverts dropped by half. New engineers stopped asking the same onboarding questions twice, because someone was always there to answer.
+
+    ## 3. Why the speed-up looks like a slow-down
+
+    Solo work feels fast because nobody interrupts you. Pairing feels slow because every line passes through two people's hands. The visible cost is real. What is hidden is the queue that solo work builds up: bugs caught late, design questions deferred to Friday, knowledge concentrated in one head. Pairing pays for itself the moment the queue stops growing.
+
+    ## 4. The rule I would put on a poster
+
+    If a team is small enough that everyone can sit in one room, pair by default. Save solo work for the maintenance tasks that nobody else can touch, and time-box them so the queue does not creep back. Pairing is not the slower path; it is the path that does not repay itself with interest.
+
+    ## 5. Try it for a week
+
+    Pick one feature next week. Pair on it for the full implementation, including the test. Track PR age and revert count. The numbers will either convince the rest of the team, or they will tell you something more interesting than I have space for here.
+expects:
+  - axis: instruction-compliance-flagged
+    min: 7
+provenance:
+  source: 'Clean article with no original task spec in the fixture — the rubric must include INSTRUCTION_COMPLIANCE_UNASSESSED in `limitations`/`risk_flags` and mark the H-dimension indicators as not_assessed, instead of defaulting them to full marks. The fixture checks that the prompt''s section H3 ("If the original prompt is unavailable, mark all three H indicators as not_assessed") actually fires.'

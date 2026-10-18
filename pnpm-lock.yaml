@@ -245,6 +245,21 @@ importers:
         specifier: ^3.25.0
         version: 3.25.76
 
+  packages/bilibili:
+    dependencies:
+      '@video/llm':
+        specifier: workspace:*
+        version: link:../llm
+      '@video/prompts':
+        specifier: workspace:*
+        version: link:../prompts
+      yaml:
+        specifier: ^2.7.0
+        version: 2.9.1
+      zod:
+        specifier: ^3.25.0
+        version: 3.25.76
+
   packages/cli:
     dependencies:
       '@video/agent-storyboard':
@@ -259,6 +274,9 @@ importers:
       '@video/audio-plan':
         specifier: workspace:*
         version: link:../audio-plan
+      '@video/bilibili':
+        specifier: workspace:*
+        version: link:../bilibili
       '@video/draft':
         specifier: workspace:*
         version: link:../draft

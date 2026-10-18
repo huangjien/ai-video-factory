@@ -13,10 +13,12 @@ import type {
   ScenePromptInput,
 } from "@video/draft";
 import {
+  buildArticleReviewMessages,
   buildMessages as buildDraftMessages,
   buildScenePromptMessages,
   callDraft,
   expandSceneBrief,
+  scoreArticle,
 } from "@video/draft";
 import { stringify as yamlStringify } from "yaml";
 import {
@@ -134,7 +136,30 @@ export const EVAL_AGENTS: Record<string, EvalAgent> = {
       };
     },
   },
+  "article-review": {
+    id: "article-review",
+    /** Fixture input carries the article markdown the judge will score.
+     *  Same shape as `buildArticleReviewMessages` already takes — layer-1
+     *  hashing is a pure path, no I/O, no provider. */
+    build: (input) => {
+      const markdown = pickMarkdown(input);
+      return buildArticleReviewMessages(markdown);
+    },
+    /** Layer-2 path: the agent under test IS the judge, so this is the
+     *  one place `scoreArticle` runs against a real provider. The output
+     *  is the rubric JSON; the layer-2 evaluator inspects that JSON. */
+    call: async (input, provider, fallback) => {
+      const markdown = pickMarkdown(input);
+      const score = await scoreArticle(markdown, provider, fallback ?? null);
+      return { output: JSON.stringify(score), providerName: provider.name };
+    },
+  },
 };
+
+function pickMarkdown(input: Record<string, unknown>): string {
+  const m = input["markdown"];
+  return typeof m === "string" ? m : "";
+}
 
 /** The image-prompt fixture shape: { scene, style?, learned?, setting? }. */
 function imagePromptScene(input: Record<string, unknown>): ScenePromptInput {

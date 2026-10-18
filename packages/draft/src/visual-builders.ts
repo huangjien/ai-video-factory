@@ -248,7 +248,11 @@ const buildComparison: VisualPropsBuilder = (scene, input) => {
   const sectionBody = input.section?.body ?? "";
   const narration = (scene.narration ?? "").trim();
   const blob = `${scene.caption ?? ""}\n${narration}\n${sectionBody}`;
-  const split = splitLeftRight(blob, input.language);
+  const split = splitLeftRight(blob, input.language, {
+    caption: scene.caption ?? "",
+    visual: scene.visual ?? "",
+    sectionHeading: input.section?.heading ?? "",
+  });
   return {
     text: scene.caption,
     visual: scene.visual,
@@ -257,14 +261,30 @@ const buildComparison: VisualPropsBuilder = (scene, input) => {
   };
 };
 
+/** Inputs `splitLeftRight` uses as fallbacks when contrast markers,
+ *  headings, and a colon/dash split all fail. The bug being fixed:
+ *  titles used to fall through to positional labels like "左" or
+ *  "Left", which read as gibberish on screen. */
+interface ComparisonHint {
+  caption: string;
+  visual: string;
+  sectionHeading: string;
+}
+
 /** Split the narration / section into two buckets by the most common
  *  contrast tokens (对/比/左/右/vs/versus/while/instead). Falls back to
- *  sentence halves. */
-function splitLeftRight(blob: string, language: string | undefined): {
+ *  sentence halves. Every title is content-derived — positional
+ *  placeholders ("Left" / "左") are deliberately avoided so the
+ *  rendered card carries meaning, not geometry. */
+function splitLeftRight(
+  blob: string,
+  language: string | undefined,
+  hint: ComparisonHint,
+): {
   left: { title: string; items: string[] };
   right: { title: string; items: string[] };
 } {
-  // 1) Look for explicit "左 ... 右" or "A ... B" pattern.
+  // 1) Look for explicit "A vs B" pattern.
   const sepRe =
     /(?:\s*(?:vs\.?|versus|对比|相比|instead|whereas|而|但是|但)\s*)/i;
   const parts = blob.split(sepRe);
@@ -275,8 +295,14 @@ function splitLeftRight(blob: string, language: string | undefined): {
     const bSentences = splitSentences(b).filter((s) => s.length <= 60);
     if (aSentences.length >= 1 && bSentences.length >= 1) {
       return {
-        left: { title: truncate(a, 18), items: aSentences.slice(0, 4) },
-        right: { title: truncate(b, 18), items: bSentences.slice(0, 4) },
+        left: {
+          title: comparisonSideTitle(a, aSentences, hint, "left"),
+          items: aSentences.slice(0, 4),
+        },
+        right: {
+          title: comparisonSideTitle(b, bSentences, hint, "right"),
+          items: bSentences.slice(0, 4),
+        },
       };
     }
   }
@@ -286,35 +312,149 @@ function splitLeftRight(blob: string, language: string | undefined): {
     s.replace(/^\s*#{3,4}\s*/, "").trim(),
   );
   if (headings.length >= 2) {
+    // Headings carry real meaning — pass them straight through;
+    // `comparisonSideTitle` only fires when a heading is missing.
     return {
-      left: { title: headings[0] ?? loc(language, "左", "Left"), items: extractBullets(blob, 0) },
-      right: { title: headings[1] ?? loc(language, "右", "Right"), items: extractBullets(blob, 1) },
+      left: {
+        title: headings[0]!,
+        items: extractBullets(blob, 0),
+      },
+      right: {
+        title: headings[1]!,
+        items: extractBullets(blob, 1),
+      },
     };
   }
 
-  // 3) Fallback: split the caption on the colon or em-dash.
-  const cap = blob.split("\n")[0] ?? "";
+  // 3) Fallback: split the hint caption on the colon or em-dash.
+  const cap = hint.caption.trim() || blob.split("\n")[0] || "";
   const colonSplit = cap.split(/[:：—\-]/);
   if (colonSplit.length === 2) {
+    const a = (colonSplit[0] ?? "").trim();
+    const b = (colonSplit[1] ?? "").trim();
     return {
-      left: { title: truncate(colonSplit[0] ?? loc(language, "左", "Left"), 18), items: [] },
-      right: { title: truncate(colonSplit[1] ?? loc(language, "右", "Right"), 18), items: [] },
+      left: {
+        title: comparisonSideTitle(a, [], hint, "left"),
+        items: [],
+      },
+      right: {
+        title: comparisonSideTitle(b, [], hint, "right"),
+        items: [],
+      },
     };
   }
 
-  // 4) Last resort — split narration into two halves.
+  // 4) Last resort — split narration into two halves, derive a real
+  // title for each from the surrounding context. This used to emit
+  // "左"/"右"/"Left"/"Right", which read as gibberish on screen; now
+  // every title traces to a sentence, the caption, the visual
+  // direction, or the section heading. An em-dash ("—") is the
+  // last-possible-resort placeholder when truly nothing is available.
   const sentences = splitSentences(blob).filter((s) => s.length <= 60);
   const half = Math.max(1, Math.floor(sentences.length / 2));
+  const itemsLeft = sentences.slice(0, half).slice(0, 4);
+  const itemsRight = sentences.slice(half).slice(0, 4);
   return {
     left: {
-      title: loc(language, "左", "Left"),
-      items: sentences.slice(0, half).slice(0, 4),
+      title: comparisonSideTitle("", itemsLeft, hint, "left"),
+      items: itemsLeft,
     },
     right: {
-      title: loc(language, "右", "Right"),
-      items: sentences.slice(half).slice(0, 4),
+      title: comparisonSideTitle("", itemsRight, hint, "right"),
+      items: itemsRight,
     },
   };
+}
+
+/** Pick a content-meaningful title for one Comparison card. Walks
+ *  through every available signal in order: the side text already
+ *  extracted, the scene caption split on a contrast separator, the
+ *  visual direction split the same way, the first sentence on this
+ *  side, then the section heading. The trailing "—" only fires when
+ *  ALL signals are empty — better an em-dash than a positional word
+ *  that means nothing to the viewer. */
+function comparisonSideTitle(
+  primary: string,
+  sideItems: string[],
+  hint: ComparisonHint,
+  side: "left" | "right",
+): string {
+  // 1) Side text already extracted by the caller (e.g. the half of
+  //    a "vs" pair, or a colon-split half of the caption).
+  const flat = primary.replace(/\s+/g, " ").trim();
+  if (flat.length > 0) return truncate(flat, 18);
+
+  // 2) Caption split on a contrast separator ("A vs B", "A — B",
+  //    "A 对比 B", "A 和 B"…). Caption is the LLM-authored headline,
+  //    so its halves are the most reliable labels we have.
+  const fromCaption = contrastSide(hint.caption, side);
+  if (fromCaption.length > 0) return truncate(fromCaption, 18);
+
+  // 3) Visual direction likewise carries a "compare X vs Y" hint in
+  //    roughly half of all Comparisons (the article draft writes one).
+  const fromVisual = contrastSide(hint.visual, side);
+  if (fromVisual.length > 0) return truncate(fromVisual, 18);
+
+  // 4) The first sentence we extracted for this side works as a
+  //    crude label — trim to its leading noun phrase so it does not
+  //    span the entire sentence.
+  const firstSentence = sideItems[0];
+  if (firstSentence && firstSentence.trim().length > 0) {
+    const phrase = stripLeadingVerb(firstSentence);
+    if (phrase.length > 0) return truncate(phrase, 18);
+  }
+
+  // 5) Section heading is the only signal that's shared across both
+  //    sides, so it carries less meaning — but it's still better
+  //    than "Left" / "右" echoing on screen.
+  const heading = hint.sectionHeading.trim();
+  if (heading.length > 0) return truncate(heading, 18);
+
+  // 6) Truly nothing to say. An em-dash is the honest signal that
+  //    we have no content; positional labels were worse.
+  return "—";
+}
+
+/** Split `text` on a contrast separator and return the requested
+ *  side. Returns "" when no separator matches. */
+function contrastSide(text: string, side: "left" | "right"): string {
+  const sepRe =
+    /\s+(?:vs\.?|versus|对比|相比|而不是|和|跟|&\s+|:\s+|—\s+|——\s+|--\s+|·\s+)\s*/i;
+  const parts = text.split(sepRe);
+  if (parts.length < 2) return "";
+  if (side === "left") return (parts[0] ?? "").trim();
+  return parts.slice(1).join(" ").trim();
+}
+
+/** Drop a sentence-leading subject-verb or preposition so the
+ *  remaining noun phrase reads as a label rather than the full
+ *  sentence. Conservative: returns the original string trimmed
+ *  when no leading verb matches. */
+function stripLeadingVerb(sentence: string): string {
+  const cleaned = sentence.replace(/\s+/g, " ").trim();
+  // Match a leading Chinese or English verb + optional object marker,
+  // up to the first comma, "的"/"之", " is "/" was "/" were "/etc.
+  // Conservative: only strips when the sentence starts with one of
+  // these verbs.
+  const verbLead =
+    /^([\u4e00-\u9fa5]{1,6}(?:[\u4e00-\u9fa5]{1,6}是|[\u4e00-\u9fa5]{1,6}的))|(?:(?:is|are|was|were|means?|refers? to|the)\s+)/i;
+  // No verb found → return the leading clause delimited by the first
+  // Chinese or English comma / em-dash / colon — a short noun phrase
+  // beats a whole sentence for a card title.
+  if (verbLead.test(cleaned)) {
+    // Strip the matched verb phrase, then take the leading chunk.
+    const stripped = cleaned.replace(verbLead, "").trim();
+    if (stripped.length > 0) return takeLeadingClause(stripped);
+  }
+  return takeLeadingClause(cleaned);
+}
+
+/** Take the leading clause — split on the first sentence-internal
+ *  delimiter (comma / colon / Chinese enumeration) and return the
+ *  first chunk, trimmed. */
+function takeLeadingClause(s: string): string {
+  const m = s.match(/^[^,，:：;；、—\-\n]+/);
+  return (m ? m[0] : s).trim();
 }
 
 /** Split prose into sentences, treating dotted abbreviations as part of the

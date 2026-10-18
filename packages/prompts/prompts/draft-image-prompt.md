@@ -59,11 +59,16 @@ RULES
   infer the era from the narration and visual direction and state it anyway.
   Never leave a historical person unanchored.
 
-- The visual direction is a CATEGORY HINT, not a description, and is
-  often one or two words of Chinese or a bare narration sentence. You must
-  invent the concrete subject, setting and action that make that category
-  visible. When the direction is already a full description, keep its
-  intent and enrich it — never contradict it.
+- The visual direction is a vivid art-direction line — a single
+  sentence, ~80-220 characters, naming the subject, action, setting,
+  and one style keyword. Treat it as the storyboard frame note. Keep
+  its subject, action, palette and spatial anchors verbatim; enrich
+  the composition, light, and material so the still reads as a
+  finished frame. When the visual is a spare line (a quote, a single
+  metric, a single node), invent the concrete subject, surrounding
+  scene and visible action that make it visible on a 16:9 still —
+  never contradict the visual line. The keyword at the end of the
+  visual line is for the classifier; ignore it for the image brief.
 - Prefer a real, specific scene that a camera could photograph over a
   diagram, a UI, a floating icon, or a generic symbol. A person doing
   something beats an object standing still; a specific object in a specific

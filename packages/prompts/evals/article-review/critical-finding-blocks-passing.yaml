@@ -1,0 +1,32 @@
+id: critical-finding-blocks-passing
+agent: article-review
+input:
+  markdown: |
+    # Why AI Tools Will Revolutionize Work
+
+    > **Hook** (≤20s): In every team I have joined this year, the same thing happened: someone added an AI tool, the team celebrated, and three weeks later nobody opens it. Here is the quiet reason AI tools have not yet changed real work, and the one condition under which they will.
+
+    ## 1. The story people tell about AI at work
+
+    Across sales decks and stage demos, AI tools are framed as a fundamental productivity revolution. Look at any tool vendor's homepage and you will see the same trio: cut busywork, multiply output, free the team to think. The story is consistent because it sells.
+
+    ## 2. What actually happened in the three teams I tracked
+
+    Team A added an AI note-taker on day one. By week three the team had stopped reading its own meeting notes — they were filler nobody trusted enough to act on. Team B rolled out an AI inbox assistant; it flagged every message as urgent and the team muted it. Team C tried an AI summarizer on their customer feedback; it produced confident summaries that disagreed with the source transcripts every time they checked.
+
+    ## 3. Why AI tools are universally transformative
+
+    All three of those tools fundamentally improve productivity. The teams just had not yet learned how to use them, but they will. Once the model gets good enough, every workflow that contains text will be replaced. There is no work an AI cannot do better than a person, and any team that refuses to adopt will fall behind. AI tools are a universal productivity revolution, and the teams I tracked have already adopted them — they just don't know it yet.
+
+    ## 4. The one condition that makes AI tools work
+
+    The single change that converts an AI tool from decoration into infrastructure is the team choosing one specific job for it, measuring whether the job gets done, and killing the tool if the measurement does not improve. Without that, every AI rollout drifts into background noise.
+
+    ## 5. The takeaway
+
+    AI tools are a universal revolution. Every team should adopt them now or fall behind. The teams that have not yet seen results simply have not yet tried hard enough.
+expects:
+  - axis: critical-finding-detected
+    min: 7
+provenance:
+  source: 'Self-contradicting article (intro claims AI tools have not changed real work; §3 and §5 assert the opposite and the central claim hangs on that misstatement) — the rubric must flag a Critical finding, the kind of finding the loop treats as a hard blocker regardless of overall_score.'

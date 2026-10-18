@@ -1,10 +1,10 @@
 case: history-topic-opens-with-tension
 agent: draft
-prompt_hash: sha256:6cb9721df846d28191732497afb7d6e34c10b17c3ad57bdc7af56b3f8b6c4adb
+prompt_hash: sha256:ff930cc88dfbe7ac128200d1457cfb0fe09629bc4916b1fdae4d964f4a329d97
 messages:
   - role: system
-    bytes: 15479
-    content_sha256: sha256:c5223e0a59a63fa5efc672a5e672b42495edae8860bb5f4aeee78ec148181c38
+    bytes: 20015
+    content_sha256: sha256:86242871d23e900176a26d439d5407cb941f9d7da435024ccf3d25fc2588c925
     blocks:
       - "Prioritize:"
       - "Avoid:"
@@ -19,7 +19,7 @@ messages:
       - "Narration must:"
       - "Prefer:"
       - "Do NOT begin with:"
-      - "Use one of these short category phrases:"
+      - "What the visual MUST NOT contain:"
       - "Normally use:"
       - "Good captions communicate:"
       - "Use transitions such as:"

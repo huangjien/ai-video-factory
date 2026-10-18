@@ -1,1 +1,3 @@
-Which VDSL scene component best matches this scene's visual direction? Pick the ONE component that will visualize the content.
+Choose the single VDSL scene component that best expresses the scene's main visual idea. Base the choice on both the visual direction and the narration excerpt; prefer a component that makes the intended information clear at a glance.
+
+Use the supplied component choices only. Select a text or diagram component when the scene's purpose depends on readable labels, a comparison, a sequence, or a relationship. Select an illustration-oriented component when the scene is mainly a person, place, object, or mood. Do not choose a component just because a word appears in the scene; match the scene's purpose. If several choices could work, choose the simplest one that preserves the main idea. Return exactly one choice and do not invent a component or explain the answer.

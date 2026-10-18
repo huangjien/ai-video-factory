@@ -80,6 +80,7 @@ Full command set:
 | `video thumbnail <project>` | YouTube thumbnail (MiniMax image) |
 | `video shorts <project>` | 60s Shorts clip (MiniMax video) |
 | `video youtube <project>` | Title / description / chapters / shorts hook; `--upload` publishes final-mixed.mp4 + thumbnail directly (OAuth: `video youtube --auth` once, then `--privacy private\|unlisted\|public`, default private) |
+| `video bilibili <project>` | Bilibili submission metadata: title / 简介 / ≤10 tags / suggested 分区 / cover prompt → `bilibili/CHECKLIST.md`. **Packaging only — Bilibili has no public upload API**, so the last step is manual. Never hard-fails: a bad model response degrades to a deterministic package with a warning. |
 | `video visuals <project>` | v0.8: generate scene images + contact sheet for review (gate off by default) |
 | `video research <topic>` | Facts + sources + claims package (feeds draft) |
 | `video motion <project>` | Per-scene animation timelines (agent + heuristics) |

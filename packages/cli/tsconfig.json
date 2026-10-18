@@ -24,6 +24,7 @@
     { "path": "../../packages/tts" },
     { "path": "../../packages/review" },
     { "path": "../../packages/youtube" },
+    { "path": "../../packages/bilibili" },
     { "path": "../../packages/audio-assets" },
     { "path": "../../packages/audio-mix" },
     { "path": "../../packages/learn" },

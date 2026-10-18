@@ -19,7 +19,13 @@ import {
 
 describe("evals fixtures on disk", () => {
   it("lists every agent, each with cases", () => {
-    expect(listEvalAgents()).toEqual(["draft", "image-prompt", "storyboard"]);
+    expect(listEvalAgents()).toEqual([
+      "article-review",
+      "draft",
+      "image-prompt",
+      "storyboard",
+    ]);
+    expect(listEvalFiles(evalsDir(), "article-review").length).toBeGreaterThan(0);
     expect(listEvalFiles(evalsDir(), "draft").length).toBeGreaterThan(0);
     expect(listEvalFiles(evalsDir(), "storyboard").length).toBeGreaterThan(0);
   });

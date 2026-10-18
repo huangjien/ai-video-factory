@@ -1,7 +1,14 @@
 import { describe, expect, it } from "vitest";
 import type { ChatRequest, ChatResponse, Provider } from "@video/llm";
 import {
-  ArticleScoreSchema,
+  ArticleScoreRawSchema,
+  DEFAULT_MIN_SCORE,
+  MAX_POSSIBLE_SCORE,
+  PROFILE,
+  PROFILE_ID,
+  computeScore,
+  dropHallucinatedQuotes,
+  gradeFor,
   renderArticleReviewYaml,
   runScoredDraft,
   scoreArticle,
@@ -39,13 +46,79 @@ const GOOD_ARTICLE = JSON.stringify({
   ],
 });
 
-function judgeScore(a: number, i: number, u: number, suggestions: string[] = []) {
+/** Build a minimum-valid raw payload with two indicators per dimension
+ *  at score 4 (a passing draft). Shortcuts review-test boilerplate. */
+function buildPassingRaw(score = 4): string {
+  const dimensions = PROFILE.map((d) => ({
+    id: d.id,
+    indicators: d.indicators.map((i) => ({
+      id: i.id,
+      score,
+      reason: "ok",
+    })),
+  }));
   return JSON.stringify({
-    attractive: a,
-    interesting: i,
-    useful: u,
-    comment: "needs work",
-    suggestions,
+    dimension_scores: dimensions,
+    findings: [],
+    risk_flags: [],
+    limitations: [],
+    summary: { strengths: [], main_weaknesses: [], conclusion: "", confidence: 0.5 },
+    comment: "looks good",
+    suggestions: [],
+  });
+}
+
+/** Same shape but a finding is attached so the loop has something to
+ *  pass into the next draft. The quote must appear in GOOD_ARTICLE
+ *  to survive the evidence pass. */
+function buildRawWithFinding(
+  severity: "Critical" | "Major" | "Moderate" | "Minor" = "Major",
+): string {
+  const dimensions = PROFILE.map((d) => ({
+    id: d.id,
+    indicators: d.indicators.map((i) => ({
+      id: i.id,
+      score: severity === "Critical" ? 2 : 3,
+      reason: "ok",
+    })),
+  }));
+  return JSON.stringify({
+    dimension_scores: dimensions,
+    findings: [
+      {
+        id: "F-001",
+        code: "LOGIC_GAP",
+        severity,
+        dimension_ids: ["B"],
+        indicator_ids: ["B1"],
+        location: { quote: "narration line" },
+        description: "needs more support",
+        impact: "central claim weak",
+        recommendation: "add a number",
+        confidence: 0.9,
+        verification_status: "verified_in_text",
+      },
+    ],
+    risk_flags:
+      severity === "Critical" || severity === "Major"
+        ? [
+            {
+              code:
+                severity === "Critical"
+                  ? "CRITICAL_BLOCKER"
+                  : "MAJOR_REVISION_NEEDED",
+              severity,
+              finding_ids: ["F-001"],
+            },
+          ]
+        : [],
+    limitations: [],
+    summary: { strengths: [], main_weaknesses: ["logic gap"], conclusion: "revise", confidence: 0.8 },
+    comment: "the single biggest weakness",
+    suggestions: [
+      "scene_1 — add a concrete number",
+      "section 1 — name the year before the figure",
+    ],
   });
 }
 
@@ -56,59 +129,239 @@ const INPUT = {
   duration: 60,
 };
 
-describe("ArticleScoreSchema", () => {
-  it("coerces floats and clamps to 0-10", () => {
-    const s = ArticleScoreSchema.parse({
-      attractive: 8.4,
-      interesting: 12,
-      useful: -1,
-    });
-    expect(s.attractive).toBe(8);
-    expect(s.interesting).toBe(10);
-    expect(s.useful).toBe(0);
-    expect(s.suggestions).toEqual([]);
+// ---------------------------------------------------------------------------
+// Schema & engine.
+// ---------------------------------------------------------------------------
+
+describe("PROFILE", () => {
+  it("ships the canonical 8 dimensions × 24 indicators", () => {
+    expect(PROFILE).toHaveLength(8);
+    const totals = PROFILE.map((d) =>
+      d.indicators.reduce((sum, i) => sum + i.weight, 0),
+    );
+    expect(totals).toEqual([15, 15, 12, 15, 12, 10, 13, 8]);
+    expect(MAX_POSSIBLE_SCORE).toBe(100);
   });
 
-  it("rejects non-numeric axes", () => {
-    expect(
-      ArticleScoreSchema.safeParse({ attractive: "high", interesting: 1, useful: 2 })
-        .success,
-    ).toBe(false);
-  });
-
-  it("scoreTotal sums the three axes", () => {
-    expect(scoreTotal({ attractive: 8, interesting: 7, useful: 9 })).toBe(24);
+  it("uses general_article_v1 as the profile id", () => {
+    expect(PROFILE_ID).toBe("general_article_v1");
   });
 });
 
+describe("ArticleScoreRawSchema", () => {
+  it("accepts a minimal valid payload", () => {
+    const r = ArticleScoreRawSchema.safeParse(
+      JSON.parse(buildPassingRaw()),
+    );
+    expect(r.success).toBe(true);
+  });
+
+  it("rejects a payload missing dimension_scores", () => {
+    const r = ArticleScoreRawSchema.safeParse({ comment: "x" });
+    expect(r.success).toBe(false);
+  });
+
+  it("coerces / clamps indicator scores into 0-5 integers", () => {
+    const r = ArticleScoreRawSchema.safeParse(
+      JSON.parse(buildPassingRaw(7)),
+    );
+    expect(r.success).toBe(true);
+    if (!r.success) return;
+    const a3 = r.data.dimension_scores
+      .find((d) => d.id === "A")!
+      .indicators.find((i) => i.id === "A1")!.score;
+    expect(a3).toBe(5);
+  });
+
+  it("rejects an unknown dimension id", () => {
+    const bad = JSON.parse(buildPassingRaw());
+    bad.dimension_scores.push({
+      id: "Z",
+      indicators: [{ id: "Z1", score: 3, reason: "" }],
+    });
+    const r = ArticleScoreRawSchema.safeParse(bad);
+    expect(r.success).toBe(false);
+  });
+});
+
+describe("computeScore", () => {
+  it("an all-4 draft hits 80/100 (B grade)", () => {
+    const parsed = ArticleScoreRawSchema.parse(JSON.parse(buildPassingRaw(4)));
+    const c = computeScore(parsed);
+    expect(c.overall_score).toBe(80);
+    expect(c.grade).toBe("B");
+    expect(c.coverage).toBe(100);
+  });
+
+  it("an all-3 draft hits 60/100 (D grade)", () => {
+    const parsed = ArticleScoreRawSchema.parse(JSON.parse(buildPassingRaw(3)));
+    const c = computeScore(parsed);
+    expect(c.overall_score).toBe(60);
+    expect(c.grade).toBe("D");
+  });
+
+  it("an all-5 draft hits 100/100 (A grade)", () => {
+    const parsed = ArticleScoreRawSchema.parse(JSON.parse(buildPassingRaw(5)));
+    const c = computeScore(parsed);
+    expect(c.overall_score).toBe(100);
+    expect(c.grade).toBe("A");
+  });
+
+  it("weights the dimensions proportionally", () => {
+    // All 4 except A is 0 → A loses its 15 share, others stay at 4.
+    const parsed = ArticleScoreRawSchema.parse(JSON.parse(buildPassingRaw(4)));
+    for (const d of parsed.dimension_scores) {
+      if (d.id === "A") {
+        for (const i of d.indicators) i.score = 0;
+      }
+    }
+    const c = computeScore(parsed);
+    // (100 - 15) of weight at 4/5 = 85 * 4/5 = 68
+    expect(c.overall_score).toBe(68);
+    expect(c.grade).toBe("D");
+  });
+
+  it("reports each dimension's weighted score", () => {
+    const parsed = ArticleScoreRawSchema.parse(JSON.parse(buildPassingRaw(4)));
+    const c = computeScore(parsed);
+    const a = c.dimension_scores.find((d) => d.id === "A")!;
+    expect(a.weight).toBe(15);
+    expect(a.weighted_score).toBe(12); // 15 * (4/5)
+  });
+});
+
+describe("gradeFor", () => {
+  it("maps the framework's bands", () => {
+    expect(gradeFor(95)).toBe("A");
+    expect(gradeFor(89)).toBe("B");
+    expect(gradeFor(80)).toBe("B");
+    expect(gradeFor(70)).toBe("C");
+    expect(gradeFor(60)).toBe("D");
+    expect(gradeFor(59)).toBe("F");
+  });
+});
+
+describe("DEFAULT_MIN_SCORE", () => {
+  it("sets the acceptance bar at grade C (70/100)", () => {
+    expect(DEFAULT_MIN_SCORE).toBe(70);
+  });
+});
+
+describe("dropHallucinatedQuotes", () => {
+  it("keeps findings whose quote appears in the article", () => {
+    const parsed = ArticleScoreRawSchema.parse(
+      JSON.parse(buildRawWithFinding()),
+    );
+    const { kept, dropped } = dropHallucinatedQuotes(
+      parsed.findings,
+      GOOD_ARTICLE,
+    );
+    expect(kept).toHaveLength(1);
+    expect(dropped).toEqual([]);
+  });
+
+  it("drops findings whose quote does NOT appear", () => {
+    const raw = JSON.parse(buildRawWithFinding());
+    raw.findings[0].location.quote = "this string is not in the article";
+    const parsed = ArticleScoreRawSchema.parse(raw);
+    const { kept, dropped } = dropHallucinatedQuotes(
+      parsed.findings,
+      GOOD_ARTICLE,
+    );
+    expect(kept).toHaveLength(0);
+    expect(dropped).toEqual(["F-001"]);
+  });
+
+  it("marks very short quotes for external check, does not drop them", () => {
+    const raw = JSON.parse(buildRawWithFinding());
+    raw.findings[0].location.quote = "ok";
+    const parsed = ArticleScoreRawSchema.parse(raw);
+    const { kept, dropped } = dropHallucinatedQuotes(
+      parsed.findings,
+      GOOD_ARTICLE,
+    );
+    expect(kept).toHaveLength(1);
+    expect(kept[0]!.verification_status).toBe("needs_external_check");
+    expect(dropped).toEqual([]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// scoreArticle (full pipeline).
+// ---------------------------------------------------------------------------
+
 describe("scoreArticle", () => {
-  it("parses a clean JSON judge response", async () => {
-    const p = new FakeProvider([judgeScore(9, 8, 9)]);
-    const s = await scoreArticle("ARTICLE", p);
-    expect(s.total).toBe(26);
-    expect(s.comment).toBe("needs work");
+  it("computes overall_score 80 for an all-4 raw payload", async () => {
+    const p = new FakeProvider([buildPassingRaw(4)]);
+    const s = await scoreArticle(GOOD_ARTICLE, p);
+    expect(s.computed.overall_score).toBe(80);
+    expect(s.computed.grade).toBe("B");
+    expect(s.total).toBe(80);
+    expect(s.profile_id).toBe(PROFILE_ID);
+  });
+
+  it("passes an all-4 draft (≥ 70) with no findings", async () => {
+    const p = new FakeProvider([buildPassingRaw(4)]);
+    const s = await scoreArticle(GOOD_ARTICLE, p);
+    expect(s.passing).toBe(true);
+    expect(s.comment).toBe("looks good");
+  });
+
+  it("an all-3 draft has no Critical blocker (bar check is the loop's job)", async () => {
+    const p = new FakeProvider([buildPassingRaw(3)]);
+    const s = await scoreArticle(GOOD_ARTICLE, p);
+    // ArticleScore.passing only reflects the Critical-blocker check;
+    // the numeric bar (minScore) lives on the loop side.
+    expect(s.passing).toBe(true);
+    expect(s.computed.overall_score).toBe(60);
+  });
+
+  it("drops findings whose quote is not in the article", async () => {
+    const raw = JSON.parse(buildRawWithFinding());
+    raw.findings[0].location.quote = "imagined string";
+    const p = new FakeProvider([JSON.stringify(raw)]);
+    const s = await scoreArticle(GOOD_ARTICLE, p);
+    expect(s.raw.findings).toHaveLength(0);
+  });
+
+  it("drops orphaned risk_flags whose finding was dropped", async () => {
+    const raw = JSON.parse(buildRawWithFinding("Major"));
+    raw.findings[0].location.quote = "imagined string";
+    const p = new FakeProvider([JSON.stringify(raw)]);
+    const s = await scoreArticle(GOOD_ARTICLE, p);
+    expect(s.raw.risk_flags).toHaveLength(0);
   });
 
   it("extracts JSON from fenced / prose-wrapped responses", async () => {
     const p = new FakeProvider([
-      `Here is my evaluation:\n\`\`\`json\n${judgeScore(7, 7, 7)}\n\`\`\`\nthanks`,
+      `Here is my evaluation:\n\`\`\`json\n${buildPassingRaw(4)}\n\`\`\`\nthanks`,
     ]);
-    const s = await scoreArticle("ARTICLE", p);
-    expect(s.total).toBe(21);
+    const s = await scoreArticle(GOOD_ARTICLE, p);
+    expect(s.computed.overall_score).toBe(80);
   });
 
   it("throws ArticleReviewError when no JSON is present", async () => {
     const p = new FakeProvider(["no scores here, sorry"]);
-    await expect(scoreArticle("ARTICLE", p)).rejects.toThrow(
+    await expect(scoreArticle(GOOD_ARTICLE, p)).rejects.toThrow(
       /no JSON object/,
     );
   });
 });
 
+describe("scoreTotal", () => {
+  it("is a passthrough of the computed total (legacy API)", () => {
+    expect(scoreTotal({ total: 78 })).toBe(78);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// runScoredDraft loop.
+// ---------------------------------------------------------------------------
+
 describe("runScoredDraft", () => {
   it("accepts the first draft when it meets the bar (1 draft + 1 judge call)", async () => {
-    const p = new FakeProvider([GOOD_ARTICLE, judgeScore(9, 9, 8)]);
-    const r = await runScoredDraft(INPUT, p, null, { minScore: 25 });
+    const p = new FakeProvider([GOOD_ARTICLE, buildPassingRaw(4)]);
+    const r = await runScoredDraft(INPUT, p, null, { minScore: 70 });
     expect(r.passing).toBe(true);
     expect(r.regenerated).toBe(false);
     expect(r.attempts).toHaveLength(1);
@@ -119,11 +372,11 @@ describe("runScoredDraft", () => {
   it("regenerates below the bar, passes judge feedback into the next draft", async () => {
     const p = new FakeProvider([
       GOOD_ARTICLE,
-      judgeScore(6, 7, 8, ["scene_1 narration is flat — add a concrete anecdote"]),
+      buildRawWithFinding("Major"), // 60 + Major finding → fail
       GOOD_ARTICLE,
-      judgeScore(9, 9, 8),
+      buildPassingRaw(4), // 80, passes
     ]);
-    const r = await runScoredDraft(INPUT, p, null, { minScore: 25 });
+    const r = await runScoredDraft(INPUT, p, null, { minScore: 70 });
     expect(r.passing).toBe(true);
     expect(r.attempts).toHaveLength(2);
     expect(p.requests).toHaveLength(4);
@@ -131,29 +384,40 @@ describe("runScoredDraft", () => {
       .map((m) => m.content)
       .join("\n");
     expect(secondDraftPrompt).toContain("quality judge");
-    expect(secondDraftPrompt).toContain("attractive=6");
-    expect(secondDraftPrompt).toContain("add a concrete anecdote");
+    expect(secondDraftPrompt).toMatch(/60\/100/);
+    expect(secondDraftPrompt).toContain("acceptance bar of 70/100");
+    expect(secondDraftPrompt).toContain("scene_1 — add a concrete number");
+    expect(secondDraftPrompt).toContain("[Major] LOGIC_GAP");
+  });
+
+  it("a Critical finding blocks passing even when overall_score is high", async () => {
+    // Critical finding ⇒ risk_flags present. The LLM put scores at 4
+    // (overall 80) but the engine must mark ArticleScore.passing false.
+    const raw = JSON.parse(buildRawWithFinding("Critical"));
+    const p = new FakeProvider([GOOD_ARTICLE, JSON.stringify(raw)]);
+    const r = await runScoredDraft(INPUT, p, null, { minScore: 70 });
+    expect(r.attempts[0]!.score!.passing).toBe(false);
+    expect(r.attempts[0]!.passing).toBe(false);
   });
 
   it("keeps the best candidate when all attempts stay below the bar", async () => {
     const p = new FakeProvider([
       GOOD_ARTICLE,
-      judgeScore(6, 6, 6), // 18
+      buildPassingRaw(3), // 60
       GOOD_ARTICLE,
-      judgeScore(9, 8, 7), // 24 — best, still below 25
+      buildPassingRaw(4), // 80 - best, still below 100
       GOOD_ARTICLE,
-      judgeScore(5, 5, 5), // 15
+      buildPassingRaw(2), // 40
     ]);
-    const r = await runScoredDraft(INPUT, p, null, { minScore: 25 });
+    const r = await runScoredDraft(INPUT, p, null, { minScore: 100 });
     expect(r.passing).toBe(false);
     expect(r.attempts).toHaveLength(3);
-    expect(r.score?.total).toBe(24);
-    expect(r.markdown).toContain("# t");
+    expect(r.score?.computed.overall_score).toBe(80);
   });
 
   it("stops iterating and accepts the draft when the judge fails", async () => {
     const p = new FakeProvider([GOOD_ARTICLE, "the judge has no opinion"]);
-    const r = await runScoredDraft(INPUT, p, null, { minScore: 25 });
+    const r = await runScoredDraft(INPUT, p, null, { minScore: 70 });
     expect(r.attempts).toHaveLength(1);
     expect(r.score).toBeNull();
     expect(r.passing).toBe(false);
@@ -161,34 +425,43 @@ describe("runScoredDraft", () => {
   });
 
   it("honors maxAttempts=1 (draft once, never regenerate)", async () => {
-    const p = new FakeProvider([GOOD_ARTICLE, judgeScore(3, 3, 3)]);
-    const r = await runScoredDraft(INPUT, p, null, { minScore: 25, maxAttempts: 1 });
+    const p = new FakeProvider([GOOD_ARTICLE, buildPassingRaw(3)]);
+    const r = await runScoredDraft(INPUT, p, null, {
+      minScore: 70,
+      maxAttempts: 1,
+    });
     expect(r.attempts).toHaveLength(1);
     expect(p.requests).toHaveLength(2);
   });
 });
 
+// ---------------------------------------------------------------------------
+// renderArticleReviewYaml.
+// ---------------------------------------------------------------------------
+
 describe("renderArticleReviewYaml", () => {
-  it("emits per-attempt scores and a final verdict", async () => {
+  it("emits per-attempt scores, findings, dimensions and a final verdict", async () => {
     const p = new FakeProvider([
       GOOD_ARTICLE,
-      judgeScore(6, 7, 8, ["fix a", "fix b"]),
+      buildRawWithFinding("Major"),
       GOOD_ARTICLE,
-      judgeScore(9, 9, 8),
+      buildPassingRaw(4),
     ]);
-    const r = await runScoredDraft(INPUT, p, null, { minScore: 25 });
+    const r = await runScoredDraft(INPUT, p, null, { minScore: 70 });
     const yaml = renderArticleReviewYaml(r, {
       project: "demo",
-      threshold: 25,
+      threshold: 70,
       language: "zh-CN",
     });
-    expect(yaml).toContain("threshold: 25");
+    expect(yaml).toContain("profile: general_article_v1");
+    expect(yaml).toContain("threshold: 70");
     expect(yaml).toContain("passing: true");
     expect(yaml).toContain("attempts_used: 2");
-    expect(yaml).toContain("final_total: 26");
-    expect(yaml).toContain("- fix a");
-    expect(yaml).toContain("attractive: 6");
-    expect(yaml).toContain("attractive: 9");
+    expect(yaml).toMatch(/final_overall: \d/);
+    expect(yaml).toMatch(/final_grade: [A-F]/);
+    expect(yaml).toContain("LOGIC_GAP");
+    expect(yaml).toContain("scene_1 — add a concrete number");
+    expect(yaml).toContain("dimensions:");
   });
 
   it("records judge failures without inventing a score", async () => {
@@ -196,11 +469,11 @@ describe("renderArticleReviewYaml", () => {
     const r = await runScoredDraft(INPUT, p, null, {});
     const yaml = renderArticleReviewYaml(r, {
       project: "demo",
-      threshold: 25,
+      threshold: 70,
       language: "zh-CN",
     });
     expect(yaml).toContain("score: null");
     expect(yaml).toContain("passing: false");
-    expect(yaml).toContain("final_total: null");
+    expect(yaml).toContain("final_overall: null");
   });
 });

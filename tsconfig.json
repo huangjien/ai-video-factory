@@ -47,6 +47,9 @@
       "path": "packages/youtube"
     },
     {
+      "path": "packages/bilibili"
+    },
+    {
       "path": "packages/media-generators"
     },
     {

@@ -19,3 +19,18 @@ export async function probeAudioDuration(file: string): Promise<number> {
   }
   return duration;
 }
+
+/** Nullable variant for advisory probing (library scans, tag
+ * resolution, report lines): ffprobe missing or audio unreadable →
+ * null instead of throwing. The mix paths that need a real number
+ * (fade timestamps, apad targets) must use the throwing variant — a
+ * NaN there poisons the whole filtergraph. */
+export async function probeAudioDurationOrNull(
+  file: string,
+): Promise<number | null> {
+  try {
+    return await probeAudioDuration(file);
+  } catch {
+    return null;
+  }
+}

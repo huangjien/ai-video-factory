@@ -67,7 +67,8 @@ export async function validateProject(
           });
         }
       } else if (
-        scene.visual.component === "Image" &&
+        (scene.visual.component === "Image" ||
+          scene.visual.component === "ImageBackground") &&
         typeof props.data.src === "string"
       ) {
         const src = path.join(opts.projectRoot, props.data.src);
@@ -76,8 +77,55 @@ export async function validateProject(
             file,
             field: `${base.join(".")}.visual.props.src`,
             line: line([...base, "visual", "props"]),
-            message: `Image file not found: ${props.data.src} (resolved against project root).`,
+            message: `${scene.visual.component} file not found: ${props.data.src} (resolved against project root).`,
           });
+        }
+      }
+    }
+
+    // excalidraw is an asset-generation flow (`video excalidraw`), not a
+    // render path — the renderer table in schema.ts has no component for
+    // it. Reject here instead of failing later at render time.
+    if (scene.visual.renderer === "excalidraw") {
+      errors.push({
+        file,
+        field: `${base.join(".")}.visual.renderer`,
+        line: line([...base, "visual", "renderer"]),
+        message: `renderer "excalidraw" is asset-generation only (video excalidraw) — it has no scene render path. Use remotion/svg/canvas, or generate the excalidraw asset and reference it from an Image scene.`,
+      });
+    }
+
+    const anims = scene.animations ?? [];
+
+    // Timeline animation targets must name a real element: a typo'd target
+    // silently no-ops (svgSceneLogic falls back to the default stagger).
+    // Cheap to check only where element ids are declared in props — svg
+    // (nodes/edges) and canvas (strokes) scenes. Remotion components have
+    // no enumerable element ids, so they are skipped.
+    if (
+      anims.length > 0 &&
+      (scene.visual.renderer === "svg" || scene.visual.renderer === "canvas")
+    ) {
+      const ids = sceneElementIds(scene.visual.props);
+      if (ids !== null) {
+        // The scene's own id (and the literal "root") target the SCENE
+        // ROOT — a legitimate hand-authored pattern (the shipped
+        // mcp-explainer example uses it for whole-scene entrances), not a
+        // typo. Anything else outside the element set is the typo case.
+        ids.add(scene.id);
+        ids.add("root");
+        for (let a = 0; a < anims.length; a++) {
+          const anim = anims[a];
+          if (!anim) continue;
+          if (!ids.has(anim.target)) {
+            errors.push({
+              file,
+              field: `${base.join(".")}.animations.${a}.target`,
+              line: line([...base, "animations", a]),
+              message: `Animation "${anim.id}" targets "${anim.target}", which is not an element id of this ${scene.visual.renderer} scene (known: ${[...ids].join(", ")}).`,
+              fix: "Fix the target id, or remove the entry to fall back to the default stagger.",
+            });
+          }
         }
       }
     }
@@ -108,7 +156,6 @@ export async function validateProject(
     // Timeline animations (plan §10) must fit inside the scene: they are
     // scene-relative seconds and silently overflowing would get clipped
     // at render time.
-    const anims = scene.animations ?? [];
     for (let a = 0; a < anims.length; a++) {
       const anim = anims[a];
       if (!anim) continue;
@@ -144,4 +191,25 @@ export async function validateProject(
 
   if (errors.length > 0) return { ok: false, errors };
   return { ok: true, data: shape.data };
+}
+
+/** Element ids declared in svg/canvas scene props (SvgScene nodes/edges,
+ * DoodleScene strokes). Null when none are declared — the caller skips
+ * target validation rather than guessing. */
+function sceneElementIds(props: unknown): Set<string> | null {
+  if (props === null || typeof props !== "object") return null;
+  const ids = new Set<string>();
+  // Named cast: props is a yaml-parsed object; per-key reads are guarded.
+  const obj = props as Record<string, unknown>;
+  for (const key of ["nodes", "edges", "strokes"]) {
+    const arr: unknown = obj[key];
+    if (!Array.isArray(arr)) continue;
+    for (const el of arr) {
+      if (el !== null && typeof el === "object" && "id" in el) {
+        const id: unknown = el.id;
+        if (typeof id === "string" && id.length > 0) ids.add(id);
+      }
+    }
+  }
+  return ids.size > 0 ? ids : null;
 }

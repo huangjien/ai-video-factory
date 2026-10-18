@@ -199,25 +199,48 @@ export async function renderPlanToVideo(
   }
 }
 
+/** Mime type for an image asset extension. Falls back to jpeg — the
+ * browser sniffs anyway, but an explicit type keeps data URLs honest. */
+function imageMime(ext: string): string {
+  switch (ext) {
+    case ".png":
+      return "image/png";
+    case ".webp":
+      return "image/webp";
+    case ".avif":
+      return "image/avif";
+    case ".svg":
+      return "image/svg+xml";
+    default:
+      return "image/jpeg";
+  }
+}
+
 /**
  * Convert ImageBackground scene `src` file paths to base64 data URLs.
  * Remotion's bundler serves the entry over HTTP, so file:// and
  * relative paths won't resolve in the headless browser. Data URLs
  * bypass that entirely. Non-existent files leave the src unchanged
- * (the dark background renders instead of crashing).
+ * (the dark background renders instead of crashing) — but the silence
+ * is reported through `warn` so the render outcome can surface it.
  */
 export async function resolveImageSources(
   plan: RenderPlan,
+  warn: (message: string) => void = () => {},
 ): Promise<RenderPlan> {
   const scenes = await Promise.all(
     plan.scenes.map(async (scene) => {
       if (scene.component !== "ImageBackground") return scene;
-      const src = (scene.props as { src?: unknown }).src;
+      const src: unknown = scene.props.src;
       if (typeof src !== "string" || src.startsWith("data:")) return scene;
-      if (!existsSync(src)) return scene;
+      if (!existsSync(src)) {
+        warn(
+          `scene ${scene.id}: ImageBackground src not found: ${src} — rendering the dark background instead`,
+        );
+        return scene;
+      }
       const bytes = await readFile(src);
-      const ext = path.extname(src).toLowerCase();
-      const mime = ext === ".png" ? "image/png" : "image/jpeg";
+      const mime = imageMime(path.extname(src).toLowerCase());
       const dataUrl = `data:${mime};base64,${Buffer.from(bytes).toString("base64")}`;
       return {
         ...scene,
@@ -227,18 +250,21 @@ export async function resolveImageSources(
   );
   // Brand watermark icon (branding 2026-10-05): same bundler constraint —
   // the headless browser only renders what the entry embeds, so inline the
-  // icon as a data URL too. Missing file → watermark silently skipped.
+  // icon as a data URL too. Missing file → watermark skipped, reported
+  // through `warn` instead of silently.
   let brand = plan.style.brand;
   const icon = brand?.icon;
-  if (brand && icon && !icon.startsWith("data:") && existsSync(icon)) {
-    const bytes = await readFile(icon);
-    const ext = path.extname(icon).toLowerCase();
-    const mime =
-      ext === ".png" ? "image/png" : ext === ".svg" ? "image/svg+xml" : "image/jpeg";
-    brand = {
-      ...brand,
-      icon: `data:${mime};base64,${Buffer.from(bytes).toString("base64")}`,
-    };
+  if (brand && icon && !icon.startsWith("data:")) {
+    if (!existsSync(icon)) {
+      warn(`brand icon not found: ${icon} — watermark skipped`);
+    } else {
+      const bytes = await readFile(icon);
+      const mime = imageMime(path.extname(icon).toLowerCase());
+      brand = {
+        ...brand,
+        icon: `data:${mime};base64,${Buffer.from(bytes).toString("base64")}`,
+      };
+    }
   }
   return { ...plan, scenes, ...(brand ? { style: { ...plan.style, brand } } : {}) };
 }

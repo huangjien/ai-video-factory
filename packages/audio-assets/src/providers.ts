@@ -1,12 +1,10 @@
-import { execFile } from "node:child_process";
-import { promisify } from "node:util";
 import {
   existsSync,
   readdirSync,
   readFileSync,
-  statSync,
 } from "node:fs";
 import path from "node:path";
+import { probeAudioDurationOrNull } from "@video/media";
 import type {
   AssetResult,
   AudioAssetProvider,
@@ -14,8 +12,6 @@ import type {
   SfxOptions,
 } from "./schemas.js";
 import { AudioAssetError } from "./schemas.js";
-
-const execFileAsync = promisify(execFile);
 
 /** Audio formats `FileBasedAudioAssetProvider.lookup` accepts. Order matches
  *  the priority of "exact filename match" — the first extension tried is
@@ -37,30 +33,6 @@ function contentTypeFor(ext: string): AssetResult["contentType"] {
   throw new AudioAssetError(`unsupported extension: ${ext}`, "file-based");
 }
 
-/** Probe duration in seconds via ffprobe. Returns null when ffprobe is
- *  unavailable or fails — the caller then falls back to a placeholder
- *  duration. The provider's `durationSec` is advisory (mix plans
- *  re-probe via `bgm-timeline`), so a missing probe must not break
- *  tag resolution. */
-async function probeDurationSec(filePath: string): Promise<number | null> {
-  try {
-    const { stdout } = await execFileAsync("ffprobe", [
-      "-v",
-      "error",
-      "-select_streams",
-      "a:0",
-      "-show_entries",
-      "stream=duration",
-      "-of",
-      "csv=p=0",
-      filePath,
-    ]);
-    const seconds = parseFloat(stdout.trim());
-    return Number.isFinite(seconds) && seconds > 0 ? seconds : null;
-  } catch {
-    return null;
-  }
-}
 
 /** Deterministic local-only provider — returns a short synthetic WAV
  * (RIFF header + 1-second silence at 8kHz mono 8-bit) so downstream mixers
@@ -181,7 +153,9 @@ export class FileBasedAudioAssetProvider implements AudioAssetProvider {
     const bytes = readFileSync(chosen);
     const license = readLicense(directory, tag);
     const ext = path.extname(chosen).toLowerCase() as AudioExtension;
-    const durationSec = (await probeDurationSec(chosen)) ?? statSync(chosen).size;
+    // Advisory only — null on unprobeable audio (was: the file's byte
+    // size in "seconds"). Mix plans re-probe via bgm-timeline.
+    const durationSec = await probeAudioDurationOrNull(chosen);
     return {
       bytes: new Uint8Array(bytes),
       contentType: contentTypeFor(ext),

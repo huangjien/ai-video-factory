@@ -18,6 +18,12 @@ const registry: ComponentRegistry = {
       .object({ src: z.string().min(1), fit: z.enum(["contain", "cover"]) })
       .strict(),
   },
+  ImageBackground: {
+    propsSchema: z
+      .object({ src: z.string().min(1), caption: z.string().optional() })
+      .strict(),
+  },
+  SvgScene: { propsSchema: z.object({}).passthrough() },
 };
 
 function fixtureProject(): string {
@@ -184,5 +190,103 @@ describe("validateProject — §21.1 lines 926-930", () => {
         true,
       );
     }
+  });
+
+  it("checks ImageBackground props.src existence too", async () => {
+    const yamlText = validStoryboardYaml.replace(
+      'component: Paragraph\n      props:\n        text: "因为上下文会丢失。"',
+      'component: ImageBackground\n      props:\n        src: "assets/images/missing-bg.jpg"',
+    );
+    const result = await validateProject(yamlText, "storyboard.yaml", {
+      projectRoot: fixtureProject(),
+      registry,
+      probeAudio: okProbe,
+    });
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(
+        result.errors.some((e) => e.message.includes("missing-bg.jpg")),
+      ).toBe(true);
+    }
+  });
+
+  it("rejects renderer: excalidraw (asset-generation only)", async () => {
+    const yamlText = validStoryboardYaml.replace(
+      "component: Paragraph",
+      "component: Paragraph\n      renderer: excalidraw",
+    );
+    const result = await validateProject(yamlText, "storyboard.yaml", {
+      projectRoot: fixtureProject(),
+      registry,
+      probeAudio: okProbe,
+    });
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(
+        result.errors.some(
+          (e) =>
+            e.field.endsWith("visual.renderer") &&
+            e.message.includes("excalidraw"),
+        ),
+      ).toBe(true);
+    }
+  });
+
+  const svgSceneYaml = (target: string): string => `schema_version: "0.1"
+project:
+  id: t
+  language: zh-CN
+  fps: 30
+  width: 1920
+  height: 1080
+scenes:
+  - id: scene-01
+    duration: 5
+    visual:
+      component: SvgScene
+      renderer: svg
+      props:
+        nodes:
+          - id: n1
+            kind: rect
+            x: 100
+            y: 200
+            w: 300
+            h: 120
+            text: "节点"
+    animations:
+      - id: draw-1
+        target: ${target}
+        type: draw
+        start: 0
+        duration: 1
+`;
+
+  it("rejects an animations[].target that names no svg element id", async () => {
+    const result = await validateProject(
+      svgSceneYaml("node-1"),
+      "storyboard.yaml",
+      { projectRoot: fixtureProject(), registry, probeAudio: okProbe },
+    );
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(
+        result.errors.some(
+          (e) =>
+            e.field.endsWith("animations.0.target") &&
+            e.message.includes("node-1") &&
+            e.message.includes("n1"),
+        ),
+      ).toBe(true);
+    }
+  });
+
+  it("accepts an animations[].target that names a real svg element id", async () => {
+    const result = await validateProject(svgSceneYaml("n1"), "storyboard.yaml", {
+      projectRoot: fixtureProject(),
+      registry,
+      probeAudio: okProbe,
+    });
+    expect(result.ok).toBe(true);
   });
 });

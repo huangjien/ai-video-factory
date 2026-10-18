@@ -196,6 +196,7 @@ export function computeMakeImpact(
       effectiveVoice,
       pauseSec,
       effectiveTtsProvider,
+      article.frontmatter.language,
     );
     if (meta !== null) {
       try {

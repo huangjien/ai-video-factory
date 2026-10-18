@@ -25,6 +25,9 @@ export default defineConfig({
       "@video/draft": path.resolve("packages/draft/src"),
       "@video/make": path.resolve("packages/make/src"),
       "@video/audio-plan": path.resolve("packages/audio-plan/src"),
+      "@video/video-renderer": path.resolve("packages/video-renderer/src"),
+      "@video/learn": path.resolve("packages/learn/src"),
+      "@video/cli": path.resolve("packages/cli/src"),
     },
   },
   test: {
@@ -68,7 +71,8 @@ export default defineConfig({
       reporter: ["text", "text-summary"],
       // v8 coverages hit thresholds below; the threshold is intentionally
       // lenient to start — tighten over time as more code is covered.
-      thresholds: { lines: 0, functions: 0, branches: 0, statements: 0 },
+      // Ratcheted 2026-10-18 to the then-current values (lines/statements 80%, branches 62%, functions 78%) — slightly under the snapshot so a small regression does not immediately fail. Tighten incrementally as the suite matures. `**/index.ts` stays excluded — those are pure re-exports and the inflated numbers are intentional (a self-reporting metric is worse than a slightly padded one).
+      thresholds: { lines: 80, functions: 78, branches: 62, statements: 80 },
     },
   },
 });

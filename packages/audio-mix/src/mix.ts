@@ -1,9 +1,9 @@
 import { execFile } from "node:child_process";
-import { execFileSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import { promisify } from "node:util";
 import { mkdir, mkdtemp, writeFile, rm } from "node:fs/promises";
 import path from "node:path";
+import { probeAudioDuration } from "@video/media";
 
 const execFileAsync = promisify(execFile);
 
@@ -110,15 +110,19 @@ export async function mixTracks(opts: MixOptions): Promise<MixResult> {
   if (videoIndex !== null) {
     mapArgs.push("-map", `${videoIndex}:v`, "-c:v", "copy");
   }
-  mapArgs.push(
-    "-movflags",
-    "+faststart",
+  // Per-output options MUST precede the output file — ffmpeg silently
+  // drops trailing options ("Trailing option(s) found … may be ignored"),
+  // which is how -b:a 192k went missing for the entire life of this code.
+  mapArgs.push("-movflags", "+faststart");
+  await execFileAsync("ffmpeg", [
+    "-y",
+    ...inputArgs,
+    "-filter_complex",
+    filter,
+    ...mapArgs,
+    ...codecArgs,
     opts.outPath,
-  );
-  await execFileAsync(
-    "ffmpeg",
-    ["-y", ...inputArgs, "-filter_complex", filter, ...mapArgs, ...codecArgs],
-  );
+  ]);
   await rm(tmpDir, { recursive: true, force: true }).catch(() => undefined);
   return { outPath: opts.outPath };
 }
@@ -277,24 +281,9 @@ export async function mixTracksWithSpec(
   ]);
   // Probe concatenated narration duration so we can place the fade-out
   // at a concrete timestamp (afade=out:st=N requires an absolute second,
-  // not the symbolic "END-N").
-  const narrationDuration = parseFloat(
-    execFileSync(
-      "ffprobe",
-      [
-        "-v",
-        "error",
-        "-select_streams",
-        "a:0",
-        "-show_entries",
-        "stream=duration",
-        "-of",
-        "csv=p=0",
-        tmpNarration,
-      ],
-      { encoding: "utf8" },
-    ).trim(),
-  );
+  // not the symbolic "END-N"). Shared probe throws on NaN — a NaN here
+  // would poison apad=whole_dur and every fade timestamp silently.
+  const narrationDuration = await probeAudioDuration(tmpNarration);
 
   // Step 2: build the combined filter graph.
   //   [0:a]aresample=44100[nar]
@@ -352,19 +341,17 @@ export async function mixTracksWithSpec(
   if (videoIndex !== null) {
     mapArgs.push("-map", `${videoIndex}:v`, "-c:v", "copy");
   }
-  mapArgs.push("-movflags", "+faststart", opts.outPath);
-
-  await execFileAsync(
-    "ffmpeg",
-    [
-      "-y",
-      ...inputs.flatMap((p) => ["-i", p]),
-      "-filter_complex",
-      filterParts.join(";"),
-      ...mapArgs,
-      ...codecArgs,
-    ],
-  );
+  // Same ordering contract as mixTracks: output options before the file.
+  mapArgs.push("-movflags", "+faststart");
+  await execFileAsync("ffmpeg", [
+    "-y",
+    ...inputs.flatMap((p) => ["-i", p]),
+    "-filter_complex",
+    filterParts.join(";"),
+    ...mapArgs,
+    ...codecArgs,
+    opts.outPath,
+  ]);
   await rm(tmpDir, { recursive: true, force: true }).catch(() => undefined);
   return { outPath: opts.outPath };
 }

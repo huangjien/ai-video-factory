@@ -36,7 +36,10 @@ export const AssetResultSchema = z
       "audio/ogg",
       "audio/x-m4a",
     ]),
-    durationSec: z.number().positive(),
+    // Nullable 2026-10-18: an unprobeable file used to report its BYTE
+    // SIZE as seconds (6 MB → "6291456s"); null is the honest advisory
+    // value — mix plans re-probe via bgm-timeline anyway.
+    durationSec: z.number().positive().nullable(),
     license: z.string().min(1),
     source: z.string().min(1),
   })

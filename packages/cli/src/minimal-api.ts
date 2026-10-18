@@ -65,20 +65,28 @@ export const MINIMAL_API_COMMANDS: readonly MinimalApiCommand[] = [
 /** Verbs wired for back-compat but outside the recommended path — shown in
  *  the banner's "Advanced verbs" line and the README back-compat paragraph. */
 export const ADVANCED_VERBS: readonly string[] = [
+  // Everything wired in the CLI that the four-command path doesn't cover.
+  // audio-plan and theme are ALSO reachable as recommended-path steps, so
+  // they stay off this "back-compat" list (they used to appear in both).
   "research",
+  "script",
   "storyboard",
   "motion",
   "audio",
-  "audio-plan",
+  "audio-asset",
   "mix",
   "thumbnail",
   "shorts",
   "youtube",
-  "theme",
+  "bilibili",
+  "excalidraw",
+  "studio",
   "qa",
   "review",
   "validate",
   "scene",
+  "learn",
+  "prompts",
   "laya",
 ];
 
@@ -130,7 +138,7 @@ export function buildBanner(version: string): string {
   const lines: string[] = [
     `A I   V I D E O   F A C T O R Y   ·   v${version}`,
     rule,
-    "▷ Turn a topic into a finished 1080p Chinese MP4 in four commands.",
+    "▷ Turn a topic into a finished 1080p MP4 (zh-CN / en-US) in four commands.",
     "",
   ];
   for (const step of BANNER_CORE_STEPS) {

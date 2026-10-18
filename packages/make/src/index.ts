@@ -10,7 +10,6 @@ import {
 } from "node:fs/promises";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { promisify } from "node:util";
-import os from "node:os";
 import path from "node:path";
 import {
   parseArticleWithRecovery,
@@ -27,6 +26,7 @@ import { parse as parseYaml, stringify as yamlStringify } from "yaml";
 import { FakeTTSProvider, EdgeTTSProvider, VoiceboxTTSProvider, MinimaxTTSProvider, voiceboxStatus, type TTSProvider } from "@video/tts";
 import { resolveNarration } from "./narration.js";
 import {
+  mp3ToWav,
   readSceneTimings,
   syncSceneDurations,
   probeAudioDuration,
@@ -119,19 +119,24 @@ export function heartbeat<T>(
   const everyMs = (opts.everySec ?? 20) * 1000;
   const afterMs = (opts.afterSec ?? 30) * 1000;
   const t0 = Date.now();
-  let nextBeatMs = afterMs;
-  const timer = setInterval(() => {
-    const elapsedMs = Date.now() - t0;
-    if (elapsedMs >= nextBeatMs) {
-      nextBeatMs += everyMs;
-      emit({
-        kind: "heartbeat",
-        label,
-        elapsedSec: elapsedSinceSec(t0),
-      });
-    }
-  }, everyMs);
-  return run().finally(() => clearInterval(timer));
+  // First beat exactly at afterMs (setTimeout), then every everyMs — the
+  // old single-interval version fired the first beat at the first
+  // everyMs multiple ≥ afterMs (40s for the 30/20 defaults).
+  const beat = () =>
+    emit({
+      kind: "heartbeat",
+      label,
+      elapsedSec: elapsedSinceSec(t0),
+    });
+  let interval: NodeJS.Timeout | undefined;
+  const first = setTimeout(() => {
+    beat();
+    interval = setInterval(beat, everyMs);
+  }, afterMs);
+  return run().finally(() => {
+    clearTimeout(first);
+    clearInterval(interval); // no-op when the first beat never fired
+  });
 }
 
 export interface MakeOptions {
@@ -418,7 +423,14 @@ async function syncStoryboardFromArticle(
   };
   try {
     parsed = parseYaml(yamlText) as typeof parsed;
-  } catch {
+  } catch (err) {
+    // A corrupt storyboard used to fall through as {scenes: []} SILENTLY,
+    // which forces the ids-mismatch path below and rewrites the whole
+    // file — destroying hand-edited components/props with zero warning.
+    // Rewriting is still the only sane recovery; say so loudly.
+    console.warn(
+      `warning: storyboard.yaml is unparseable (${(err as Error).message}) — regenerating from article.md, hand edits will be lost`,
+    );
     parsed = { scenes: [] };
   }
 
@@ -868,7 +880,13 @@ async function runTts(
     // after any re-draft/narration edit, desyncing audio from the
     // picture and subtitles (the render cache uses the same
     // content-hash discipline).
-    const cacheKey = ttsCacheKey(scene.narration, voice, pause, provider.name);
+    const cacheKey = ttsCacheKey(
+      scene.narration,
+      voice,
+      pause,
+      provider.name,
+      article.frontmatter.language,
+    );
     const meta = await readTtsMeta(wavPath);
     if (meta !== null && meta.cacheKey === cacheKey && existsSync(wavPath)) {
       continue;
@@ -1061,15 +1079,17 @@ export async function resolveLibraryBgm(
     }).path;
   } catch {
     // An unresolvable tag is a planning mistake, not a reason to fail the
-    // render. Write the same silent placeholder the old mock provider did so
-    // ffmpeg always receives a real file — passing it a missing path fails
-    // the whole mix.
+    // render. Write a silent placeholder so ffmpeg always receives a real
+    // file — but name it `.silent.wav`: the resolver and library scans
+    // skip that suffix, so the placeholder can never shadow the real
+    // library again (the old `${tag}.wav` name matched the project-local
+    // override path and silenced every future run for that tag).
     const placeholder = path.join(
       projectRoot,
       "assets",
       "audio-assets",
       "bgm",
-      `${tag}.wav`,
+      `_unresolved-${tag}.silent.wav`,
     );
     await mkdir(path.dirname(placeholder), { recursive: true });
     const r = await new MockAudioAssetProvider().pickBackgroundMusic({ tag });
@@ -1111,9 +1131,16 @@ async function runMix(
 ): Promise<string[]> {
   const slug = path.basename(projectRoot);
   const workspaceRoot = path.dirname(path.dirname(projectRoot));
+  // Fail with the actual fix instead of Node's raw module-not-found stack.
+  const cliEntry = path.join(workspaceRoot, "packages", "cli", "dist", "index.js");
+  if (!existsSync(cliEntry)) {
+    throw new Error(
+      `mix step needs the built CLI — run \`pnpm build\` first (missing ${cliEntry})`,
+    );
+  }
   // Translate audio-config.yaml → video mix CLI flags rather than
   // duplicating the existing pipeline.
-  const mixArgs: string[] = ["node", "packages/cli/dist/index.js", "mix", slug];
+  const mixArgs: string[] = ["node", cliEntry, "mix", slug];
   if (config.bgm && typeof config.bgm === "string") {
     // Resolve the tag against the curated library (`assets/bgm/`) with the
     // project's own `assets/audio-assets/bgm/` shadowing it. The file is
@@ -1163,7 +1190,14 @@ async function runMix(
     mixArgs.push("--bgm-fade-out", String(config.bgm_fade_out_sec));
   }
   await runCli(mixArgs, { cwd: workspaceRoot });
-  // Mirror what `video mix` actually writes.
+  // `video mix` exits 0 even when it wrote nothing useful elsewhere in
+  // its history — verify the artifact instead of asserting by convention.
+  const mixed = path.join(projectRoot, "output", "final-mixed.mp4");
+  if (!existsSync(mixed)) {
+    throw new Error(
+      "video mix reported success but output/final-mixed.mp4 is missing",
+    );
+  }
   return ["output/final-mixed.mp4"];
 }
 
@@ -1229,68 +1263,18 @@ async function collectOutputs(projectRoot: string): Promise<string[]> {
     const fullDir = path.join(projectRoot, dir);
     if (!existsSync(fullDir)) continue;
     // Shallow listing only — full recursive scan adds noise to the report.
+    // (This used to read a `.placeholder` file that nothing ever writes,
+    // so report.outputFiles was always [].)
     try {
-      const entries = await readFile(
-        path.join(fullDir, ".placeholder"),
-        "utf8",
-      ).catch(() => "");
-      if (entries) out.push(`${dir}/<contents>`);
+      for (const name of await readdir(fullDir)) {
+        if (!name.startsWith(".")) out.push(`${dir}/${name}`);
+      }
     } catch {
-      // ignore
+      // unreadable directory — skip it in the report
     }
   }
   return out;
 }
 
-function slugify(s: string): string {
-  return (
-    s
-      ?.toLowerCase()
-      ?.replace(/[^a-z0-9]+/g, "-")
-      ?.replace(/^-|-$/g, "") ?? ""
-  );
-}
-
-/** Same mp3ToWav helper as @video/cli runAudio — kept local to avoid a
- * circular import from the CLI package. */
-/** Convert mp3 bytes (from TTS) to 44.1kHz mono WAV, padding to
- * `minDurationSec` total when the narration is shorter. Never truncates:
- * `apad=whole_dur` only tops up to the minimum, so a narration that runs
- * longer than the article's estimate survives intact (the LLM routinely
- * underestimates) and syncStoryboardDurations rewrites the storyboard to
- * the measured length. */
-async function mp3ToWav(
-  mp3Bytes: Uint8Array,
-  minDurationSec: number,
-): Promise<Uint8Array> {
-  const dir = await (
-    await import("node:fs/promises")
-  ).mkdtemp(path.join(os.tmpdir(), "video-make-tts-"));
-  try {
-    const inPath = path.join(dir, "in.mp3");
-    const outPath = path.join(dir, "out.wav");
-    await writeFile(inPath, mp3Bytes);
-    await execFileAsync("ffmpeg", [
-      "-y",
-      "-i",
-      inPath,
-      "-ar",
-      "44100",
-      "-ac",
-      "1",
-      "-af",
-      `apad=whole_dur=${minDurationSec}`,
-      outPath,
-    ]);
-    return await readFile(outPath);
-  } finally {
-    await (
-      await import("node:fs/promises")
-    ).rm(dir, {
-      recursive: true,
-      force: true,
-    });
-  }
-}
 
 export { MockAudioAssetProvider };

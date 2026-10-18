@@ -6,6 +6,7 @@ import path from "node:path";
 import { execSync } from "node:child_process";
 import { parse as parseYaml } from "yaml";
 import { FakeTTSProvider, type TTSProvider } from "@video/tts";
+import { mp3ToWav } from "@video/media";
 import { resolveProjectDir } from "./project-path.js";
 import { assertStageWritable } from "./stage-guard.js";
 
@@ -25,40 +26,7 @@ export interface AudioOptions {
 const ZH_VOICE = "zh-CN-YunjianNeural";
 const EN_VOICE = "en-US-ChristopherNeural";
 
-/** Run ffmpeg to convert mp3 bytes (from TTS) to 44.1kHz mono WAV. Pads to
- * `minDurationSec` if the TTS is shorter; never truncates if it's longer.
- * (Truncating used to chop off long narrations mid-sentence.) */
-async function mp3ToWav(
-  mp3Bytes: Uint8Array,
-  minDurationSec: number,
-): Promise<Uint8Array> {
-  const { mkdtemp, rm } = await import("node:fs/promises");
-  const { tmpdir } = await import("node:os");
-  const dir = await mkdtemp(path.join(tmpdir(), "video-tts-"));
-  try {
-    const inPath = path.join(dir, "in.mp3");
-    const outPath = path.join(dir, "out.wav");
-    await writeFile(inPath, mp3Bytes);
-    await execFileAsync("ffmpeg", [
-      "-y",
-      "-i",
-      inPath,
-      "-ar",
-      "44100",
-      "-ac",
-      "1",
-      "-af",
-      // whole_dur = pad UP to this total length; never truncates.
-      // (pad_dur would APPEND minDurationSec of silence unconditionally.)
-      `apad=whole_dur=${minDurationSec}`,
-      outPath,
-    ]);
-    const { readFile } = await import("node:fs/promises");
-    return await readFile(outPath);
-  } finally {
-    await rm(dir, { recursive: true, force: true }).catch(() => {});
-  }
-}
+// mp3ToWav now lives in @video/media (one copy; make imports it too).
 
 function safeGitHead(cwd: string): string {
   try {

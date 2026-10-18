@@ -25,7 +25,12 @@ import {
   writeRun,
   type Stage,
 } from "@video/workflow";
-import { concatScenes, faststart, renderSceneToVideo } from "./render.js";
+import {
+  concatScenes,
+  faststart,
+  renderSceneToVideo,
+  resolveImageSources,
+} from "./render.js";
 
 const STORYBOARD_REL = "storyboard/storyboard.yaml";
 const VDSL_REL = "vdsl/vdsl.yaml";
@@ -192,6 +197,11 @@ interface SceneCacheMeta {
    * Absent on sidecars written before this field existed — treated as a
    * mismatch so legacy caches invalidate exactly once. */
   projectHash?: string;
+  /** Hash of the scene's COMPILED caption lines. The storyboard fragment
+   * cannot see wrapText output: a change to @video/media's wrapText or the
+   * compile-time caption width alters the burned-in lines while every
+   * fragment hash stays identical. Absent on legacy sidecars — mismatch. */
+  captionsHash?: string;
   /** `RENDERER_REVISION` that produced these pixels. Explicit rather than
    * folded into `projectHash` so `video make --dry-run` can check it with a
    * string compare — the dry-run has no compiled renderPlan and must not
@@ -218,17 +228,30 @@ interface SceneCacheMeta {
  * bumping for refactors with identical output — an unnecessary bump
  * re-renders every scene, which is expensive.
  *
+ * Frame-affecting inputs also live OUTSIDE those two directories: the
+ * compiled caption lines come from @video/media's `wrapText` and the vdsl
+ * compiler (compile.ts). Caption-content changes are covered by the
+ * sidecar's `captionsHash`, but a wrapText/compile change that alters
+ * frames in other ways (timing, geometry) still requires a revision bump.
+ *
  * Same contract as `IMAGE_PROMPT_REVISION` in @video/draft, and deliberately
  * manual: hashing the source tree would re-render on every comment edit.
  */
-export const RENDERER_REVISION = "3"; // 2: caption type + halo + no-plate overlay
+export const RENDERER_REVISION = "4";
+// 2: caption type + halo + no-plate overlay
 // 3: the title card preserves inter-word spaces — each glyph is its own flex
 // item, so a bare space collapsed to zero width and headlines rendered run-on.
+// 4: ImageBackground's caption band now shares captionStyle.ts geometry
+// (bottom offset, max-width, padding) with the CaptionsOverlay track and
+// drops the title-face override — image-scene captions moved.
 
 /** Cache freshness: the scene fragment, the narration audio, AND every
- *  project-level render input (theme, fps/width/height) must match. A
- *  style.theme flip leaves all fragment hashes identical — without the
- *  projectHash term it silently reused the old-theme MP4s. */
+ * project-level render input (theme, fps/width/height) must match. A
+ * style.theme flip leaves all fragment hashes identical — without the
+ * projectHash term it silently reused the old-theme MP4s. `captionsHash`
+ * (compiled caption lines) is optional: the renderer always passes it;
+ * callers without a compiled plan (video make --dry-run) omit it and the
+ * term is skipped rather than falsely stale. */
 export function sceneCacheIsFresh(
   meta: SceneCacheMeta | null,
   sceneHash: string | null,
@@ -236,6 +259,7 @@ export function sceneCacheIsFresh(
   audioPath: string | null,
   audioMtimeMs: number,
   rendererRevision: string = RENDERER_REVISION,
+  captionsHash: string | null = null,
 ): boolean {
   return (
     meta !== null &&
@@ -245,6 +269,8 @@ export function sceneCacheIsFresh(
     // Absent on sidecars written before the field existed — a mismatch,
     // so pre-existing caches invalidate exactly once.
     meta.rendererRevision === rendererRevision &&
+    (captionsHash === null ||
+      meta.captionsHash === captionsHash) &&
     (meta.audioPath ?? null) === (audioPath ?? null) &&
     Math.abs((meta.audioMtimeMs ?? 0) - audioMtimeMs) < 1
   );
@@ -306,10 +332,28 @@ async function renderScenesIncrementally(
     result.sceneFiles.push(file);
     const frag = extractSceneFragment(storyboardText, scene.id);
     const sceneHash = frag === null ? null : hashSceneFragment(frag);
+    // Compiled caption lines are a render input the fragment cannot see
+    // (wrapText runs at compile time) — fold them into the sidecar so a
+    // wrap/width change regenerates the scene instead of replaying old
+    // pixels.
+    const captionsHash =
+      scene.captions === null
+        ? null
+        : hashSceneFragment(JSON.stringify(scene.captions.lines));
     const audioPath = scene.audio ? path.join(root, scene.audio) : null;
     const audioM = audioPath ? await mtimeOrZero(audioPath) : 0;
     const sidecar = await readSceneCacheMeta(file);
-    if (sceneCacheIsFresh(sidecar, sceneHash, projectHash, audioPath, audioM)) {
+    if (
+      sceneCacheIsFresh(
+        sidecar,
+        sceneHash,
+        projectHash,
+        audioPath,
+        audioM,
+        RENDERER_REVISION,
+        captionsHash,
+      )
+    ) {
       log(`  scene ${scene.id}: cached`);
       result.cachedSceneIds.push(scene.id);
       continue;
@@ -319,6 +363,7 @@ async function renderScenesIncrementally(
     await writeSceneCacheMeta(file, {
       sceneHash: sceneHash ?? "",
       projectHash,
+      ...(captionsHash !== null ? { captionsHash } : {}),
       rendererRevision: RENDERER_REVISION,
       ...(audioPath !== null ? { audioPath, audioMtimeMs: audioM } : {}),
       renderedAt: new Date().toISOString(),
@@ -413,8 +458,17 @@ export async function renderPreviewProject(
     }
   }
 
+  // Surface missing image assets as warnings instead of silent dark
+  // backgrounds / skipped watermarks (resolveImageSources keeps its
+  // defensive fallback either way). Runs once up front; the per-scene
+  // re-resolution inside renderSceneToVideo then no-ops on data URLs.
+  const resolvedPlan = await resolveImageSources(renderPlan, (message) => {
+    warnings.push(message);
+    log(`  warn: ${message}`);
+  });
+
   const { sceneFiles } = await renderScenesIncrementally(
-    renderPlan,
+    resolvedPlan,
     storyboardText,
     root,
     { ...(draft ? { draft: true } : {}), log },

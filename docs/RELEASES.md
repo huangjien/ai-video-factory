@@ -15,6 +15,52 @@ video research → script → storyboard → audio (TTS) → audio-asset (BGM+SF
        video review                          → Content/Visual/Technical review YAMLs
 ```
 
+## v0.9.1 (2026-10-18) — TTS providers, draft quality bar, Ask gate, visual cache key
+
+Consolidates two Unreleased streams (Voicebox + MiniMax TTS providers, preflight policy, draft quality bar 90/A with 8 attempts, ask-gate tts question) and the v0.9 visual-cache hardening into a single release.
+
+`minimax` became the default image provider in v0.8.1; this release deletes
+the local model entirely. It cost **~1–3 min/scene** on Apple Silicon while
+every hosted provider returns in seconds — unacceptable for a pipeline whose
+iteration loop is "edit `article.md`, re-render".
+
+**Deleted**
+
+- `packages/media-generators/src/flux-image.ts` + test, and the Python sidecar
+  `flux_worker.py` (`packages/media-generators/python/` keeps only
+  `contact_sheet.py`).
+- `lora-config.ts` + test, and the `lora-config.yaml` convention — LoRA had no
+  consumer outside that provider.
+- `--lora`, `--lora-config`, `--reference-style-anchor`, `--anchor-scene` from
+  `video make`; `--lora`, `--lora-config`, `--text`, `--no-text`,
+  `--text-position` from `video thumbnail`.
+- `visual_bible:` frontmatter and its parser (`parseVisualBible`,
+  `sceneRefNames`, `visualBibleRefPath`) — image-to-image conditioning had no
+  remaining provider.
+- `ImageRequest.referenceImage` and `ImageRequest.textOverlay` — both were
+  honoured only by the deleted provider.
+- Four skills: `flux2-klein-local-gen`, `flux-image-prompting`,
+  `flux-visual-consistency`, `flux-asset-review`.
+- `models/` (**23 GB** of weights) and the uv `.venv`. The Python project is
+  now Pillow-only: `uv.lock` went from ~30 packages to 2.
+
+**Kept**
+
+`--image-provider minimax|openai|gemini|mock|none`, `minimax` still the
+default. The v0.8 content-keyed image cache, `video make --dry-run` impact
+table, and the `video visuals` contact sheet + `require_visual_approval` gate
+are untouched; the cache key simply lost its LoRA / ref-digest / style-anchor
+inputs, so **existing images regenerate once** on the next `make`.
+
+**What you can no longer do**
+
+LoRA style adapters, cross-scene image-to-image consistency (style anchor or
+Visual Bible refs), Pillow text overlays on generated images, and native
+1920×1080 scene output — hosted providers cap 16:9 at 1280×720, which the
+renderer upscales. The last one bites `video thumbnail`: the overlay that
+rendered CJK titles crisply was Pillow inside the deleted worker, so
+`youtube/thumbnail.*` must now be typed in YouTube Studio.
+
 ## Unreleased — BGM library, Bilibili packaging, en-US captions
 
 **BGM is a local library, not a service.** `assets/bgm/` is the single source
@@ -86,50 +132,6 @@ a conditional `tts` question to the video-ask envelope — offered only
 when the local server answers with cloned profiles, answered via
 `--tts voicebox:<profile>|minimax-system|edge` and stamped into
 frontmatter as `tts_provider` + `voice`.
-
-## v0.9 — local diffusion provider removed
-
-`minimax` became the default image provider in v0.8.1; this release deletes
-the local model entirely. It cost **~1–3 min/scene** on Apple Silicon while
-every hosted provider returns in seconds — unacceptable for a pipeline whose
-iteration loop is "edit `article.md`, re-render".
-
-**Deleted**
-
-- `packages/media-generators/src/flux-image.ts` + test, and the Python sidecar
-  `flux_worker.py` (`packages/media-generators/python/` keeps only
-  `contact_sheet.py`).
-- `lora-config.ts` + test, and the `lora-config.yaml` convention — LoRA had no
-  consumer outside that provider.
-- `--lora`, `--lora-config`, `--reference-style-anchor`, `--anchor-scene` from
-  `video make`; `--lora`, `--lora-config`, `--text`, `--no-text`,
-  `--text-position` from `video thumbnail`.
-- `visual_bible:` frontmatter and its parser (`parseVisualBible`,
-  `sceneRefNames`, `visualBibleRefPath`) — image-to-image conditioning had no
-  remaining provider.
-- `ImageRequest.referenceImage` and `ImageRequest.textOverlay` — both were
-  honoured only by the deleted provider.
-- Four skills: `flux2-klein-local-gen`, `flux-image-prompting`,
-  `flux-visual-consistency`, `flux-asset-review`.
-- `models/` (**23 GB** of weights) and the uv `.venv`. The Python project is
-  now Pillow-only: `uv.lock` went from ~30 packages to 2.
-
-**Kept**
-
-`--image-provider minimax|openai|gemini|mock|none`, `minimax` still the
-default. The v0.8 content-keyed image cache, `video make --dry-run` impact
-table, and the `video visuals` contact sheet + `require_visual_approval` gate
-are untouched; the cache key simply lost its LoRA / ref-digest / style-anchor
-inputs, so **existing images regenerate once** on the next `make`.
-
-**What you can no longer do**
-
-LoRA style adapters, cross-scene image-to-image consistency (style anchor or
-Visual Bible refs), Pillow text overlays on generated images, and native
-1920×1080 scene output — hosted providers cap 16:9 at 1280×720, which the
-renderer upscales. The last one bites `video thumbnail`: the overlay that
-rendered CJK titles crisply was Pillow inside the deleted worker, so
-`youtube/thumbnail.*` must now be typed in YouTube Studio.
 
 ## v0.8.1 — minimax is the default image provider
 

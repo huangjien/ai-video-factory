@@ -86,12 +86,12 @@ export async function runAudioAsset(opts: AudioAssetOptions): Promise<number> {
     if (opts.bgmTag) {
       const r = await provider.pickBackgroundMusic({ tag: opts.bgmTag });
       const file = await writeAsset(projectRoot, "bgm", opts.bgmTag, r.bytes);
-      bgmOut = `${file} (${r.bytes.byteLength} bytes, ${r.durationSec}s, ${r.license})`;
+      bgmOut = `${file} (${r.bytes.byteLength} bytes, ${r.durationSec ?? "?"}s, ${r.license})`;
     }
     if (opts.sfxTag) {
       const r = await provider.pickSoundEffect({ tag: opts.sfxTag });
       const file = await writeAsset(projectRoot, "sfx", opts.sfxTag, r.bytes);
-      sfxOut = `${file} (${r.bytes.byteLength} bytes, ${r.durationSec}s, ${r.license})`;
+      sfxOut = `${file} (${r.bytes.byteLength} bytes, ${r.durationSec ?? "?"}s, ${r.license})`;
     }
   } catch (err) {
     console.error(

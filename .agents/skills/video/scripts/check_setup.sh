@@ -41,14 +41,17 @@ fi
 hdr "pnpm"
 if command -v pnpm >/dev/null 2>&1; then
     ver=$(pnpm --version)
-    # pnpm 12.5+ is required; print major.minor
-    if [[ "$ver" == 12.5* ]] || [[ "$ver" > "12.5" ]]; then
-        ok "pnpm $ver (>= 12.5 required)"
+    # Lexicographic compare let pnpm 9/10 pass the >= 12.5 check
+    # ('9' > '1' character-wise). Read the exact pinned version from
+    # packageManager and compare semver via sort -V.
+    required=$(node -e "const p=require('$REPO/package.json'); console.log((p.packageManager||'').match(/(\d+)\.(\d+)\.(\d+)/)?.[0]||'0.0.0')" 2>/dev/null)
+    if [ "$(printf '%s\n' "$required" "$ver" | sort -V | head -1)" = "$required" ]; then
+        ok "pnpm $ver (>= $required from packageManager)"
     else
-        warn "pnpm $ver — older than recommended 12.5+; some workspaces may misbehave"
+        fail "pnpm $ver — too old (need >= $required). Run: corepack enable"
     fi
 else
-    fail "pnpm not found. Install via corepack: corepack enable && corepack prepare pnpm@12.5.1 --activate"
+    fail "pnpm not found. Install via corepack: corepack enable"
 fi
 
 # ─── 3. FFmpeg + ffprobe ────────────────────────────────────────────────────

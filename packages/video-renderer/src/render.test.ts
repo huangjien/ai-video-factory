@@ -1,10 +1,10 @@
-import { mkdtempSync } from "node:fs";
+import { mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { execFileSync } from "node:child_process";
 import { describe, expect, it } from "vitest";
-import type { RenderPlan } from "@video/vdsl";
-import { renderPlanToVideo } from "./render.js";
+import { brandSchema, type RenderPlan } from "@video/vdsl";
+import { renderPlanToVideo, resolveImageSources } from "./render.js";
 
 const samplePlan: RenderPlan = {
   project: {
@@ -74,4 +74,64 @@ describe("renderPlanToVideo (todo 10)", () => {
     expect(s.r_frame_rate).toBe("30/1");
     expect(Math.abs(parseFloat(s.duration) - 7.0)).toBeLessThan(0.2);
   }, 120_000);
+});
+
+describe("resolveImageSources — missing assets warn, mimes are honest", () => {
+  const imageScene = (src: string): RenderPlan => ({
+    ...samplePlan,
+    scenes: [
+      {
+        ...samplePlan.scenes[0]!,
+        id: "scene-img",
+        component: "ImageBackground",
+        props: { src },
+      },
+    ],
+  });
+
+  it("warns and keeps the dark-background fallback when src is missing", async () => {
+    const warnings: string[] = [];
+    const resolved = await resolveImageSources(
+      imageScene("/nonexistent/bg.jpg"),
+      (m) => warnings.push(m),
+    );
+    expect(resolved.scenes[0]?.props.src).toBe("/nonexistent/bg.jpg");
+    expect(
+      warnings.some((m) => m.includes("scene-img") && m.includes("bg.jpg")),
+    ).toBe(true);
+  });
+
+  it("maps .webp/.avif to their real mime types", async () => {
+    const dir = mkdtempSync(path.join(tmpdir(), "video-imgsrc-"));
+    const cases = [
+      ["bg.webp", "image/webp"],
+      ["bg.avif", "image/avif"],
+    ] as const;
+    for (const [name, mime] of cases) {
+      const file = path.join(dir, name);
+      writeFileSync(file, "x");
+      const resolved = await resolveImageSources(imageScene(file));
+      expect(resolved.scenes[0]?.props.src).toMatch(
+        new RegExp(`^data:${mime};base64,`),
+      );
+    }
+  });
+
+  it("warns when the brand icon is missing (watermark skipped)", async () => {
+    const warnings: string[] = [];
+    const resolved = await resolveImageSources(
+      {
+        ...samplePlan,
+        style: {
+          theme: "dark-tech",
+          brand: brandSchema.parse({ icon: "/gone/logo.png" }),
+        },
+      },
+      (m) => warnings.push(m),
+    );
+    expect(resolved.style.brand?.icon).toBe("/gone/logo.png");
+    expect(
+      warnings.some((m) => m.includes("brand icon") && m.includes("logo.png")),
+    ).toBe(true);
+  });
 });

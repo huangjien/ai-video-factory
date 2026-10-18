@@ -103,20 +103,32 @@ scenes:
   });
 });
 
-describe("ttsCacheKey — provider namespacing", () => {
-  it("keeps the legacy hash byte-identical for the default (edge) provider", () => {
-    // Pinned 2026-10-18 from the pre-provider formula — every existing
-    // sidecar in shipped projects must stay a cache hit across the upgrade.
-    expect(ttsCacheKey("第一场的话。", "zh-CN-YunjianNeural", undefined)).toBe(
-      "sha256:9d64f9c054c99306e258b7636b6ea37095c835a6ca6d18d533389f868f88b652",
+describe("ttsCacheKey — provider + language namespacing", () => {
+  it("pins the post-language formula (edge, zh-CN)", () => {
+    // Pinned 2026-10-18 from the formula WITH language — cloned/custom
+    // voice ids don't encode locale the way Edge ids do, so language
+    // joined the key. This intentionally retired the pre-language pin:
+    // every sidecar written before re-synthesizes once (all Edge, free).
+    expect(
+      ttsCacheKey("第一场的话。", "zh-CN-YunjianNeural", undefined, "edge", "zh-CN"),
+    ).toBe(
+      "sha256:e53d9fd61977ad9830d02026c97552064242e3844a23c3f7b656627350b1edec",
     );
   });
 
-  it("differs per provider for the same voice/pause/narration", () => {
-    const edge = ttsCacheKey("n", "v", 0.3, "edge");
-    const voicebox = ttsCacheKey("n", "v", 0.3, "voicebox");
-    const fake = ttsCacheKey("n", "v", 0.3, "fake");
+  it("differs per provider for the same voice/language/narration", () => {
+    const edge = ttsCacheKey("n", "v", 0.3, "edge", "zh-CN");
+    const voicebox = ttsCacheKey("n", "v", 0.3, "voicebox", "zh-CN");
+    const fake = ttsCacheKey("n", "v", 0.3, "fake", "zh-CN");
     // Set: dynamic membership — three providers must hash to three keys.
     expect(new Set([edge, voicebox, fake]).size).toBe(3);
+  });
+
+  it("differs per language for the same custom voice id", () => {
+    // "narrator-zh" through a clone backend carries no locale in its id —
+    // zh-CN and en-US articles using it must not share cached audio.
+    expect(ttsCacheKey("n", "cloned-voice", 0.3, "voicebox", "zh-CN")).not.toBe(
+      ttsCacheKey("n", "cloned-voice", 0.3, "voicebox", "en-US"),
+    );
   });
 });

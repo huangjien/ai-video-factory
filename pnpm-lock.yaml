@@ -211,6 +211,9 @@ importers:
       '@video/llm':
         specifier: workspace:*
         version: link:../llm
+      '@video/media':
+        specifier: workspace:*
+        version: link:../media
       '@video/prompts':
         specifier: workspace:*
         version: link:../prompts
@@ -220,6 +223,9 @@ importers:
 
   packages/audio-mix:
     dependencies:
+      '@video/media':
+        specifier: workspace:*
+        version: link:../media
       yaml:
         specifier: ^2.7.0
         version: 2.9.1

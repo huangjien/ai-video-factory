@@ -73,7 +73,7 @@ describe("planBgmWindows", () => {
 });
 
 describe("buildBgmTimelineArgs", () => {
-  it("builds a looped, trimmed, crossfaded concat filtergraph", () => {
+  it("builds a looped, trimmed, real-acrossfade filtergraph", () => {
     const windows = planBgmWindows(
       [
         { track: "calm", until_sec: 18 },
@@ -89,11 +89,27 @@ describe("buildBgmTimelineArgs", () => {
     expect(args).toContain("/assets/calm.wav");
     expect(args).toContain("/assets/epic.wav");
     expect(filter).toContain("[0:a]aresample=44100");
-    expect(filter).toContain("atrim=duration=18.000");
-    expect(filter).toContain("afade=out:st=17.000:d=1");
-    expect(filter).toContain("afade=in:st=0:d=1");
-    expect(filter).toContain("concat=n=2:v=0:a=1[out]");
+    // Window 0 extends by the 1s crossfade (18+1); the last does not.
+    expect(filter).toContain("atrim=duration=19.000");
+    expect(filter).toContain("atrim=duration=22.000");
+    // One real crossfade at the boundary — NOT the old fade-out+fade-in
+    // pair that dipped both sides to silence.
+    expect(filter).toContain("acrossfade=d=1.000:c1=tri:c2=tri[out]");
+    expect(filter).not.toContain("afade");
+    expect(filter).not.toContain("concat=");
     expect(args[args.length - 1]).toBe("/out/tl.wav");
+  });
+
+  it("caps the crossfade at the shortest window", () => {
+    const windows = [
+      { path: "/a.wav", startSec: 0, endSec: 0.4 },
+      { path: "/b.wav", startSec: 0.4, endSec: 5 },
+    ];
+    const { filter } = buildBgmTimelineArgs(windows, "/out/t.wav", {
+      crossfadeSec: 1,
+    });
+    // acrossfade needs every input ≥ d, so a 0.4s window caps d at 0.4.
+    expect(filter).toContain("acrossfade=d=0.400");
   });
 });
 

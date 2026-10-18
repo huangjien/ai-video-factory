@@ -16,18 +16,32 @@ export function ttsCacheKey(
   voice: string,
   pauseSec: number | undefined,
   providerName = "edge",
+  language: string,
 ): string {
   // The provider must be part of the key: "narrator-zh" through Voicebox and
   // "zh-CN-YunjianNeural" through Edge are different audio, and a provider
   // switch with an unchanged (voice, pause, narration) triple would otherwise
   // silently replay the old bytes. "" for the historical default keeps every
-  // existing sidecar valid — re-hashing four shipped projects buys nothing.
-  // ("fake" gets its own namespace too, which also stops --fake runs from
-  // poisoning a later real run's cache — a pre-existing latent bug.)
+  // pre-provider sidecar valid — re-hashing four shipped projects buys
+  // nothing. ("fake" gets its own namespace too, which also stops --fake
+  // runs from poisoning a later real run's cache — a pre-existing latent
+  // bug.)
+  //
+  // language joins the key 2026-10-18: cloned/custom voice ids do NOT
+  // encode the language the way Edge ids do ("narrator-zh" is a name, not
+  // a locale), so the same voice id in a zh-CN and an en-US article must
+  // not share audio. This DOES invalidate every pre-existing sidecar once
+  // (all Edge, free to re-synthesize) — pinned in tts-cache.test.ts.
   const providerTag = providerName === "edge" ? "" : providerName;
-  const parts =
+  const langTag = language === "" ? "" : `${language}\u0000`;
+  const core =
     providerTag === ""
-      ? [voice, String(pauseSec ?? "-"), narration.trim()]
-      : [providerTag, voice, String(pauseSec ?? "-"), narration.trim()];
-  return "sha256:" + createHash("sha256").update(parts.join("\u0000")).digest("hex");
+      ? `${langTag}${voice}`
+      : `${providerTag}\u0000${langTag}${voice}`;
+  return (
+    "sha256:" +
+    createHash("sha256")
+      .update(`${core}\u0000${pauseSec ?? "-"}\u0000${narration.trim()}`)
+      .digest("hex")
+  );
 }

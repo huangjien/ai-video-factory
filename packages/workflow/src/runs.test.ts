@@ -6,7 +6,6 @@ import {
   formatRunId,
   lastSuccessfulStage,
   listRuns,
-  withRetry,
   writeRun,
   type RunRecord,
 } from "./runs.js";
@@ -46,40 +45,6 @@ describe("runs + retry + resume (todo 12) — §62.1 / §62.2", () => {
     expect(list[0]?.tool_version).toBe("5.7.0");
   });
 
-  it("withRetry: succeeds on the third attempt after two transient failures", async () => {
-    let calls = 0;
-    const fn = vi.fn(async () => {
-      calls += 1;
-      if (calls < 3) throw new Error("transient");
-      return "ok";
-    });
-    const result = await withRetry(fn, { sleeps: [10, 10, 10] });
-    expect(result).toBe("ok");
-    expect(calls).toBe(3);
-  });
-
-  it("withRetry: validation failures (non-retriable) never retry", async () => {
-    const fn = vi.fn(async () => {
-      throw new Error("validation failed");
-    });
-    await expect(
-      withRetry(fn, {
-        sleeps: [10, 10, 10],
-        isRetriable: (err) => !String(err).includes("validation"),
-      }),
-    ).rejects.toThrow("validation failed");
-    expect(fn).toHaveBeenCalledTimes(1);
-  });
-
-  it("withRetry: 4 transient failures exhaust and throw the last error", async () => {
-    const fn = vi.fn(async () => {
-      throw new Error("boom");
-    });
-    await expect(withRetry(fn, { sleeps: [10, 10, 10] })).rejects.toThrow(
-      "boom",
-    );
-    expect(fn).toHaveBeenCalledTimes(4); // initial + 3 retries
-  });
 
   it("lastSuccessfulStage returns the most recent succeeded stage", async () => {
     const root = tmpRoot();

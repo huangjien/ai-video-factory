@@ -1,34 +1,13 @@
 #!/usr/bin/env bash
-# /video — thin wrapper around the video CLI (doc §58 "Pi Extension").
 # Maps `video <verb> [args...]` to `node packages/cli/dist/index.js <verb> [args...]`.
-# Use from OpenCode/Pi agents, shell, or Makefile. Errors propagate via exit code.
+# A fresh clone won't have packages/cli/dist/ until you run `pnpm build` —
+# fail with the actual fix instead of Node's raw module-not-found stack.
+
 set -euo pipefail
 
-if [[ "${1:-}" == "" || "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
-  cat <<'USAGE'
-video — AI Video Factory CLI wrapper
-
-Usage:  video <verb> [args...]
-
-Example:
-  video new "demo"
-  video research "AI 思维链"
-  video script "AI 思维链" --from-research projects/ai-思维链/research
-  video storyboard "AI 思维链" --from-research ...
-  video audio "AI 思维链"
-  video review "AI 思维链"
-  video preview --cwd projects/demo
-  video status --cwd projects/demo
-  video approve review --cwd projects/demo
-  video final --cwd projects/demo
-
-Combined shortcuts (run several stages in one shot):
-  video draft "AI 思维链"          # research + script + storyboard + audio-plan
-  video make  "AI 思维链"          # render the final 1080p MP4
-
-All arguments are forwarded to the `video` CLI under the hood.
-USAGE
-  exit 0
+entry="$(cd "$(dirname "$(realpath "$0")")/.." && pwd)/packages/cli/dist/index.js"
+if [[ ! -f "$entry" ]]; then
+    echo "not built — run: pnpm build" >&2
+    exit 1
 fi
-
-exec node "$(cd "$(dirname "$(realpath "$0")")/.." && pwd)/packages/cli/dist/index.js" "$@"
+exec node "$entry" "$@"

@@ -64,32 +64,6 @@ export async function listRuns(projectRoot: string): Promise<RunRecord[]> {
   }
 }
 
-/** Retry policy per §62.1: validation failures are NEVER retried
- * (line 2221); transient (process/network) up to 3 attempts with backoff. */
-export async function withRetry<T>(
-  fn: () => Promise<T>,
-  opts: { isRetriable?: (err: unknown) => boolean; sleeps?: number[] } = {},
-): Promise<T> {
-  const sleeps = opts.sleeps ?? [1000, 2000, 4000];
-  let attempt = 0;
-  let lastErr: unknown;
-  while (attempt <= sleeps.length) {
-    try {
-      return await fn();
-    } catch (err) {
-      lastErr = err;
-      const retriable = opts.isRetriable ?? (() => true);
-      if (!retriable(err)) throw err;
-      if (attempt === sleeps.length) break;
-      const ms = sleeps[attempt];
-      if (ms === undefined) break;
-      await new Promise((r) => setTimeout(r, ms));
-      attempt += 1;
-    }
-  }
-  throw lastErr instanceof Error ? lastErr : new Error(String(lastErr));
-}
-
 /** Resume: re-runs from the last successful run's stage; never restarts
  * a project from scratch. (§62.1 line 2224). Returns the free-form stage
  * label (any string) — callers decide whether the value is a known

@@ -1,6 +1,6 @@
 {
   "name": "video-agent",
-  "version": "0.1.0",
+  "version": "0.9.1",
   "private": true,
   "type": "module",
   "description": "AI Video Factory \u2014 structured-content-to-video production system (v0.1)",
@@ -13,7 +13,7 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "test": "vitest run --coverage",
+    "test": "vitest run",
     "publish:packages:dry-run": "pnpm run build && pnpm publish --filter \"./packages/*\" --access public --dry-run",
     "publish:packages": "pnpm run build && pnpm publish --filter \"./packages/*\" --access public",
     "benchmark:verify": "node scripts/benchmark-verify.mjs",

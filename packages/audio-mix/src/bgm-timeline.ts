@@ -87,10 +87,14 @@ export interface TimelineFilterOptions {
   sampleRate?: number;
 }
 
-/** Build the ffmpeg invocation that concatenates the windows into one
- * wav: each source is looped (short generated beds), trimmed to its
- * window, edge-faded, then concat'ed. Pure string building — unit-tested
- * without ffmpeg. */
+/** Build the ffmpeg invocation that merges the windows into one wav.
+ * Interior boundaries use REAL crossfades (`acrossfade`, overlapping
+ * equal-power triangles) — the previous per-window fade-out+fade-in
+ * pairs both dipped to silence at every boundary and butt-joined with
+ * `concat`, an audible dropout the module doc had already promised
+ * away. Global start/end stay dry (no fade-in/out at the very edges),
+ * preserving the original envelope semantics. Pure string building —
+ * unit-tested without ffmpeg. */
 export function buildBgmTimelineArgs(
   windows: BgmWindow[],
   outPath: string,
@@ -99,33 +103,42 @@ export function buildBgmTimelineArgs(
   if (windows.length === 0) {
     throw new BgmTimelineError("no bgm windows to render");
   }
-  const xf = Math.max(0, opts.crossfadeSec ?? 1);
   const sr = opts.sampleRate ?? 44100;
+  const durs = windows.map((w) => w.endSec - w.startSec);
+  // acrossfade requires every participating input ≥ d, so the shortest
+  // window caps the crossfade (and a degenerate 0 collapses to concat).
+  const xfd =
+    windows.length > 1
+      ? Math.min(Math.max(0, opts.crossfadeSec ?? 1), ...durs)
+      : 0;
   const args: string[] = ["-y"];
   const chains: string[] = [];
-  const labels: string[] = [];
   windows.forEach((w, i) => {
-    const dur = w.endSec - w.startSec;
     // -stream_loop before -i: a bed shorter than its window repeats.
     args.push("-stream_loop", "-1", "-i", w.path);
-    const fadeIn = i === 0 ? 0 : xf;
-    const fadeOut = i === windows.length - 1 ? 0 : xf;
-    const parts = [
-      `aresample=${sr}`,
-      "aformat=sample_fmts=fltp:channel_layouts=stereo",
-      `atrim=duration=${dur.toFixed(3)}`,
-    ];
-    if (fadeIn > 0 && dur > fadeIn) parts.push(`afade=in:st=0:d=${fadeIn}`);
-    if (fadeOut > 0 && dur > fadeOut) {
-      parts.push(`afade=out:st=${(dur - fadeOut).toFixed(3)}:d=${fadeOut}`);
-    }
-    // apad guarantees the exact window length even if the source is short
-    // and stream_loop off-by-ones — concat needs identical-length inputs.
-    parts.push(`apad=whole_dur=${dur.toFixed(3)}`);
-    chains.push(`[${i}:a]${parts.join(",")}[as${i}]`);
-    labels.push(`[as${i}]`);
+    // Interior windows extend by the crossfade so the overlap has
+    // material to blend into (the fade eats exactly xfd of the join,
+    // keeping the total at sum(durs)). apad guarantees the exact length
+    // even when stream_loop off-by-ones.
+    const len = durs[i]! + (i < windows.length - 1 ? xfd : 0);
+    chains.push(
+      `[${i}:a]aresample=${sr},aformat=sample_fmts=fltp:channel_layouts=stereo,atrim=duration=${len.toFixed(3)},apad=whole_dur=${len.toFixed(3)}[as${i}]`,
+    );
   });
-  chains.push(`${labels.join("")}concat=n=${windows.length}:v=0:a=1[out]`);
+  if (windows.length === 1) {
+    chains.push("[as0]anull[out]");
+  } else if (xfd <= 0) {
+    chains.push(
+      `${windows.map((_, i) => `[as${i}]`).join("")}concat=n=${windows.length}:v=0:a=1[out]`,
+    );
+  } else {
+    let label = "[as0]";
+    for (let i = 1; i < windows.length; i++) {
+      const out = i === windows.length - 1 ? "[out]" : `[xf${i}]`;
+      chains.push(`${label}[as${i}]acrossfade=d=${xfd.toFixed(3)}:c1=tri:c2=tri${out}`);
+      label = out;
+    }
+  }
   const filter = chains.join(";");
   args.push("-filter_complex", filter, "-map", "[out]", outPath);
   return { args, filter };

@@ -2,7 +2,9 @@ import type { Theme } from "../theme.js";
 import { darkTechTheme } from "../theme.js";
 import {
   CAPTION_FONT_RATIO,
+  captionContainerStyle,
   captionFontSize,
+  captionLineStyle,
   captionTextStyle,
 } from "../captionStyle.js";
 
@@ -25,11 +27,8 @@ export interface CaptionsOverlayProps {
  * treatment shared with `ImageBackground`.
  */
 
-/** Distance from the bottom edge, as a fraction of frame height. */
-const BOTTOM_RATIO = 0.055;
-
-/** Widest a single caption line may run, as a fraction of frame width. */
-const MAX_WIDTH_RATIO = 0.86;
+/** Band geometry (bottom offset, max width, padding) lives in
+ * `captionStyle.ts` — shared with `ImageBackground`'s own caption. */
 
 export const CaptionsOverlay = ({
   lines,
@@ -39,30 +38,13 @@ export const CaptionsOverlay = ({
 }: CaptionsOverlayProps) => {
   if (lines.length === 0) return null;
   const fontSize = captionFontSize(height);
-  const bottom = Math.round(height * BOTTOM_RATIO);
   return (
-    <div
-      style={{
-        position: "absolute",
-        left: 0,
-        right: 0,
-        bottom,
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        gap: Math.round(fontSize * 0.3),
-        pointerEvents: "none",
-      }}
-    >
+    <div style={captionContainerStyle(height)}>
       {lines.map((line, i) => (
         <div
           key={`${i}-${line.slice(0, 8)}`}
           style={{
-            maxWidth: Math.round(width * MAX_WIDTH_RATIO),
-            // Padding is inset only to give the outline room to render —
-            // there is no plate behind it.
-            padding: `${Math.round(fontSize * 0.1)}px ${Math.round(fontSize * 0.25)}px`,
-            textAlign: "center",
+            ...captionLineStyle(width, height),
             ...captionTextStyle(theme, fontSize),
           }}
         >

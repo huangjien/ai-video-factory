@@ -1,5 +1,6 @@
 export { wrapText } from "./captions.js";
-export { probeAudioDuration } from "./probe.js";
+export { probeAudioDuration, probeAudioDurationOrNull } from "./probe.js";
+export { mp3ToWav } from "./convert.js";
 export {
   readSceneTimings,
   syncSceneDurations,

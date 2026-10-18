@@ -52,7 +52,11 @@ describe("buildBanner", () => {
     for (const verb of ADVANCED_VERBS) {
       expect(banner).toContain(verb);
     }
-    expect(banner).toContain("not part of the recommended path");
+    // The banner wraps at 78 cols and the closing phrase can split across
+    // lines — compare on whitespace-normalized text.
+    expect(banner.replace(/\s+/g, " ")).toContain(
+      "not part of the recommended path",
+    );
   });
 
   it("keeps every line within a terminal-friendly width", () => {

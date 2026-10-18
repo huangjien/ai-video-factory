@@ -82,3 +82,57 @@ describe("sceneCacheIsFresh — project-level render inputs invalidate the cache
     ).toBe(false);
   });
 });
+
+describe("sceneCacheIsFresh — compiled caption lines invalidate the cache", () => {
+  const HASH_C = "sha256:" + "c".repeat(64);
+
+  it("is stale when the compiled caption lines changed (wrapText move)", () => {
+    expect(
+      sceneCacheIsFresh(
+        current({ sceneHash: HASH_A, projectHash: HASH_B, renderedAt: "t" }),
+        HASH_A,
+        HASH_B,
+        null,
+        0,
+        RENDERER_REVISION,
+        HASH_C,
+      ),
+    ).toBe(false);
+  });
+
+  it("is fresh when the caption hash matches", () => {
+    expect(
+      sceneCacheIsFresh(
+        current({
+          sceneHash: HASH_A,
+          projectHash: HASH_B,
+          captionsHash: HASH_C,
+          renderedAt: "t",
+        }),
+        HASH_A,
+        HASH_B,
+        null,
+        0,
+        RENDERER_REVISION,
+        HASH_C,
+      ),
+    ).toBe(true);
+  });
+
+  it("skips the caption term when the caller has no compiled plan (dry-run)", () => {
+    expect(
+      sceneCacheIsFresh(
+        current({
+          sceneHash: HASH_A,
+          projectHash: HASH_B,
+          captionsHash: HASH_C,
+          renderedAt: "t",
+        }),
+        HASH_A,
+        HASH_B,
+        null,
+        0,
+      ),
+    ).toBe(true);
+  });
+});

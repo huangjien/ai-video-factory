@@ -94,8 +94,12 @@ export async function runStatus(
       if (errors > 0) {
         console.log(`  run \`video qa <project>\` to inspect, or \`video final --force\` to override`);
       }
-    } catch {
-      // Corrupt report — leave it; the user can re-run video qa.
+    } catch (err) {
+      // A corrupt report used to print NOTHING — while `video final` still
+      // gates on this same file. Name the problem and the fix instead.
+      console.log(
+        `QA: ⚠ report unreadable (${(err as Error).message.slice(0, 80)}) — run \`video qa ${path.basename(root)}\``,
+      );
     }
   }
   return 0;

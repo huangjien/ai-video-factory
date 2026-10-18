@@ -1,10 +1,7 @@
-import { execFile } from "node:child_process";
-import { promisify } from "node:util";
 import { existsSync, readdirSync } from "node:fs";
 import path from "node:path";
+import { probeAudioDurationOrNull } from "@video/media";
 import { AudioAssetError } from "./schemas.js";
-
-const execFileAsync = promisify(execFile);
 
 /** A single entry in the curated local BGM library. */
 export interface LocalBgmEntry {
@@ -38,6 +35,11 @@ export function loadLocalBgmLibrary(directory: string): LocalBgmEntry[] {
   const tags = new Set<string>();
   const out: LocalBgmEntry[] = [];
   for (const file of readdirSync(directory).sort()) {
+    // `*.silent.wav` are the placeholders `video make` writes for
+    // unresolvable tags — never legitimate library audio. Skipping them
+    // here AND in the resolver is what keeps a one-time miss from
+    // permanently shadowing the real library lookup.
+    if (file.endsWith(".silent.wav")) continue;
     const ext = path.extname(file).toLowerCase();
     if (ext !== ".wav" && ext !== ".mp3" && ext !== ".m4a") continue;
     const tag = file.slice(0, -ext.length);
@@ -62,7 +64,7 @@ export async function probeLibrary(
 ): Promise<LocalBgmEntry[]> {
   const results = await Promise.all(
     entries.map((e) =>
-      probeDurationSec(e.path).then(
+      probeAudioDurationOrNull(e.path).then(
         (d) => ({ e, d }),
         () => ({ e, d: null }),
       ),
@@ -71,25 +73,6 @@ export async function probeLibrary(
   return results.map(({ e, d }) => ({ ...e, durationSec: d }));
 }
 
-async function probeDurationSec(filePath: string): Promise<number | null> {
-  try {
-    const { stdout } = await execFileAsync("ffprobe", [
-      "-v",
-      "error",
-      "-select_streams",
-      "a:0",
-      "-show_entries",
-      "stream=duration",
-      "-of",
-      "csv=p=0",
-      filePath,
-    ]);
-    const seconds = parseFloat(stdout.trim());
-    return Number.isFinite(seconds) && seconds > 0 ? seconds : null;
-  } catch {
-    return null;
-  }
-}
 
 /** Locator attempts, in priority order, when resolving a tag to a real
  *  audio file. First hit wins. Each attempt is the absolute directory
@@ -177,6 +160,7 @@ function pickFuzzy(dir: string, tag: string): string | null {
   const entries = readdirSync(dir)
     .filter((f) => {
       const lc = f.toLowerCase();
+      if (lc.endsWith(".silent.wav")) return false; // make's placeholder
       if (!(lc.endsWith(".wav") || lc.endsWith(".mp3") || lc.endsWith(".m4a"))) {
         return false;
       }

@@ -75,12 +75,11 @@ export function transition(
     input_commit: undefined,
     output_commit: undefined,
   };
-  const nextState: MachineState =
-    action.kind === "rollback"
-      ? { status: next, stage: previousStage(state.stage) }
-      : next === "FINAL_APPROVED"
-        ? { status: next, stage: state.stage }
-        : { status: next, stage: advanceStage(state, next) };
+  // The stage cursor is caller-owned: commands.ts sets it explicitly on
+  // reset/rollback. These two branches used to call advanceStage() /
+  // previousStage() — both were identity no-ops that only made the
+  // machine look like it managed the cursor.
+  const nextState: MachineState = { status: next, stage: state.stage };
   return { state: nextState, record };
 }
 
@@ -142,13 +141,3 @@ function actionReason(action: Action): string {
   return action.kind;
 }
 
-function advanceStage(state: MachineState, next: WorkflowStatus): Stage {
-  // When we transition into DRAFT, advance the stage cursor.
-  if (next === "DRAFT") return state.stage;
-  return state.stage;
-}
-
-function previousStage(stage: Stage): Stage {
-  // Approximation: rollback just resets to the same stage (caller rewinds via target).
-  return stage;
-}

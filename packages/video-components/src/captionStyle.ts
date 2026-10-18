@@ -1,3 +1,4 @@
+import type { CSSProperties } from "react";
 import type { Theme } from "./theme.js";
 
 /**
@@ -54,6 +55,44 @@ export function captionHalo(ink: string): string {
     `0 2px 5px ${soft}`,
     `0 0 14px ${soft}`,
   ].join(", ");
+}
+
+/** Distance from the bottom edge, as a fraction of frame height. */
+export const CAPTION_BOTTOM_RATIO = 0.055;
+
+/** Widest a single caption line may run, as a fraction of frame width. */
+export const CAPTION_MAX_WIDTH_RATIO = 0.86;
+
+/** The bottom caption band's container geometry, as ratios of the frame —
+ * the single source for both caption draw paths (the `CaptionsOverlay`
+ * track and `ImageBackground`'s convenience caption), so the two can never
+ * drift into different bands on the same frame. */
+export function captionContainerStyle(height: number): CSSProperties {
+  return {
+    position: "absolute" as const,
+    left: 0,
+    right: 0,
+    bottom: Math.round(height * CAPTION_BOTTOM_RATIO),
+    display: "flex",
+    flexDirection: "column" as const,
+    alignItems: "center",
+    gap: Math.round(captionFontSize(height) * 0.3),
+    pointerEvents: "none",
+  };
+}
+
+/** Per-line box: max-width as a fraction of frame width, padding inset
+ * only so the outline has room to render (there is no plate). */
+export function captionLineStyle(
+  width: number,
+  height: number,
+): CSSProperties {
+  const fontSize = captionFontSize(height);
+  return {
+    maxWidth: Math.round(width * CAPTION_MAX_WIDTH_RATIO),
+    padding: `${Math.round(fontSize * 0.1)}px ${Math.round(fontSize * 0.25)}px`,
+    textAlign: "center" as const,
+  };
 }
 
 /** Caption type in px for a given frame height. */

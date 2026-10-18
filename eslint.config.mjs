@@ -4,11 +4,13 @@ import globals from "globals";
 
 /**
  * Base ESLint config. We previously used `typescript-eslint` for type-aware
- * linting, but `typescript-eslint@8.70.x` does not yet support TypeScript
- * 7.x (see typescript-eslint/typescript-eslint#10940). This config trades
+ * linting, but `typescript-eslint@8.71.x` still caps its peer dep at
+ * `typescript <6.1.0` (TS 7 unsupported — see
+ * typescript-eslint/typescript-eslint#10940). This config trades
  * type-aware rules for the base JS ruleset so `pnpm run lint` runs on TS 7
- * without waiting for upstream. Re-introduce `typescript-eslint` once it
- * supports TS 7.
+ * without waiting for upstream. The decision and trigger conditions
+ * (re-evaluate 2026-12-31) are in docs/roadmap/typescript-eslint-ts7.md —
+ * re-introduce `typescript-eslint` per that plan once it supports TS 7.
  */
 export default [
   {

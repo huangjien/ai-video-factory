@@ -103,7 +103,7 @@ export function registerMake(program: Command): void {
     .command("make")
     .argument(
       "<project>",
-      "project: topic, folder name, path, or unique prefix (defaults to cwd-discovered single project)",
+      "project: topic, folder name, path, or unique prefix (required)",
     )
     .option("--cwd <dir>", "base directory for the project")
     .option(

@@ -1,7 +1,12 @@
 import type { FC } from "react";
 import { AbsoluteFill } from "remotion";
 import { darkTechTheme, type Theme } from "../theme.js";
-import { captionFontSize, captionTextStyle } from "../captionStyle.js";
+import {
+  captionContainerStyle,
+  captionFontSize,
+  captionLineStyle,
+  captionTextStyle,
+} from "../captionStyle.js";
 
 export interface ImageBackgroundProps {
   theme?: Theme;
@@ -25,6 +30,9 @@ export interface ImageBackgroundProps {
   /** Frame height, used to scale the caption. Defaults to the 1080p
    *  target; the renderer passes the real composition height. */
   height?: number | undefined;
+  /** Frame width, used to scale the caption's max-width. The renderer
+   *  passes the real composition width. */
+  width?: number | undefined;
   startFrame: number;
   durationInFrames: number;
   frame: number;
@@ -45,9 +53,11 @@ export const ImageBackground: FC<ImageBackgroundProps> = ({
   fit = "cover",
   kenBurnsScale = 0.08,
   caption,
+  width = 1920,
   height = 1080,
-  frame,
+  startFrame,
   durationInFrames,
+  frame,
 }) => {
   const t = durationInFrames > 0 ? frame / durationInFrames : 0;
   const eased = easeInOut(t);
@@ -85,19 +95,17 @@ export const ImageBackground: FC<ImageBackgroundProps> = ({
       {caption !== undefined && caption.length > 0 ? (
         <div
           style={{
-            position: "absolute",
-            left: 0,
-            right: 0,
-            bottom: 80,
-            padding: "0 80px",
-            textAlign: "center",
+            ...captionContainerStyle(height),
+            // Fade-in only — geometry and type come from the shared
+            // captionStyle.ts so this band can never drift from the
+            // CaptionsOverlay track.
             opacity: 0.6 + 0.4 * eased,
           }}
         >
           <p
             style={{
+              ...captionLineStyle(width, height),
               ...captionTextStyle(theme, captionFontSize(height)),
-              fontFamily: theme.typography.title.fontFamily,
               margin: 0,
             }}
           >

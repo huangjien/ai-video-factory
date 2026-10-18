@@ -140,6 +140,7 @@ describe("extractYaml", () => {
 
 describe("callBilibili degradation", () => {
   const boom: Provider = {
+    name: "boom",
     async chat() {
       throw new Error("provider is down");
     },
@@ -153,8 +154,12 @@ describe("callBilibili degradation", () => {
   });
 
   const malformed: Provider = {
+    name: "malformed",
     async chat() {
-      return { content: "sorry, I cannot help with that" };
+      return {
+        content: "sorry, I cannot help with that",
+        usage: { input: 0, output: 0 },
+      };
     },
   };
 
@@ -165,9 +170,11 @@ describe("callBilibili degradation", () => {
   });
 
   const oversize: Provider = {
+    name: "oversize",
     async chat() {
       return {
         content: `title: "${"长".repeat(BILIBILI_TITLE_MAX + 20)}"\ntags: []\ndescription: d\nsuggested_category: null\ncover_prompt: c`,
+        usage: { input: 0, output: 0 },
       };
     },
   };
@@ -182,6 +189,7 @@ describe("callBilibili degradation", () => {
   });
 
   const good: Provider = {
+    name: "good",
     async chat() {
       return {
         content: [
@@ -193,6 +201,7 @@ describe("callBilibili degradation", () => {
           'cover_prompt: "a brass machine on a dark desk · medium shot"',
           "```",
         ].join("\n"),
+        usage: { input: 0, output: 0 },
       };
     },
   };

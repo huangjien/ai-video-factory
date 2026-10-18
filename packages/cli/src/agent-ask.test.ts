@@ -236,10 +236,14 @@ describe("DRAFT_QUESTIONS", () => {
   // every option pointed at a track that did not exist.
   it("bgm choices are library tags + none", () => {
     const bgm = DRAFT_QUESTIONS.find((q) => q.id === "bgm") as AskQuestion;
+    // Shortlist of three mood-distinct tags plus `none`. The actual
+    // roster is `BGM_DEFAULT_TAG` (light-gravity) plus two contrasting
+    // tracks from `assets/bgm/`. When the catalogue grows or shrinks
+    // this test enforces that BGM_SHORTLIST picks only real tags.
     expect(bgm.choices?.map((c) => c.value)).toEqual([
-      "upbeat-your-love",
       "light-gravity",
       "classical-gymnopedie-no-3",
+      "rock-not-the-only-one",
       "none",
     ]);
   });
@@ -319,7 +323,7 @@ describe("questionsFor", () => {
         imageStyle: "flat-vector",
         imageProvider: "minimax",
         style: "paper-light",
-        bgm: "upbeat-your-love",
+        bgm: "light-gravity",
       }),
     ).toEqual([]);
   });
@@ -472,7 +476,8 @@ describe("emitQuestionsDoc", () => {
       image_style: "flat-vector",
       image_provider: "minimax",
       style: "paper-light",
-      bgm: "upbeat-your-love",
+      bgm: "light-gravity",
+      tts: "minimax-system",
     });
   });
 
@@ -498,7 +503,8 @@ describe("emitQuestionsDoc", () => {
       image_style: "flat-vector",
       image_provider: "openai",
       style: "paper-light",
-      bgm: "upbeat-your-love",
+      bgm: "light-gravity",
+      tts: "minimax-system",
     });
   });
 

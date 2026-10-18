@@ -184,10 +184,6 @@ exports[`emitQuestionsDoc > emits the full video-ask/1 envelope (snapshot) 1`] =
     {
       "choices": [
         {
-          "note": "Your Love — Forward-moving tech explainers and 'the paradigm is changing' narratives",
-          "value": "upbeat-your-love",
-        },
-        {
           "note": "Gravity — Default choice for light, breezy technical explainers - loud master keeps it audible under narration.",
           "value": "light-gravity",
         },
@@ -196,27 +192,32 @@ exports[`emitQuestionsDoc > emits the full video-ask/1 envelope (snapshot) 1`] =
           "value": "classical-gymnopedie-no-3",
         },
         {
+          "note": "Not the Only One — Guitar-driven pieces needing forward momentum and emotional lift.",
+          "value": "rock-not-the-only-one",
+        },
+        {
           "note": "no BGM (bgm: null)",
           "value": "none",
         },
       ],
-      "default": "upbeat-your-love",
+      "default": "light-gravity",
       "flag": "--bgm",
       "id": "bgm",
       "question": "Background music track?",
-      "recommended": "upbeat-your-love",
+      "recommended": "light-gravity",
       "type": "choice",
       "why": "picked from the local library in assets/bgm/ — no generation cost, but the wrong mood still re-renders every scene",
     },
   ],
   "resolved": {
     "audience": "developers",
-    "bgm": "upbeat-your-love",
+    "bgm": "light-gravity",
     "duration": 180,
     "image_provider": "minimax",
     "image_style": "flat-vector",
     "lang": "zh-CN",
     "style": "paper-light",
+    "tts": "minimax-system",
   },
 }
 `;

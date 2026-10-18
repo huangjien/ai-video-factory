@@ -27,7 +27,8 @@ import {
 } from "@video/audio-plan";
 import { resolveProjectDir } from "./project-path.js";
 import { withProgress } from "./ui.js";
-import { maybeAgentAsk } from "./agent-ask.js";
+import { maybeAgentAsk, resolveAskTrigger, detectAgentEnv, type AskCtx } from "./agent-ask.js";
+import { voiceboxStatus, parseTtsChoice } from "@video/tts";
 
 export interface DraftOptions {
   topic: string;
@@ -68,6 +69,12 @@ export interface DraftOptions {
    *  | openai | gemini | mock | none. Also a video-ask/1 knob: passing
    *  it explicitly marks the image_provider question as specified. */
   imageProvider?: string;
+  /** Narration backend — written into article.md frontmatter
+   *  (`tts_provider:` + `voice:`) so `video make` picks it up.
+   *  voicebox:<profile> | minimax-system | edge. Also a video-ask/1
+   *  knob (conditional: only offered when the local voicebox server
+   *  answers with cloned profiles). */
+  tts?: string;
   /** v0.7 (video-ask/1): force the agent-ask gate — emit the
    *  video-ask/1 question envelope and exit 2 even when no agent
    *  harness is detected. See docs/v0.7-agent-ask-protocol-plan.md §4. */
@@ -262,14 +269,24 @@ export async function runDraft(opts: DraftOptions): Promise<number> {
   // v0.7 (video-ask/1): the ask gate sits before provider config /
   // project resolution / web search, so the exit-2 path constructs no
   // provider and writes no file (spec §4). null = run normally.
-  const askExit = await maybeAgentAsk(opts, process.argv);
+  // The tts question is conditional on a healthy local voicebox — probe
+  // here (the ask module stays I/O-free). Humans never pay the probe:
+  // it only runs when the gate could actually ask.
+  let askCtx: AskCtx | undefined;
+  const askTrigger = resolveAskTrigger(opts);
+  if (askTrigger.mode !== "off" && (askTrigger.mode === "force" || detectAgentEnv())) {
+    const status = await voiceboxStatus();
+    if (status.healthy && status.profiles.length > 0) {
+      askCtx = { voiceboxProfiles: status.profiles };
+    }
+  }
+  const askExit = await maybeAgentAsk(opts, process.argv, askCtx);
   if (askExit !== null) {
     // No process.exitCode here: callers get the code from the return
     // value (the commander action assigns it; a sticky write here would
     // leak the exit code into unrelated library callers' processes).
     return askExit;
   }
-
   const resolvedProject = resolveProjectDir(opts.topic, opts.cwd);
   if (!resolvedProject.ok) {
     console.error(resolvedProject.message);
@@ -418,6 +435,16 @@ export async function runDraft(opts: DraftOptions): Promise<number> {
       opts.imageProvider,
     );
   }
+  // Same contract as image_provider: the narration backend is durable
+  // project config (tts_provider + voice), and --tts / the video-ask
+  // answer is the explicit value that always wins.
+  if (opts.tts !== undefined) {
+    const { ttsProvider, voice } = parseTtsChoice(opts.tts, language);
+    stamped = stampFrontmatterKey(stamped, "tts_provider", ttsProvider);
+    if (voice !== undefined) {
+      stamped = stampFrontmatterKey(stamped, "voice", voice);
+    }
+  }
   await writeFile(articlePath, stamped, "utf8");
 
   let parsedArticle: ParsedArticle | null = null;
@@ -540,6 +567,7 @@ export interface DraftCliOpts {
   audioPlan?: boolean;
   imageStyle?: string;
   imageProvider?: string;
+  tts?: string;
   style?: string;
   captions?: boolean;
   review?: boolean;
@@ -571,6 +599,7 @@ export function draftCliOptsToDraftOptions(
     ...(opts.imageProvider !== undefined
       ? { imageProvider: opts.imageProvider }
       : {}),
+    ...(opts.tts !== undefined ? { tts: opts.tts } : {}),
     ...(opts.style !== undefined ? { style: opts.style } : {}),
     noCaptions: opts.captions === false,
     noReview: opts.review === false,
@@ -598,6 +627,10 @@ export function registerDraft(program: Command): void {
     .option("--model <provider>", "model provider: minimax|glm (default: glm)")
     .option("--no-web", "disable MiniMax web search (use LLM knowledge only)")
     .option("--lang <lang>", "language: zh-CN|en-US (default zh-CN)")
+    .option(
+      "--tts <choice>",
+      "narration backend stamped into article.md: voicebox:<profile> | minimax-system | edge (voice-ask knob; offered automatically when the local voicebox server is up)",
+    )
     .option(
       "--duration <seconds>",
       "total duration target in seconds (default: 180)",

@@ -1,5 +1,10 @@
 import type { ChatMessage } from "@video/llm";
-import { fillPrompt, loadPrompt, renderBgmCatalogue } from "@video/prompts";
+import {
+  fillPrompt,
+  loadPrompt,
+  loadAndValidateBgmCatalogue,
+  renderBgmCatalogue,
+} from "@video/prompts";
 import type { ParsedArticle } from "@video/draft";
 
 export interface AudioPlanInput {
@@ -12,9 +17,11 @@ export interface AudioPlanInput {
 /** Body lives in `packages/prompts/prompts/audio-plan.md` — edit it there.
  *  `{{BGM_CATALOGUE}}` is filled from `music.json`, which indexes the real
  *  files in `assets/bgm/`; the planner must choose a tag from it rather
- *  than invent one, because no music is generated any more. */
+ *  than invent one, because no music is generated any more. The
+ *  catalogue is loaded through `loadAndValidateBgmCatalogue` so a
+ *  missing file surfaces here at module-init time, not at mix time. */
 export const SYSTEM_PROMPT = fillPrompt(loadPrompt("audio-plan"), {
-  BGM_CATALOGUE: renderBgmCatalogue(),
+  BGM_CATALOGUE: renderBgmCatalogue(loadAndValidateBgmCatalogue().catalogue),
 });
 
 export function buildMessages(input: AudioPlanInput): ChatMessage[] {

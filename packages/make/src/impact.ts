@@ -155,22 +155,34 @@ export function computeMakeImpact(
   const audioCfgText = readTextSafe(
     path.join(projectRoot, "audio-config.yaml"),
   );
-  let voice: string | undefined;
   let pauseSec: number | undefined;
   if (audioCfgText !== null) {
     try {
       const cfg = parseYaml(audioCfgText) as {
-        voice?: string;
         pause_between_sentences_sec?: number;
       };
-      voice = cfg.voice;
       pauseSec = cfg.pause_between_sentences_sec;
     } catch {
       warnings.push("audio-config.yaml unreadable — TTS impact approximate");
     }
   }
+  // Same resolution order as runTts: frontmatter.voice, else the language
+  // default. (This used to read audio-config.yaml's `voice:`, which make
+  // ignores on the synthesis path — the table lied whenever the two files
+  // disagreed.)
   const effectiveVoice =
-    voice ?? (article.frontmatter.language === "en-US" ? EN_VOICE : ZH_VOICE);
+    article.frontmatter.voice ||
+    (article.frontmatter.language === "en-US" ? EN_VOICE : ZH_VOICE);
+  // --fake runs synthesize under the "fake" provider namespace; the impact
+  // report has no fake flag, so it can over-report resynthesis there.
+  // Names mirror the providers' `name` fields (MinimaxTTSProvider is
+  // "minimax-tts"), since that is what runTts feeds ttsCacheKey.
+  const effectiveTtsProvider =
+    article.frontmatter.tts_provider === "voicebox"
+      ? "voicebox"
+      : article.frontmatter.tts_provider === "minimax"
+        ? "minimax-tts"
+        : "edge";
   article.scenes.forEach((scene) => {
     const idNum = scene.id.replace(/^scene[-_]?/, "");
     const wav = path.join(audioDir, `scene_${idNum}.wav`);
@@ -179,7 +191,12 @@ export function computeMakeImpact(
       return;
     }
     const meta = readTextSafe(`${wav}.json`);
-    const key = ttsCacheKey(scene.narration, effectiveVoice, pauseSec);
+    const key = ttsCacheKey(
+      scene.narration,
+      effectiveVoice,
+      pauseSec,
+      effectiveTtsProvider,
+    );
     if (meta !== null) {
       try {
         const m = JSON.parse(meta) as { cacheKey?: string };

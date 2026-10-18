@@ -19,6 +19,12 @@ export const ArticleFrontmatterSchema = z
     language: z.enum(["zh-CN", "en-US"]),
     duration_target_sec: z.number().int().positive(),
     voice: z.string().min(1),
+    /** TTS backend selector for `video make`: "voicebox" (local
+     *  voicebox.sh server, `voice:` then names a Voicebox profile) or
+     *  omitted/unknown → Edge TTS (voice is an Edge voice id). Plain
+     *  string on purpose — article.md is hand-edited, and make warns
+     *  and falls back to Edge on unrecognized values. */
+    tts_provider: z.string().min(1).optional(),
     default_renderer: z.string().min(1).optional(),
     /** v0.4: visual theme (e.g. "paper-light", "dark-tech", "blueprint").
      *  Falls back to "paper-light" when omitted (v0.4.3 default flip). */

@@ -1,9 +1,16 @@
 import { describe, expect, it } from "vitest";
+import { mkdtempSync, rmSync, mkdirSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import path from "node:path";
 import {
   fillPrompt,
   loadImageStylePresets,
   loadBgmCatalogue,
+  loadAndValidateBgmCatalogue,
   renderBgmCatalogue,
+  BGM_DEFAULT_TAG,
+  BGM_TRACK_EXTENSIONS,
+  resolveBgmDirectory,
   loadPrompt,
   promptFilePath,
 } from "./index.js";
@@ -151,5 +158,76 @@ describe("structured prompt files", () => {
     expect(out).toContain("LUFS");
     expect(out).toContain("use when:");
     expect(out).toContain("avoid when:");
+  });
+});
+
+describe("BGM library integrity", () => {
+  it("BGM_DEFAULT_TAG names a real track in the catalogue", () => {
+    const cat = loadBgmCatalogue();
+    expect(cat[BGM_DEFAULT_TAG]).toBeDefined();
+    expect(cat[BGM_DEFAULT_TAG]!.file).toBe(`${BGM_DEFAULT_TAG}.mp3`);
+  });
+
+  it("resolveBgmDirectory defaults to <repoRoot>/assets/bgm/", () => {
+    expect(resolveBgmDirectory("/x/y")).toBe(path.join("/x/y", "assets", "bgm"));
+  });
+
+  it("every catalogue tag has a backing file in assets/bgm/ on disk", () => {
+    const { catalogue, drift } = loadAndValidateBgmCatalogue();
+    // The CI check the planner relies on: if you commit a music.json
+    // entry without the corresponding mp3, the audio-plan agent will
+    // pick a tag that fails at mix time.
+    if (drift.catalogueOrphans.length > 0) {
+      throw new Error(
+        `these catalogue entries have no file in ${resolveBgmDirectory()}: ` +
+          drift.catalogueOrphans.join(", "),
+      );
+    }
+    expect(catalogue[BGM_DEFAULT_TAG]).toBeDefined();
+  });
+
+  it("isolated drift detection: catalogue vs filesystem on both sides", () => {
+    // Sandbox: catalogue registers 'foo' only, but the library has
+    // 'bar'. Both directions of drift surface in one report:
+    // foo is a catalogueOrphan (no file), bar is a filesystemOrphan
+    // (no catalogue entry).
+    const sandbox = mkdtempSync(path.join(tmpdir(), "bgm-drift-"));
+    const libDir = resolveBgmDirectory(sandbox);
+    mkdirSync(libDir, { recursive: true });
+    const catalogueDir = path.join(sandbox, "prompts", "prompts");
+    mkdirSync(catalogueDir, { recursive: true });
+    writeFileSync(
+      path.join(catalogueDir, "music.json"),
+      JSON.stringify({
+        foo: {
+          track: "Foo",
+          artist: "Tester",
+          file: "foo.mp3",
+          duration_sec: 60,
+          loudness_lufs_i: -12,
+          dynamic_range_lu: 4,
+          use_when: "test",
+          avoid_when: "tests",
+          needs_loop_under_300s: false,
+          quiet_master: false,
+          wide_dynamics: false,
+        },
+      }),
+    );
+    writeFileSync(path.join(libDir, "bar.mp3"), Buffer.from([0xff]));
+    try {
+      const { drift } = loadAndValidateBgmCatalogue(sandbox, catalogueDir);
+      expect(drift.catalogueOrphans).toEqual(["foo"]);
+      expect(drift.filesystemOrphans).toEqual(["bar"]);
+    } finally {
+      rmSync(sandbox, { recursive: true, force: true });
+    }
+  });
+
+  it("BGM_TRACK_EXTENSIONS stays in sync with the file-based provider's list", () => {
+    // The list is duplicated between @video/audio-assets and
+    // @video/prompts. If you change one, change both — a mismatch
+    // produces silent "tag not found" failures at mix time.
+    expect([...BGM_TRACK_EXTENSIONS]).toEqual([".wav", ".mp3", ".m4a"]);
   });
 });

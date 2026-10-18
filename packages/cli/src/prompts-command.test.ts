@@ -30,7 +30,9 @@ describe("video prompts", () => {
 
   it("shows a prompt body by stem", async () => {
     const out = await run(["show", "qa-triage"]);
-    expect(out).toContain("pass = nothing beyond the normal human gate");
+    expect(out).toContain(
+      "pass — no reported errors or warnings; continue to the normal human review gate",
+    );
   });
 
   it("shows a structured file by exact name", async () => {

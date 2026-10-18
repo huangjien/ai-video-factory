@@ -468,6 +468,26 @@ video draft "my-topic"           # → projects/<slug>/article.md + audio-config
 $EDITOR projects/<slug>/article.md
 $EDITOR projects/<slug>/audio-config.yaml
 
+**`article.md` frontmatter that changes rendering.** Beyond `project` /
+`language` / `duration_target_sec` / `voice`:
+
+| Key | Effect |
+|---|---|
+| `image_style` | preset used for scene-image briefs (`editorial`, `flat-vector`, …) |
+| `image_provider` | which image API `video make` uses; stamped by `--image-provider` |
+| `theme` | storyboard theme, written by `--style` |
+| `require_visual_approval: true` | `video make` refuses to render until `video approve visuals` freezes the image set |
+| `captions_source` | what the caption overlay burns in: `narration` (default) or `caption` |
+| `no_captions: true` | no caption overlay at all (set by `--no-captions`) |
+
+**Use `captions_source: caption` for English articles.** The overlay is
+validated against the bottom safe area — 3 lines × 24 CJK units, ASCII
+counting 0.5 — which caps an English scene near 144 characters. English
+narration runs 150-220 per scene, so `source: narration` fails validation
+on nearly every scene and the render is refused. `caption` burns the
+scene's short `caption:` label instead, which passes at any language and
+stops a designed card's own text from being printed twice beneath itself.
+
 # 🚪 Human gate: read article.md (mirrored into storyboard.yaml), then approve
 video approve storyboard --cwd projects/<slug>
 ```
@@ -526,6 +546,18 @@ silent placeholder WAVs) and real image generation. Scenes stay as
 visible end-to-end without any network access. Pass `--image-provider
 mock` explicitly only when you want to exercise the `ImageBackground`
 path with placeholder images.
+
+### Narrating with a cloned voice (Voicebox)
+
+Add `tts_provider: voicebox` to `article.md` frontmatter and set `voice:`
+to a Voicebox voice profile (name or id). The provider talks to a local
+voicebox-server on `VOICEBOX_URL` (default `http://127.0.0.1:17493`),
+polls the async job, and writes the returned WAV; `syncSceneDurations`
+then rewrites scene lengths to the measured audio. Qwen3-TTS 1.7B on
+Apple Silicon synthesizes ~7× slower than realtime — budget ~20 min of
+machine time per 180 s of narration, paid once per narration edit thanks
+to the provider-namespaced TTS cache. See `docs/schema.md`
+(`tts_provider:`) for details and re-draft semantics.
 
 `--bgm-dir` / `--sfx-dir` point at your own audio library. The tag in
 `audio-config.yaml` (`bgm: calm`, `sfx: {scene_1: whoosh}`) resolves to
@@ -942,6 +974,7 @@ video qa <slug>                                    # rebuild the report; exits 1
 video approve review --cwd projects/<slug>         # 🚪 HUMAN GATE 2
 video final --cwd projects/<slug> [--mix]          # 🚪 HUMAN GATE 3 (QA-gated) → FINAL_APPROVED
 video youtube <slug>                               # publishing metadata
+video bilibili <slug>                             # Bilibili submission metadata (no upload — see below)
 ```
 
 ### `video motion` — the Motion Agent
@@ -1025,6 +1058,44 @@ videos (1,600 of the default 10,000 units each). Publishing the app
 through Google verification lifts the first two.
 
 ## 9. Voice, subtitles, and audio
+
+
+### `video bilibili` — Bilibili packaging (no upload)
+
+Bilibili has **no public video-upload API for third-party tools**. The
+`openhome.bilibili.com` platform covers games, live and content-partner
+integrations, not generic submission, and the web form posts to
+undocumented internal endpoints that are actively hardened against
+automation. So this command does the half that can be automated:
+
+```bash
+video bilibili <slug> [--model minimax|glm]
+# → projects/<slug>/bilibili/package.yaml     title / 简介 / tags / suggested 分区 / cover brief
+# → projects/<slug>/bilibili/cover-prompt.txt  cover image brief
+# → projects/<slug>/bilibili/CHECKLIST.md     the manual upload steps
+```
+
+Field limits are enforced before you reach the form, which silently
+truncates past them: title ≤ 80 characters, 简介 ≤ 2000, at most 10 tags
+of ≤ 20 characters each.
+
+Three decisions worth knowing:
+
+- **`suggested_category` is a 分区 *name*, not a numeric `tid`.** A wrong
+  `tid` does not error — it files the video into an unrelated section and
+  nobody notices until after publishing. A name you can check against the
+  dropdown fails loudly instead. `null` means "no confident pick".
+- **A failed model call degrades, it does not fail.** Provider outage,
+  content filter, malformed YAML or a schema violation all fall back to a
+  deterministic package derived from `article.md`, with the warning printed
+  and recorded in the checklist. `video youtube` hard-fails on the same
+  conditions.
+- **The cover brief is reused** from `video youtube`'s thumbnail prompt when
+  that package exists, so both platforms show the same video.
+
+Add `video bilibili` to a project's checklist alongside `video youtube`; the
+`.srt` captions are reusable but Bilibili wants them uploaded through the
+submission form.
 
 ### 9.1 Recommended: subsumed into `video make`
 
@@ -1263,6 +1334,7 @@ projects/<slug>/
 │   └── excalidraw/                 video excalidraw writes: .excalidraw + animated SVG
 ├── captions/<lang>.srt              subtitles (video make writes)
 ├── youtube/                         publishing package from video youtube / thumbnail / shorts
+├── bilibili/                        video bilibili: package.yaml + cover-prompt.txt + CHECKLIST.md (manual upload)
 └── output/
     ├── preview.mp4                  video make writes
     ├── preview-faststart.mp4        video make writes

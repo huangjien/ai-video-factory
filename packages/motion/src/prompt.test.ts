@@ -23,7 +23,7 @@ describe("motion prompt", () => {
     const sys = system?.content ?? "";
     expect(sys).toContain("```yaml fenced block");
     expect(sys).toContain("2-5 animations total");
-    expect(sys).toContain("must fit inside the scene's 4s");
+    expect(sys).toContain("must fit inside the scene's 4 seconds");
   });
 
   it("user message carries the scene as parseable JSON with the baseline", () => {

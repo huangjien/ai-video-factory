@@ -24,7 +24,8 @@ import {
 } from "@video/draft";
 import { MiniMaxProvider } from "@video/llm";
 import { parse as parseYaml, stringify as yamlStringify } from "yaml";
-import { FakeTTSProvider, EdgeTTSProvider, type TTSProvider } from "@video/tts";
+import { FakeTTSProvider, EdgeTTSProvider, VoiceboxTTSProvider, MinimaxTTSProvider, voiceboxStatus, type TTSProvider } from "@video/tts";
+import { resolveNarration } from "./narration.js";
 import {
   readSceneTimings,
   syncSceneDurations,
@@ -827,12 +828,30 @@ async function runTts(
   ) => Promise<Uint8Array> = mp3ToWav,
   onEvent: ProgressEmit = noopEmit,
 ): Promise<string[]> {
-  const provider: TTSProvider = opts.fake
-    ? new FakeTTSProvider({ sampleBytes: 256 })
-    : new EdgeTTSProvider();
-  const voice =
+  const ttsProvider = article.frontmatter.tts_provider;
+  const frontmatterVoice =
     article.frontmatter.voice ||
     (article.frontmatter.language === "en-US" ? EN_VOICE : ZH_VOICE);
+  // Pre-flight (2026-10-18 policy): a voicebox article degrades loudly to
+  // the MiniMax system voice when the local server is down, and to Edge
+  // when the MiniMax key is missing too. --fake never probes localhost.
+  let voiceboxHealthy = false;
+  if (!opts.fake && ttsProvider === "voicebox") {
+    voiceboxHealthy = (await voiceboxStatus()).healthy;
+  }
+  const decision = resolveNarration({
+    fake: opts.fake === true,
+    ttsProvider,
+    voice: frontmatterVoice,
+    language: article.frontmatter.language,
+    voiceboxHealthy,
+    minimaxKey: Boolean(process.env["MINIMAX_API_KEY"]),
+  });
+  const provider: TTSProvider = decision.provider;
+  const voice = decision.voice;
+  for (const w of decision.warnings) {
+    console.warn(`warning: ${w}`);
+  }
   const pause =
     typeof audioConfig.pause_between_sentences_sec === "number"
       ? audioConfig.pause_between_sentences_sec
@@ -849,7 +868,7 @@ async function runTts(
     // after any re-draft/narration edit, desyncing audio from the
     // picture and subtitles (the render cache uses the same
     // content-hash discipline).
-    const cacheKey = ttsCacheKey(scene.narration, voice, pause);
+    const cacheKey = ttsCacheKey(scene.narration, voice, pause, provider.name);
     const meta = await readTtsMeta(wavPath);
     if (meta !== null && meta.cacheKey === cacheKey && existsSync(wavPath)) {
       continue;

@@ -11,3 +11,17 @@ export {
   type EdgeTTSProviderOptions,
 } from "./edge-tts.js";
 export { FakeTTSProvider, type FakeTTSOptions } from "./fake.js";
+export {
+  VoiceboxTTSProvider,
+  type VoiceboxTTSProviderOptions,
+} from "./voicebox.js";
+export {
+  MinimaxTTSProvider,
+  type MinimaxTTSProviderOptions,
+} from "./minimax-tts.js";
+export {
+  voiceboxStatus,
+  MINIMAX_SYSTEM_VOICE,
+  minimaxSystemVoice,
+  parseTtsChoice,
+} from "./voicebox.js";

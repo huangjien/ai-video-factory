@@ -431,6 +431,24 @@ video draft "my-topic"           # → projects/<slug>/article.md + audio-config
 $EDITOR projects/<slug>/article.md
 $EDITOR projects/<slug>/audio-config.yaml
 
+**会影响渲染的 `article.md` frontmatter。** 除 `project` / `language` /
+`duration_target_sec` / `voice` 之外：
+
+| 键 | 作用 |
+|---|---|
+| `image_style` | 场景生图用的画风预设（`editorial`、`flat-vector` …） |
+| `image_provider` | `video make` 用哪家生图 API；由 `--image-provider` 写入 |
+| `theme` | 分镜主题，由 `--style` 写入 |
+| `require_visual_approval: true` | 必须先 `video approve visuals` 冻结图集，`video make` 才渲染 |
+| `captions_source` | 字幕条烧什么内容：`narration`（默认）或 `caption` |
+| `no_captions: true` | 完全不要字幕条（由 `--no-captions` 写入） |
+
+**英文稿请用 `captions_source: caption`。** 字幕要过底部安全区校验——
+3 行 × 24 中文单位（ASCII 按 0.5 计），换算下来英文每场上限约 144 字符。
+而英文旁白每场 150-220 字符，`source: narration` 几乎每场都超限、直接
+拒绝渲染。改成 `caption` 烧场景的短标签，任何语言都能过；顺带也避免了
+「卡片自己已经写了字、底下又印一遍同一句」。
+
 # 🚪 人工门：读完 article.md（已镜像进 storyboard.yaml）后批准 storyboard
 video approve storyboard --cwd projects/<slug>
 ```
@@ -820,6 +838,7 @@ video qa <slug>                                    # 重建 QA 报告；错误�
 video approve review --cwd projects/<slug>         # 🚪 人工门 2
 video final --cwd projects/<slug> [--mix]          # 🚪 人工门 3（QA 门）→ FINAL_APPROVED
 video youtube <slug>                               # 发布元数据
+video bilibili <slug>                             # B 站投稿元数据（不含上传，见下）
 ```
 
 ### `video motion` — Motion Agent
@@ -874,6 +893,34 @@ video youtube <slug>
 生成标题、简介、WebVTT chapters、结构化 YAML、缩略图提示词与 Shorts hook。
 它**不会**上传 YouTube，也**不会**生成缩略图或 Shorts MP4（那两个由 §12.5
 中的 `video thumbnail` 和 `video shorts` 产出）。
+
+### `video bilibili` — B 站投稿打包（不上传）
+
+B 站**没有面向第三方工具的公开投稿 API**。`openhome.bilibili.com` 开放平台
+面向的是游戏发行、直播和内容合作方对接，不含通用投稿能力；网页版投稿走未公开
+的内部接口，需要签名和会话 cookie，且官方在持续对抗自动化。所以这条命令只
+做能自动化的那一半：
+
+```bash
+video bilibili <slug> [--model minimax|glm]
+# → projects/<slug>/bilibili/package.yaml     标题 / 简介 / 标签 / 建议分区 / 封面提示词
+# → projects/<slug>/bilibili/cover-prompt.txt  封面生图提示词
+# → projects/<slug>/bilibili/CHECKLIST.md     人工投稿清单
+```
+
+字段上限在进表单前就校验（网页版超了是静默截断）：标题 ≤ 80 字符、简介 ≤ 2000、
+标签最多 10 个且每个 ≤ 20 字符。
+
+三个值得知道的设计决定：
+
+- **`suggested_category` 给分区名称，不给数字 `tid`。** tid 填错不会报错，只会把
+  视频投进毫不相关的分区，且要等发布后才发现；给一个能对着下拉框核对的名称，
+  失败方式是响亮的。`null` 表示「没有把握，让投稿人选」。
+- **模型调用失败是降级，不是报错。** provider 宕机、内容过滤、YAML 解析失败、
+  schema 越权——一律退回到由 `article.md` 确定性推导的包，并在终端和清单中标注
+  警告。`video youtube` 在同样条件下是硬失败。
+- **封面提示词复用** `video youtube` 的 thumbnail_prompt（若已生成），两个平台
+  看起来是同一条片子。
 
 ## 9. 语音、字幕和音频
 
@@ -1041,6 +1088,7 @@ projects/<slug>/
 │   └── excalidraw/                 video excalidraw 写：.excalidraw + 动画 SVG
 ├── captions/<lang>.srt              字幕（video make 写）
 ├── youtube/                         video youtube / thumbnail / shorts 的发布包
+├── bilibili/                        video bilibili 的产物：package.yaml + cover-prompt.txt + CHECKLIST.md（人工投稿）
 └── output/
     ├── preview.mp4                  video make 写
     ├── preview-faststart.mp4        video make 写

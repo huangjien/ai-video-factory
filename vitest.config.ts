@@ -41,6 +41,11 @@ export default defineConfig({
     // 'fetch failed' in CI (Ubuntu/Node 22) even though they pass locally
     // (macOS/Node 26). Forks isolate each file in its own process.
     pool: "forks",
+    // Hermetic voicebox probe: runDraft's pre-flight must never see a
+    // developer's live local server, or the conditional tts question
+    // appears and every ask-envelope assertion becomes machine-dependent.
+    // Port 9 (discard) refuses instantly.
+    env: { VOICEBOX_URL: "http://127.0.0.1:9" },
     poolOptions: {
       forks: {
         // One fork per CPU by default; cap at 4 to avoid resource spikes
@@ -48,7 +53,15 @@ export default defineConfig({
         maxForks: 4,
       },
     },
+    // Enabled in config (not just via `pnpm test`'s --coverage flag) so
+    // scoped runs — `pnpm vitest run packages/<name>` — end with the
+    // coverage table too. Scoped runs only execute one package, so every
+    // other package reports 0%: read the rows for the package under test.
     coverage: {
+      enabled: true,
+      // Print the coverage table even when tests fail — a red suite still
+      // needs its coverage numbers at the end (default hides them).
+      reportOnFailure: true,
       provider: "v8",
       include: ["packages/*/src/**/*.ts"],
       exclude: ["**/*.test.ts", "**/*.test.tsx", "**/index.ts", "**/dist/**"],

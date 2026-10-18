@@ -46,7 +46,13 @@ export type AudioConfig = z.infer<typeof AudioConfigSchema>;
 
 export const DEFAULT_AUDIO_CONFIG: AudioConfig = {
   voice: undefined,
-  bgm: "calm",
+  /** Default BGM. Pinned to `light-gravity` — the catalogue entry
+   *  marked as "default for technical explainers" — so the audio-plan
+   *  agent, the CLI's interactive ask, and the dry-run fallback all
+   *  land on the same tag. Kept in this file (not music.json) because
+   *  it's a single tag and the schema already wires it everywhere
+   *  through the {Merge} in agent.ts. */
+  bgm: "light-gravity",
   bgm_fade_in_sec: 1.5,
   bgm_fade_out_sec: 2.0,
   pause_between_sentences_sec: 0,

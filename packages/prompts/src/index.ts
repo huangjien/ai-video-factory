@@ -10,7 +10,7 @@
  * byte-identical to the historical template literals (prompt_hash lineage
  * depends on that).
  */
-import { readdirSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { parse as parseYaml } from "yaml";
@@ -154,13 +154,116 @@ export type BgmCatalogue = Record<string, BgmCatalogueEntry>;
 
 /** `music.json` — the curated BGM library index: tag → entry. Replaces the
  *  old tag → generation-prompt map, which only existed to feed the
- *  (now removed) music-generation API. */
-export function loadBgmCatalogue(): BgmCatalogue {
+ *  (now removed) music-generation API. The optional `dirOverride`
+ *  exists for tests that need to exercise the integrity check against
+ *  a sandbox copy of the catalogue. */
+export function loadBgmCatalogue(dirOverride?: string): BgmCatalogue {
   return loadStructured(
     "music.json",
     (text) => JSON.parse(text) as BgmCatalogue,
+    dirOverride,
   );
 }
+
+/** Audio extensions the curated library accepts. Mirrors
+ *  `FileBasedAudioAssetProvider` in @video/audio-assets — keep both
+ *  lists in sync, otherwise `provider` and `catalogue` will disagree
+ *  on what counts as a real track. */
+export const BGM_TRACK_EXTENSIONS = [".wav", ".mp3", ".m4a"] as const;
+
+/** Path resolution for the curated BGM library on disk. The library
+ *  lives at `<repoRoot>/assets/bgm/`. Caller should pass the repo
+ *  root explicitly; if omitted we walk up from the prompts package
+ *  looking for the first directory that has a `package.json` with
+ *  `{ workspaces: [...] }` — that is the monorepo root and the
+ *  conventional location of the curated library. */
+export function resolveBgmDirectory(repoRoot?: string): string {
+  const root = repoRoot ?? findRepoRoot();
+  return path.join(root, "assets", "bgm");
+}
+
+/** Walk up from the prompts package looking for the monorepo root.
+ *  The pnpm convention is a `pnpm-workspace.yaml` next to the root
+ *  `package.json` — that marker names the repo unambiguously. Returns
+ *  undefined leaves the caller with `assets/bgm/` read against the CWD
+ *  (the right answer for tools run from the repo root). */
+function findRepoRoot(): string {
+  let dir = path.resolve(promptsDir(), "..", "..", "..");
+  for (let i = 0; i < 6; i++) {
+    const workspaceYaml = path.join(dir, "pnpm-workspace.yaml");
+    const pkg = path.join(dir, "package.json");
+    if (existsSync(workspaceYaml) && existsSync(pkg)) return dir;
+    const parent = path.dirname(dir);
+    if (parent === dir) break;
+    dir = parent;
+  }
+  // Fall back: the directory two levels above the prompts prompt files
+  // — the conventional `packages/<this>` install layout when the
+  // package is consumed outside the monorepo.
+  return path.resolve(promptsDir(), "..", "..", "..");
+}
+
+/** Drift report from `validateBgmCatalogue`. Pure data — no console
+ *  output, no fs writes. The CLI composes a human-readable warning from
+ *  these buckets at startup so a missing track doesn't surface mid-mix. */
+export interface BgmDriftReport {
+  /** Tags in music.json with no matching file on disk. These will
+   *  resolve to "tag not found" at mix time. */
+  catalogueOrphans: string[];
+  /** Files in assets/bgm/ with no entry in music.json. These never
+   *  reach the LLM planner because the catalogue drives its prompt. */
+  filesystemOrphans: string[];
+}
+
+/** Cross-check `music.json` against `assets/bgm/`. Returns the catalogue
+ *  plus a drift report. Pure — no logging, no side effects — so the
+ *  caller can decide whether to warn, fail, or keep going.
+ *
+ *  Use this at startup (CLI entry) or before audio-plan fills its
+ *  prompt, NOT inside a hot path. Reads fs twice (catalogue JSON and
+ *  library directory). `catalogueDirOverride` lets tests inject a
+ *  sandbox copy of `music.json`. */
+export function loadAndValidateBgmCatalogue(
+  repoRoot?: string,
+  catalogueDirOverride?: string,
+): { catalogue: BgmCatalogue; drift: BgmDriftReport } {
+  const catalogue = loadBgmCatalogue(catalogueDirOverride);
+  const libDir = resolveBgmDirectory(repoRoot);
+  const filesOnDisk = new Set<string>();
+  if (existsSync(libDir)) {
+    for (const entry of readdirSync(libDir)) {
+      const ext = path.extname(entry).toLowerCase();
+      if (
+        (BGM_TRACK_EXTENSIONS as readonly string[]).includes(ext)
+      ) {
+        filesOnDisk.add(entry.slice(0, -ext.length));
+      }
+    }
+  }
+  const catalogueKeys = new Set(Object.keys(catalogue));
+  const catalogueOrphans = [...catalogueKeys].filter(
+    (tag) => !filesOnDisk.has(tag),
+  );
+  const filesystemOrphans = [...filesOnDisk].filter(
+    (tag) => !catalogueKeys.has(tag),
+  );
+  return {
+    catalogue,
+    drift: {
+      catalogueOrphans: catalogueOrphans.sort(),
+      filesystemOrphans: filesystemOrphans.sort(),
+    },
+  };
+}
+
+/** Default BGM tag — the one the audio-plan agent picks when nothing in
+ *  the article specifically suggests another mood. Lives here (not in
+ *  `music.json` or in any agent) so it stays a single source of truth:
+ *  the audio-plan prompt fills it in, the CLI's agent-ask falls back to
+ *  it, and the runtime resolver confirms the file exists. If this is
+ *  `null` or an unregistered tag, both fallbacks will pick the first
+ *  track alphabetically from the validated catalogue. */
+export const BGM_DEFAULT_TAG = "light-gravity";
 
 /** Render the catalogue as the compact table the audio planner reads.
  *
@@ -193,13 +296,23 @@ export function renderBgmCatalogue(catalogue?: BgmCatalogue): string {
     .join("\n");
 }
 
-function loadStructured<T>(file: string, parse: (text: string) => T): T {
-  const hit = structuredCache.get(file) as T | undefined;
+function loadStructured<T>(
+  file: string,
+  parse: (text: string) => T,
+  /** Override the directory `file` is read from. Tests pass a sandbox
+   *  root here so the `loadAndValidateBgmCatalogue` integrity check
+   *  can be exercised with a hand-crafted catalogue without touching
+   *  the real `packages/prompts/prompts/music.json` on disk. */
+  dirOverride?: string,
+): T {
+  const cachedKey = dirOverride ? `${dirOverride}::${file}` : file;
+  const hit = structuredCache.get(cachedKey) as T | undefined;
   if (hit !== undefined) {
     return hit;
   }
-  const value = parse(readFileSync(path.join(promptsDir(), file), "utf8"));
-  structuredCache.set(file, value);
+  const dir = dirOverride ?? promptsDir();
+  const value = parse(readFileSync(path.join(dir, file), "utf8"));
+  structuredCache.set(cachedKey, value);
   return value;
 }
 

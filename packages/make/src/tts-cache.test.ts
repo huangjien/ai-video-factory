@@ -3,7 +3,7 @@ import { mkdtemp, mkdir, rm, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 
-import { runMake } from "./index.js";
+import { runMake, ttsCacheKey } from "./index.js";
 
 /** Regression: runTts used to skip on WAV existence, so any re-draft or
  * narration edit kept narrating the OLD text — audio desynced from the
@@ -100,5 +100,23 @@ scenes:
     const report = await runMake({ projectRoot: dir, fake: true, dryRun: false });
     const tts = report.steps.find((s) => s.name === "tts");
     expect(tts?.outputs).toContain("assets/audio/scene_2.wav");
+  });
+});
+
+describe("ttsCacheKey — provider namespacing", () => {
+  it("keeps the legacy hash byte-identical for the default (edge) provider", () => {
+    // Pinned 2026-10-18 from the pre-provider formula — every existing
+    // sidecar in shipped projects must stay a cache hit across the upgrade.
+    expect(ttsCacheKey("第一场的话。", "zh-CN-YunjianNeural", undefined)).toBe(
+      "sha256:9d64f9c054c99306e258b7636b6ea37095c835a6ca6d18d533389f868f88b652",
+    );
+  });
+
+  it("differs per provider for the same voice/pause/narration", () => {
+    const edge = ttsCacheKey("n", "v", 0.3, "edge");
+    const voicebox = ttsCacheKey("n", "v", 0.3, "voicebox");
+    const fake = ttsCacheKey("n", "v", 0.3, "fake");
+    // Set: dynamic membership — three providers must hash to three keys.
+    expect(new Set([edge, voicebox, fake]).size).toBe(3);
   });
 });

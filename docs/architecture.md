@@ -140,7 +140,7 @@ parentheses; v0.5.2 additions marked):
 | `@video/video-renderer` | remotion | scene-isolated Remotion rendering (`renderSceneToVideo`, `concatScenes`), draft mode, studio workspace generator |
 | `@video/media` | assets | CJK caption wrap, ffprobe, duration sync (`syncSceneDurations`), scene-timing reader |
 | `@video/media-generators` | images | `ImageProvider` + `VideoProvider` abstractions; `MockImageProvider`, `MiniMaxImageProvider` (**default since v0.8.1**), the OpenAI and Gemini image providers, `MiniMaxVideoProvider`. |
-| `@video/tts`, `@video/audio-assets`, `@video/audio-mix` | audio | Edge TTS (+word timestamps), BGM/SFX providers, ducking/fades mix engine |
+| `@video/tts`, `@video/audio-assets`, `@video/audio-mix` | audio | Edge TTS (+word timestamps), ducking/fades mix engine. **BGM has no provider service**: tags resolve against the curated library in `assets/bgm/` (project-local `assets/audio-assets/bgm/` shadows it), and the file is passed to ffmpeg in place rather than copied per project. `music.json` indexes that library with measured duration/loudness/dynamic-range plus scenario notes, and feeds the audio planner's choice. SFX tags still fall back to a mock placeholder. |
 | `@video/qa` | qa | render report (duration/fps/resolution/audio/black-frames/assets/scene-audio-sync/captions/boundaries), contact sheet, export gate |
 | `@video/learn` | learn | human-review learning loop: `video learn` sessions → lesson store → `promptRules()` injected into image-prompt expansion |
 | `@video/workflow` | (agent state) | 10-state machine, checkpoints + invalidation, scene version store, run records |

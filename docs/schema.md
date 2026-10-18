@@ -201,6 +201,48 @@ old setting.
 re-drafts; `project`, `language`, `duration_target_sec` and `voice` always
 reflect the newest run.
 
+### `tts_provider:` — narration backend (voicebox / minimax, v0.9.x)
+
+`video make` can narrate through a local [Voicebox](https://voicebox.sh)
+server or MiniMax's hosted T2A v2 instead of Edge TTS. Set the frontmatter
+keys:
+
+```yaml
+---
+voice: narrator-zh          # backend-specific voice id — see below
+tts_provider: voicebox      # or "minimax"; omit (or "edge") for Edge TTS
+---
+```
+
+| `tts_provider` | `voice:` means | Requirements | Speed |
+|---|---|---|---|
+| `voicebox` | Voicebox profile name or id | local voicebox-server (`VOICEBOX_URL`, default `127.0.0.1:17493`) | Qwen3-TTS ~7× slower than realtime (MLX) |
+| `minimax` | MiniMax `voice_setting.voice_id` (system voice or cloned voice_id) | `MINIMAX_API_KEY`; **voice cloning needs a pay-as-you-go key — Token Plan keys get error 2061** | ~2.5× faster than realtime |
+| omitted / `edge` | Edge TTS voice id (e.g. `zh-CN-YunjianNeural`) | none (free Edge endpoint) | ~realtime |
+
+MiniMax cloning flow (verified 2026-10-18): `POST /v1/files/upload`
+(`purpose=voice_clone`, wav ≥10 s) → `POST /v1/voice_clone` → use the
+returned `voice_id`. **MiniMax deletes a cloned voice unused for 7 days.**
+`speech-2.8-turbo` is the default model; inter-sentence pauses use native
+`<#x#>` markers instead of Edge's silence concat.
+
+The TTS cache key includes the provider name, so switching
+`tts_provider` (or `voice`) re-synthesizes every scene; Edge-sidecar
+hashes are unchanged from before this key existed. An unrecognized
+`tts_provider` value warns and falls back to Edge TTS.
+
+`tts_provider` survives re-drafts (it is not drafter-owned), but `voice`
+is — a re-draft resets it, so re-set both after `video draft`.
+
+**Pre-flight policy (2026-10-18)**: before `video make` synthesizes, a
+voicebox article probes the local server (2 s timeout). Server down →
+loud warning + MiniMax system voice (`Chinese (Mandarin)_Male_Announcer`
+/ `English_expressive_narrator`); MiniMax key missing too → Edge. The
+same probe gates the `video-ask` `tts` question: it is offered (with
+your cloned profiles as choices, `--tts` to answer) only when the server
+answers with at least one profile; otherwise the draft silently defaults
+to `minimax-system`.
+
 ### `bake.json` — text baked onto scene images (v0.10.5)
 
 When a scene needs large typography — an opening title, a closing quote — the

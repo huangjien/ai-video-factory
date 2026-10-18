@@ -1,4 +1,4 @@
-import { loadBgmCatalogue } from "@video/prompts";
+import { BGM_DEFAULT_TAG, loadBgmCatalogue } from "@video/prompts";
 import { IMAGE_STYLES } from "@video/draft";
 import { THEME_NAMES, THEME_META } from "@video/video-components";
 import type { DraftOptions } from "./draft-command.js";
@@ -181,9 +181,9 @@ const IMAGE_PROVIDER_CHOICES: readonly { value: string; note: string }[] =
  * question offered pointed at nothing.
  */
 const BGM_SHORTLIST = [
-  "upbeat-your-love",
-  "light-gravity",
+  BGM_DEFAULT_TAG,
   "classical-gymnopedie-no-3",
+  "rock-not-the-only-one",
 ] as const;
 
 const BGM_CHOICES: readonly { value: string; note: string }[] = [
@@ -199,7 +199,7 @@ const BGM_CHOICES: readonly { value: string; note: string }[] = [
   { value: "none", note: "no BGM (bgm: null)" },
 ];
 
-const BGM_DEFAULT = "upbeat-your-love";
+const BGM_DEFAULT = BGM_DEFAULT_TAG;
 
 /** The six draft knobs worth asking about, stable order (§6). */
 export const DRAFT_QUESTIONS: readonly AskQuestion[] = [
@@ -281,11 +281,55 @@ export const DRAFT_QUESTIONS: readonly AskQuestion[] = [
   },
 ];
 
-/** Unspecified + not-dropped questions, stable order (§9: pure). */
-export function questionsFor(opts: AskOpts): AskQuestion[] {
-  return DRAFT_QUESTIONS.filter(
+/** Runtime context for conditionally-asked questions. The voicebox probe
+ * itself lives in draft-command (this module stays I/O-free); a healthy
+ * server with cloned profiles is what makes the tts question appear. */
+export interface AskCtx {
+  voiceboxProfiles: string[];
+}
+
+/** Narration backend question — offered only when the local voicebox
+ * server is up and has at least one cloned profile (the caller's probe
+ * decided that). Down server ⇒ no question, resolved default
+ * "minimax-system". */
+export function ttsQuestion(profiles: readonly string[]): AskQuestion {
+  return {
+    id: "tts",
+    flag: "--tts",
+    type: "choice",
+    question: "Narration voice backend?",
+    choices: [
+      ...profiles.map((p) => ({
+        value: `voicebox:${p}`,
+        note: `local clone "${p}" — free, ~7× slower than realtime`,
+      })),
+      {
+        value: "minimax-system",
+        note: "MiniMax system voice — ~2.5× realtime, billed per char",
+      },
+    ],
+    default: "minimax-system",
+    recommended: profiles.length > 0 ? `voicebox:${profiles[0] ?? ""}` : "minimax-system",
+    why: "your clone is free but slow; MiniMax is fast but a system timbre — switching later re-synthesizes every scene",
+    specified: (opts) => opts.tts !== undefined,
+    resolved: (opts) => opts.tts ?? "minimax-system",
+  };
+}
+
+/** Unspecified + not-dropped questions, stable order (§9: pure). The
+ * conditional tts question (AskCtx) is appended after bgm when the probe
+ * found a healthy voicebox with cloned profiles. */
+export function questionsFor(
+  opts: AskOpts,
+  ctx?: AskCtx,
+): AskQuestion[] {
+  const base = DRAFT_QUESTIONS.filter(
     (q) => !q.specified(opts) && !(q.dropped?.(opts) ?? false),
   );
+  if (ctx !== undefined && ctx.voiceboxProfiles.length > 0 && opts.tts === undefined) {
+    base.push(ttsQuestion(ctx.voiceboxProfiles));
+  }
+  return base;
 }
 
 // ─── Trigger precedence (§4) ─────────────────────────────────────────────────
@@ -329,9 +373,10 @@ function commandEcho(argv: string[]): string[] {
 export async function emitQuestionsDoc(
   opts: AskOpts,
   argv: string[],
+  ctx?: AskCtx,
 ): Promise<number> {
   const detected = detectAgentEnv();
-  const asked = questionsFor(opts);
+  const asked = questionsFor(opts, ctx);
   const byId = new Map(DRAFT_QUESTIONS.map((q) => [q.id, q]));
   const envelope = {
     protocol: "video-ask/1",
@@ -357,6 +402,11 @@ export async function emitQuestionsDoc(
       image_provider: byId.get("image_provider")?.resolved(opts) ?? "minimax",
       style: byId.get("style")?.resolved(opts) ?? "paper-light",
       bgm: byId.get("bgm")?.resolved(opts) ?? "calm",
+      tts:
+        opts.tts ??
+        (ctx?.voiceboxProfiles.length
+          ? `voicebox:${ctx.voiceboxProfiles[0] ?? ""}`
+          : "minimax-system"),
     },
   };
   console.log(JSON.stringify(envelope, null, 2));
@@ -376,11 +426,12 @@ export async function emitQuestionsDoc(
 export async function maybeAgentAsk(
   opts: AskOpts,
   argv: string[],
+  ctx?: AskCtx,
 ): Promise<number | null> {
   try {
     const trigger = resolveAskTrigger(opts);
     if (trigger.mode === "off") return null;
-    const asked = questionsFor(opts);
+    const asked = questionsFor(opts, ctx);
     if (asked.length === 0) {
       if (trigger.mode === "force") {
         console.error("agent-ask: nothing to ask — all knobs explicit");
@@ -388,7 +439,7 @@ export async function maybeAgentAsk(
       return null;
     }
     if (trigger.mode === "auto" && !detectAgentEnv()) return null;
-    return await emitQuestionsDoc(opts, argv);
+    return await emitQuestionsDoc(opts, argv, ctx);
   } catch {
     return null; // the gate must never take the run down (§9)
   }

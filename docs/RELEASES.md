@@ -15,6 +15,78 @@ video research → script → storyboard → audio (TTS) → audio-asset (BGM+SF
        video review                          → Content/Visual/Technical review YAMLs
 ```
 
+## Unreleased — BGM library, Bilibili packaging, en-US captions
+
+**BGM is a local library, not a service.** `assets/bgm/` is the single source
+of truth for background music (17 tracks, `<mood>-<slug>.mp3` + a sibling
+`.license.txt`); the MiniMax music-01 generation path, its provider, the
+`--music-provider` flag and the `MUSIC_PROMPTS` map are **removed** — the API
+had been returning `410 This Music API is no longer available` anyway, so
+every generated bed was silently degrading to a 1-second silent placeholder.
+`bgm: <tag>` now resolves project-local `assets/audio-assets/bgm/` first,
+then the library, then `assets/brand/`, and hands ffmpeg the file **in place**
+— previously a tag was copied to `assets/audio-assets/bgm/<tag>.wav`, which
+wrote mp3 bytes under a .wav name and duplicated the track per project. An
+unresolvable tag warns, lists what is available, and mixes silence rather
+than failing the render. `music.json` is now the library index
+(`loadBgmCatalogue`) carrying each track's **measured** duration, LUFS and
+dynamic range plus `use_when`/`avoid_when`; the audio planner reads it through
+`renderBgmCatalogue()`. Two measurements that a filename cannot answer now
+drive selection: loudness spans ~8 dB while the mixer applies one fixed bed
+level, and tracks shorter than the runtime loop (most of them) at a seam.
+`video draft`'s BGM question offered `calm | epic | guofeng | …` — generation
+prompts that are not files, so every option pointed at nothing; it now offers
+real tags.
+
+**`video bilibili`** packages Bilibili submission metadata
+(title / 简介 / ≤10 tags / suggested 分区 / cover brief → `bilibili/CHECKLIST.md`).
+Bilibili has no public upload API for third-party tools, so this is
+packaging-only by design. `suggested_category` is a section **name**, not a
+numeric `tid`: a wrong tid does not error, it files the video somewhere
+unrelated and nobody notices until after publishing. Any model failure
+degrades to a deterministic package instead of failing, which is the one
+behaviour `video youtube` lacks.
+
+**English videos can render at all.** The caption overlay is validated against
+the bottom safe area (3 lines × 24 CJK units, ASCII 0.5) — ~144 characters for
+English, while English narration runs 150-220 per scene, so `source: narration`
+failed validation on 19 of 23 scenes and the render was refused. New
+`captions_source` frontmatter (`narration` default, `caption` for the short
+label) fixes it and stops a designed card printing its own text twice.
+
+**Comparison cards** no longer render positional placeholders. Titles are
+content-derived: the caption's own contrast pair wins when it yields both
+sides, `还是` is recognised as a contrast connective (the commonest way a
+Chinese caption states one — "精确，还是结构"), and the title budget is
+language-aware so an English title is no longer cut mid-word
+("Promoted into inf…"). Items no longer pull sentences from a prose section
+matched by index, which with 7 sections across 25 scenes put one scene's
+content on another scene's card.
+
+## Unreleased — Voicebox + MiniMax TTS providers (cloned voices)
+
+`video make` can narrate through a local [Voicebox](https://voicebox.sh)
+server: set `tts_provider: voicebox` + `voice: <profile>` in `article.md`
+frontmatter; `tts_provider: minimax` narrates through MiniMax T2A v2
+(`speech-2.8-turbo`, system or cloned voice ids — cloning requires a
+pay-as-you-go key, Token Plan gets error 2061; unused cloned voices are
+deleted after 7 days). New providers:
+`VoiceboxTTSProvider` (`packages/tts/src/voicebox.ts`) drives the v0.5.0
+async REST flow (`/generate` → poll `/history/{id}` → `/audio/{id}`);
+base URL from `VOICEBOX_URL` (default
+`http://127.0.0.1:17493`). The TTS cache key is now provider-namespaced
+(edge hashes unchanged — existing sidecars stay valid; `--fake` runs no
+longer share a key namespace with real syntheses). The `--dry-run` impact
+table now resolves voice from `article.md` frontmatter like the synthesis
+path does, instead of `audio-config.yaml`'s voice (which make ignores).
+
+Pre-flight policy: `video make` probes voicebox before synthesizing and
+degrades loudly (down → MiniMax system voice → Edge); `video draft` adds
+a conditional `tts` question to the video-ask envelope — offered only
+when the local server answers with cloned profiles, answered via
+`--tts voicebox:<profile>|minimax-system|edge` and stamped into
+frontmatter as `tts_provider` + `voice`.
+
 ## v0.9 — local diffusion provider removed
 
 `minimax` became the default image provider in v0.8.1; this release deletes

@@ -744,6 +744,16 @@ Seven quality wins shipped under the same human-gate principle:
   storyboard now has `captions: { source: narration }`; opt out with
   `--no-captions`. Captions follow narration timing via the existing
   `writeCaptionsSrt` step.
+- **Choosing what the caption overlay burns in** (`captions_source` in
+  `article.md` frontmatter, default `narration`). The overlay's text is
+  checked against the bottom safe area — 3 lines × 24 CJK units, and ASCII
+  counts 0.5, so an English scene is capped near 144 characters. English
+  narration runs 150-220 per scene, so `source: narration` fails validation
+  on nearly every scene of an en-US article and the video will not render.
+  Set `captions_source: caption` to burn the scene's short `caption:` label
+  instead: that passes the check at any language, and on a scene that is a
+  designed card it also stops the card's own text being printed twice under
+  itself. `no_captions: true` still turns the overlay off entirely.
 - **Visual variety** (`packages/draft/src/visual-classifier.ts`): the
   article's `visual:` field is now classified into the right VDSL
   component (FlowChart / Comparison / Terminal / Timeline / Callout /

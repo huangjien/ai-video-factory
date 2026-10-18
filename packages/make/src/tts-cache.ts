@@ -15,11 +15,19 @@ export function ttsCacheKey(
   narration: string,
   voice: string,
   pauseSec: number | undefined,
+  providerName = "edge",
 ): string {
-  return (
-    "sha256:" +
-    createHash("sha256")
-      .update(`${voice}\u0000${pauseSec ?? "-"}\u0000${narration.trim()}`)
-      .digest("hex")
-  );
+  // The provider must be part of the key: "narrator-zh" through Voicebox and
+  // "zh-CN-YunjianNeural" through Edge are different audio, and a provider
+  // switch with an unchanged (voice, pause, narration) triple would otherwise
+  // silently replay the old bytes. "" for the historical default keeps every
+  // existing sidecar valid — re-hashing four shipped projects buys nothing.
+  // ("fake" gets its own namespace too, which also stops --fake runs from
+  // poisoning a later real run's cache — a pre-existing latent bug.)
+  const providerTag = providerName === "edge" ? "" : providerName;
+  const parts =
+    providerTag === ""
+      ? [voice, String(pauseSec ?? "-"), narration.trim()]
+      : [providerTag, voice, String(pauseSec ?? "-"), narration.trim()];
+  return "sha256:" + createHash("sha256").update(parts.join("\u0000")).digest("hex");
 }

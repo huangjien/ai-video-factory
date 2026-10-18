@@ -179,6 +179,16 @@ and CJK horizontals are barely 2px wide at 35px. Type is
 (45px), which covered the image it was captioning. Shared by
 `captionStyle.ts`, so `CaptionsOverlay` and `ImageBackground` cannot drift.
 
+**What the overlay burns in: `captions_source`.** `article.md` frontmatter takes
+`narration` (default) or `caption`. The overlay is validated against the
+bottom safe area — 3 lines × 24 CJK units, ASCII counting 0.5 — so an
+English scene caps near 144 characters while English narration runs 150-220
+per scene. `source: narration` therefore fails validation on nearly every
+scene of an en-US article and `video make` refuses to render. Use
+`captions_source: caption` for English: it burns the scene's short `caption:`
+label, passes at any language, and stops a designed card printing its own
+text twice. `no_captions: true` turns the overlay off entirely.
+
 **One caption per scene, and the short label wins.** Two layers can draw a
 caption: the `CaptionsOverlay` track, and `ImageBackground`'s own `caption`
 prop, which `video make` fills from the scene's `caption:` field. Both draw
@@ -504,7 +514,22 @@ Idempotent: `video make` skips a step when its output is newer than its inputs. 
     generation entirely.
   - `--fake` always resolves to `none` — scenes stay
     `AnimatedIllustration` (caption + animated SVG).
-- TTS: `--fake` (offline placeholder)
+- TTS: `--fake` (offline placeholder). Real narration backends select per
+  project via `article.md` frontmatter: `tts_provider: voicebox` + `voice:`
+  = Voicebox profile name/id (local voicebox-server, `VOICEBOX_URL`,
+  default `127.0.0.1:17493`; Qwen3-TTS ~7× slower than realtime on MLX);
+  `tts_provider: minimax` + `voice:` = MiniMax voice_id — T2A v2
+  `speech-2.8-turbo`, ~2.5× faster than realtime, needs
+  `MINIMAX_API_KEY`, and **voice CLONING is not on Token Plan keys
+  (error 2061; pay-as-you-go only; clones deleted after 7 days idle)**;
+  omitted/`edge` → Edge TTS voice id. Unknown values warn + fall back to
+  Edge. Pre-flight: `video make` probes voicebox (2 s) and degrades
+  loudly (voicebox down → minimax system voice → edge); `video draft`
+  offers the conditional `tts` question only when voicebox answers with
+  cloned profiles (answer via `--tts voicebox:<profile>|minimax-system`;
+  server down ⇒ no question, default minimax-system). Cache key is
+  provider-namespaced; re-drafts reset `voice:` (drafter-owned) but
+  preserve `tts_provider:`.
 - Web search in research: `--no-web` (LLM knowledge only)
 
 Provider fallback (minimax → glm) is automatic on quota / rate-limit errors.

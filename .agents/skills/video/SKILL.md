@@ -94,6 +94,7 @@ Full command set:
 | `video excalidraw <project>` | `.excalidraw` asset → animated SVG |
 | `video studio <project>` | Remotion Studio live-preview workspace |
 | `video theme [name]` | Palette inspector (list / one / resolve project) |
+| `video character [list \| approve <id> <style> <version> --by <name>]` | Character bible: list the characters and their per-style reference sheets, or promote a candidate to the official sheet (stamps the reviewer, supersedes the previous one) |
 | `video laya health/ask/eval` | Laya decision-sidecar diagnostics (advisory) |
 | `video learn <project>` | Human-review learning loop (`--ask`/`--answer`/`--status`/`--propose`) |
 | `video prompts [show <name>]` | Inspect the central prompt registry (`packages/prompts/prompts/`) |
@@ -109,21 +110,27 @@ Every command accepts `--cwd <dir>` (default `projects/`). Every step writes `ru
 | quote, 引用/名言/金句 | `QuoteBlock` | quote card + `——author` attribution |
 | %, percent, 增长/百分比/统计 | `StatGrid` | big numbers with count-up |
 | chart, distribution, 柱状图/分布 | `BarChart` | animated horizontal bars from `label: 40%` pairs |
-| ranking, top-N, 排名/榜单/冠军 | `Leaderboard` | ranked rows, #1 lands last |
+| ranking, top-5, 排名/榜单/冠军 | `Leaderboard` | ranked rows, #1 lands last |
 | checklist, 注意事项/避坑 | `Checklist` | check marks stroke on per item |
 | key insight, takeaway, 核心观点/一句话 | `BigIdea` | full-screen statement, token reveal |
 | pyramid, hierarchy, 金字塔/层级 | `PyramidDiagram` | layers drawn bottom-up |
 | venn, overlap, 交集/重叠 | `VennDiagram` | 2-3 translucent circles |
 | cycle, loop, 循环/闭环/飞轮 | `CycleDiagram` | stages on rotating ring |
-| network, pipeline, 流程/步骤 | `SvgScene` | draw-on diagram |
-| compare, vs, 对比/差异 | `Comparison` | left/right cards |
+| network, pipeline, flow, node, 流程/步骤/节点 | `FlowChart` | boxes and arrows |
 | code, terminal, 代码/命令行 | `Terminal` | typewriter listing |
 | timeline, history, 历史/年表 | `Timeline` | events on a line |
 | formula, 公式 / database, 数据库 | `Callout` | info/warning/success card |
 | list, bullet, 列表/要点 | `Checklist` | item rows with stroke-on check marks (DoodleScene never auto-selected) |
-| (no match) | `AnimatedIllustration` | generic shapes |
+| (no match) | `AnimatedIllustration` | generic shapes, or the generated image once one exists |
 
-Renderers: `remotion` covers all classic components; `svg` → SvgScene; `canvas` → DoodleScene. New scenes need no YAML hand-editing — the storyboard regenerates, but hand edits to `storyboard.yaml` are overwritten by the next `video make` (article.md is the source of truth). One-off visual check of all components: `node scripts/render-visual-smoke.mjs` → stills in `.omo/tmp/visual-smoke/`. Branding smoke: `node scripts/render-brand-smoke.mjs` → `.omo/tmp/brand-smoke/`.
+Only the last row reaches the image model. Every row above it is a
+self-rendered component, and `selfRenderedSceneNumbers()`
+(`packages/make/src/visual-cache.ts:47`) **skips image generation for those
+scenes entirely** — so a trigger keyword silently costs that scene its
+picture. There is no `Comparison` or `SvgScene` component any more; `对比`
+and `流程` route to nothing and `FlowChart` respectively.
+
+Renderers: `remotion` covers every registered component; `canvas` → DoodleScene. New scenes need no YAML hand-editing — the storyboard regenerates, but hand edits to `storyboard.yaml` are overwritten by the next `video make` (article.md is the source of truth). One-off visual check of all components: `node scripts/render-visual-smoke.mjs` → stills in `.omo/tmp/visual-smoke/`. Branding smoke: `node scripts/render-brand-smoke.mjs` → `.omo/tmp/brand-smoke/`.
 
 ### How a `visual:` line becomes an image prompt
 
@@ -290,13 +297,23 @@ consecutive scenes returned full two-page spreads of fake paragraphs, and a
 fourth came back as a doodle sheet captioned *"LAGH'S KEY OF OURAMMING
 BEAGY…"*. A `no text` suffix on the prompt did not prevent it.
 
+**The line is drawn at READABILITY, not at the presence of marks.** What
+fails is a viewer-readable sign, title, UI or watermark. What passes is
+marks the viewer cannot make out — the texture of a printed page at a
+distance, blurred impressions, a page of dense illegible strokes, a small
+seal whose characters cannot be read. Those read as a page or a signature,
+which is what the scene wanted. Acceptance: **if the audience cannot tell
+the marks are wrong or odd characters, it passes.** `projects/写好小说`
+scene_14 (a manuscript covered in dense illegible strokes, three marker
+notes, a reader's finger) is the reference case.
+
 | Never put in a `visual:` line | Write this instead |
 |---|---|
 | "a poster reading '思考链'" | "a printed poster with indistinct marks" |
 | "a screen showing the title 思维链" | "a screen with blurred unreadable content" |
 | "a shopfront sign saying 杂货" | "a shopfront with an unreadable sign" |
 | "a page of handwritten notes" | "a page covered in vague scribbled lines" |
-| any typography, subtitle, watermark, logo, caption | omit entirely |
+| a readable title, sign, UI or watermark | omit entirely, or make it illegible |
 
 The rule is enforced in `styleSystemBlock()`
 (`packages/draft/src/image-style.ts`), which injects these constraints into
@@ -311,12 +328,13 @@ renderer instead.
 | Owner | Content |
 |---|---|
 | Image model | subject, environment, lighting, palette — **never text** |
-| Remotion components / `SvgScene` | geometry, layout, diagrams, counters, captions |
+| Remotion components | geometry, layout, diagrams, counters, captions |
 | Pillow, or YouTube Studio | any legible text that must exist |
 
-`visual:` lines steer the deterministic component classifier too: a line
-containing `对比` renders a native `Comparison` component, not an image. See
-the trigger table above.
+`visual:` lines steer the deterministic component classifier too: any
+trigger keyword in the table above turns the scene into a self-rendered
+component and it loses its generated image. `对比` steers nothing. See the
+trigger table above.
 
 > **Pillow caveat (since v0.9):** the in-pipeline Pillow text-overlay that
 > used to burn captions into generated images was removed with the local

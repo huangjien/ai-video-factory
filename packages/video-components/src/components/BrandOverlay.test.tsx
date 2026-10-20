@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
+import { renderToStaticMarkup } from "react-dom/server";
+import type { BrandConfig } from "@video/vdsl";
 import {
+  BrandWatermark,
   INTRO_GRADIENTS,
   cornerStyle,
   introGradient,
@@ -57,5 +60,43 @@ describe("introGradient", () => {
       expect(Object.keys(INTRO_GRADIENTS)).toContain(name);
     }
     expect(introGradient("nope").band).toBe(INTRO_GRADIENTS["aurora"]!.band);
+  });
+});
+
+describe("BrandWatermark — the per-scene corner mark can be switched off (CS-08)", () => {
+  const brand = (extra: Partial<BrandConfig>): BrandConfig =>
+    ({
+      name: "频道",
+      icon: "data:image/gif;base64,R0lGODlhAQABAAAAACw=",
+      corner: "bottom-right",
+      size_px: 72,
+      opacity: 0.85,
+      watermark: true,
+      ...extra,
+    }) as BrandConfig;
+
+  it("draws the mark by default", () => {
+    const html = renderToStaticMarkup(
+      <BrandWatermark brand={brand({})} width={1920} height={1080} />,
+    );
+    expect(html).toContain("<img");
+  });
+
+  it("draws nothing when the watermark is off, even with an icon set", () => {
+    const html = renderToStaticMarkup(
+      <BrandWatermark brand={brand({ watermark: false })} width={1920} height={1080} />,
+    );
+    expect(html).toBe("");
+  });
+
+  it("draws nothing without an icon, as before", () => {
+    const html = renderToStaticMarkup(
+      <BrandWatermark
+        brand={brand({ icon: undefined })}
+        width={1920}
+        height={1080}
+      />,
+    );
+    expect(html).toBe("");
   });
 });

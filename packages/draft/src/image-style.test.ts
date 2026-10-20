@@ -85,8 +85,13 @@ describe("expandScenePrompt style injection", () => {
     // styleSystemBlock on every path. Assert the rule that must reach the
     // expander, not the copy of it that used to be duplicated in the
     // expander's own prompt file.
-    expect(system).toContain("HARD RULE — the image carries NO readable writing");
+    expect(system).toContain(
+      "HARD RULE — the image carries NO READABLE writing",
+    );
     expect(system).toContain("RESERVE THE OVERLAY ZONE");
+    // The line is drawn at readability, not at the presence of marks:
+    // illegible page texture passes, a viewer-readable sign does not.
+    expect(system).toContain("cannot tell the marks are wrong");
     expect(out.prompt.endsWith(stylePromptSuffix("editorial"))).toBe(true);
     expect(out.prompt).toContain("A lone lighthouse");
     expect(out.cacheHit).toBe(false);

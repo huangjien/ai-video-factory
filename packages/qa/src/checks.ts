@@ -155,17 +155,19 @@ export async function checkCaptions(
   const findings: QaFixableFinding[] = [];
 
   // Caption fit (out-of-bounds proxy, §28 "out-of-bounds elements"): the
-  // plan's captions are already CJK-wrapped by the compiler (24 units);
-  // the overlay safe area fits at most 3 lines.
+  // plan's caption cues are already CJK-wrapped by the compiler, so the
+  // check is per CUE — the safe area fits at most 3 lines at any instant,
+  // which is what matters now that a scene holds several timed cues.
   for (const scene of plan.scenes) {
-    const lines = scene.captions?.lines ?? [];
-    if (lines.length > CAPTION_MAX_LINES) {
-      findings.push({
-        level: "error",
-        check: "captionFit",
-        message: `scene ${scene.id}: captions wrap to ${lines.length} lines (safe area fits ${CAPTION_MAX_LINES} × ${CAPTION_MAX_UNITS} units)`,
-        fix: "Shorten the caption text or split the scene.",
-      });
+    for (const cue of scene.captions?.cues ?? []) {
+      if (cue.lines.length > CAPTION_MAX_LINES) {
+        findings.push({
+          level: "error",
+          check: "captionFit",
+          message: `scene ${scene.id}: a caption cue wraps to ${cue.lines.length} lines (safe area fits ${CAPTION_MAX_LINES} × ${CAPTION_MAX_UNITS} units)`,
+          fix: "Shorten the caption text or split the scene.",
+        });
+      }
     }
   }
 

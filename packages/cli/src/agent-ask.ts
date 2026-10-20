@@ -143,6 +143,7 @@ const IMAGE_STYLE_NOTES: Record<string, string> = {
   whiteboard: "marker sketch; pairs with draw-on animations",
   isometric: "fixed axonometric view; systems and processes",
   "paper-cut": "layered tactile collage; narrative scenes",
+  gongbi: "restrained ink linework, low-saturation washes; historical scenes",
 };
 
 const IMAGE_STYLE_CHOICES: readonly { value: string; note: string }[] =

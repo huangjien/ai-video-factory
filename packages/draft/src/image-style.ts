@@ -28,6 +28,8 @@
  *                  DoodleScene canvas renderer.
  *   isometric   — fixed-camera axonometric scenes for systems and processes.
  *   paper-cut   — layered tactile collage for narrative scenes.
+ *   gongbi      — restrained fine ink linework with low-saturation
+ *                  layered washes; historical dress, one full-frame scene.
  *
  * Cross-scene consistency comes from these shared contracts — reusing
  * the same palette and camera vocabulary across scenes — not from any
@@ -48,6 +50,7 @@ export const IMAGE_STYLES = [
   "whiteboard",
   "isometric",
   "paper-cut",
+  "gongbi",
 ] as const;
 
 export type ImageStyle = (typeof IMAGE_STYLES)[number];

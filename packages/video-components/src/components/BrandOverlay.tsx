@@ -99,6 +99,9 @@ export const BrandWatermark: FC<BrandWatermarkProps> = ({
   width,
   height,
 }) => {
+  // CS-08: `watermark: false` turns the per-scene corner mark off while
+  // the rest of the brand (name, intro) still applies.
+  if (brand.watermark === false) return null;
   if (!brand.icon) return null;
   // Scale the authored-at-1080p size to the actual composition width.
   const size = Math.round((brand.size_px * width) / 1920);

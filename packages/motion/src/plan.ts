@@ -22,6 +22,10 @@ export type TransitionKind = "fade" | "cut";
 export interface MotionSpec {
   animations: TimelineAnimation[];
   transition: { in: TransitionKind; out: TransitionKind };
+  /** CS-09: slow push expressed as ImageBackground's Ken Burns amount.
+   *  Undefined for every pre-CS-09 profile, which keeps the existing
+   *  default (the component's own 0.08) untouched. */
+  kenBurnsScale?: number;
 }
 
 export interface SceneMotionInput {
@@ -36,6 +40,21 @@ export interface SceneMotionInput {
   targets?: string[];
   /** Optional beat grid (e.g. 120) — entrance/emphasis snap to beats. */
   beatsPerMinute?: number;
+  /** CS-09: channel profile. `chinese-storybook` plans a still shot by
+   *  default — no entrance, no mid-scene emphasis. */
+  channelProfile?: string;
+  /** CS-09: slow-push amount, 0 (still) or ~0.015 (1–2% push). Only
+   *  meaningful under a profile that opts into still shots; an explicit
+   *  human choice, never derived from the 80/15/5 sampling target. */
+  kenBurnsScale?: number;
+}
+
+/** The still-first channel: shots hold, and the only motion a shot may
+ *  carry is one slow push. CS-09. */
+const STILL_FIRST_PROFILES: readonly string[] = ["chinese-storybook"];
+
+export function isStillFirstProfile(value: unknown): boolean {
+  return typeof value === "string" && STILL_FIRST_PROFILES.includes(value);
 }
 
 /** Plan motion for one scene. Throws when the input cannot produce a legal
@@ -43,6 +62,19 @@ export interface SceneMotionInput {
 export function planSceneMotion(input: SceneMotionInput): MotionSpec {
   if (!(input.durationSec > 0)) {
     throw new Error(`planSceneMotion: scene ${input.sceneId} has non-positive duration`);
+  }
+  // CS-09: a still-first channel plans a still shot. No entrance, no
+  // mid-scene emphasis, no pan — the only permitted motion is the slow
+  // push, and even that is opt-in. Returning zero animations here is the
+  // point: the agent may keep at most one, and is never obliged to add
+  // one, so "no motion" survives the quality loop as a valid answer
+  // instead of being averaged away by a 2–5-animations rule.
+  if (isStillFirstProfile(input.channelProfile)) {
+    return {
+      animations: [],
+      transition: { in: "fade", out: "cut" },
+      kenBurnsScale: input.kenBurnsScale ?? 0,
+    };
   }
   const targets = input.targets && input.targets.length > 0 ? input.targets : [input.sceneId];
   const animations: TimelineAnimation[] = [];

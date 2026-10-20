@@ -59,6 +59,18 @@ RULES
   infer the era from the narration and visual direction and state it anyway.
   Never leave a historical person unanchored.
 
+- CHARACTER ANCHORS — when the request includes a "Character" block with
+  identity anchors, that person MUST be drawn from those anchors, not from
+  your own idea of them. The image model receives NO reference picture, so
+  that text is the only thing keeping the same person recognisable across
+  scenes and across films. Fold the anchors into the Subject line
+  (silhouette, face shape, hair, build, costume, signature props) and
+  carry them into Composition for the pose. If the block names a variant,
+  use THAT variant's costume and props, not the base identity's — a young
+  prince and an older emperor must not wear the same robe. Never add
+  distinguishing features the anchors do not mention, and never contradict
+  one.
+
 - The visual direction is a vivid art-direction line — a single
   sentence, ~80-220 characters, naming the subject, action, setting,
   and one style keyword. Treat it as the storyboard frame note. Keep

@@ -18,8 +18,14 @@ export interface VoiceboxTTSProviderOptions {
   timeoutMs?: number;
   /** Injectable fetch for tests. */
   fetchImpl?: typeof fetch;
-  /** Playback rate passed to voice_setting.speed. Default 1.
-   *  0.9 = slightly slower (more intelligible narration); Qwen3-TTS honors it. */
+  /** Playback rate applied to the SYNTHESIZED audio. Default 1.
+   *  0.9 = slightly slower (more intelligible narration).
+   *
+   *  The voicebox server's GenerationRequest has no speed/tempo field —
+   *  sending one was silently ignored, so the narrator always came out
+   *  at its natural pace. The rate is therefore applied locally with
+   *  ffmpeg's `atempo`, which stretches time while holding the pitch.
+   *  0.84 → the audio is 1/0.84 ≈ 1.19× longer. */
   speed?: number;
   /** When > 0, the narration is split on sentence-ending punctuation
    *  (keeping the punctuation on each sentence) and each sentence is
@@ -163,11 +169,66 @@ export class VoiceboxTTSProvider implements TTSProvider {
       for (const s of sentences) {
         pieces.push(await this.generateOne(s, profileId, req.language));
       }
-      return stitchWithPauses(pieces, this.sentencePauseSec, this.timeoutMs);
+      const stitched = await stitchWithPauses(
+        pieces,
+        this.sentencePauseSec,
+        this.timeoutMs,
+      );
+      return this.applyTempo(stitched);
     }
 
     const one = await this.generateOne(req.text, profileId, req.language);
-    return { audio: one.audio, durationMs: one.durationMs, words: [] };
+    return this.applyTempo({ audio: one.audio, durationMs: one.durationMs, words: [] });
+  }
+
+  /**
+   * Apply the requested playback rate to the finished audio.
+   *
+   * The rate is a STRETCH factor applied with ffmpeg's `atempo`: 0.84
+   * makes the narration 1/0.84 ≈ 1.19× longer, holding the pitch. It is
+   * applied AFTER the sentence stitch, so the pauses stretch with the
+   * speech and the breathing room scales too.
+   */
+  private async applyTempo(result: TTSResult): Promise<TTSResult> {
+    const tempo = this.speed;
+    if (tempo === undefined || tempo === 1 || result.audio.length === 0) {
+      return result;
+    }
+    if (tempo <= 0) {
+      throw new TTSError("voicebox speed must be > 0", this.name);
+    }
+    const { execFile } = await import("node:child_process");
+    const { promisify } = await import("node:util");
+    const { mkdtemp, writeFile, readFile, rm } = await import("node:fs/promises");
+    const { tmpdir } = await import("node:os");
+    const { join } = await import("node:path");
+    const execFileAsync = promisify(execFile);
+    const dir = await mkdtemp(join(tmpdir(), "voicebox-tempo-"));
+    const src = join(dir, "in.wav");
+    const out = join(dir, "out.wav");
+    try {
+      await writeFile(src, result.audio);
+      // atempo accepts 0.5–2.0 in one pass; chain for anything wider.
+      const factor = Math.min(2, Math.max(0.5, tempo));
+      await execFileAsync(
+        "ffmpeg",
+        ["-y", "-i", src, "-af", `atempo=${factor}`, "-c:a", "pcm_s16le", out],
+        { timeout: this.timeoutMs },
+      );
+      const audio = new Uint8Array(await readFile(out));
+      // Measure the result rather than dividing by the tempo: atempo's
+      // effective factor on a short clip is not exactly 1/tempo (silence
+      // and the clip's own shape shift it), and a reported duration that
+      // disagrees with the bytes is worse than no number.
+      const probed = await probeWavDuration(out);
+      return {
+        ...result,
+        audio,
+        durationMs: probed ?? Math.round(result.durationMs / tempo),
+      };
+    } finally {
+      await rm(dir, { recursive: true, force: true }).catch(() => {});
+    }
   }
 
   /** One full round-trip: POST /generate, poll /history, GET /audio. */
@@ -183,7 +244,6 @@ export class VoiceboxTTSProvider implements TTSProvider {
     };
     if (this.modelSize !== undefined) body.model_size = this.modelSize;
     if (this.engine !== undefined) body.engine = this.engine;
-    if (this.speed !== undefined) body.speed = this.speed;
 
     const deadline = Date.now() + this.timeoutMs;
     const gen = await this.requestJson<{ id: string }>(
@@ -221,9 +281,44 @@ export class VoiceboxTTSProvider implements TTSProvider {
     }
 
     const audio = await this.requestBytes(`/audio/${gen.id}`, deadline);
+    // Defensive duration: voicebox's `entry.duration` is a backend-reported
+    // estimate that sometimes overshoots the actual wav length (model may
+    // truncate mid-sentence). Probe the bytes via ffprobe and use the
+    // smaller of the two so the caller gets a real upper bound. Warn on
+    // >5% mismatch so we notice if the backend starts lying more often.
+    const { execFileSync } = await import("node:child_process");
+    const { mkdtempSync, writeFileSync, readFileSync, rmSync } = await import("node:fs");
+    const { tmpdir } = await import("node:os");
+    const { join } = await import("node:path");
+    let actualSec = 0;
+    const probeDir = mkdtempSync(join(tmpdir(), "voicebox-dur-"));
+    try {
+      writeFileSync(join(probeDir, "x.wav"), audio);
+      const stdout = execFileSync(
+        "ffprobe",
+        ["-v", "error", "-show_entries", "format=duration", "-of", "default=noprint_wrappers=1:nokey=1", join(probeDir, "x.wav")],
+        { encoding: "utf8" as const, timeout: 5000 },
+      );
+      actualSec = Number.parseFloat(String(stdout).trim());
+      if (!Number.isFinite(actualSec)) actualSec = 0;
+    } catch {
+      // ffprobe missing or failed — keep the backend's duration.
+    } finally {
+      try { rmSync(probeDir, { recursive: true, force: true }); } catch { /* ignore */ }
+    }
+    const reportedSec = entry.duration ?? 0;
+    const useSec = actualSec > 0 ? Math.min(reportedSec, actualSec) : reportedSec;
+    if (reportedSec > 0 && actualSec > 0) {
+      const diff = Math.abs(reportedSec - actualSec) / reportedSec;
+      if (diff > 0.05) {
+        console.warn(
+          `voicebox: backend reported ${reportedSec.toFixed(2)}s but wav is ${actualSec.toFixed(2)}s for gen ${gen.id} (${(diff * 100).toFixed(1)}% off)`,
+        );
+      }
+    }
     return {
       audio,
-      durationMs: Math.round((entry.duration ?? 0) * 1000),
+      durationMs: Math.round(useSec * 1000),
     };
   }
 
@@ -352,6 +447,29 @@ export function splitSentences(text: string): string[] {
 /** Concat pre-synthesized sentence WAVs into one stream, padding each with
  *  `pauseSec` of silence (the last segment is NOT padded). All pieces come
  *  from the same voicebox backend so they share format/encoding. */
+/** The duration of a WAV file in ms, measured with ffprobe. Returns null
+ *  when ffprobe is unavailable or the file is unreadable. */
+async function probeWavDuration(file: string): Promise<number | null> {
+  const { execFile } = await import("node:child_process");
+  const { promisify } = await import("node:util");
+  try {
+    const execFileAsync = promisify(execFile);
+    const out = await execFileAsync("ffprobe", [
+      "-v",
+      "error",
+      "-show_entries",
+      "format=duration",
+      "-of",
+      "default=noprint_wrappers=1:nokey=1",
+      file,
+    ]);
+    const sec = Number.parseFloat(out.stdout.trim());
+    return Number.isFinite(sec) ? Math.round(sec * 1000) : null;
+  } catch {
+    return null;
+  }
+}
+
 async function stitchWithPauses(
   pieces: Array<{ audio: Uint8Array; durationMs: number }>,
   pauseSec: number,
@@ -382,9 +500,13 @@ async function stitchWithPauses(
       const p = join(dir, `s${i}.wav`);
       await writeFile(p, pieces[i]!.audio);
       inputs.push("-i", p);
-      const dur =
-        pieces[i]!.durationMs / 1000 + (i < pieces.length - 1 ? pauseSec : 0);
-      filterParts.push(`[${i}:a]apad=pad_dur=${dur.toFixed(3)}[s${i}]`);
+      // Pad each piece by the PAUSE ONLY. Padding by the piece's own
+      // duration doubled every sentence's audio — a single-sentence scene
+      // was right (it skips this path) while a two-sentence scene came out
+      // roughly twice as long, which dragged the measured narration rate
+      // down to a third of the intended pace.
+      const pause = i < pieces.length - 1 ? pauseSec : 0;
+      filterParts.push(`[${i}:a]apad=pad_dur=${pause.toFixed(3)}[s${i}]`);
       labels.push(`[s${i}]`);
     }
     await execFileAsync(

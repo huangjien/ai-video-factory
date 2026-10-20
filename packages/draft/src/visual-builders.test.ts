@@ -12,7 +12,7 @@ const scene = (
 });
 
 describe("buildTitle", () => {
-  it("emits text from caption and subtext from visual", () => {
+  it("emits text from caption and subtext from the film's title", () => {
     const props = VISUAL_BUILDERS.Title!(
       scene({
         id: "scene_1",
@@ -20,17 +20,39 @@ describe("buildTitle", () => {
         caption: "Title text",
         visual: "A short subtext",
       }),
-      { section: null },
+      { section: null, title: "The Film Title" },
     );
     expect(props.text).toBe("Title text");
-    expect(props.subtext).toBe("A short subtext");
+    expect(props.subtext).toBe("The Film Title");
+  });
+
+  it("never puts the art direction on screen", () => {
+    // `visual:` is a PROMPT for the image model, not viewer-facing copy.
+    // It used to be burned onto the title card as the subtitle.
+    const visual =
+      "画面左右分成两栏，左侧铺满桌面的宏大城堡剪影静止，右侧一本小说停在空白页";
+    const props = VISUAL_BUILDERS.Title!(
+      scene({ id: "scene_1", duration: 5, caption: "c", visual }),
+      { section: null, title: "读者为什么弃书" },
+    );
+    expect(JSON.stringify(props)).not.toContain("画面左右分成两栏");
+    expect(props.subtext).toBe("读者为什么弃书");
+  });
+
+  it("omits the subtitle when the article has no title", () => {
+    const props = VISUAL_BUILDERS.Title!(
+      scene({ id: "scene_1", duration: 5, caption: "c", visual: "a direction" }),
+      { section: null },
+    );
+    expect(props.subtext).toBeUndefined();
+    expect(JSON.stringify(props)).not.toContain("a direction");
   });
 
   it("truncates subtext to 80 chars with a trailing …", () => {
     const long = "x".repeat(120);
     const props = VISUAL_BUILDERS.Title!(
-      scene({ id: "scene_1", duration: 5, caption: "c", visual: long }),
-      { section: null },
+      scene({ id: "scene_1", duration: 5, caption: "c", visual: "v" }),
+      { section: null, title: long },
     );
     expect((props.subtext as string).length).toBeLessThanOrEqual(51);
     expect((props.subtext as string).endsWith("…")).toBe(true);

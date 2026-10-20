@@ -8,7 +8,7 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { parse as parseYaml } from "yaml";
+import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
 import {
   articleToStoryboardYaml,
   parseArticle,
@@ -139,6 +139,18 @@ describe("generateSceneVisuals — provider none leaves scenes self-rendered", (
     rmSync(dir, { recursive: true, force: true });
   });
 
+  function writeStoryboardWithKenBurns(value: number): void {
+    const board = parseYaml(readFileSync(sbPath, "utf8")) as {
+      scenes?: SceneYaml[];
+    };
+    const scene = board.scenes?.[2];
+    scene!.visual = {
+      component: "AnimatedIllustration",
+      props: { kenBurnsScale: value },
+    };
+    writeFileSync(sbPath, stringifyYaml(board), "utf8");
+  }
+
   it("switches nothing when the provider is none", async () => {
     expect(
       await generateSceneVisuals(projectRoot, article, { provider: "none" }),
@@ -173,4 +185,43 @@ describe("generateSceneVisuals — provider none leaves scenes self-rendered", (
     expect(after?.visual?.props?.["src"]).toContain("scene_3");
     expect(after?.visual?.props?.["caption"]).toBe(text);
   });
+
+  it("carries kenBurnsScale onto ImageBackground when switched (CS-09)", async () => {
+    // Same class of silent loss as the caption above: a still-first
+    // channel expresses its motion in visual.props.kenBurnsScale, and
+    // the switch rebuilds props from scratch. Dropping it restores
+    // ImageBackground's own 0.08 default, so the shot drifts again.
+    writeStoryboardWithKenBurns(0.015);
+    expect(readStoryboard(sbPath)[2]?.visual?.props?.["kenBurnsScale"]).toBe(
+      0.015,
+    );
+
+    await generateSceneVisuals(projectRoot, article, { provider: "mock" });
+
+    const after = readStoryboard(sbPath)[2];
+    expect(after?.visual?.component).toBe("ImageBackground");
+    expect(after?.visual?.props?.["kenBurnsScale"]).toBe(0.015);
+  });
+
+  it("keeps a still frame at 0 rather than dropping the falsy value", async () => {
+    // `0` is the profile's default and the common case, so a truthiness
+    // check here would silently un-freeze every still shot.
+    writeStoryboardWithKenBurns(0);
+    expect(readStoryboard(sbPath)[2]?.visual?.props?.["kenBurnsScale"]).toBe(0);
+
+    await generateSceneVisuals(projectRoot, article, { provider: "mock" });
+
+    expect(
+      readStoryboard(sbPath)[2]?.visual?.props?.["kenBurnsScale"],
+    ).toBe(0);
+  });
+
+  it("leaves the key absent when no motion prop was ever set", async () => {
+    await generateSceneVisuals(projectRoot, article, { provider: "mock" });
+
+    expect(
+      readStoryboard(sbPath)[2]?.visual?.props,
+    ).not.toHaveProperty("kenBurnsScale");
+  });
+
 });

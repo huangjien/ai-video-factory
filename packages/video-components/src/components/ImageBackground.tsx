@@ -41,6 +41,11 @@ export interface ImageBackgroundProps {
 const easeInOut = (t: number): number =>
   t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
 
+/** Percentage of frame height left untouched by the caption veil. */
+const SCRIM_CLEAN_UNTIL = 55;
+/** Peak veil alpha, reached only at the bottom edge. */
+const SCRIM_BOTTOM = 0.5;
+
 /**
  * Scene background from an AI-generated image with subtle Ken-Burns
  * motion (slow zoom + pan). Accepts data URLs — file paths must be
@@ -61,6 +66,9 @@ export const ImageBackground: FC<ImageBackgroundProps> = ({
 }) => {
   const t = durationInFrames > 0 ? frame / durationInFrames : 0;
   const eased = easeInOut(t);
+  // `eased` is a function of `frame`, so motion must be gated on `still`
+  // too — otherwise a `kenBurnsScale: 0` frame keeps fading in.
+  const still = kenBurnsScale === 0;
   const scale = 1 + kenBurnsScale * eased;
   const tx = -kenBurnsScale * 60 * eased;
   const ty = -kenBurnsScale * 40 * eased;
@@ -81,15 +89,16 @@ export const ImageBackground: FC<ImageBackgroundProps> = ({
           height: "100%",
           objectFit: fit,
           transform: `scale(${scale}) translate(${tx}px, ${ty}px)`,
-          opacity: 0.85 + 0.15 * eased,
         }}
       />
+      {/* Bottom-weighted, not a full-frame wash: captionStyle.ts already gives
+          every glyph a 0.92-alpha outline, so only the caption band needs
+          contrast. A full wash cost a paper-white ground half its luma. */}
       <div
         style={{
           position: "absolute",
           inset: 0,
-          background:
-            "linear-gradient(180deg, rgba(0,0,0,0.45) 0%, rgba(0,0,0,0.65) 100%)",
+          background: `linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0) ${SCRIM_CLEAN_UNTIL}%, rgba(0,0,0,${SCRIM_BOTTOM}) 100%)`,
         }}
       />
       {caption !== undefined && caption.length > 0 ? (
@@ -99,7 +108,7 @@ export const ImageBackground: FC<ImageBackgroundProps> = ({
             // Fade-in only — geometry and type come from the shared
             // captionStyle.ts so this band can never drift from the
             // CaptionsOverlay track.
-            opacity: 0.6 + 0.4 * eased,
+            opacity: still ? 1 : 0.6 + 0.4 * eased,
           }}
         >
           <p

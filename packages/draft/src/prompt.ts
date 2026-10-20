@@ -1,5 +1,6 @@
 import type { ChatMessage } from "@video/llm";
 import { loadPrompt } from "@video/prompts";
+import { withChannelBlock } from "./channel-profile.js";
 
 export interface DraftInput {
   topic: string;
@@ -17,6 +18,10 @@ export interface DraftInput {
   /** Judge feedback from a rejected previous draft (scored below the
    *  acceptance bar). The drafter must fix these findings in the rewrite. */
   feedback?: string;
+  /** CS-03: channel grammar profile. Appends the profile's narrator /
+   *  pacing / arc rules to the system prompt. Unknown or omitted → the
+   *  system prompt is byte-identical to the pre-profile one. */
+  channelProfile?: string;
 }
 
 /** Body lives in `packages/prompts/prompts/draft-article.md` — edit it there. */
@@ -63,7 +68,14 @@ export function buildMessages(input: DraftInput): ChatMessage[] {
     );
   }
   return [
-    { role: "system", content: SYSTEM_PROMPT },
+    {
+      role: "system",
+      content: withChannelBlock(
+        SYSTEM_PROMPT,
+        input.channelProfile,
+        "draft",
+      ),
+    },
     { role: "user", content: userParts.join("\n") },
   ];
 }

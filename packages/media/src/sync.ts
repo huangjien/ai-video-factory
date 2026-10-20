@@ -61,6 +61,11 @@ export async function syncSceneDurations(
   const lines = yaml.split("\n");
   const outputs: string[] = [];
   const dropRanges: Array<[number, number]> = [];
+  // Speech windows are applied AFTER the loop: inserting a line while the
+  // loop is still walking `lines` shifts every later index, and the loop
+  // reads scene ids by index — so a mid-loop insert makes it attribute
+  // one scene's window to the previous scene's captions block.
+  const speechWindows: { at: number; line: string }[] = [];
   for (let i = 0; i < lines.length; i++) {
     const idMatch = lines[i]!.match(/^\s*-\s*id:\s*scene[-_]?(\d+)\s*$/);
     if (!idMatch) continue;
@@ -80,6 +85,7 @@ export async function syncSceneDurations(
         lines[j] = `${durMatch[1]}duration: ${newSec}`;
         outputs.push(`storyboard.yaml: scene_${sceneKey} duration=${newSec}s`);
         clampAnimations(lines, i, measured, sceneKey, outputs, dropRanges);
+        collectSpeechWindow(lines, i, measured, sceneKey, outputs, speechWindows);
         break;
       }
     }
@@ -88,6 +94,11 @@ export async function syncSceneDurations(
   // would bump the storyboard mtime on every preview and make the
   // per-scene render cache look stale forever.
   if (outputs.length === 0) return [];
+  // Descending order: each insert shifts the lines after it, and going
+  // backwards keeps the already-collected positions valid.
+  for (const w of [...speechWindows].sort((a, b) => b.at - a.at)) {
+    lines.splice(w.at, 0, w.line);
+  }
   if (dropRanges.length > 0) {
     const dropped = new Set<number>();
     for (const [from, to] of dropRanges) {
@@ -100,6 +111,56 @@ export async function syncSceneDurations(
   await mkdir(path.dirname(storyboardPath), { recursive: true });
   await writeFile(storyboardPath, lines.join("\n"), "utf8");
   return outputs;
+}
+
+/** CS-03: when a scene holds silence after its narration, the caption cues
+ *  must be timed against the SPOKEN part only. The measured wav is speech
+ *  + hold, so the speech length is measured minus the declared hold; it
+ *  is written to `captions.speech_sec` for the compiler to use. */
+function collectSpeechWindow(
+  lines: string[],
+  sceneStart: number,
+  measured: number,
+  sceneKey: string,
+  outputs: string[],
+  into: { at: number; line: string }[],
+): void {
+  const sceneEnd = nextSceneStart(lines, sceneStart);
+  let hold = 0;
+  let holdIdx = -1;
+  let captionsIdx = -1;
+  let speechIdx = -1;
+  for (let k = sceneStart + 1; k < sceneEnd; k++) {
+    const line = lines[k]!;
+    const holdMatch = line.match(/^(\s*)hold_after_sec:\s*([0-9.]+)\s*$/);
+    if (holdMatch) {
+      hold = parseFloat(holdMatch[2]!);
+      holdIdx = k;
+      continue;
+    }
+    if (/^\s*captions:\s*$/.test(line)) captionsIdx = k;
+    // Already written by a previous pass — leave it alone, or the block
+    // would grow a second `speech_sec` key and stop being valid YAML.
+    if (/^\s*speech_sec:\s*[0-9.]+\s*$/.test(line)) speechIdx = k;
+  }
+  if (holdIdx < 0 || captionsIdx < 0 || hold <= 0) return;
+  if (speechIdx >= 0) {
+    const indent = lines[speechIdx]!.match(/^(\s*)/)![1] ?? "";
+    lines[speechIdx] = `${indent}speech_sec: ${(measured - hold).toFixed(2)}`;
+    return;
+  }
+  const speech = measured - hold;
+  if (speech <= 0) return;
+  // The captions block is written AFTER the `captions:` key, so the
+  // speech window goes on the following line at the same indent.
+  const indent = lines[captionsIdx]!.match(/^(\s*)/)![1] ?? "";
+  into.push({
+    at: captionsIdx + 1,
+    line: `${indent}  speech_sec: ${speech.toFixed(2)}`,
+  });
+  outputs.push(
+    `storyboard.yaml: scene_${sceneKey} speech=${speech.toFixed(2)}s (hold ${hold}s)`,
+  );
 }
 
 /** Clamp the scene block's `animations:` entries to the measured duration:
@@ -191,6 +252,8 @@ export interface StoryboardSceneTiming {
   id: string;
   duration: number;
   narration: string;
+  /** CS-03: the spoken length when the scene holds silence after it. */
+  speechSec?: number | undefined;
 }
 
 /** Read per-scene id/duration/narration from the (duration-synced)
@@ -210,6 +273,7 @@ export async function readSceneTimings(
       id?: string;
       duration?: number;
       narration?: { text?: string };
+      captions?: { speech_sec?: number };
     }[];
   };
   return (doc.scenes ?? [])
@@ -218,5 +282,6 @@ export async function readSceneTimings(
       id: s.id as string,
       duration: s.duration as number,
       narration: s.narration?.text ?? "",
+      speechSec: s.captions?.speech_sec,
     }));
 }

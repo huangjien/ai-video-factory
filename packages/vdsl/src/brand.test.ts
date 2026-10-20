@@ -77,3 +77,25 @@ describe("storyboard style.brand passthrough", () => {
     expect(renderPlan.style.brand).toBeUndefined();
   });
 });
+
+describe("brand watermark switch (CS-08)", () => {
+  it("defaults to on, so every project keeps the inherited mark", () => {
+    const parsed = brandSchema.parse({});
+    expect(parsed.watermark).toBe(true);
+  });
+
+  it("accepts an explicit off switch", () => {
+    expect(brandSchema.parse({ watermark: false }).watermark).toBe(false);
+  });
+
+  it("keeps the rest of the brand usable with the mark off", () => {
+    const parsed = brandSchema.parse({
+      watermark: false,
+      name: "频道",
+      icon: "assets/brand/icon.png",
+    });
+    expect(parsed.watermark).toBe(false);
+    expect(parsed.name).toBe("频道");
+    expect(parsed.icon).toBe("assets/brand/icon.png");
+  });
+});

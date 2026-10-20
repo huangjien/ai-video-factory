@@ -1,6 +1,7 @@
 import type { ChatMessage } from "@video/llm";
 import { fillPrompt, loadPrompt } from "@video/prompts";
 import type { MotionSpec, SceneMotionInput } from "./plan.js";
+import { isStillFirstProfile } from "./plan.js";
 
 /** Skill names whose guidance feeds the prompt when installed (T0.2). */
 export const MOTION_SKILLS = [
@@ -10,6 +11,10 @@ export const MOTION_SKILLS = [
 
 /** Loaded at import time so the registry coverage test sees it. */
 const MOTION_TEMPLATE = loadPrompt("motion");
+/** CS-09 still-first block. Also import-time: prompt-registry.test.ts
+ *  asserts every file on disk is loaded by an import-time loader, and a
+ *  lazy load inside buildMotionMessages would read as an orphan. */
+const MOTION_STILL_FIRST_BLOCK = loadPrompt("motion-channel-chinese-storybook");
 
 export interface MotionAgentSceneInput {
   sceneId: string;
@@ -25,6 +30,9 @@ export interface MotionAgentSceneInput {
   baseline: MotionSpec;
   /** Skill guidance text (adapter), already truncated by the caller. */
   guidance: string | null;
+  /** CS-09: channel profile. Appended last so its still-first rules
+   *  override the template's default "2-5 animations" quota. */
+  channelProfile?: string;
 }
 
 export function buildMotionMessages(
@@ -32,9 +40,16 @@ export function buildMotionMessages(
 ): ChatMessage[] {
   // Template lives in `packages/prompts/prompts/motion.md` — the skill
   // fallback sentence is assembly logic, so it stays here.
-  const guidanceBlock = input.guidance
+  const skillBlock = input.guidance
     ? `Motion guidance to follow:\n${input.guidance}`
     : "Skill guidance unavailable — rely on the schema rules and the baseline's timing.";
+  // CS-09: the profile block goes LAST so its still-first rules win over
+  // the template's default "2-5 animations" quota.
+  const profileBlock = isStillFirstProfile(input.channelProfile)
+    ? MOTION_STILL_FIRST_BLOCK
+    : null;
+  const guidanceBlock =
+    profileBlock === null ? skillBlock : `${skillBlock}\n\n${profileBlock}`;
 
   const system: ChatMessage = {
     role: "system",

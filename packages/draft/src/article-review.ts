@@ -1,8 +1,9 @@
 import { z } from "zod";
 import type { Provider } from "@video/llm";
-import { chatWithFallback } from "@video/llm";
+import { chatWithFallback, stripReasoning } from "@video/llm";
 import { loadPrompt } from "@video/prompts";
 import { callDraft, extractBalancedJson } from "./agent.js";
+import { withChannelBlock } from "./channel-profile.js";
 import type { DraftInput } from "./prompt.js";
 
 /**
@@ -421,12 +422,22 @@ export function dropHallucinatedQuotes(
 /** Body lives in `packages/prompts/prompts/draft-article-review.md` — edit it there. */
 export const ARTICLE_REVIEW_SYSTEM_PROMPT = loadPrompt("draft-article-review");
 
-export function buildArticleReviewMessages(markdown: string): {
+export function buildArticleReviewMessages(
+  markdown: string,
+  channelProfile?: string,
+): {
   role: "system" | "user";
   content: string;
 }[] {
   return [
-    { role: "system", content: ARTICLE_REVIEW_SYSTEM_PROMPT },
+    {
+      role: "system",
+      content: withChannelBlock(
+        ARTICLE_REVIEW_SYSTEM_PROMPT,
+        channelProfile,
+        "review",
+      ),
+    },
     {
       role: "user",
       content: `## Article to judge\n\n${markdown.slice(0, 12000)}\n\nProduce the score JSON.`,
@@ -453,11 +464,14 @@ export async function scoreArticle(
   markdown: string,
   provider: Provider,
   fallback?: Provider | null,
+  channelProfile?: string,
 ): Promise<ArticleScore> {
   const out = await chatWithFallback(provider, fallback ?? null, {
-    messages: buildArticleReviewMessages(markdown),
+    messages: buildArticleReviewMessages(markdown, channelProfile),
   });
-  const parsed = extractBalancedJson(out.response.content);
+  // CS-14: the judge's reasoning block carries a JSON sketch too —
+  // extract it from the ANSWER, not from the thinking.
+  const parsed = extractBalancedJson(stripReasoning(out.response.content));
   if (!parsed) {
     throw new ArticleReviewError(
       "no JSON object in judge response",
@@ -627,7 +641,12 @@ export async function runScoredDraft(
     let score: ArticleScore | null = null;
     let scoreError: string | undefined;
     try {
-      score = await scoreArticle(draft.markdown, provider, fallback);
+      score = await scoreArticle(
+        draft.markdown,
+        provider,
+        fallback,
+        input.channelProfile,
+      );
     } catch (err) {
       scoreError = (err as Error).message;
     }

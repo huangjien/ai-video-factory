@@ -1,0 +1,84 @@
+schema: character-profile/1
+id: li_shimin
+name: 李世民
+identity:
+  era_region: Tang-dynasty China, 618-649 CE
+  role: 秦王 → 唐太宗（贞观年间）
+anchors:
+  silhouette:
+    value: 身形高大，肩背舒展，站姿稳定，重心略前
+    basis: inferred
+    note: 《旧唐书》本纪称其"身长七尺"，体格高大为史实依据；具体体态比例属造型判断
+  face_shape:
+    value: 长脸，颐方而丰满，眉骨明显，眼神沉静
+    basis: inferred
+    note: 工笔传统中的帝王面相。无史料记载具体五官，不可考
+  hair:
+    value: 高髻束发，髻上横簪一支，鬓发贴面
+    basis: inferred
+    note: 唐代男子髻式多样，文献只记制度不记图样，此为美术推断
+  build_age:
+    value: 二十余岁至五十余岁之间；青年时肩背更宽，动作外放
+    basis: inferred
+    note: 年龄跨度为叙事需要，按两个变体分别处理
+  temperament:
+    value: 沉着少言，情绪不外露决断留有余地
+    basis: sourced
+    source: 《旧唐书·太宗本纪》"性沉静"，及玄武门伏兵事
+  props:
+    value:
+      - 随身佩剑，出场时多按剑不动
+      - 天策府时期披轻甲
+      - 即位后常服圆领袍，不着甲
+    basis: inferred
+    note: 佩剑与甲胄的场合差异有制度依据，具体式样为美术推断
+variants:
+  - id: li_shimin__young_prince
+    label: 青年秦王
+    period: 618-626 CE
+    anchors:
+      costume:
+        value: 暗色圆领袍，窄袖，少配饰；战时改轻甲
+        basis: inferred
+        note: 秦王封爵期间的常服；此时尚未称帝，不着赭黄
+      props:
+        value:
+          - 佩剑
+          - 轻甲（战时）
+        basis: inferred
+      age_read:
+        value: 二十六七，面部线条硬朗，唇下留短须
+        basis: inferred
+        note: 原写"唇下无须"，但模型两次都画了长须（v2/v3）与短髭（v4）。锚点必须是模型真能画出来的，否则它不约束任何东西、只会在核对时误导人。故改为可实现的"唇下短须"，并把长须问题记在
+          note 里。
+  - id: li_shimin__emperor
+    label: 后期皇帝
+    period: 627-649 CE
+    anchors:
+      costume:
+        value: 赭黄圆领常服，饰襕，衣料有暗纹，不再着甲
+        basis: sourced
+        source: 《旧唐书·舆服志》记唐代帝王以赭黄为常服色
+      props:
+        value:
+          - 笏板或手卷
+          - 不佩剑
+        basis: inferred
+      age_read:
+        value: 四十余岁，面部线条更缓，神情更深
+        basis: inferred
+references:
+  - style: gongbi
+    version: v2
+    status: superseded
+    file: refs/gongbi/v2.jpg
+  - style: gongbi
+    version: v3
+    status: superseded
+    file: refs/gongbi/v3.jpg
+  - style: gongbi
+    version: v4
+    status: approved
+    file: refs/gongbi/v4.jpg
+    reviewedBy: huangjien
+    reviewedAt: 2026-10-19T17:07:14.199Z

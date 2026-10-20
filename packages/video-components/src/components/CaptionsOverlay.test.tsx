@@ -14,9 +14,20 @@ import { darkTechTheme, paperLightTheme, paperCreamTheme } from "../theme.js";
  */
 
 const FRAME = { width: 1920, height: 1080 };
+const cue = (lines: string[], endSec = 10) => ({
+  lines,
+  startSec: 0,
+  endSec,
+});
 const at = (lines: string[], theme = darkTechTheme): string =>
   renderToStaticMarkup(
-    <CaptionsOverlay lines={lines} {...FRAME} theme={theme} />,
+    <CaptionsOverlay
+      cues={[cue(lines)]}
+      localFrame={0}
+      fps={30}
+      {...FRAME}
+      theme={theme}
+    />,
   );
 
 describe("CaptionsOverlay — no background of its own", () => {
@@ -39,6 +50,37 @@ describe("CaptionsOverlay — no background of its own", () => {
   });
 });
 
+describe("CaptionsOverlay — only the active cue draws (CS-07)", () => {
+  const cues = [
+    { lines: ["第一句。"], startSec: 0, endSec: 2 },
+    { lines: ["第二句。"], startSec: 2, endSec: 4 },
+  ];
+  const frameAt = (sec: number) =>
+    renderToStaticMarkup(
+      <CaptionsOverlay cues={cues} localFrame={sec * 30} fps={30} {...FRAME} />,
+    );
+
+  it("shows the cue whose window contains the frame", () => {
+    expect(frameAt(0.5)).toContain("第一句。");
+    expect(frameAt(0.5)).not.toContain("第二句。");
+    expect(frameAt(3)).toContain("第二句。");
+    expect(frameAt(3)).not.toContain("第一句。");
+  });
+
+  it("never stacks more than one cue at a time", () => {
+    for (const t of [0, 1, 1.99, 2, 3, 3.99]) {
+      const html = frameAt(t);
+      expect(html.includes("第一句。") && html.includes("第二句。")).toBe(false);
+    }
+  });
+
+  it("keeps the final cue on the last frame instead of blinking out", () => {
+    // The scene's last frame is past the final cue's endSec; without the
+    // fallback the caption would vanish one frame before the cut.
+    expect(frameAt(4)).toContain("第二句。");
+  });
+});
+
 describe("CaptionsOverlay — type size", () => {
   it("sets caption type at ~3.2% of frame height (35px at 1080p)", () => {
     // Was 4.2% — 45px at 1080p, which dominated the image it sits on.
@@ -47,7 +89,13 @@ describe("CaptionsOverlay — type size", () => {
 
   it("scales with the frame rather than hardcoding pixels", () => {
     const small = renderToStaticMarkup(
-      <CaptionsOverlay lines={["字幕"]} width={1280} height={720} />,
+      <CaptionsOverlay
+        cues={[cue(["字幕"])]}
+        localFrame={0}
+        fps={30}
+        width={1280}
+        height={720}
+      />,
     );
     expect(small).toContain("font-size:23px"); // 720 * 0.032
   });

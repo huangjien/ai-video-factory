@@ -6,6 +6,7 @@ import { createHash } from "node:crypto";
 import { parseArticleWithRecovery } from "@video/draft";
 import { generateSceneVisuals } from "./index.js";
 import { computeMakeImpact, formatImpact } from "./impact.js";
+import { ttsCacheKey } from "./tts-cache.js";
 import { fileSha256 } from "./visual-cache.js";
 
 /**
@@ -140,6 +141,47 @@ describe("computeMakeImpact", () => {
       );
       expect(computeMakeImpact(dir, { imageProvider: "mock" }).visualsGate)
         .toEqual({ required: true, state: "stale", staleScenes: [2] });
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("TTS cache: dash-padded scene ids report cached, not synthesize", async () => {
+    // runTts writes `${scene.id}.wav` — for a project whose ids are
+    // `scene-01` that is `scene-01.wav`. The impact table used to rebuild
+    // the name as `scene_01.wav` (underscore), so every scene looked
+    // missing and the table claimed 26 re-syntheses that never happen.
+    const dashed = ARTICLE.replace("id: scene_1", "id: scene-01").replace(
+      "id: scene_2",
+      "id: scene-02",
+    );
+    const dir = await mkProject(dashed);
+    try {
+      const article = parseArticleWithRecovery(dashed).article;
+      await mkdir(path.join(dir, "assets", "audio"), { recursive: true });
+      for (const scene of article.scenes) {
+        const wav = path.join(dir, "assets", "audio", `${scene.id}.wav`);
+        await writeFile(wav, Buffer.from("RIFF"));
+        await writeFile(
+          `${wav}.json`,
+          JSON.stringify({
+            cacheKey: ttsCacheKey(
+              scene.narration,
+              "zh-CN-YunjianNeural",
+              undefined,
+              "edge",
+              "zh-CN",
+              undefined,
+              undefined,
+              scene.hold_after_sec,
+            ),
+          }),
+          "utf8",
+        );
+      }
+      const impact = computeMakeImpact(dir, { imageProvider: "mock" });
+      expect(impact.ttsSynthesize).toEqual([]);
+      expect(impact.ttsCached).toEqual(["scene-01", "scene-02"]);
     } finally {
       await rm(dir, { recursive: true, force: true });
     }

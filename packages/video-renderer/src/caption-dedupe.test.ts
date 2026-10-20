@@ -20,7 +20,9 @@ import { captionWiring, sceneCaptionOwner } from "./Root.js";
 const IMAGE = "ImageBackground";
 const OTHER = "Callout";
 const CAPTIONS = {
-  lines: ["一段很长的旁白字幕"],
+  cues: [
+    { lines: ["一段很长的旁白字幕"], startSec: 0, endSec: 1 },
+  ],
 } as RenderPlanScene["captions"];
 
 describe("sceneCaptionOwner — the component's label beats the narration track", () => {
@@ -58,14 +60,14 @@ describe("sceneCaptionOwner — the component's label beats the narration track"
     expect(sceneCaptionOwner(IMAGE, {}, null)).toBe("none");
     expect(
       sceneCaptionOwner(OTHER, {}, {
-        lines: [],
+        cues: [],
       } as RenderPlanScene["captions"]),
     ).toBe("none");
   });
 
   it("prefers the component even when the track has several lines", () => {
     const many = {
-      lines: ["第一行", "第二行", "第三行"],
+      cues: [{ lines: ["第一行", "第二行", "第三行"], startSec: 0, endSec: 1 }],
     } as RenderPlanScene["captions"];
     expect(sceneCaptionOwner(IMAGE, { caption: "短标签" }, many)).toBe(
       "component",
@@ -115,8 +117,8 @@ describe("captionWiring — both halves of the decision together", () => {
     const capSets: RenderPlanScene["captions"][] = [
       CAPTIONS,
       null,
-      { lines: [] },
-      { lines: ["a", "b", "c"] },
+      { cues: [] },
+      { cues: [{ lines: ["a", "b", "c"], startSec: 0, endSec: 1 }] },
     ];
     for (const comp of [IMAGE, OTHER]) {
       for (const props of propSets) {

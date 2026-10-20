@@ -68,6 +68,14 @@ export const ArticleFrontmatterSchema = z
      *  (article.md is human-edited — a typo must not brick parsing);
      *  resolveImageProvider coerces unknown values at the use site. */
     image_provider: z.string().optional(),
+    /** CS-01: cross-video channel grammar (narrative voice, captions,
+     *  motion defaults, brand chrome) — distinct from `image_style`,
+     *  which is the per-film art style. Carried article → storyboard
+     *  `style.channel_profile` → VDSL → RenderPlan.style. Typo-tolerant
+     *  plain string like image_style: article.md is hand-edited, and an
+     *  unknown profile must fall back to the neutral default rather
+     *  than fail parsing. */
+    channel_profile: z.string().optional(),
   })
   .passthrough();
 export type ArticleFrontmatter = z.infer<typeof ArticleFrontmatterSchema>;
@@ -82,6 +90,59 @@ export const SceneBlockSchema = z
           caption: z.string().min(1),
           visual: z.string().min(1),
           narration: z.string().min(1),
+          /** CS-12: the characters on screen, cited by their stable
+           *  character-bible id and (optionally) the appearance variant.
+           *  The image brief then splices that character's anchors in, so
+           *  the same person reads the same across scenes and films. */
+          characters: z
+            .array(
+              z
+                .object({
+                  id: z.string().min(1),
+                  variant: z.string().min(1).optional(),
+                })
+                .passthrough(),
+            )
+            .optional(),
+          /** CS-03: seconds of silence held AFTER this scene's narration.
+           *  The channel's 留白 — the still frame keeps breathing after the
+           *  voice stops, which is what brings the spoken share down to
+           *  55–70% of the runtime. It is padded into the narration WAV,
+           *  so the scene's measured length IS speech + hold. */
+          hold_after_sec: z.number().min(0).max(30).optional(),
+          /** CS-14: the map geometry for a MapInsert scene — authored,
+           *  not generated. The image model invents geography, so the
+           *  shapes and routes come from the article (the source of
+           *  truth) and carry their own source note. */
+          map: z
+            .object({
+              landforms: z
+                .array(
+                  z
+                    .object({
+                      d: z.string().min(1),
+                      kind: z.enum(["ridge", "river", "plain"]).optional(),
+                    })
+                    .passthrough(),
+                )
+                .optional(),
+              routes: z
+                .array(z.object({ d: z.string().min(1) }).passthrough())
+                .optional(),
+              markers: z
+                .array(
+                  z
+                    .object({
+                      x: z.number(),
+                      y: z.number(),
+                      kind: z.enum(["start", "city", "battle"]).optional(),
+                    })
+                    .passthrough(),
+                )
+                .optional(),
+            })
+            .passthrough()
+            .optional(),
         }).passthrough(),
       )
       .min(1),
@@ -94,6 +155,9 @@ export interface ParsedArticle {
   frontmatter: ArticleFrontmatter;
   proseBody: string;
   scenes: SceneBlock["scenes"];
+  /** CS-06: the article's first H1 — the film's title. It is overlaid on
+   *  the opening shot rather than given a title card of its own. */
+  title?: string;
   /** Original markdown, preserved verbatim for round-trip editing. */
   markdown: string;
 }
@@ -138,6 +202,9 @@ export function articleToStoryboardYaml(
     ``,
     `style:`,
     `  theme: ${yamlStr(theme)}`,
+    ...(f.channel_profile
+      ? [`  channel_profile: ${yamlStr(f.channel_profile)}`]
+      : []),
     ``,
     `scenes:`,
   ];
@@ -150,9 +217,16 @@ export function articleToStoryboardYaml(
     sections.length === 0
       ? 0
       : Math.max(1, Math.ceil(article.scenes.length / sections.length));
+  // CS-05: a channel profile opts out of the Title first-scene default, so
+  // the opening shot goes through the normal narrative-image path. Gated
+  // on the profile because the plan scopes v1 to chinese-storybook and
+  // explicitly does not migrate existing films — flipping this globally
+  // would turn every shipped project's title card into a generated image.
+  const keepTitleCard = f.channel_profile === undefined;
+  let previousSectionIdx = -1;
   article.scenes.forEach((s, i) => {
     const id = `scene-${String(i + 1).padStart(2, "0")}`;
-    const isFirst = i === 0;
+    const isFirst = keepTitleCard && i === 0;
     const overrideKey = opts.visualOverrides?.get(i);
     const override =
       overrideKey !== undefined && VISUAL_BUILDERS[overrideKey] !== undefined
@@ -167,10 +241,20 @@ export function articleToStoryboardYaml(
     const section = sections[sectionIdx] ?? null;
     const builder: VisualPropsBuilder =
       VISUAL_BUILDERS[component] ?? VISUAL_BUILDERS.AnimatedIllustration!;
-    const props = builder(s, { section, language: f.language });
+    const props = builder(s, {
+      section,
+      language: f.language,
+      ...(article.title !== undefined ? { title: article.title } : {}),
+    });
     const propsLines = propsToYamlLines(props, "        ");
     lines.push(`  - id: ${id}`);
     lines.push(`    duration: ${s.duration ?? 0}`);
+    if (s.hold_after_sec !== undefined) {
+      // CS-03: the held silence. sync-durations reads it to work out the
+      // scene's SPOKEN length, which is what the caption cues are timed
+      // against.
+      lines.push(`    hold_after_sec: ${s.hold_after_sec}`);
+    }
     lines.push(`    narration:`);
     lines.push(`      text: ${yamlStr(s.narration ?? "")}`);
     lines.push(`    visual:`);
@@ -178,8 +262,46 @@ export function articleToStoryboardYaml(
     if (component === "DoodleScene") {
       lines.push(`      renderer: canvas`);
     }
-    lines.push(`      props:`);
-    for (const pl of propsLines) lines.push(pl);
+    if (propsLines.length === 0) {
+      // An empty props object must be written as `{}` — a bare `props:`
+      // key parses as null, and the VDSL visual schema requires an object.
+      lines.push(`      props: {}`);
+    } else {
+      lines.push(`      props:`);
+      for (const pl of propsLines) lines.push(pl);
+    }
+    // CS-06: the film's title rides on the OPENING SHOT (it fades out
+    // after a few seconds), and a chapter name appears only where a
+    // section actually turns — never as a card of its own. Gated on the
+    // profile: no other project gets a title overlay.
+    if (f.channel_profile !== undefined) {
+      const overlay: string[] = [];
+      if (i === 0 && article.title !== undefined) {
+        overlay.push(`      title: ${yamlStr(article.title)}`);
+      }
+      // A section turn: this scene opens a new prose section (not the first).
+      if (
+        section !== null &&
+        i > 0 &&
+        sectionIdx !== previousSectionIdx
+      ) {
+        overlay.push(`      chapter: ${yamlStr(section.heading)}`);
+      }
+      if (overlay.length > 0) {
+        lines.push(`    overlay:`);
+        for (const o of overlay) lines.push(o);
+        lines.push(`      position: top`);
+        if (i === 0 && article.title !== undefined) {
+          // The title is a brief arrival, not a permanent frame label.
+          lines.push(`      start_sec: 0.6`);
+          lines.push(`      end_sec: ${Math.min(5, s.duration ?? 5)}`);
+        } else {
+          lines.push(`      start_sec: 0.4`);
+          lines.push(`      end_sec: ${Math.min(4, s.duration ?? 4)}`);
+        }
+      }
+      previousSectionIdx = sectionIdx;
+    }
     const animations = emitSceneAnimations(component, props, {
       sceneDurationSec: s.duration ?? 0,
     });
@@ -291,10 +413,12 @@ export function parseArticle(md: string): ParsedArticle {
   const { proseBody, scenesYaml } = splitScenesBlock(body);
   const parsedScenes = parseYaml(scenesYaml) as unknown;
   const sb = SceneBlockSchema.parse(parsedScenes);
+  const title = extractTitle(proseBody);
   return {
     frontmatter: fm,
     proseBody,
     scenes: sb.scenes,
+    ...(title !== undefined ? { title } : {}),
     markdown: md,
   };
 }
@@ -305,10 +429,12 @@ export function parseArticleLenient(md: string): ParsedArticle {
   const { proseBody, scenesYaml } = splitScenesBlock(body);
   const parsedScenes = parseYaml(scenesYaml) as unknown;
   const sb = SceneBlockLenientSchema.parse(parsedScenes);
+  const title = extractTitle(proseBody);
   return {
     frontmatter: fm,
     proseBody,
     scenes: sb.scenes,
+    ...(title !== undefined ? { title } : {}),
     markdown: md,
   };
 }
@@ -472,6 +598,15 @@ function splitFrontmatter(md: string): {
     throw new Error(`frontmatter YAML parse failed: ${(err as Error).message}`);
   }
   return { frontmatter: fm, body };
+}
+
+/** The article's first H1 — the film's title. CS-06 overlays it on the
+ *  opening shot rather than giving it a title card of its own. */
+function extractTitle(body: string): string | undefined {
+  const m = body.match(/^#\s+(.+?)\s*$/m);
+  if (!m) return undefined;
+  const title = (m[1] ?? "").trim();
+  return title === "" ? undefined : title;
 }
 
 function splitScenesBlock(body: string): {

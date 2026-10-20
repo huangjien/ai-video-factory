@@ -166,3 +166,61 @@ describe("IartSkillAdapter — skills present vs absent (AD-5 fallback)", () => 
     expect(adapter.isAvailable("storyboard")).toBe(true);
   });
 });
+
+describe("planSceneMotion — still-first channel (CS-09)", () => {
+  const base = {
+    sceneId: "scene-01",
+    durationSec: 12,
+    index: 0,
+    component: "ImageBackground",
+  } as const;
+
+  it("plans a held frame: no animation at all", () => {
+    const spec = planSceneMotion({
+      ...base,
+      channelProfile: "chinese-storybook",
+    });
+    expect(spec.animations).toEqual([]);
+    expect(validateMotionSpec(spec, 12)).toEqual([]);
+  });
+
+  it("holds the frame instead of fading it away", () => {
+    expect(
+      planSceneMotion({ ...base, channelProfile: "chinese-storybook" })
+        .transition,
+    ).toEqual({ in: "fade", out: "cut" });
+  });
+
+  it("defaults to still, and carries an explicit slow push when given one", () => {
+    expect(
+      planSceneMotion({ ...base, channelProfile: "chinese-storybook" })
+        .kenBurnsScale,
+    ).toBe(0);
+    expect(
+      planSceneMotion({
+        ...base,
+        channelProfile: "chinese-storybook",
+        kenBurnsScale: 0.015,
+      }).kenBurnsScale,
+    ).toBe(0.015);
+  });
+
+  it("never emits typewriter, highlight, or a beat-synced entrance", () => {
+    const spec = planSceneMotion({
+      ...base,
+      durationSec: 40,
+      channelProfile: "chinese-storybook",
+      beatsPerMinute: 120,
+    });
+    expect(spec.animations).toEqual([]);
+  });
+
+  it("leaves every other profile on the existing entrance+emphasis plan", () => {
+    const plain = planSceneMotion(base);
+    expect(plain.animations.length).toBeGreaterThan(0);
+    // Absent, not zero: absence preserves each component's own default.
+    expect(plain.kenBurnsScale).toBeUndefined();
+    expect(planSceneMotion({ ...base, channelProfile: "some-other-channel" }).kenBurnsScale)
+      .toBeUndefined();
+  });
+});

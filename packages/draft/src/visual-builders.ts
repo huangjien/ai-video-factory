@@ -24,6 +24,9 @@ export interface BuildInput {
   /** The article's declared language (e.g. "zh-CN" / "en-US"). Used only to
    *  localize the builders' fallback labels. */
   language?: string | undefined;
+  /** CS-12: the article's H1 — the film's title. It is the only
+   *  human-readable title text available to the title card. */
+  title?: string | undefined;
 }
 
 /** Localize a fallback label. The builders were otherwise language-blind: an
@@ -45,28 +48,17 @@ export type VisualPropsBuilder = (
 // ---------------------------------------------------------------------------
 // Title — opening card. Always first scene.
 // ---------------------------------------------------------------------------
-/** Strip a leading type-classifier prefix ("时间线展示：七次重试" →
- * "七次重试") from a visual direction. The prefix is an instruction to the
- * visual classifier, not viewer-facing copy — it leaked onto the title
- * card as subtext (observed 2026-10-16). Only strips when a colon appears
- * early (≤8 chars in), so directions without a prefix pass through. */
-function stripDirectionPrefix(direction: string): string {
-  const idx = direction.search(/[：:]/);
-  if (idx <= 0 || idx > 8) return direction;
-  return direction.slice(idx + 1).trim();
-}
-
 const buildTitle: VisualPropsBuilder = (scene, input) => {
-  const language = input.language;
   const props: Record<string, unknown> = {
     text: scene.caption,
   };
-  const subtext =
-    scene.visual && scene.visual.length > 0
-      ? stripDirectionPrefix(scene.visual)
-      : "";
-  if (subtext.length > 0) {
-    props.subtext = truncateForSubtext(subtext);
+  // The subtitle is the FILM's title, never the scene's `visual:` line.
+  // `visual:` is an art-direction PROMPT — it is written for the image
+  // model ("画面左右分成两栏，左侧铺满桌面的宏大城堡剪影…") and putting
+  // it on screen printed the staging directions onto the title card.
+  const title = input.title?.trim() ?? "";
+  if (title.length > 0) {
+    props.subtext = truncateForSubtext(title);
   }
   return props;
 };
@@ -533,6 +525,24 @@ const buildCycleDiagram: VisualPropsBuilder = (scene, input) => {
   return { stages, title: (scene.caption ?? "").slice(0, 12) || undefined };
 };
 
+// MapInsert — the geometry comes from the ARTICLE, never from the
+// narration. CS-14's risk table names it: "生成式地图地理关系不可靠 →
+// 战役路线误导观众", and the mitigation is "使用可审核的矢量路径/标记
+// 数据；先核来源再进入渲染". A builder that derived rivers and march
+// routes from the narration would reintroduce exactly the failure the
+// plan mitigates — the picture would look authoritative and be invented.
+// A scene with no authored map therefore renders an empty sheet, which
+// is the honest state: the map needs reviewed coordinates first.
+const buildMapInsert: VisualPropsBuilder = (scene) => {
+  const map = scene.map;
+  if (map === undefined) return {};
+  return {
+    ...(map.landforms !== undefined ? { landforms: map.landforms } : {}),
+    ...(map.routes !== undefined ? { routes: map.routes } : {}),
+    ...(map.markers !== undefined ? { markers: map.markers } : {}),
+  };
+};
+
 // ---------------------------------------------------------------------------
 // Public dispatch
 // ---------------------------------------------------------------------------
@@ -553,6 +563,7 @@ export const VISUAL_BUILDERS: Record<string, VisualPropsBuilder> = {
   PyramidDiagram: buildPyramidDiagram,
   VennDiagram: buildVennDiagram,
   CycleDiagram: buildCycleDiagram,
+  MapInsert: buildMapInsert,
 };
 
 // ---------------------------------------------------------------------------

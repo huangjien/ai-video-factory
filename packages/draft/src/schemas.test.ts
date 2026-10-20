@@ -224,6 +224,7 @@ describe("articleToStoryboardYaml (VDSL sync)", () => {
       voice: "zh-CN-YunjianNeural",
     },
     proseBody: "",
+    title: "同步测试",
     scenes: [
       {
         id: "scene_1",
@@ -278,33 +279,35 @@ describe("articleToStoryboardYaml (VDSL sync)", () => {
     expect(parsed.scenes[1]?.duration).toBe(6);
   });
 
-  it("uses Title for the first scene with subtext from article.visual", () => {
+  it("uses Title for the first scene, with the film's title as the subtitle", () => {
     const yaml = articleToStoryboardYaml(fixture);
     const parsed = parseYaml(yaml) as {
       scenes: { visual: { component: string; props: Record<string, string> } }[];
     };
     expect(parsed.scenes[0]?.visual.component).toBe("Title");
     expect(parsed.scenes[0]?.visual.props.text).toBe("开场");
-    expect(parsed.scenes[0]?.visual.props.subtext).toBe(
-      "两个数据库图标之间流动的同步箭头动画",
-    );
+    // The film's title, not the scene's art direction.
+    expect(parsed.scenes[0]?.visual.props.subtext).toBe("同步测试");
   });
 
-  it("truncates long Title.subtext so it does not overflow the 36px <p>", () => {
-    const longVisual: ParsedArticle = {
-      ...fixture,
-      scenes: [
-        {
-          id: "scene_1",
-          duration: 8,
-          caption: "开场",
-          visual:
-            "电影感开场：黑屏渐亮，浮现 2024 年科技发布会现场的大屏幕，屏幕上循环播放 Sora 生成的六十秒东京街景视频片段，镜头缓慢推近屏幕表面。",
-          narration: "今天我们谈一下同步测试",
-        },
-      ],
+  it("never writes the art direction onto the title card", () => {
+    // Regression: `visual:` is a PROMPT for the image model. It used to be
+    // burned onto the title card as the subtitle, so the staging
+    // directions appeared on screen.
+    const yaml = articleToStoryboardYaml(fixture);
+    const parsed = parseYaml(yaml) as {
+      scenes: { visual: { props: Record<string, string> } }[];
     };
-    const yaml = articleToStoryboardYaml(longVisual);
+    const props = parsed.scenes[0]?.visual.props ?? {};
+    expect(Object.values(props).join(" ")).not.toContain("两个数据库图标");
+  });
+
+  it("truncates a long title so it does not overflow the 36px <p>", () => {
+    const longTitle: ParsedArticle = {
+      ...fixture,
+      title: "x".repeat(120),
+    };
+    const yaml = articleToStoryboardYaml(longTitle);
     const parsed = parseYaml(yaml) as {
       scenes: { visual: { props: { subtext: string } } }[];
     };
@@ -510,5 +513,116 @@ describe("articleToStoryboardYaml — theme + captions flags", () => {
     article.frontmatter = { ...article.frontmatter, no_captions: true };
     const without = articleToStoryboardYaml(article);
     expect(without).not.toContain("captions:");
+  });
+
+  describe("channel_profile (CS-01)", () => {
+    it("carries channel_profile into style, alongside the art style", () => {
+      const article = parse();
+      article.frontmatter = {
+        ...article.frontmatter,
+        channel_profile: "chinese-storybook",
+        image_style: "gongbi",
+      };
+      const style = parseYaml(articleToStoryboardYaml(article)).style;
+      expect(style.channel_profile).toBe("chinese-storybook");
+      expect(style.theme).toBeTruthy();
+    });
+
+    it("keeps the channel profile when the art style changes", () => {
+      const article = parse();
+      article.frontmatter = {
+        ...article.frontmatter,
+        channel_profile: "chinese-storybook",
+        image_style: "manga",
+      };
+      expect(
+        parseYaml(articleToStoryboardYaml(article)).style.channel_profile,
+      ).toBe("chinese-storybook");
+    });
+
+    it("omits the key entirely for articles without a profile", () => {
+      const style = parseYaml(articleToStoryboardYaml(parse())).style;
+      expect(style).not.toHaveProperty("channel_profile");
+    });
+  });
+
+  describe("channel_profile first scene (CS-05)", () => {
+    const withProfile = (fm: Record<string, string>) => {
+      const article = parse();
+      article.frontmatter = { ...article.frontmatter, ...fm };
+      return article;
+    };
+    const componentsOf = (article: ReturnType<typeof parse>) =>
+      parseYaml(articleToStoryboardYaml(article)).scenes.map(
+        (s: { visual: { component: string } }) => s.visual.component,
+      );
+
+    it("keeps the Title card when no profile is set", () => {
+      expect(componentsOf(parse())[0]).toBe("Title");
+    });
+
+    it("routes the opening shot to the image path under a profile", () => {
+      const comps = componentsOf(withProfile({ channel_profile: "chinese-storybook" }));
+      expect(comps[0]).toBe("AnimatedIllustration");
+      expect(comps).not.toContain("Title");
+    });
+
+    it("still lets the classifier win under a profile", () => {
+      const article = withProfile({ channel_profile: "chinese-storybook" });
+      article.scenes[0]!.visual = "timeline of three eras";
+      expect(componentsOf(article)[0]).toBe("Timeline");
+    });
+  });
+});
+
+describe("scene text overlay (CS-06)", () => {
+  const withProfile = (fm: Record<string, string>) => {
+    const article = parseArticle(SAMPLE_MD);
+    article.frontmatter = { ...article.frontmatter, ...fm };
+    return article;
+  };
+
+  it("overlays the article's H1 on the opening shot under a profile", () => {
+    const board = parseYaml(
+      articleToStoryboardYaml(withProfile({ channel_profile: "chinese-storybook" })),
+    ) as { scenes: { id: string; overlay?: { title?: string } }[] };
+    expect(board.scenes[0]?.overlay?.title).toBe("AI 思维链");
+    // The title rides the FIRST shot — it is not a scene of its own.
+    expect(board.scenes.length).toBeGreaterThan(1);
+  });
+
+  it("gives no overlay at all when no profile is set", () => {
+    const board = parseYaml(articleToStoryboardYaml(parseArticle(SAMPLE_MD))) as {
+      scenes: { overlay?: unknown }[];
+    };
+    for (const s of board.scenes) expect(s.overlay).toBeUndefined();
+  });
+
+  it("writes a chapter name only where a prose section turns", () => {
+    const board = parseYaml(
+      articleToStoryboardYaml(withProfile({ channel_profile: "chinese-storybook" })),
+    ) as {
+      scenes: { id: string; overlay?: { title?: string; chapter?: string } }[];
+    };
+    expect(board.scenes[0]?.overlay?.title).toBe("AI 思维链");
+    // A chapter appears only at the turn, not on every scene.
+    const chapters = board.scenes
+      .map((s) => s.overlay?.chapter)
+      .filter((c) => c !== undefined);
+    expect(chapters.length).toBeLessThan(board.scenes.length);
+    expect(chapters).toContain("2. 解释");
+  });
+
+  it("gives every scene an object for visual.props", () => {
+    // A `props:` key with no children parses as null, and the VDSL visual
+    // schema requires an object — the compile step refuses the board
+    // otherwise. An empty props object must be written as `{}`.
+    const board = parseYaml(articleToStoryboardYaml(parseArticle(SAMPLE_MD))) as {
+      scenes: { visual: { props: unknown } }[];
+    };
+    for (const s of board.scenes) {
+      expect(typeof s.visual.props).toBe("object");
+      expect(s.visual.props).not.toBeNull();
+    }
   });
 });

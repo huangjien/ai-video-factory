@@ -107,3 +107,40 @@ describe("v0.4.2 component schemas", () => {
     expect(validate("CycleDiagram", { stages: ["a", "b", "c"] }).success).toBe(true);
   });
 });
+
+describe("MapInsert props (CS-14 — the one component that is strict)", () => {
+  function validate(props: unknown) {
+    const entry = REGISTRY["MapInsert" as keyof typeof REGISTRY];
+    if (!entry) throw new Error("MapInsert is not registered");
+    return entry.propsSchema.safeParse(props);
+  }
+
+  it("accepts reviewable structured geometry", () => {
+    expect(
+      validate({
+        landforms: [{ d: "M0 0 L10 10", kind: "river" }],
+        routes: [{ d: "M0 0 L20 20" }],
+        markers: [{ x: 5, y: 5, kind: "battle" }],
+      }).success,
+    ).toBe(true);
+  });
+
+  it("accepts the empty prop set the drafter emits", () => {
+    expect(validate({}).success).toBe(true);
+  });
+
+  it("rejects a readable place name — there is no field for one", () => {
+    // CS-14: 禁止可读地名. Every other component here is deliberately
+    // loose because the storyboard LLM invents props; this one is strict
+    // because a `label` would put text on a map that is supposed to be
+    // geometry the renderer draws and the narrator names out loud.
+    expect(validate({ label: "changan" }).success).toBe(false);
+    expect(validate({ routes: [{ d: "M0 0", name: "x" }] }).success).toBe(false);
+    expect(validate({ markers: [{ x: 1, y: 2, text: "x" }] }).success).toBe(false);
+  });
+
+  it("rejects malformed coordinates rather than rendering them", () => {
+    expect(validate({ markers: [{ x: "5", y: 5 }] }).success).toBe(false);
+    expect(validate({ routes: [{}] }).success).toBe(false);
+  });
+});

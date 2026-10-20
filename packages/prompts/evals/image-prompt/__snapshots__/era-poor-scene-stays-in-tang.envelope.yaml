@@ -1,10 +1,10 @@
 case: era-poor-scene-stays-in-tang
 agent: image-prompt
-prompt_hash: sha256:ea39ea2c0da83c100619eb038708718a84a86e510add3c335ffc8939a1dacce1
+prompt_hash: sha256:d174d607ca1dfc374b774827d132de951d2787a20f287e61963ae762a4c1019e
 messages:
   - role: system
-    bytes: 9718
-    content_sha256: sha256:e1789cf61c29357d62422867ed56c709ffb1d6e55b3dec7dbff13800c98ea42e
+    bytes: 11388
+    content_sha256: sha256:b77467a6792ea38283b198ef10a56b0667116dabf5ae91a130536749296a6076
     blocks:
       - "Style:"
   - role: user

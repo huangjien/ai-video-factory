@@ -114,3 +114,51 @@ describe("mergeBrandConfig — standalone project dirs", () => {
     expect(plan.style.brand).toBeUndefined();
   });
 });
+
+describe("mergeBrandConfig — the watermark switch (CS-08)", () => {
+  it("inherits the workspace watermark by default", async () => {
+    const { ws, project } = await wsProject(
+      ["brand:", "  name: 工作区品牌", "  icon: brand-icon.png"].join("\n"),
+      null,
+    );
+    await writeFile(path.join(ws, "brand-icon.png"), Buffer.from(ICON, "base64"));
+    const plan = minimalPlan();
+    await mergeBrandConfig(plan, project);
+    expect(plan.style.brand?.watermark).toBe(true);
+    // The icon is still inherited — only the mark is switched off.
+    expect(plan.style.brand?.icon).toBe(path.join(ws, "brand-icon.png"));
+  });
+
+  it("lets a project switch the mark off while keeping the rest of the brand", async () => {
+    const { ws, project } = await wsProject(
+      ["brand:", "  name: 工作区品牌", "  icon: brand-icon.png"].join("\n"),
+      ["brand:", "  watermark: false"].join("\n"),
+    );
+    await writeFile(path.join(ws, "brand-icon.png"), Buffer.from(ICON, "base64"));
+    const plan = minimalPlan();
+    await mergeBrandConfig(plan, project);
+    expect(plan.style.brand?.watermark).toBe(false);
+    expect(plan.style.brand?.name).toBe("工作区品牌");
+  });
+
+  it("leaves other projects on the inherited mark", async () => {
+    // The switch is per project: a sibling that opts out must not change
+    // what every other project renders.
+    const ws = await mkdtemp(path.join(tmpdir(), "brand-ws-"));
+    await writeBrand(ws, ["brand:", "  name: 工作区品牌", "  icon: brand-icon.png"].join("\n"));
+    await writeFile(path.join(ws, "brand-icon.png"), Buffer.from(ICON, "base64"));
+    const optedOut = path.join(ws, "projects", "no-mark");
+    const other = path.join(ws, "projects", "other");
+    await mkdir(optedOut, { recursive: true });
+    await mkdir(other, { recursive: true });
+    await writeBrand(optedOut, ["brand:", "  watermark: false"].join("\n"));
+
+    const a = minimalPlan();
+    await mergeBrandConfig(a, optedOut);
+    expect(a.style.brand?.watermark).toBe(false);
+
+    const b = minimalPlan();
+    await mergeBrandConfig(b, other);
+    expect(b.style.brand?.watermark).toBe(true);
+  });
+});

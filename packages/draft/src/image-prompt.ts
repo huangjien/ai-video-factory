@@ -11,6 +11,7 @@ import {
   resolveImageStyle,
   type ImageStyle,
 } from "./image-style.js";
+import { anchorPromptLines, loadCharacterById } from "./character-profile.js";
 
 /**
  * v0.4 (T3) — image-prompt expansion for the MiniMax image provider.
@@ -67,7 +68,12 @@ const MAX_BRIEF_CHARS = 1400;
 // v7 — visual direction is now a vivid art-direction line (~80-220 chars),
 // not a thin category hint. Briefs written from sparse directions need to be
 // re-expanded under the new contract so the still matches the article.
-export const IMAGE_PROMPT_REVISION = "7";
+// v8 — the no-text rule now draws the line at READABILITY, not at the
+// presence of marks: illegible page texture and unreadable seals pass, a
+// viewer-readable sign or title does not. The rule text is injected into
+// the expander's system message, so briefs written under the old wording
+// would keep asking for the old thing.
+export const IMAGE_PROMPT_REVISION = "8";
 
 /** Remove the reasoning scaffold that reasoning-enabled chat models emit
  *  ahead of their answer (`<think>…</think>`, an unterminated `<think>`,
@@ -104,6 +110,10 @@ export interface ScenePromptInput {
   visual: string;
   caption?: string | undefined;
   narration?: string | undefined;
+  /** CS-12: characters on screen, cited by character-bible id and
+   *  optional appearance variant. Their anchors are spliced into the
+   *  brief so the same person reads the same across scenes. */
+  characters?: { id: string; variant?: string | undefined }[] | undefined;
 }
 
 /** Everything the expander knows that is not per-scene: the style preset, the
@@ -116,6 +126,9 @@ export interface ScenePromptContext {
    *  the expander only has the narration to guess from, which is how a Tang
    *  court scene ends up rendered in Western medieval armour. */
   setting?: string | undefined;
+  /** CS-12: the character bible root. Null when the project is not under
+   *  a workspace `projects/` dir, or no bible exists. */
+  characterRoot?: string | null | undefined;
 }
 
 /** Body lives in `packages/prompts/prompts/draft-image-prompt.md` — edit it there. */
@@ -147,6 +160,21 @@ export function buildScenePromptMessages(
   }
   if (scene.caption) parts.push(`Caption (on-screen text): ${scene.caption}`);
   parts.push(`Visual direction: ${scene.visual}`);
+  // CS-12: the character bible's anchors, spliced in as text. The image
+  // model takes NO reference image (MiniMax has no subject_reference), so
+  // the anchors ARE the consistency mechanism — they must be in the brief
+  // or the same person drifts between scenes.
+  for (const entry of scene.characters ?? []) {
+    const profile = loadCharacterById(context.characterRoot ?? null, entry.id);
+    if (profile === undefined) continue;
+    const label = entry.variant ?? "base identity";
+    const anchors = anchorPromptLines(profile, entry.variant);
+    if (anchors.length === 0) continue;
+    parts.push(
+      `Character "${profile.name}" (${entry.id}, ${label}) — reproduce these identity anchors EXACTLY, and keep this the same person as in every other scene:`,
+      ...anchors.map((a) => `  - ${a}`),
+    );
+  }
   if (scene.narration) {
     parts.push(
       `Narration (the scene's content — DO NOT render any of its words): ${scene.narration.slice(0, 200)}`,
@@ -213,6 +241,30 @@ export async function expandSceneBrief(
   };
 }
 
+/**
+ * The character anchors a scene will inherit, as one stable string.
+ *
+ * Feeds the prompt cache key. Hashing the character ID alone would be
+ * wrong: the anchors are what actually reach the image model, so an
+ * edited anchor must invalidate the cached brief. A character with no
+ * profile contributes nothing — the scene simply has no anchors.
+ */
+function characterAnchorDigest(
+  scene: ScenePromptInput,
+  characterRoot: string | null,
+): string {
+  const parts: string[] = [];
+  for (const entry of scene.characters ?? []) {
+    const profile = loadCharacterById(characterRoot, entry.id);
+    if (profile === undefined) continue;
+    parts.push(
+      `${entry.id}@${entry.variant ?? ""}:` +
+        anchorPromptLines(profile, entry.variant).join("|"),
+    );
+  }
+  return parts.join(";");
+}
+
 export async function expandScenePrompt(
   scene: ScenePromptInput,
   provider: Provider,
@@ -243,6 +295,12 @@ export async function expandScenePrompt(
   // setting must never be reused under another.
   cacheKey.update("|");
   cacheKey.update(opts.setting ?? "");
+  // CS-12: the character anchors are part of the brief's identity. A
+  // cached brief written before an anchor changed (or before a variant
+  // was picked) would silently keep the old face, so the anchors go
+  // into the key — not just the character id.
+  cacheKey.update("|");
+  cacheKey.update(characterAnchorDigest(scene, opts.characterRoot ?? null));
   // Same argument for the expander itself: a reworded `draft-image-prompt.md`
   // must not keep serving briefs that were written by the previous wording.
   cacheKey.update("|");

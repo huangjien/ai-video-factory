@@ -103,13 +103,14 @@ describe("image brief expander", () => {
 });
 
 describe("structured prompt files", () => {
-  it("image-styles.yaml has the twelve styles with non-empty blocks", () => {
+  it("image-styles.yaml has the thirteen styles with non-empty blocks", () => {
     const presets = loadImageStylePresets();
     expect(Object.keys(presets).sort()).toEqual([
       "clay-3d",
       "editorial",
       "flat-vector",
       "genki-anime",
+      "gongbi",
       "ink-wash",
       "isometric",
       "manga",

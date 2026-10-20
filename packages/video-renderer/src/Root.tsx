@@ -6,6 +6,8 @@ import {
   BrandIntro,
   BrandWatermark,
   CaptionsOverlay,
+  SceneBackground,
+  TextOverlay,
   resolveTheme,
 } from "@video/video-components";
 
@@ -69,7 +71,7 @@ export function sceneCaptionOwner(
     const text = props?.["caption"];
     if (typeof text === "string" && text.trim() !== "") return "component";
   }
-  if ((captions?.lines?.length ?? 0) > 0) return "track";
+  if ((captions?.cues?.length ?? 0) > 0) return "track";
   return "none";
 }
 
@@ -150,10 +152,19 @@ export const Root = ({ renderPlan }: RootProps) => {
   // both halves of that decision come from one call.
   const caption = captionWiring(scene.component, scene.props, scene.captions);
 
+  // A bound background image replaces the theme fill: the wrapper goes
+  // transparent and the component's own `theme.colors.background` fill
+  // (every REGISTRY component paints one) is neutralised below, so the
+  // photo shows through instead of being covered by flat colour.
+  const hasBackground = typeof scene.backgroundSrc === "string";
+  const sceneTheme = hasBackground
+    ? { ...theme, colors: { ...theme.colors, background: "transparent" } }
+    : theme;
+
   const wrapStyle: React.CSSProperties = {
     position: "absolute",
     inset: 0,
-    backgroundColor: theme.colors.background,
+    backgroundColor: sceneTheme.colors.background,
   };
 
   const baseProps = {
@@ -165,7 +176,7 @@ export const Root = ({ renderPlan }: RootProps) => {
     // (DoodleScene consumes both; passthrough props ignore them).
     animations: scene.animations,
     fps: renderPlan.project.fps,
-    theme,
+    theme: sceneTheme,
     // Frame height so components that draw their own text can scale it
     // instead of hardcoding pixels.
     height: renderPlan.project.height,
@@ -174,13 +185,42 @@ export const Root = ({ renderPlan }: RootProps) => {
 
   return (
     <div style={wrapStyle}>
-      <Background frame={frame} theme={theme} />
+      {hasBackground ? (
+        <SceneBackground
+          src={scene.backgroundSrc as string}
+          scrim={scene.backgroundScrim !== false}
+          theme={theme}
+          startFrame={scene.startFrame}
+          durationInFrames={scene.durationInFrames}
+          frame={localFrame}
+        />
+      ) : (
+        <Background frame={frame} theme={theme} />
+      )}
       <div style={{ position: "absolute", inset: 0, opacity }}>
         <SceneComponent {...baseProps} />
       </div>
       {scene.captions && caption.renderTrack ? (
         <CaptionsOverlay
-          lines={scene.captions.lines}
+          cues={scene.captions.cues}
+          localFrame={localFrame}
+          fps={renderPlan.project.fps}
+          width={renderPlan.project.width}
+          height={renderPlan.project.height}
+          theme={theme}
+        />
+      ) : null}
+      {/* CS-06: the title / chapter text layer, composited OVER the
+          scene's own picture. It never replaces the image and never
+          becomes a scene of its own. */}
+      {scene.overlay ? (
+        <TextOverlay
+          title={scene.overlay.title}
+          chapter={scene.overlay.chapter}
+          position={scene.overlay.position}
+          startSec={scene.overlay.startSec}
+          endSec={scene.overlay.endSec}
+          sceneSec={localFrame / renderPlan.project.fps}
           width={renderPlan.project.width}
           height={renderPlan.project.height}
           theme={theme}

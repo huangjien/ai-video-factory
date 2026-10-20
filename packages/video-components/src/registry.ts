@@ -20,6 +20,7 @@ import { QuoteBlock } from "./components/QuoteBlock.js";
 import { StatGrid } from "./components/StatGrid.js";
 import { Terminal } from "./components/Terminal.js";
 import { Timeline } from "./components/Timeline.js";
+import { MapInsert } from "./components/MapInsert.js";
 import { Title } from "./components/Title.js";
 import { VennDiagram } from "./components/VennDiagram.js";
 
@@ -112,6 +113,38 @@ const timelineProps = z
       .min(1),
   })
   .passthrough();
+
+const mapInsertProps = z
+  .object({
+    landforms: z
+      .array(
+        z
+          .object({
+            d: z.string().min(1),
+            kind: z.enum(["ridge", "river", "plain"]).optional(),
+          })
+          .strict(),
+      )
+      .optional(),
+    routes: z.array(z.object({ d: z.string().min(1) }).strict()).optional(),
+    markers: z
+      .array(
+        z
+          .object({
+            x: z.number(),
+            y: z.number(),
+            kind: z.enum(["start", "city", "battle"]).optional(),
+          })
+          .strict(),
+      )
+      .optional(),
+  })
+  // Deliberately `.strict()`, not `.passthrough()` like the other
+  // components. CS-14 forbids readable place names on the map, and the
+  // reliable way to forbid a thing is to have no field for it: a stray
+  // `label:` fails validation instead of rendering as text that CS-14
+  // says must be spoken by the narrator instead.
+  .strict();
 
 const calloutProps = z
   .object({
@@ -313,6 +346,10 @@ export const REGISTRY: Record<string, RegistryEntry> = {
     propsSchema: timelineProps,
     component: Timeline as ComponentType<unknown>,
   },
+  MapInsert: {
+    propsSchema: mapInsertProps,
+    component: MapInsert as ComponentType<unknown>,
+  },
   Callout: {
     propsSchema: withAlias("Callout", calloutProps),
     component: Callout as ComponentType<unknown>,
@@ -386,6 +423,11 @@ export type RegistryPropsByName = {
     direction?: string;
   };
   Timeline: { events: { label: string; description?: string }[] };
+  MapInsert: {
+    landforms?: { d: string; kind?: "ridge" | "river" | "plain" }[];
+    routes?: { d: string }[];
+    markers?: { x: number; y: number; kind?: "start" | "city" | "battle" }[];
+  };
   Callout: {
     kind: "info" | "warning" | "success";
     title?: string;

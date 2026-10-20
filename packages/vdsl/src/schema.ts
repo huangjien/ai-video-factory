@@ -558,6 +558,14 @@ export const brandSchema = z
   .object({
     /** Channel / product name shown in the intro band. */
     name: z.string().min(1).optional(),
+    /**
+     * CS-08: the per-scene corner watermark. Defaults to on, because every
+     * project inherits the workspace brand. A project whose channel does
+     * not want a mark on every narrative shot sets this to false — an
+     * explicit switch, rather than the absence of an icon, which would be
+     * indistinguishable from "not configured yet".
+     */
+    watermark: z.boolean().default(true),
     /** Project-relative image path (png/jpg/svg) — corner watermark. */
     icon: z.string().min(1).optional(),
     corner: z
@@ -588,6 +596,10 @@ export type BrandConfig = z.infer<typeof brandSchema>;
 const styleSchema = z
   .object({
     theme: z.string().min(1).default("paper-light"),
+    /** CS-01: optional channel grammar profile, carried through to
+     *  RenderPlan.style. Omitted for every pre-CS-01 project, which is
+     *  what keeps their behaviour unchanged. */
+    channel_profile: z.string().min(1).optional(),
     brand: brandSchema.optional(),
   })
   .strict();
@@ -634,6 +646,23 @@ const visualSchema = z
         z.enum(VISUAL_RENDERER_CANONICAL),
       )
       .optional(),
+    /**
+     * `background` — control over the scene background IMAGE, which every
+     * component gets for free: when `assets/images/scene_N.jpg` exists the
+     * renderer binds it behind the component (resolveImageSources), so a
+     * FlowChart or a Title draws on the generated scene art instead of a
+     * flat theme fill. Nothing in the storyboard is required to opt in —
+     * the image is already on disk from `video make`.
+     *
+     * `scrim` (default true) overlays a dark gradient so text overlaid on
+     * the photo stays legible. Set false for a clean full-bleed image.
+     */
+    background: z
+      .object({
+        scrim: z.boolean().default(true),
+      })
+      .strict()
+      .optional(),
   })
   .strict();
 
@@ -674,6 +703,14 @@ const captionsSchema = z
       z.enum(CAPTIONS_SOURCE_CANONICAL),
     ),
     text: z.string().optional(),
+    /**
+     * CS-03: the scene's SPOKEN length, when it is shorter than the
+     * scene. The scene is speech plus a held silence, and the caption
+     * cues must be timed against the speech — timing them across the
+     * whole scene would make the text drift late by the length of the
+     * hold. Written by sync-durations, which measures the audio.
+     */
+    speech_sec: z.number().positive().optional(),
   })
   .strict();
 
@@ -734,6 +771,33 @@ const sceneSchema = z
     animations: z.array(timelineAnimationSchema).optional(),
     captions: captionsSchema.optional(),
     transition: transitionSchema.optional(),
+    /**
+     * CS-03: seconds of silence held after this scene's narration. The
+     * scene's duration is speech + this hold, and the narration wav
+     * carries the silence too, so the audio track and the picture stay
+     * the same length.
+     */
+    hold_after_sec: z.number().min(0).max(30).optional(),
+    /**
+     * CS-06 — a text layer composited OVER the scene's own image. It
+     * never replaces the picture and never becomes its own scene: the
+     * film's title sits in the opening shot's quiet area and fades, and a
+     * chapter name appears only when a section turn earns one.
+     *
+     * `title` and `chapter` are independent — a scene may carry either,
+     * both, or neither. The window is scene-relative seconds.
+     */
+    overlay: z
+      .object({
+        title: z.string().min(1).optional(),
+        chapter: z.string().min(1).optional(),
+        position: z.enum(["top", "bottom"]).default("top"),
+        /** Scene-relative seconds. Defaults to the scene's own span. */
+        start_sec: z.number().min(0).optional(),
+        end_sec: z.number().min(0).optional(),
+      })
+      .strict()
+      .optional(),
   })
   .strict();
 
@@ -760,7 +824,24 @@ const storyboardObjectSchema = z
     assets: z.array(assetSchema).optional(),
     scenes: z.array(sceneSchema).min(1),
   })
-  .strict();
+  .strict()
+  .superRefine((board, ctx) => {
+    // CS-14: a channel profile allows at most ONE full-frame map insert
+    // per film, and the map may not be split into panels. Gated on the
+    // profile — a board with no channel_profile is unchanged, and only
+    // the profile's own docs describe the one-insert rule.
+    if (board.style?.channel_profile !== "chinese-storybook") return;
+    const mapScenes = board.scenes.filter(
+      (s) => s.visual.component === "MapInsert",
+    );
+    if (mapScenes.length > 1) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["scenes"],
+        message: `channel_profile chinese-storybook allows one map insert per film, found ${mapScenes.length} (${mapScenes.map((s) => s.id).join(", ")})`,
+      });
+    }
+  });
 
 /** Renderer inheritance: scene.visual.renderer ?? defaults.renderer ??
  * "remotion", resolved at parse time so the compiled vdsl.yaml and the

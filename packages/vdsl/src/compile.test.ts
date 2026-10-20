@@ -101,11 +101,15 @@ scenes:
     expect(() => compileStoryboard("not: valid: vdsl", "/proj")).toThrow();
   });
 
-  it("wraps captions via wrapText in the render plan", () => {
+  it("builds timed caption cues in the render plan", () => {
     const { renderPlan } = compileStoryboard(validStoryboardYaml, "/proj");
     const first = renderPlan.scenes[0];
-    expect(first?.captions?.lines).toBeDefined();
-    expect(first?.captions?.lines.length).toBeGreaterThan(0);
+    expect(first?.captions?.cues).toBeDefined();
+    expect(first?.captions?.cues.length).toBeGreaterThan(0);
+    for (const cue of first?.captions?.cues ?? []) {
+      expect(cue.lines.length).toBeLessThanOrEqual(2);
+      expect(cue.endSec).toBeGreaterThan(cue.startSec);
+    }
   });
 
   it("exposes ANIMATION_ENTRANCES and TRANSITIONS constants", () => {
@@ -119,5 +123,78 @@ scenes:
     expect(renderPlan.scenes[0]?.animation.entrance).toBe("none");
     expect(renderPlan.scenes[0]?.captions).toBeNull();
     expect(renderPlan.scenes[0]?.audio).toBeNull();
+  });
+});
+
+describe("compile carries the scene text overlay (CS-06)", () => {
+  const board = (overlay: string) => `schema_version: "0.2"
+
+project:
+  id: t
+  language: zh-CN
+  fps: 30
+  width: 1920
+  height: 1080
+
+scenes:
+  - id: scene-01
+    duration: 10
+    visual:
+      component: AnimatedIllustration
+      props:
+        text: v
+${overlay}
+`;
+
+  it("carries the title, the window and the position", () => {
+    const { renderPlan } = compileStoryboard(
+      board(
+        [
+          "    overlay:",
+          "      title: 片名",
+          "      position: top",
+          "      start_sec: 0.6",
+          "      end_sec: 5",
+        ].join("\n"),
+      ),
+      "/proj",
+    );
+    expect(renderPlan.scenes[0]?.overlay).toEqual({
+      title: "片名",
+      position: "top",
+      startSec: 0.6,
+      endSec: 5,
+    });
+  });
+
+  it("defaults the window to the scene's own span", () => {
+    const { renderPlan } = compileStoryboard(
+      board(["    overlay:", "      title: 片名"].join("\n")),
+      "/proj",
+    );
+    expect(renderPlan.scenes[0]?.overlay?.startSec).toBe(0);
+    expect(renderPlan.scenes[0]?.overlay?.endSec).toBe(10);
+  });
+
+  it("leaves the overlay null when the scene has none", () => {
+    const { renderPlan } = compileStoryboard(board(""), "/proj");
+    expect(renderPlan.scenes[0]?.overlay).toBeNull();
+  });
+
+  it("keeps the title and the chapter independent", () => {
+    const { renderPlan } = compileStoryboard(
+      board(
+        [
+          "    overlay:",
+          "      chapter: 第一章",
+          "      position: bottom",
+        ].join("\n"),
+      ),
+      "/proj",
+    );
+    const o = renderPlan.scenes[0]?.overlay;
+    expect(o?.chapter).toBe("第一章");
+    expect(o?.title).toBeUndefined();
+    expect(o?.position).toBe("bottom");
   });
 });

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { wrapText } from "./captions.js";
+import { buildCaptionCues, MAX_CAPTION_LINES, wrapText } from "./captions.js";
 
 describe("wrapText (CJK-aware, unit = 1 zh char)", () => {
   it("short zh text stays one line", () => {
@@ -29,5 +29,65 @@ describe("wrapText (CJK-aware, unit = 1 zh char)", () => {
   it("hard-breaks unbreakable CJK runs at the limit", () => {
     const lines = wrapText("字".repeat(30), 24);
     expect(lines).toEqual(["字".repeat(24), "字".repeat(6)]);
+  });
+});
+
+describe("buildCaptionCues (CS-07)", () => {
+  const narration =
+    "公元六二六年七月二日清晨，长安城刚刚苏醒，宫城北门玄武门外响起急促的马蹄声。" +
+    "三十多名骑兵如鬼魅般冲出，直扑太子与齐王的队伍。" +
+    "几十分钟后，大唐帝国的两位皇子当场殒命。";
+
+  it("splits a long narration into several cues", () => {
+    expect(buildCaptionCues(narration, 20).length).toBeGreaterThan(1);
+  });
+
+  it("never stacks more than two lines in any cue", () => {
+    for (const cue of buildCaptionCues(narration, 20)) {
+      expect(cue.lines.length).toBeLessThanOrEqual(MAX_CAPTION_LINES);
+    }
+  });
+
+  it("covers the whole scene: first cue at 0, last ends at the duration", () => {
+    const cues = buildCaptionCues(narration, 20);
+    expect(cues[0]?.startSec).toBe(0);
+    expect(cues[cues.length - 1]?.endSec).toBeCloseTo(20, 6);
+  });
+
+  it("is continuous and monotonic — no gaps, no overlaps, no reordering", () => {
+    const cues = buildCaptionCues(narration, 20);
+    for (let i = 0; i < cues.length; i++) {
+      const cue = cues[i]!;
+      expect(cue.endSec).toBeGreaterThan(cue.startSec);
+      const next = cues[i + 1];
+      if (next) expect(cue.endSec).toBeCloseTo(next.startSec, 9);
+    }
+  });
+
+  it("loses no text — every character survives into some cue", () => {
+    const rejoined = buildCaptionCues(narration, 20)
+      .flatMap((c) => c.lines)
+      .join("")
+      .replace(/\s/g, "");
+    expect(rejoined).toBe(narration.replace(/\s/g, ""));
+  });
+
+  it("splits a punctuation-free run instead of truncating it", () => {
+    const long = "一".repeat(200);
+    const cues = buildCaptionCues(long, 30);
+    expect(cues.length).toBeGreaterThan(1);
+    expect(cues.flatMap((c) => c.lines).join("")).toHaveLength(200);
+  });
+
+  it("gives longer cues proportionally more time", () => {
+    const cues = buildCaptionCues("短。".repeat(2) + "长".repeat(60) + "。", 30);
+    const spans = cues.map((c) => c.endSec - c.startSec);
+    expect(spans[spans.length - 1]!).toBeGreaterThan(spans[0]!);
+  });
+
+  it("returns nothing for empty text or a non-positive duration", () => {
+    expect(buildCaptionCues("", 10)).toEqual([]);
+    expect(buildCaptionCues("   ", 10)).toEqual([]);
+    expect(buildCaptionCues("有文字。", 0)).toEqual([]);
   });
 });

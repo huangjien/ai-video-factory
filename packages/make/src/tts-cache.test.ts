@@ -109,10 +109,22 @@ describe("ttsCacheKey — provider + language namespacing", () => {
     // voice ids don't encode locale the way Edge ids do, so language
     // joined the key. This intentionally retired the pre-language pin:
     // every sidecar written before re-synthesizes once (all Edge, free).
+    //
+    // 2026-10-19: the provider revision joined the key too — the voicebox
+    // sentence stitch and the local playback-rate stretch both changed the
+    // output for identical inputs, and the key could not otherwise see
+    // that. The pin moves with it.
     expect(
       ttsCacheKey("第一场的话。", "zh-CN-YunjianNeural", undefined, "edge", "zh-CN"),
     ).toBe(
-      "sha256:e53d9fd61977ad9830d02026c97552064242e3844a23c3f7b656627350b1edec",
+      "sha256:f777874af3eceaf8fbe37d91623e95807fee37109ea04f2a3bf06a309e3b9770",
+    );
+  });
+
+  it("changes the key when the provider revision moves", () => {
+    const before = ttsCacheKey("n", "v", 0.3, "voicebox", "zh-CN");
+    expect(before).not.toBe(
+      ttsCacheKey("n", "v", 0.3, "voicebox", "zh-CN", undefined, undefined, 0),
     );
   });
 

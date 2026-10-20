@@ -70,6 +70,11 @@ export interface DraftOptions {
    *  | openai | gemini | mock | none. Also a video-ask/1 knob: passing
    *  it explicitly marks the image_provider question as specified. */
   imageProvider?: string;
+  /** CS-01: channel grammar profile stamped into article.md frontmatter
+   *  (`channel_profile:`) and carried to storyboard `style.channel_profile`
+   *  → VDSL → RenderPlan.style. Distinct from `imageStyle`, which is the
+   *  per-film art style. */
+  channelProfile?: string;
   /** Narration backend — written into article.md frontmatter
    *  (`tts_provider:` + `voice:`) so `video make` picks it up.
    *  voicebox:<profile> | minimax-system | edge. Also a video-ask/1
@@ -334,6 +339,9 @@ export async function runDraft(opts: DraftOptions): Promise<number> {
     ...(fromContent !== undefined ? { fromContent } : {}),
     ...(ideaSeed !== undefined ? { ideaSeed } : {}),
     ...(webContext && webContext.length > 0 ? { webContext } : {}),
+    ...(opts.channelProfile !== undefined
+      ? { channelProfile: opts.channelProfile }
+      : {}),
   };
 
   let markdown: string;
@@ -434,6 +442,16 @@ export async function runDraft(opts: DraftOptions): Promise<number> {
       stamped,
       "image_provider",
       opts.imageProvider,
+    );
+  }
+  // CS-01: same contract. channel_profile outlives image_style by design —
+  // it is the cross-film channel grammar, so changing the art style must
+  // not clear it.
+  if (opts.channelProfile !== undefined) {
+    stamped = stampFrontmatterKey(
+      stamped,
+      "channel_profile",
+      opts.channelProfile,
     );
   }
   // Same contract as image_provider: the narration backend is durable
@@ -568,6 +586,7 @@ export interface DraftCliOpts {
   audioPlan?: boolean;
   imageStyle?: string;
   imageProvider?: string;
+  channelProfile?: string;
   tts?: string;
   style?: string;
   captions?: boolean;
@@ -599,6 +618,9 @@ export function draftCliOptsToDraftOptions(
     ...(opts.imageStyle !== undefined ? { imageStyle: opts.imageStyle } : {}),
     ...(opts.imageProvider !== undefined
       ? { imageProvider: opts.imageProvider }
+      : {}),
+    ...(opts.channelProfile !== undefined
+      ? { channelProfile: opts.channelProfile }
       : {}),
     ...(opts.tts !== undefined ? { tts: opts.tts } : {}),
     ...(opts.style !== undefined ? { style: opts.style } : {}),
@@ -656,7 +678,7 @@ export function registerDraft(program: Command): void {
     )
     .option(
       "--image-style <style>",
-      "scene-image style preset — flat-vector | photoreal | watercolor | ink-wash | clay-3d | manga | genki-anime | medieval | editorial | whiteboard | isometric | paper-cut (default: flat-vector); see video prompts show image-styles.yaml for use cases",
+      "scene-image style preset — flat-vector | photoreal | watercolor | ink-wash | clay-3d | manga | genki-anime | medieval | editorial | whiteboard | isometric | paper-cut | gongbi (default: flat-vector); see video prompts show image-styles.yaml for use cases",
     )
     .option(
       "--image-provider <provider>",
@@ -670,6 +692,10 @@ export function registerDraft(program: Command): void {
         }
         return v;
       },
+    )
+    .option(
+      "--channel-profile <name>",
+      "v0.11: cross-video channel grammar profile stamped into article.md frontmatter and carried to the render plan (currently: chinese-storybook). Distinct from --image-style, which is the per-film art style.",
     )
     .option(
       "--style <theme>",

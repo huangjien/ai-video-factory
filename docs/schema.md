@@ -35,6 +35,8 @@ scenes:
     visual:
       component: FlowChart
       renderer: remotion # remotion (default) | canvas
+      background:      # optional; see "Scene background image" below
+        scrim: true    # dark gradient over the photo (default true)
       props: { … } # validated against the REGISTRY props schema
     animation: # legacy v0.1 entrance model (still honored)
       entrance: fade # none|fade|slide|scale|draw|typewriter (+synonyms)
@@ -101,6 +103,32 @@ The scene family also decides the animation fallback: `canvas` scenes
 auto-draw sequentially (strokes, ease-out, ~0.25 s stagger) so a minimal
 storyboard still animates; `remotion` components fall back to their
 `animation.entrance` model.
+
+## Scene background image
+
+Every component draws on its scene's generated image. When
+`assets/images/scene_N.jpg` exists (written by `video make` for every
+scene), the renderer binds it behind whatever component the scene uses —
+`resolveImageSources` inlines it as a data URL and `Root.tsx` draws it as
+a `SceneBackground` layer with a slow Ken-Burns drift. Because every
+REGISTRY component paints a full-frame `theme.colors.background` fill,
+the renderer makes that colour transparent for image-backed scenes; no
+component needs to know about backgrounds.
+
+Nothing in the storyboard is required to opt in. `visual.background` is
+the only control:
+
+```yaml
+visual:
+  component: FlowChart
+  background: {scrim: false} # no dark gradient over the photo
+```
+
+Scrim defaults on (`rgba(0,0,0,0.25→0.45)`) so overlaid text stays
+legible. No image on disk → the scene paints the theme background, so
+hand-authored projects without `video make` output are unaffected.
+`ImageBackground` scenes keep their own full-bleed `props.src` and get no
+second background.
 
 ## The `animations[]` timeline — the scene's choreography
 

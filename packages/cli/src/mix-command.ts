@@ -6,7 +6,12 @@ import { execFile, execSync } from "node:child_process";
 import { promisify } from "node:util";
 import path from "node:path";
 import { resolveProjectDir } from "./project-path.js";
-import { mixTracks, mixTracksWithSpec, parseMixYaml } from "@video/audio-mix";
+import {
+  mixTracks,
+  mixTracksWithSpec,
+  parseMixYaml,
+  SfxCueKeySchema,
+} from "@video/audio-mix";
 import { formatRunId } from "@video/workflow";
 import {
   curatedBgmDirectory,
@@ -26,6 +31,10 @@ export interface MixOptions {
   mixYamlPath?: string | undefined;
   bgmFadeInSec?: number;
   bgmFadeOutSec?: number;
+  /** SFX cues as `scene_N=tag`. `video make` passes audio-config.yaml's
+   *  `sfx:` block through here — the documented place for cues, and the
+   *  one the mix actually reads. */
+  sfx?: string[] | undefined;
 }
 
 function safeGitHead(cwd: string): string {
@@ -197,6 +206,34 @@ export function pickNarrations(projectRoot: string): string[] {
   return files;
 }
 
+/** Parse `--sfx scene_2=whoosh` flags into a cue map.
+ *
+ * The scene key goes through the SAME schema mix.yaml uses, so a
+ * mis-keyed cue fails loudly here instead of being dropped in silence —
+ * `scene-02` (hyphen) is the easy mistake, and it used to cost every
+ * cue in the file. */
+export function parseSfxFlags(flags: string[] | undefined): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const flag of flags ?? []) {
+    const eq = flag.indexOf("=");
+    if (eq <= 0 || eq === flag.length - 1) {
+      throw new Error(
+        `--sfx must be scene_N=tag (e.g. scene_2=whoosh), got "${flag}"`,
+      );
+    }
+    const key = flag.slice(0, eq).trim();
+    const tag = flag.slice(eq + 1).trim();
+    const parsedKey = SfxCueKeySchema.safeParse(key);
+    if (!parsedKey.success) {
+      throw new Error(
+        `--sfx "${flag}": ${parsedKey.error.issues[0]?.message ?? "invalid scene key"}`,
+      );
+    }
+    out[parsedKey.data] = tag;
+  }
+  return out;
+}
+
 /** Parse a spec's SFX cues into engine cues by translating scene_N tags into
  * absolute seconds based on the accumulated narration duration. */
 function resolveSfxCues(
@@ -207,6 +244,9 @@ function resolveSfxCues(
   narrationDurationsSec: number[],
 ): { atSec: number; path: string }[] {
   if (!specSfx) return [];
+  // Both cue sources (mix.yaml and --sfx) are validated against
+  // SfxCueKeySchema before they get here, so every key matches scene_N and
+  // none can be silently skipped.
   const cues: { atSec: number; path: string }[] = [];
   let cumulative = 0;
   for (let i = 0; i < narrationPaths.length; i++) {
@@ -313,22 +353,33 @@ export async function runMix(opts: MixOptions): Promise<number> {
   const fadeIn = opts.bgmFadeInSec ?? spec?.bgm_fade_in_sec ?? 0;
   const fadeOut = opts.bgmFadeOutSec ?? spec?.bgm_fade_out_sec ?? 0;
   const sfxDir = path.join(projectRoot, "assets/audio-assets/sfx");
+  // Cues from --sfx (audio-config.yaml, via `video make`) and from
+  // mix.yaml are merged; the flag wins on the same scene key.
+  let flagSfx: Record<string, string>;
+  try {
+    flagSfx = parseSfxFlags(opts.sfx);
+  } catch (err) {
+    console.error(`✗ ${(err as Error).message}`);
+    return 1;
+  }
+  const sfxSpec = { ...(spec?.sfx ?? {}), ...flagSfx };
   let sfxCues: { atSec: number; path: string }[];
   try {
     // Durations are only needed to place SFX cues — probe (and fail loudly
     // on error) only when the spec actually defines cues.
-    const narrationDurationsSec = spec?.sfx
-      ? await probeTotalDuration(narrationPaths)
-      : [];
+    const narrationDurationsSec =
+      Object.keys(sfxSpec).length > 0
+        ? await probeTotalDuration(narrationPaths)
+        : [];
     sfxCues = resolveSfxCues(
-      spec?.sfx,
+      sfxSpec,
       projectRoot,
       sfxDir,
       narrationPaths,
       narrationDurationsSec,
     );
   } catch (err) {
-    console.error(`\u2717 ${(err as Error).message}`);
+    console.error(`✗ ${(err as Error).message}`);
     return 1;
   }
 
@@ -439,6 +490,11 @@ program
     "--mix-yaml <path>",
     "explicit mix.yaml path (default: audio-assets/mix.yaml)",
   )
+  .option(
+    "--sfx <scene_N=tag>",
+    "SFX cue, repeatable (e.g. --sfx scene_2=whoosh). Merged with mix.yaml cues; the flag wins on the same scene.",
+    (v: string, prev: string[] = []) => [...prev, v],
+  )
   .action(
     async (
       project: string,
@@ -449,6 +505,7 @@ program
         bgmFadeIn?: number;
         bgmFadeOut?: number;
         mixYaml?: string;
+        sfx?: string[];
       },
     ) => {
       process.exitCode = await runMix({
@@ -465,6 +522,7 @@ program
           ? { bgmFadeOutSec: opts.bgmFadeOut }
           : {}),
         ...(opts.mixYaml !== undefined ? { mixYamlPath: opts.mixYaml } : {}),
+        ...(opts.sfx !== undefined ? { sfx: opts.sfx } : {}),
       });
     },
   );

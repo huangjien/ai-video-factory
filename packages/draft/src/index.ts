@@ -13,6 +13,31 @@ export {
   type ArticleWithRecovery,
 } from "./schemas.js";
 export { SYSTEM_PROMPT, buildMessages, type DraftInput } from "./prompt.js";
+export {
+  CHANNEL_PROFILES,
+  resolveChannelProfile,
+  channelDraftBlock,
+  channelReviewBlock,
+  withChannelBlock,
+  type ChannelProfile,
+} from "./channel-profile.js";
+export {
+  ANCHOR_BASIS,
+  REFERENCE_STATUS,
+  CharacterProfileSchema,
+  loadCharacterProfile,
+  loadCharacterById,
+  listCharacterIds,
+  characterRootFor,
+  approveReference,
+  anchorPromptLines,
+  anchorsForVariant,
+  approvedReferenceFor,
+  type AnchoredValue,
+  type CharacterProfile,
+  type CharacterReference,
+  type CharacterVariant,
+} from "./character-profile.js";
 export { callDraft, DraftError, type CallDraftResult } from "./agent.js";
 export {
   PROFILE,

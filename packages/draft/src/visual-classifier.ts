@@ -54,7 +54,8 @@ export type ComponentName =
   | "BigIdea"
   | "PyramidDiagram"
   | "VennDiagram"
-  | "CycleDiagram";
+  | "CycleDiagram"
+  | "MapInsert";
 
 export interface ComponentChoice {
   component: ComponentName;
@@ -167,6 +168,16 @@ const RULES: ClusterRule[] = [
       /(数据库|表格|字段|列存|列式|sql|查询)/,
     ],
   },
+  {
+    // CS-14. Last on purpose: RULES is first-match-wins, so a scene that
+    // already reads as a timeline or a chart keeps that component, and
+    // only an otherwise-unmatched "map" line becomes a map insert.
+    component: "MapInsert",
+    patterns: [
+      /\b(map|maps|route|routes|campaign-map|march)\b/i,
+      /(地图|路线图|行军图|路线图|战役图)/,
+    ],
+  },
 ];
 
 const DEFAULT_COMPONENT: ComponentName = "AnimatedIllustration";
@@ -193,6 +204,7 @@ const COMPONENT_NAMES: readonly ComponentName[] = [
   "PyramidDiagram",
   "VennDiagram",
   "CycleDiagram",
+  "MapInsert",
 ];
 
 /** Components the Laya assist may pick (v0.6 plan D2): everything except

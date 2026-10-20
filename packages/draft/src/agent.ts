@@ -1,5 +1,5 @@
 import type { ChatMessage, Provider } from "@video/llm";
-import { chatWithFallback } from "@video/llm";
+import { chatWithFallback, stripReasoning } from "@video/llm";
 import { buildMessages, type DraftInput } from "./prompt.js";
 
 export class DraftError extends Error {
@@ -87,7 +87,10 @@ type ParseResult =
 /** Tolerant parser — handles fenced JSON, surrounding prose, and minor
  * brace-mismatch errors by extracting the largest balanced JSON object. */
 function tryParse(content: string): ParseResult {
-  const trimmed = content.trim();
+  // CS-14: a reasoning model emits its thinking first, and that thinking
+  // contains a JSON SKETCH. Parsing the whole response — or the largest
+  // balanced object in it — reads the sketch, not the answer.
+  const trimmed = stripReasoning(content).trim();
   if (!trimmed) return { ok: false, error: new Error("empty content") };
 
   // 1) Try the strict path first — exactly the response, optionally after

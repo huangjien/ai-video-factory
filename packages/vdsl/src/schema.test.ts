@@ -157,3 +157,69 @@ scenes:
     }
   });
 });
+
+describe("map insert — one per film under a channel profile (CS-14)", () => {
+  const mapScene = (id: string) => `  - id: ${id}
+    duration: 6
+    visual:
+      component: MapInsert
+      props: {}
+`;
+
+  const plainScene = (id: string) => `  - id: ${id}
+    duration: 4
+    visual:
+      component: ImageBackground
+      props: {}
+`;
+
+  /** `maps` map-insert scenes plus one ordinary image scene. */
+  const board = (profile: string | null, maps: number): string => {
+    const scenes = Array.from({ length: maps }, (_, i) =>
+      mapScene(`scene-0${i + 1}`),
+    ).join("");
+    return `schema_version: "0.2"
+
+project:
+  id: t
+  language: zh-CN
+  fps: 30
+  width: 1920
+  height: 1080
+
+style:
+  theme: paper-light${profile === null ? "" : `\n  channel_profile: ${profile}`}
+
+scenes:
+${scenes}${plainScene(`scene-9${maps}`)}
+`;
+  };
+
+  it("accepts exactly one map insert under chinese-storybook", () => {
+    expect(validateStoryboard(board("chinese-storybook", 1), "storyboard.yaml").ok).toBe(
+      true,
+    );
+  });
+
+  it("accepts a film with no map insert at all", () => {
+    expect(validateStoryboard(board("chinese-storybook", 0), "storyboard.yaml").ok).toBe(
+      true,
+    );
+  });
+
+  it("rejects a second map insert under the profile", () => {
+    const result = validateStoryboard(board("chinese-storybook", 2), "storyboard.yaml");
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.errors.map((e) => e.message).join(" ")).toMatch(
+        /one map insert per film/,
+      );
+    }
+  });
+
+  it("leaves boards with no channel profile unchanged", () => {
+    // The rule belongs to the profile, not the schema — a project that
+    // never opted in must keep validating two maps.
+    expect(validateStoryboard(board(null, 2), "storyboard.yaml").ok).toBe(true);
+  });
+});

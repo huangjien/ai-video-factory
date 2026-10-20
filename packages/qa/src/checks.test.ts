@@ -117,7 +117,7 @@ describe("T6.1 extended QA checks — injected defects are caught with fixes", (
       path.join(dir, "captions", "zh-CN.srt"),
       "1\n00:00:02,000 --> 00:00:02,500\nlater\n\n2\n00:00:00,500 --> 00:00:01,000\nearlier\n",
     );
-    const p = plan([{ captions: { lines: ["x"] } }]);
+    const p = plan([{ captions: { cues: [{ lines: ["x"], startSec: 0, endSec: 1 }] } }]);
     const { findings } = await checkCaptions(p, dir, 3);
     const hit = findings.find((f) => f.message.includes("non-monotonic"));
     expect(hit?.level).toBe("error");
@@ -129,7 +129,7 @@ describe("T6.1 extended QA checks — injected defects are caught with fixes", (
       path.join(dir, "captions", "zh-CN.srt"),
       "1\n00:00:00,000 --> 00:00:09,900\nway past the 3s video\n",
     );
-    const p = plan([{ captions: { lines: ["x"] } }]);
+    const p = plan([{ captions: { cues: [{ lines: ["x"], startSec: 0, endSec: 1 }] } }]);
     const { findings } = await checkCaptions(p, dir, 3);
     const hit = findings.find((f) => f.message.includes("past the video") || f.message.includes("ends at"));
     expect(hit?.level).toBe("warn");
@@ -138,7 +138,7 @@ describe("T6.1 extended QA checks — injected defects are caught with fixes", (
 
   it("DEFECT 4 — captions overflowing the safe area are an error", async () => {
     const p = plan([
-      { captions: { lines: ["line1", "line2", "line3", "line4"] } },
+      { captions: { cues: [{ lines: ["line1", "line2", "line3", "line4"], startSec: 0, endSec: 1 }] } },
     ]);
     const { findings } = await checkCaptions(p, dir, 3);
     const hit = findings.find((f) => f.check === "captionFit");

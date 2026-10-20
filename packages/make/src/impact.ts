@@ -184,8 +184,7 @@ export function computeMakeImpact(
         ? "minimax-tts"
         : "edge";
   article.scenes.forEach((scene) => {
-    const idNum = scene.id.replace(/^scene[-_]?/, "");
-    const wav = path.join(audioDir, `scene_${idNum}.wav`);
+    const wav = path.join(audioDir, `${scene.id}.wav`);
     if (!existsSync(wav)) {
       ttsSynthesize.push(scene.id);
       return;
@@ -197,6 +196,13 @@ export function computeMakeImpact(
       pauseSec,
       effectiveTtsProvider,
       article.frontmatter.language,
+      typeof article.frontmatter.tts_speed === "number"
+        ? article.frontmatter.tts_speed
+        : undefined,
+      typeof article.frontmatter.tts_sentence_pause_sec === "number"
+        ? article.frontmatter.tts_sentence_pause_sec
+        : undefined,
+      scene.hold_after_sec,
     );
     if (meta !== null) {
       try {

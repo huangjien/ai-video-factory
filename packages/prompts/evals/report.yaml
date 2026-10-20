@@ -32,7 +32,7 @@ cases:
     judged: skipped
   - case: era-poor-scene-stays-in-tang
     agent: image-prompt
-    prompt_hash: sha256:ea39ea2c0da83c100619eb038708718a84a86e510add3c335ffc8939a1dacce1
+    prompt_hash: sha256:d174d607ca1dfc374b774827d132de951d2787a20f287e61963ae762a4c1019e
     structural: pass
     judged: skipped
   - case: script-and-research-context-order

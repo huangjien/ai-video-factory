@@ -27,6 +27,7 @@ export {
 export {
   planSceneMotion,
   validateMotionSpec,
+  isStillFirstProfile,
   type MotionSpec,
   type SceneMotionInput,
 } from "./plan.js";

@@ -19,6 +19,7 @@ import { registerShorts } from "./shorts-command.js";
 import { registerValidate } from "./validate-command.js";
 import { registerStatus } from "./status-command.js";
 import { registerTheme } from "./theme-command.js";
+import { registerCharacter } from "./character-command.js";
 import { registerWorkflow } from "./workflow-commands.js";
 import { registerVisuals } from "./visuals-command.js";
 import { registerPreview } from "./render-command.js";
@@ -69,6 +70,7 @@ for (const register of [
   registerValidate,
   registerStatus,
   registerTheme,
+  registerCharacter,
   registerWorkflow,
   registerVisuals,
   registerPreview,

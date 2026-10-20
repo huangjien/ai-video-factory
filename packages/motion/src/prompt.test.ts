@@ -73,3 +73,43 @@ describe("motion prompt", () => {
     expect(bare[0]?.content).toContain("Skill guidance unavailable");
   });
 });
+
+describe("buildMotionMessages — still-first channel (CS-09)", () => {
+  const input = {
+    sceneId: "scene-01",
+    durationSec: 12,
+    index: 0,
+    component: "ImageBackground",
+    baseline: { animations: [], transition: { in: "fade" as const, out: "cut" as const } },
+    guidance: null,
+  };
+
+  it("appends the still-first block last, overriding the 2-5 quota", () => {
+    const msg = buildMotionMessages({ ...input, channelProfile: "chinese-storybook" });
+    const content = msg[0]!.content;
+    expect(content).toContain("chinese-storybook");
+    // The quota the block must override is still present above it...
+    expect(content).toContain("2-5 animations");
+    // ...and the override lands after it.
+    expect(content.indexOf("chinese-storybook")).toBeGreaterThan(
+      content.indexOf("2-5 animations"),
+    );
+  });
+
+  it("tells the agent that zero animations is a valid answer", () => {
+    const content = buildMotionMessages({
+      ...input,
+      channelProfile: "chinese-storybook",
+    })[0]!.content;
+    expect(content).toMatch(/zero animations/i);
+    expect(content).toMatch(/at most ONE animation/i);
+    expect(content).toMatch(/typewriter/i);
+  });
+
+  it("leaves every other profile's prompt untouched", () => {
+    const plain = buildMotionMessages(input)[0]!.content;
+    const other = buildMotionMessages({ ...input, channelProfile: "x" })[0]!.content;
+    expect(plain).not.toContain("chinese-storybook");
+    expect(other).toBe(plain);
+  });
+});

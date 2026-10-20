@@ -1,4 +1,4 @@
-import { wrapText } from "@video/media";
+import { buildCaptionCues, type CaptionCue } from "@video/media";
 import { stringify as yamlStringify } from "yaml";
 import type {
   Asset,
@@ -35,15 +35,38 @@ export interface RenderPlanScene {
   /** Spec-driven transition (plan §8/§10). null = storyboard declared no
    * transition; the renderer then applies its own defaults. */
   transition: { in: TransitionKind; out: TransitionKind } | null;
-  captions: { lines: string[] } | null;
+  captions: { cues: CaptionCue[] } | null;
+  /** CS-06 — the text layer composited over the scene's own image.
+   *  Absent or null = no overlay; the scene shows its picture alone. */
+  overlay?: {
+    title?: string;
+    chapter?: string;
+    position: "top" | "bottom";
+    startSec: number;
+    endSec: number;
+  } | null;
   audio: string | null;
+  /** Renderer-bound background image (data URL) — `resolveImageSources`
+   *  binds `assets/images/scene_N.jpg` when it exists, so EVERY component
+   *  draws on the generated scene art. null = no image; the scene paints
+   *  the theme background. Bound at render time only — never part of
+   *  vdsl.yaml, so recompilation stays byte-identical. */
+  backgroundSrc?: string | null;
+  /** Dark gradient over `backgroundSrc` so overlaid text stays legible.
+   *  Default true; a storyboard opts out with `background: {scrim: false}`. */
+  backgroundScrim?: boolean;
 }
 
 export interface RenderPlan {
   project: Storyboard["project"];
-  style: { theme: string; brand?: BrandConfig };
+  style: { theme: string; brand?: BrandConfig; channel_profile?: string };
   totalFrames: number;
   scenes: RenderPlanScene[];
+  /** Absolute project root, carried from compileStoryboard. Lets the
+   *  renderer resolve project-relative assets (scene background images)
+   *  without every call site having to thread the root through. Never
+   *  written to vdsl.yaml. */
+  projectRoot?: string;
   /** Project-level asset manifest (plan §11), carried for renderer/QA. */
   assets?: Asset[];
   /** When this plan is a sliced single-scene composition
@@ -100,9 +123,35 @@ export function compileStoryboard(
     const captionText =
       scene.captions?.text ??
       (scene.captions?.source === "narration" ? narration?.text : undefined);
+    // CS-03: the cue window is the scene's SPOKEN length when it is known
+    // (the scene also holds silence), never the whole scene — timing the
+    // cues across the hold would make the text lag the voice.
+    const captionWindow = scene.captions?.speech_sec ?? scene.duration;
     const captions = captionText
-      ? { lines: wrapText(captionText, DEFAULT_CAPTION_UNITS) }
+      ? {
+          cues: buildCaptionCues(captionText, captionWindow, {
+            maxUnits: DEFAULT_CAPTION_UNITS,
+          }),
+        }
       : null;
+    // CS-06: the overlay's window defaults to the scene's own span; a
+    // storyboard that wants the title to fade out early sets end_sec.
+    const overlaySpec = scene.overlay;
+    const overlay =
+      overlaySpec !== undefined &&
+      (overlaySpec.title !== undefined || overlaySpec.chapter !== undefined)
+        ? {
+            ...(overlaySpec.title !== undefined
+              ? { title: overlaySpec.title }
+              : {}),
+            ...(overlaySpec.chapter !== undefined
+              ? { chapter: overlaySpec.chapter }
+              : {}),
+            position: overlaySpec.position,
+            startSec: overlaySpec.start_sec ?? 0,
+            endSec: overlaySpec.end_sec ?? scene.duration,
+          }
+        : null;
 
     return {
       id: scene.id,
@@ -122,7 +171,9 @@ export function compileStoryboard(
         ? { in: scene.transition.in, out: scene.transition.out }
         : null,
       captions,
+      overlay,
       audio: narration?.audio ?? null,
+      backgroundScrim: scene.visual.background?.scrim ?? true,
     };
   });
 
@@ -130,10 +181,14 @@ export function compileStoryboard(
     project,
     style: {
       theme: board.style?.theme ?? "paper-light",
+      ...(board.style?.channel_profile
+        ? { channel_profile: board.style.channel_profile }
+        : {}),
       ...(board.style?.brand ? { brand: board.style.brand } : {}),
     },
     totalFrames: cursor,
     scenes,
+    projectRoot,
     ...(board.assets ? { assets: board.assets } : {}),
   };
 

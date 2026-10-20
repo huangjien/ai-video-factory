@@ -237,13 +237,20 @@ interface SceneCacheMeta {
  * Same contract as `IMAGE_PROMPT_REVISION` in @video/draft, and deliberately
  * manual: hashing the source tree would re-render on every comment edit.
  */
-export const RENDERER_REVISION = "4";
+export const RENDERER_REVISION = "7";
 // 2: caption type + halo + no-plate overlay
 // 3: the title card preserves inter-word spaces — each glyph is its own flex
 // item, so a bare space collapsed to zero width and headlines rendered run-on.
 // 4: ImageBackground's caption band now shares captionStyle.ts geometry
 // (bottom offset, max-width, padding) with the CaptionsOverlay track and
 // drops the title-face override — image-scene captions moved.
+// 5: ImageBackground's veil is bottom-weighted (was a 0.45→0.65 full-frame
+// wash, which cost a paper-white ground half its luma), the img no longer
+// fades in, and `kenBurnsScale: 0` now freezes the opacity ramps too.
+// 6: captions are timed cues — the overlay draws only the cue active at the
+// current frame, so a scene's narration can no longer stack past two rows.
+// 7: the per-scene corner watermark honours `brand.watermark: false`, so a
+// project can drop the inherited mark without dropping the rest of the brand.
 
 /** Cache freshness: the scene fragment, the narration audio, AND every
  * project-level render input (theme, fps/width/height) must match. A
@@ -332,14 +339,15 @@ async function renderScenesIncrementally(
     result.sceneFiles.push(file);
     const frag = extractSceneFragment(storyboardText, scene.id);
     const sceneHash = frag === null ? null : hashSceneFragment(frag);
-    // Compiled caption lines are a render input the fragment cannot see
-    // (wrapText runs at compile time) — fold them into the sidecar so a
-    // wrap/width change regenerates the scene instead of replaying old
-    // pixels.
+    // Compiled caption cues are a render input the fragment cannot see
+    // (split + wrap run at compile time) — fold them into the sidecar so a
+    // cue/width change regenerates the scene instead of replaying old
+    // pixels. The whole cue array is hashed, not just the text: CS-07 made
+    // the times part of the output, so a retimed cue must invalidate too.
     const captionsHash =
       scene.captions === null
         ? null
-        : hashSceneFragment(JSON.stringify(scene.captions.lines));
+        : hashSceneFragment(JSON.stringify(scene.captions.cues));
     const audioPath = scene.audio ? path.join(root, scene.audio) : null;
     const audioM = audioPath ? await mtimeOrZero(audioPath) : 0;
     const sidecar = await readSceneCacheMeta(file);

@@ -32,12 +32,17 @@ export { Paragraph, type ParagraphProps } from "./components/Paragraph.js";
 export { AnimatedIllustration, type IllustrationProps } from "./components/Illustration.js";
 export { Background, type BackgroundProps } from "./components/Background.js";
 export { ImageBackground, type ImageBackgroundProps } from "./components/ImageBackground.js";
+export {
+  SceneBackground,
+  type SceneBackgroundProps,
+} from "./components/SceneBackground.js";
 export { Character, type CharacterProps, speechEnvelope } from "./components/Character.js";
 export { CodeBlock, type CodeBlockProps } from "./components/CodeBlock.js";
 export { Terminal, type TerminalProps } from "./components/Terminal.js";
 export { Image, type ImageProps } from "./components/Image.js";
 export { FlowChart, type FlowChartProps } from "./components/FlowChart.js";
 export { Timeline, type TimelineProps } from "./components/Timeline.js";
+export { MapInsert, type MapInsertProps } from "./components/MapInsert.js";
 export { Callout, type CalloutProps } from "./components/Callout.js";
 export { EndCard, type EndCardProps } from "./components/EndCard.js";
 export { QuoteBlock, type QuoteBlockProps } from "./components/QuoteBlock.js";
@@ -63,6 +68,11 @@ export {
   CaptionsOverlay,
   type CaptionsOverlayProps,
 } from "./components/CaptionsOverlay.js";
+export {
+  TextOverlay,
+  overlayOpacity,
+  type TextOverlayProps,
+} from "./components/TextOverlay.js";
 export {
   CAPTION_FONT_RATIO,
   captionFontSize,

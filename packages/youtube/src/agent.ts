@@ -1,5 +1,5 @@
 import type { ChatMessage, Provider } from "@video/llm";
-import { chatWithFallback } from "@video/llm";
+import { chatWithFallback, stripReasoning } from "@video/llm";
 import { parse as parseYaml } from "yaml";
 import {
   YouTubePackageSchema,
@@ -35,10 +35,17 @@ export interface CallYouTubeResult {
 }
 
 export function extractYaml(content: string): string {
+  // A reasoning-enabled model emits its thinking BEFORE the answer, and
+  // that thinking often contains a YAML *sketch* with `...` placeholders.
+  // Taking the first fence therefore grabbed the sketch, not the answer —
+  // and the sketch does not parse into the package schema. Drop the
+  // reasoning first, exactly as the image-brief expander does
+  // (`extractBrief` in @video/draft).
+  const out = stripReasoning(content);
   const fence = /```(?:yaml)?\s*([\s\S]*?)```/m;
-  const match = content.match(fence);
+  const match = out.match(fence);
   if (match && match[1]) return match[1].trim();
-  return content.trim();
+  return out.trim();
 }
 
 /** Convert a chapters array to WebVTT format for upload. Each chapter's

@@ -23,6 +23,7 @@ import {
 import {
   callMotionAgent,
   planSceneMotion,
+  isStillFirstProfile,
   IartSkillAdapter,
   type MotionSpec,
 } from "@video/motion";
@@ -181,6 +182,10 @@ export interface MotionOptions {
   /** Skip the LLM — apply the deterministic heuristics verbatim. */
   baseline?: boolean | undefined;
   model?: "minimax" | "glm" | undefined;
+  /** CS-09: slow-push amount for a still-first channel profile. 0 (the
+   *  default, a held frame) or ~0.015 for a 1–2% push. An explicit human
+   *  choice — never derived from the 80/15/5 sampling reference. */
+  kenBurnsScale?: number | undefined;
   force?: boolean | undefined;
 }
 
@@ -214,6 +219,10 @@ export async function runMotion(opts: MotionOptions): Promise<number> {
     return 1;
   }
   const scenes = shape.data.scenes;
+  // CS-09: a still-first channel profile changes the baseline from
+  // "entrance + emphasis" to "held frame", so it must reach both the
+  // planner and the agent.
+  const channelProfile = shape.data.style?.channel_profile;
   const targets = opts.scene
     ? scenes.filter((s) => s.id === opts.scene)
     : scenes;
@@ -270,6 +279,10 @@ export async function runMotion(opts: MotionOptions): Promise<number> {
         ? { narrationText: scene.narration.text }
         : {}),
       ...(opts.bpm !== undefined ? { beatsPerMinute: opts.bpm } : {}),
+      ...(channelProfile !== undefined ? { channelProfile } : {}),
+      ...(opts.kenBurnsScale !== undefined
+        ? { kenBurnsScale: opts.kenBurnsScale }
+        : {}),
     });
 
     let spec = baseline;
@@ -311,12 +324,22 @@ export async function runMotion(opts: MotionOptions): Promise<number> {
             ...(opts.bpm !== undefined ? { beatsPerMinute: opts.bpm } : {}),
             baseline,
             guidance,
+            ...(channelProfile !== undefined ? { channelProfile } : {}),
           },
           provider,
           { model: modelFor(chosenName), temperature: 0.4 },
           fallback,
         );
         spec = result.spec;
+        // CS-09: the profile allows at most ONE animation per scene. The
+        // agent is told this in its prompt, but a prompt is a request —
+        // clamp here so a non-compliant reply cannot stack motion back up.
+        if (isStillFirstProfile(channelProfile) && spec.animations.length > 1) {
+          console.warn(
+            `  scene ${scene.id}: still-first profile keeps 1 of ${spec.animations.length} proposed animation(s)`,
+          );
+          spec = { ...spec, animations: spec.animations.slice(0, 1) };
+        }
         providerNames.add(result.providerName);
         tokens.input += result.usage.input;
         tokens.output += result.usage.output;
@@ -389,15 +412,35 @@ export async function runMotion(opts: MotionOptions): Promise<number> {
     const sceneObj = (
       Array.isArray(parsedFrag) ? parsedFrag[0] : parsedFrag
     ) as Record<string, unknown>;
+    const visualObj = sceneObj["visual"] as
+      | Record<string, unknown>
+      | undefined;
+    const propsObj = visualObj?.["props"] as
+      | Record<string, unknown>
+      | undefined;
+    // CS-09: a still-first profile expresses its slow push on the scene
+    // image itself — ImageBackground.kenBurnsScale, which lives in
+    // visual.props — so it must be compared alongside the animations,
+    // or a ken-burns change alone would be skipped as "unchanged".
     if (
       specEquals(sceneObj["animations"] ?? null, spec.animations) &&
-      specEquals(sceneObj["transition"] ?? null, spec.transition)
+      specEquals(sceneObj["transition"] ?? null, spec.transition) &&
+      specEquals(propsObj?.["kenBurnsScale"] ?? null, spec.kenBurnsScale ?? null)
     ) {
       console.log(`  scene ${scene.id}: motion unchanged`);
       continue;
     }
     sceneObj["animations"] = spec.animations;
     sceneObj["transition"] = spec.transition;
+    // CS-09: the slow push rides on the scene image, so it only applies to
+    // the image-backed components. MapInsert's props schema is strict and
+    // has no such field — writing it there would fail validation.
+    const imageComponent =
+      visualObj?.["component"] === "ImageBackground" ||
+      visualObj?.["component"] === "AnimatedIllustration";
+    if (spec.kenBurnsScale !== undefined && propsObj !== undefined && imageComponent) {
+      propsObj["kenBurnsScale"] = spec.kenBurnsScale;
+    }
     const indent = leadingSpace(frag);
     const newFrag = indentFragment(yamlStringify([sceneObj]), indent);
     storyboardText = replaceSceneFragment(storyboardText, scene.id, newFrag);
@@ -464,6 +507,11 @@ program
   )
   .option("--model <provider>", "model provider: minimax|glm (default from motion role config)")
   .option(
+    "--ken-burns <n>",
+    "CS-09: slow-push amount for a still-first channel profile — 0 (held frame, default) or ~0.015 for a 1–2% push",
+    (v) => parseFloat(v),
+  )
+  .option(
     "--force",
     "regenerate even when the storyboard checkpoint is approved or the project is FINAL_APPROVED (prints a warning)",
   )
@@ -476,6 +524,7 @@ program
         bpm?: number;
         baseline?: boolean;
         model?: "minimax" | "glm";
+        kenBurnsScale?: number;
         force?: boolean;
       },
     ) => {
@@ -486,6 +535,9 @@ program
         ...(opts.bpm !== undefined ? { bpm: opts.bpm } : {}),
         ...(opts.baseline !== undefined ? { baseline: opts.baseline } : {}),
         ...(opts.model !== undefined ? { model: opts.model } : {}),
+        ...(opts.kenBurnsScale !== undefined
+          ? { kenBurnsScale: opts.kenBurnsScale }
+          : {}),
         ...(opts.force !== undefined ? { force: opts.force } : {}),
       });
     },

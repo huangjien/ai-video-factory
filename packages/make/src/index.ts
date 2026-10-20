@@ -18,6 +18,7 @@ import {
   resolveImageStyle,
   runLayaVisualAssist,
   stylePromptSuffix,
+  characterRootFor,
   IMAGE_PROMPT_REVISION,
   type ParsedArticle,
 } from "@video/draft";
@@ -26,6 +27,7 @@ import { parse as parseYaml, stringify as yamlStringify } from "yaml";
 import { FakeTTSProvider, EdgeTTSProvider, VoiceboxTTSProvider, MinimaxTTSProvider, voiceboxStatus, type TTSProvider } from "@video/tts";
 import { resolveNarration } from "./narration.js";
 import {
+  buildCaptionCues,
   mp3ToWav,
   readSceneTimings,
   syncSceneDurations,
@@ -391,6 +393,56 @@ function failStep(report: MakeReport, name: string, message: string): void {
  * v0.6: when LAYA_MODE is on/shadow, fall-through visual components may
  * be consulted (runLayaVisualAssist; shadow logs only, on overrides).
  */
+/**
+ * Carry the motion plan across a storyboard re-derivation.
+ *
+ * `video motion` writes the plan (per-scene `animations`, `transition`,
+ * and the `kenBurnsScale` that holds a still frame still) into
+ * storyboard.yaml — but storyboard.yaml is DERIVED from article.md. So
+ * any re-derivation (a changed scene count, a corrupt file, a hand
+ * re-derive) silently dropped the plan: the still frames started
+ * drifting again, with nothing in the log to say so.
+ *
+ * Scenes present in both copies keep their plan; new scenes get none.
+ */
+export function preserveMotionPlan(
+  next: { scenes?: Record<string, unknown>[] },
+  prev: { scenes?: { id?: string }[] },
+): number {
+  const prevById = new Map<string, Record<string, unknown>>();
+  for (const s of prev.scenes ?? []) {
+    if (typeof s.id === "string") {
+      prevById.set(s.id, s as Record<string, unknown>);
+    }
+  }
+  let kept = 0;
+  for (const scene of next.scenes ?? []) {
+    const id = scene["id"];
+    if (typeof id !== "string") continue;
+    const old = prevById.get(id);
+    if (old === undefined) continue;
+    for (const field of ["animations", "transition"]) {
+      if (scene[field] === undefined && old[field] !== undefined) {
+        scene[field] = old[field];
+        kept += 1;
+      }
+    }
+    const oldProps = (old["visual"] as { props?: Record<string, unknown> } | undefined)
+      ?.props;
+    const newProps = (scene["visual"] as { props?: Record<string, unknown> } | undefined)
+      ?.props;
+    if (
+      oldProps?.["kenBurnsScale"] !== undefined &&
+      newProps !== undefined &&
+      newProps["kenBurnsScale"] === undefined
+    ) {
+      newProps["kenBurnsScale"] = oldProps["kenBurnsScale"];
+      kept += 1;
+    }
+  }
+  return kept;
+}
+
 async function syncStoryboardFromArticle(
   projectRoot: string,
   article: ParsedArticle,
@@ -445,16 +497,20 @@ async function syncStoryboardFromArticle(
   if (idsMatch) return [];
 
   const laya = await runLayaVisualAssist(article, projectRoot);
-  await writeFile(
-    storyboardPath,
-    articleToStoryboardYaml(
-      article,
-      laya.overrides ? { visualOverrides: laya.overrides } : undefined,
-    ),
-    "utf8",
+  const derived = articleToStoryboardYaml(
+    article,
+    laya.overrides ? { visualOverrides: laya.overrides } : undefined,
   );
+  const nextDoc = parseYaml(derived) as {
+    scenes?: Record<string, unknown>[];
+  };
+  const kept = preserveMotionPlan(nextDoc, parsed);
+  await writeFile(storyboardPath, yamlStringify(nextDoc), "utf8");
   return [
     `storyboard.yaml: ${articleIds.length} scenes synced from article.md`,
+    ...(kept > 0
+      ? [`storyboard.yaml: kept the motion plan (${kept} field(s))`]
+      : []),
     ...(laya.summary ? [laya.summary] : []),
   ];
 }
@@ -575,6 +631,9 @@ export async function generateSceneVisuals(
   const wsRoot = workspaceRootFor(projectRoot);
   const learnedImageRules =
     wsRoot === null ? "" : promptRules(loadLessonStore(wsRoot), "image-prompt");
+  // CS-12: the character bible is shared across films, so it lives at the
+  // workspace root rather than inside a project.
+  const characterRoot = characterRootFor(projectRoot);
   if (learnedImageRules !== "") {
     outputs.push(
       `image prompts: applying ${learnedImageRules.split("\n").filter((l) => l.startsWith("- ")).length} human-review lesson(s)`,
@@ -640,6 +699,12 @@ export async function generateSceneVisuals(
             visual,
             caption: scene.caption,
             narration: scene.narration,
+            // CS-12: the characters this scene cites. Their anchors are
+            // spliced into the brief — the image model takes no reference
+            // image, so this text is the consistency mechanism.
+            ...(scene.characters !== undefined
+              ? { characters: scene.characters }
+              : {}),
           },
           expansionProvider,
           projectRoot,
@@ -650,6 +715,7 @@ export async function generateSceneVisuals(
             // v0.10: the declared era/region/culture. Absent in older
             // articles, in which case the expander behaves exactly as before.
             setting: article.frontmatter.setting,
+            characterRoot,
           },
         );
         promptForImage = prompt;
@@ -776,10 +842,19 @@ function updateStoryboardForImages(
       typeof scene.visual.props?.text === "string"
         ? (scene.visual.props.text as string)
         : undefined;
+    // CS-09: a still-first channel expresses its motion in
+    // visual.props.kenBurnsScale, and this switch rewrites props from
+    // scratch — dropping it here would silently restore the component's
+    // 0.08 default and un-do the still-frame plan on the first make.
+    const prevKenBurns =
+      typeof scene.visual.props?.kenBurnsScale === "number"
+        ? (scene.visual.props.kenBurnsScale as number)
+        : undefined;
     scene.visual.component = "ImageBackground";
     scene.visual.props = {
       src: imagePath,
       ...(prevText !== undefined ? { caption: prevText } : {}),
+      ...(prevKenBurns !== undefined ? { kenBurnsScale: prevKenBurns } : {}),
     };
     switched++;
   }
@@ -810,7 +885,12 @@ export { syncSceneDurations as syncStoryboardDurations } from "@video/media";
 
 /** SRT from the duration-synced storyboard: cue boundaries accumulate the
  * MEASURED scene durations, so captions stay aligned when TTS runs longer
- * than the LLM estimated (the common case — that's why sync exists). */
+ * than the LLM estimated (the common case — that's why sync exists).
+ *
+ * CS-07: the per-scene split calls the SAME `buildCaptionCues` the burn-in
+ * track was compiled with, so the burned captions and this file cannot
+ * disagree about where a cue starts. Scene-relative cue times are offset
+ * by the accumulated runtime to give absolute SRT stamps. */
 async function writeCaptionsSrt(
   projectRoot: string,
   lang: string,
@@ -818,14 +898,23 @@ async function writeCaptionsSrt(
   const scenes = await readSceneTimings(projectRoot);
   const srtPath = path.join(projectRoot, "captions", `${lang}.srt`);
   await mkdir(path.dirname(srtPath), { recursive: true });
-  let cursor = 0;
-  const cues = scenes.map((s, i) => {
-    const start = cursor;
-    const end = start + s.duration;
-    cursor = end;
-    return `${i + 1}\n${formatSrtTime(start)} --> ${formatSrtTime(end)}\n${s.narration}\n`;
-  });
-  await writeFile(srtPath, cues.join("\n"), "utf8");
+  let sceneStart = 0;
+  const blocks: string[] = [];
+  let index = 0;
+  for (const s of scenes) {
+    // CS-03: the same window the burn-in uses — the scene's spoken
+    // length when it holds silence, so the SRT and the burned captions
+    // cannot drift apart.
+    const window = s.speechSec ?? s.duration;
+    for (const cue of buildCaptionCues(s.narration, window)) {
+      index += 1;
+      blocks.push(
+        `${index}\n${formatSrtTime(sceneStart + cue.startSec)} --> ${formatSrtTime(sceneStart + cue.endSec)}\n${cue.lines.join("\n")}\n`,
+      );
+    }
+    sceneStart += s.duration;
+  }
+  await writeFile(srtPath, blocks.join("\n"), "utf8");
   return [`captions/${lang}.srt`];
 }
 
@@ -851,6 +940,14 @@ async function runTts(
   if (!opts.fake && ttsProvider === "voicebox") {
     voiceboxHealthy = (await voiceboxStatus()).healthy;
   }
+  const voiceboxSpeed =
+    typeof article.frontmatter.tts_speed === "number"
+      ? article.frontmatter.tts_speed
+      : undefined;
+  const voiceboxSentencePauseSec =
+    typeof article.frontmatter.tts_sentence_pause_sec === "number"
+      ? article.frontmatter.tts_sentence_pause_sec
+      : undefined;
   const decision = resolveNarration({
     fake: opts.fake === true,
     ttsProvider,
@@ -858,14 +955,8 @@ async function runTts(
     language: article.frontmatter.language,
     voiceboxHealthy,
     minimaxKey: Boolean(process.env["MINIMAX_API_KEY"]),
-    voiceboxSpeed:
-      typeof article.frontmatter.tts_speed === "number"
-        ? article.frontmatter.tts_speed
-        : undefined,
-    voiceboxSentencePauseSec:
-      typeof article.frontmatter.tts_sentence_pause_sec === "number"
-        ? article.frontmatter.tts_sentence_pause_sec
-        : undefined,
+    voiceboxSpeed,
+    voiceboxSentencePauseSec,
   });
   const provider: TTSProvider = decision.provider;
   const voice = decision.voice;
@@ -894,6 +985,9 @@ async function runTts(
       pause,
       provider.name,
       article.frontmatter.language,
+      voiceboxSpeed,
+      voiceboxSentencePauseSec,
+      scene.hold_after_sec,
     );
     const meta = await readTtsMeta(wavPath);
     if (meta !== null && meta.cacheKey === cacheKey && existsSync(wavPath)) {
@@ -942,7 +1036,17 @@ async function runTts(
     const wavBytes = isWav
       ? result.audio
       : await convertMp3(result.audio, scene.duration);
-    await writeFile(wavPath, wavBytes);
+    // CS-03: the scene's 留白 — silence held after the voice stops. It is
+    // padded INTO the narration wav, so the measured scene length is
+    // speech + hold and the still frame keeps breathing after the line
+    // ends. Padding the wav (rather than the storyboard duration) keeps
+    // sync-durations' job intact: it still measures, it never guesses.
+    const hold = scene.hold_after_sec;
+    const padded =
+      hold !== undefined && hold > 0
+        ? await appendSilenceToWav(wavBytes, hold)
+        : wavBytes;
+    await writeFile(wavPath, padded);
     await writeTtsMeta(wavPath, {
       cacheKey,
       synthesizedAt: new Date().toISOString(),
@@ -957,6 +1061,44 @@ async function runTts(
 interface TtsCacheMeta {
   cacheKey: string;
   synthesizedAt: string;
+}
+
+/**
+ * Append `seconds` of silence to a WAV, preserving its format (sample
+ * rate, channels, sample format). The bytes go through ffmpeg, so the
+ * result is a real WAV the mixer and the renderer read unchanged — a
+ * held frame's silence is part of the audio track, not a gap ffmpeg has
+ * to guess at later.
+ */
+async function appendSilenceToWav(
+  wavBytes: Uint8Array,
+  seconds: number,
+): Promise<Uint8Array> {
+  const { execFile } = await import("node:child_process");
+  const { promisify } = await import("node:util");
+  const { mkdtemp, readFile, rm } = await import("node:fs/promises");
+  const os = await import("node:os");
+  const path = await import("node:path");
+  const execFileAsync = promisify(execFile);
+  const dir = await mkdtemp(path.join(os.tmpdir(), "video-hold-"));
+  const src = path.join(dir, "in.wav");
+  const out = path.join(dir, "out.wav");
+  try {
+    await writeFile(src, wavBytes);
+    await execFileAsync("ffmpeg", [
+      "-y",
+      "-i",
+      src,
+      "-af",
+      `apad=pad_dur=${seconds}`,
+      "-c:a",
+      "pcm_s16le",
+      out,
+    ]);
+    return new Uint8Array(await readFile(out));
+  } finally {
+    await rm(dir, { recursive: true, force: true }).catch(() => {});
+  }
 }
 
 async function readTtsMeta(wavPath: string): Promise<TtsCacheMeta | null> {
@@ -1196,6 +1338,13 @@ async function runMix(
   }
   if (typeof config.bgm_fade_out_sec === "number") {
     mixArgs.push("--bgm-fade-out", String(config.bgm_fade_out_sec));
+  }
+  // CS-15: the SFX cues live in audio-config.yaml — one of the two
+  // human-edit files — but the mix engine only ever read mix.yaml, so
+  // every cue declared here was silently dropped: the .wav files were
+  // materialised and then never played. Pass them through explicitly.
+  for (const [sceneKey, tag] of Object.entries(config.sfx ?? {})) {
+    mixArgs.push("--sfx", `${sceneKey}=${tag}`);
   }
   await runCli(mixArgs, { cwd: workspaceRoot });
   // `video mix` exits 0 even when it wrote nothing useful elsewhere in

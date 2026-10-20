@@ -207,3 +207,31 @@ describe("pickVisualComponent (T2 visual variety)", () => {
     expect(r.component).toBe("Title");
   });
 });
+describe("pickVisualComponent — map insert (CS-14)", () => {
+  it("routes a map direction to MapInsert", () => {
+    expect(pickVisualComponent("map 上一连串被攻克的城池", false).component).toBe(
+      "MapInsert",
+    );
+    expect(pickVisualComponent("a hand-drawn campaign map", false).component).toBe(
+      "MapInsert",
+    );
+    expect(pickVisualComponent("行军路线图", false).component).toBe("MapInsert");
+  });
+
+  it("yields to an earlier rule so existing scenes keep their component", () => {
+    // RULES is first-match-wins and MapInsert is appended LAST, which is
+    // what keeps every shipped project byte-identical.
+    expect(pickVisualComponent("timeline of the campaigns", false).component).toBe(
+      "Timeline",
+    );
+    expect(pickVisualComponent("a chart of troop numbers", false).component).toBe(
+      "BarChart",
+    );
+  });
+
+  it("still falls through to the image path for an ordinary narrative shot", () => {
+    expect(
+      pickVisualComponent("少年立在崖边望向远方", false).component,
+    ).toBe("AnimatedIllustration");
+  });
+});

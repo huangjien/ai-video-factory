@@ -15,7 +15,7 @@ import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
 import { bundle } from "@remotion/bundler";
 import { renderMedia, selectComposition } from "@remotion/renderer";
-import { slicePlanScene, type RenderPlan } from "@video/vdsl";
+import { slicePlanScene, type RenderPlan, type RenderPlanScene } from "@video/vdsl";
 
 const execFileAsync = promisify(execFile);
 
@@ -222,6 +222,14 @@ function imageMime(ext: string): string {
  * bypass that entirely. Non-existent files leave the src unchanged
  * (the dark background renders instead of crashing) — but the silence
  * is reported through `warn` so the render outcome can surface it.
+ *
+ * The same pass binds the SCENE BACKGROUND for every other component:
+ * when `assets/images/scene_N.jpg` exists it becomes `scene.backgroundSrc`,
+ * so each component draws on the generated scene art instead of a flat
+ * theme fill. `video make` already writes that image for every scene, so
+ * this needs no storyboard change — a missing file simply leaves the
+ * theme background (never a warning: no image is the normal state for
+ * hand-authored projects).
  */
 export async function resolveImageSources(
   plan: RenderPlan,
@@ -229,22 +237,11 @@ export async function resolveImageSources(
 ): Promise<RenderPlan> {
   const scenes = await Promise.all(
     plan.scenes.map(async (scene) => {
-      if (scene.component !== "ImageBackground") return scene;
-      const src: unknown = scene.props.src;
-      if (typeof src !== "string" || src.startsWith("data:")) return scene;
-      if (!existsSync(src)) {
-        warn(
-          `scene ${scene.id}: ImageBackground src not found: ${src} — rendering the dark background instead`,
-        );
-        return scene;
+      if (scene.component === "ImageBackground") {
+        return resolveComponentSrc(scene, warn);
       }
-      const bytes = await readFile(src);
-      const mime = imageMime(path.extname(src).toLowerCase());
-      const dataUrl = `data:${mime};base64,${Buffer.from(bytes).toString("base64")}`;
-      return {
-        ...scene,
-        props: { ...scene.props, src: dataUrl },
-      };
+      const bound = await bindSceneBackground(plan, scene);
+      return bound;
     }),
   );
   // Brand watermark icon (branding 2026-10-05): same bundler constraint —
@@ -266,6 +263,53 @@ export async function resolveImageSources(
     }
   }
   return { ...plan, scenes, ...(brand ? { style: { ...plan.style, brand } } : {}) };
+}
+
+/** Inlines an ImageBackground scene's own `src` as a data URL. */
+async function resolveComponentSrc(
+  scene: RenderPlanScene,
+  warn: (message: string) => void,
+): Promise<RenderPlanScene> {
+  const src: unknown = scene.props.src;
+  if (typeof src !== "string" || src.startsWith("data:")) return scene;
+  if (!existsSync(src)) {
+    warn(
+      `scene ${scene.id}: ImageBackground src not found: ${src} — rendering the dark background instead`,
+    );
+    return scene;
+  }
+  return {
+    ...scene,
+    props: { ...scene.props, src: await toDataUrl(src) },
+  };
+}
+
+/** Binds `assets/images/scene_N.jpg` as this scene's background image.
+ *  Scene number comes from the scene id (`scene-04`, `scene_4`),
+ *  normalized to a bare integer the same way `video make` names its
+ *  files — `scene_04` must find `scene_4.jpg`, not `scene_04.jpg`.
+ *  Falls back to the 1-based position. Returns the scene unchanged when
+ *  there is no project root or no image — the theme background is right. */
+async function bindSceneBackground(
+  plan: RenderPlan,
+  scene: RenderPlanScene,
+): Promise<RenderPlanScene> {
+  if (!plan.projectRoot) return scene;
+  const idNum = scene.id.match(/scene[-_]?(\d+)/)?.[1];
+  const n = String(idNum ? parseInt(idNum, 10) : scene.index + 1);
+  for (const ext of [".jpg", ".jpeg", ".png", ".webp"]) {
+    const file = path.join(plan.projectRoot, "assets", "images", `scene_${n}${ext}`);
+    if (!existsSync(file)) continue;
+    return { ...scene, backgroundSrc: await toDataUrl(file) };
+  }
+  return scene;
+}
+
+/** File path → `data:<mime>;base64,…` for the headless browser. */
+async function toDataUrl(file: string): Promise<string> {
+  const bytes = await readFile(file);
+  const mime = imageMime(path.extname(file).toLowerCase());
+  return `data:${mime};base64,${Buffer.from(bytes).toString("base64")}`;
 }
 
 /** Re-mux with +faststart for streamable MP4 without recompressing video. */

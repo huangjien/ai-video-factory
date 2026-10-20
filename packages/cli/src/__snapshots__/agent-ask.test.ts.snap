@@ -94,6 +94,10 @@ exports[`emitQuestionsDoc > emits the full video-ask/1 envelope (snapshot) 1`] =
           "note": "layered tactile collage; narrative scenes",
           "value": "paper-cut",
         },
+        {
+          "note": "restrained ink linework, low-saturation washes; historical scenes",
+          "value": "gongbi",
+        },
       ],
       "default": "flat-vector",
       "flag": "--image-style",

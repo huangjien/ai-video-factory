@@ -123,3 +123,14 @@ medieval:
     - Do not render Latin, pseudo-Latin, runes, letters, numbers, seals, or inscriptions. No writing-like marks anywhere in the image.
     - Leave breathing room — the lower third and the outer edges stay quiet because caption and title overlays land there.
   promptSuffix: medieval illuminated miniature illustration, flattened perspective, jewel-like ultramarine burgundy parchment cream and antique gold palette, historically grounded clothing and materials, prominent readable figures and action, sparse ornamental detail, no manuscript page, no border, no Latin, no pseudo-writing, no letters, no numbers, quiet lower third, no text
+gongbi:
+  systemBlock: |-
+    Style: GONGBI LIGHT-COLOUR WASH (Chinese narrative illustration mode).
+    - Draw one full-frame scene with restrained fine ink linework and low-saturation layered colour washes. Say what the moment IS, not a mood: one clear focus, a readable figure or subject, simplified distance.
+    - Locked palette: aged paper #E8E0CF, ink black #242521, smoke grey #77786F, with slate blue-green #657B78 OR ochre yellow #B38A56 chosen per scene, plus a small amount of cinnabar red #A54A3D as the only accent. Reuse this palette in every scene.
+    - Keep period dress, buildings, weapons and materials credible for the supplied setting. Simplified distant forms are fine; modern dress and generic fantasy substitutes are not.
+    - Every scene obeys the same surface, palette and line weight. Never vary the art style between scenes of one film.
+    - Never lay out multiple panels, a comic page, a grid, a collage or a diptych. One continuous frame only, with no panel borders, gutters or frames.
+    - Do not render writing. No written characters, calligraphy, inscriptions, seals, signatures or labels anywhere in the image.
+    - Leave breathing room — the lower third and the outer edges stay quiet because caption and title overlays land there.
+  promptSuffix: gongbi light-colour wash illustration, restrained fine ink linework, low-saturation layered washes, one full-frame scene, aged paper and ink palette with slate blue-green or ochre and a little cinnabar red, credible period dress, simplified distance, quiet lower third, no panel layout, no collage, no calligraphy, no seals, no signature, no text, no letters

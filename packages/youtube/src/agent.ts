@@ -1,4 +1,4 @@
-import type { ChatMessage, Provider } from "@video/llm";
+import type { ChatMessage, ChatResponse, Provider } from "@video/llm";
 import { chatWithFallback, stripReasoning } from "@video/llm";
 import { parse as parseYaml } from "yaml";
 import {
@@ -82,8 +82,32 @@ export async function callYouTube(
 ): Promise<CallYouTubeResult> {
   const messages = buildYouTubeMessages(input);
   const out = await chatWithFallback(provider, fallback ?? null, { messages });
-  const res = out.response;
-  const actualProvider = out.provider;
+  try {
+    return buildPackage(out.response, out.provider, messages);
+  } catch (primaryErr) {
+    // The provider answered, but the answer is unusable: malformed YAML, a
+    // schema violation, unsorted chapters, a banned token. That is a
+    // CONTENT failure, not a provider outage, so `chatWithFallback` never
+    // engaged the fallback provider — the run died on one model's typo.
+    // Give the fallback a turn before failing: a different model rarely
+    // repeats the same YAML mistake. (Observed 2026-10-20: glm emitted a
+    // double-quoted description whose inner `"` closed the scalar early —
+    // "Unexpected scalar at node end" — and the whole publish hard-failed.)
+    if (!fallback || out.provider === fallback.name) throw primaryErr;
+    const retry = await chatWithFallback(fallback, null, { messages });
+    try {
+      return buildPackage(retry.response, retry.provider, messages);
+    } catch {
+      throw primaryErr;
+    }
+  }
+}
+
+function buildPackage(
+  res: ChatResponse,
+  actualProvider: string,
+  messages: ChatMessage[],
+): CallYouTubeResult {
   const yamlText = extractYaml(res.content);
   if (!yamlText) {
     throw new YouTubeError("no YAML in response", actualProvider);

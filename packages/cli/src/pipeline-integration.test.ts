@@ -32,6 +32,24 @@ import {
  * runFinal — those tests take a few seconds each.
  */
 
+/** Budget for a test that performs a REAL render.
+ *
+ * Every render bundles webpack, launches Chrome and runs ffmpeg, and the
+ * suite runs four test FILES in parallel (`vitest.config.ts` → forks,
+ * maxForks 4) — four of which render at the same time. A render that takes
+ * ~40s alone therefore competes for the same CPU and can take several
+ * minutes. The budget has to cover the contention the suite creates for
+ * itself; 120s measured the contention, not the code, and failed
+ * `runFinal` at 2m with a budget that no assertion ever came close to.
+ *
+ * Remotion's browser-launch timeout is hardcoded at 25s and cannot be
+ * raised, so the launch count is kept down instead: the renderer reuses
+ * ONE browser per batch (`packages/video-renderer/src/browser.ts`)
+ * rather than opening a fresh Chrome for every `selectComposition` and
+ * every `renderMedia`. Measured on a 2-scene render: 16 browser
+ * processes before, 1 after. */
+const RENDER_TIMEOUT = 300_000;
+
 async function seedProject(root: string): Promise<string> {
   // runNew's cwd is the BASE dir; the project lands at ${cwd}/projects/<projectId>.
   // runNew slugifies projectId (lowercase, non-alnum → '-'), so the directory
@@ -176,7 +194,7 @@ describe("CLI pipeline integration — runPreview / runFinal / runStatus / workf
     const state = readState(projectDir);
     expect(state.status).toBe("WAITING_REVIEW");
     expect(state.current_stage).toBe("review");
-  }, 120_000);
+  }, RENDER_TIMEOUT);
 
   it("writes vdsl.yaml, caches per-scene renders, versions scenes, restores (§6/§26/Principle 1)", async () => {
     const code = await runPreview(projectName, projectCwd);
@@ -244,7 +262,7 @@ describe("CLI pipeline integration — runPreview / runFinal / runStatus / workf
     const restored = readFileSync(sbPath, "utf8");
     expect(restored).toContain('text: "world"');
     expect(restored).not.toContain("world v2");
-  }, 300_000);
+  }, RENDER_TIMEOUT);
 
   it("runPreview --draft renders 960x540@15 (plan §27)", async () => {
     const code = await runPreview(projectName, projectCwd, false, {
@@ -271,13 +289,13 @@ describe("CLI pipeline integration — runPreview / runFinal / runStatus / workf
     expect(s.width).toBe(960);
     expect(s.height).toBe(540);
     expect(s.r_frame_rate).toBe("15/1");
-  }, 180_000);
+  }, RENDER_TIMEOUT);
 
   it("runPreview exits 1 when storyboard is missing", async () => {
     rmSync(path.join(projectDir, "storyboard", "storyboard.yaml"));
     const code = await runPreview(projectName, projectCwd);
     expect(code).toBe(1);
-  });
+  }, RENDER_TIMEOUT);
 
   it("runPreview refuses to render without an approved storyboard checkpoint", async () => {
     rmSync(path.join(projectDir, "checkpoints"), {
@@ -289,7 +307,7 @@ describe("CLI pipeline integration — runPreview / runFinal / runStatus / workf
     expect(
       existsSync(path.join(projectDir, "output", "preview-faststart.mp4")),
     ).toBe(false);
-  }, 60_000);
+  }, RENDER_TIMEOUT);
 
   it("runPreview --force renders without approval and lands in WAITING_REVIEW", async () => {
     rmSync(path.join(projectDir, "checkpoints"), {
@@ -300,7 +318,7 @@ describe("CLI pipeline integration — runPreview / runFinal / runStatus / workf
     expect(code).toBe(0);
     const state = readState(projectDir);
     expect(state.status).toBe("WAITING_REVIEW");
-  }, 120_000);
+  }, RENDER_TIMEOUT);
 
   it("runPreview refuses a FINAL_APPROVED project (terminal state)", async () => {
     const { writeProjectState } = await import("@video/workflow");
@@ -312,7 +330,7 @@ describe("CLI pipeline integration — runPreview / runFinal / runStatus / workf
     });
     const code = await runPreview(projectName, projectCwd);
     expect(code).toBe(1);
-  }, 60_000);
+  }, RENDER_TIMEOUT);
 
   // ----- runStatus -----
 
@@ -337,7 +355,7 @@ describe("CLI pipeline integration — runPreview / runFinal / runStatus / workf
     expect(
       existsSync(path.join(projectDir, "checkpoints", "review.yaml")),
     ).toBe(true);
-  }, 120_000);
+  }, RENDER_TIMEOUT);
 
   it("runReject writes feedback to the checkpoint + transitions to GENERATING", async () => {
     await runPreview(projectName, projectCwd);
@@ -355,7 +373,7 @@ describe("CLI pipeline integration — runPreview / runFinal / runStatus / workf
       "utf8",
     );
     expect(cp).toContain("wrong-pacing");
-  }, 120_000);
+  }, RENDER_TIMEOUT);
 
   // ----- runFinal -----
 
@@ -364,7 +382,7 @@ describe("CLI pipeline integration — runPreview / runFinal / runStatus / workf
     // review is WAITING_REVIEW — runFinal should refuse
     const code = await runFinal({ projectName, cwd: projectCwd });
     expect(code).toBe(1);
-  }, 120_000);
+  }, RENDER_TIMEOUT);
 
   it("runFinal produces final-faststart.mp4 + FINAL_APPROVED state after approval", async () => {
     await runPreview(projectName, projectCwd);
@@ -377,7 +395,7 @@ describe("CLI pipeline integration — runPreview / runFinal / runStatus / workf
     const state = readState(projectDir);
     expect(state.status).toBe("FINAL_APPROVED");
     expect(state.current_stage).toBe("final");
-  }, 120_000);
+  }, RENDER_TIMEOUT);
 
   it("T6.2 — the QA gate blocks final on error-level findings; --force overrides", async () => {
     await runPreview(projectName, projectCwd);
@@ -408,7 +426,7 @@ describe("CLI pipeline integration — runPreview / runFinal / runStatus / workf
     ).toBe(true);
     const state = readState(projectDir);
     expect(state.status).toBe("FINAL_APPROVED");
-  }, 240_000);
+  }, RENDER_TIMEOUT);
 
   // ----- runRollback -----
 
@@ -443,7 +461,7 @@ describe("CLI pipeline integration — runPreview / runFinal / runStatus / workf
       });
       fakeStdin.destroy();
     }
-  }, 120_000);
+  }, RENDER_TIMEOUT);
 
   it("runRollback rejects unknown checkpoint ids", async () => {
     await runPreview(projectName, projectCwd);
@@ -467,7 +485,7 @@ describe("CLI pipeline integration — runPreview / runFinal / runStatus / workf
       });
       fakeStdin.destroy();
     }
-  }, 120_000);
+  }, RENDER_TIMEOUT);
 
   it("runRollback invalidates downstream checkpoints and lands at DRAFT/target", async () => {
     await runPreview(projectName, projectCwd); // WAITING_REVIEW
@@ -508,7 +526,7 @@ describe("CLI pipeline integration — runPreview / runFinal / runStatus / workf
       });
       fakeStdin.destroy();
     }
-  }, 120_000);
+  }, RENDER_TIMEOUT);
 
   // ----- runResume -----
 
@@ -516,14 +534,14 @@ describe("CLI pipeline integration — runPreview / runFinal / runStatus / workf
     await runPreview(projectName, projectCwd);
     const code = await runResume(projectName, projectCwd);
     expect(code).toBe(0);
-  }, 60_000);
+  }, RENDER_TIMEOUT);
 
   it("runQa passes on a healthy project and re-uses the rendered preview", async () => {
     await runPreview(projectName, projectCwd);
     const { runQa } = await import("./qa-command.js");
     const code = await runQa({ project: projectName, cwd: projectCwd });
     expect(code).toBe(0);
-  }, 120_000);
+  }, RENDER_TIMEOUT);
 
   it("runResume no-ops on a FINAL_APPROVED project", async () => {
     const { writeProjectState } = await import("@video/workflow");

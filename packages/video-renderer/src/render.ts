@@ -15,6 +15,7 @@ import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
 import { bundle } from "@remotion/bundler";
 import { renderMedia, selectComposition } from "@remotion/renderer";
+import { sharedBrowser } from "./browser.js";
 import { slicePlanScene, type RenderPlan, type RenderPlanScene } from "@video/vdsl";
 
 const execFileAsync = promisify(execFile);
@@ -180,19 +181,30 @@ export async function renderPlanToVideo(
       // enableCaching is the option that actually reaches the config.
       enableCaching: false,
     });
-    const composition = await selectComposition({
-      serveUrl,
-      id: "video-factory",
-      inputProps: { renderPlan: resolvedPlan },
-    });
-    await renderMedia({
-      composition,
-      serveUrl,
-      codec: "h264",
-      outputLocation: outPath,
-      inputProps: { renderPlan: resolvedPlan },
-      overwrite: true,
-    });
+    const browser = await sharedBrowser.get();
+    try {
+      const composition = await selectComposition({
+        serveUrl,
+        id: "video-factory",
+        inputProps: { renderPlan: resolvedPlan },
+        puppeteerInstance: browser,
+      });
+      await renderMedia({
+        composition,
+        serveUrl,
+        codec: "h264",
+        outputLocation: outPath,
+        inputProps: { renderPlan: resolvedPlan },
+        overwrite: true,
+        puppeteerInstance: browser,
+      });
+    } catch (err) {
+      // The shared browser may be the cause — it died, or the connection
+      // dropped. Drop it so the next render opens a fresh one instead of
+      // inheriting a dead browser.
+      sharedBrowser.invalidate();
+      throw err;
+    }
   } finally {
     await rm(workDir, { recursive: true, force: true }).catch(() => {});
   }

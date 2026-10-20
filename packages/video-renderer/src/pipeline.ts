@@ -12,6 +12,7 @@ import {
   type RenderPlan,
 } from "@video/vdsl";
 import { syncSceneDurations, probeAudioDuration } from "@video/media";
+import { sharedBrowser } from "./browser.js";
 import { REGISTRY } from "@video/video-components";
 import {
   extractSceneFragment,
@@ -475,12 +476,20 @@ export async function renderPreviewProject(
     log(`  warn: ${message}`);
   });
 
-  const { sceneFiles } = await renderScenesIncrementally(
-    resolvedPlan,
-    storyboardText,
-    root,
-    { ...(draft ? { draft: true } : {}), log },
-  );
+  let sceneFiles: string[];
+  try {
+    ({ sceneFiles } = await renderScenesIncrementally(
+      resolvedPlan,
+      storyboardText,
+      root,
+      { ...(draft ? { draft: true } : {}), log },
+    ));
+  } finally {
+    // The shared Chrome lives for the whole scene batch and is closed
+    // when the batch ends — Remotion spawns it detached, so leaving it
+    // open would strand the process after the CLI exits.
+    await sharedBrowser.close();
+  }
 
   const out = path.join(root, "output", "preview.mp4");
   await concatScenes(sceneFiles, out);

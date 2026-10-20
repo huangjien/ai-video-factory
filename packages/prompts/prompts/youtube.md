@@ -18,6 +18,13 @@ Constraints:
   WRONG:   "0:00", "1:23", "00:0", "83", "01:23.5" — these are rejected outright.
 - Chapters must be sorted by time.
 - Quote any string containing ":", "#", or a leading special character, so YAML parses.
+- Write `description` and `shorts_hook` as YAML BLOCK SCALARS (`|`), never as
+  double-quoted strings. Chinese copy routinely contains `:` and `"`; inside a
+  double-quoted scalar an inner `"` ends the string early and the whole
+  document fails to parse. A block scalar takes colons, quotes and "#" as
+  literal text.
+  Correct: `description: |` then the text indented one level.
+  WRONG:   `description: "第一行… 把"书名"换成…"` — the inner quotes break it.
 - VISUAL STYLE — prefer people over screens in both thumbnail and shorts.
 
 HARD RULES for thumbnail_prompt and shorts_hook:

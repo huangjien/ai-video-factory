@@ -142,6 +142,31 @@ export type Severity = (typeof SEVERITIES)[number];
 
 const zSeverity = z.enum(["Critical", "Major", "Moderate", "Minor"]);
 
+/** The model occasionally labels a severity outside the documented four
+ *  ("Informational" seen 2026-10-21). Strict rejection there threw away
+ *  the WHOLE judgement — every dimension, every finding — because of one
+ *  invented word on one flag. Accept the wider vocabulary the models
+ *  actually produce and normalize it onto the scale the gate reads:
+ *  anything below Moderate is informational, which is exactly what the
+ *  gate should do with it (it blocks on Critical, nothing else). */
+const SEVERITY_ALIASES: Record<string, Severity> = {
+  informational: "Minor",
+  info: "Minor",
+  negligible: "Minor",
+  low: "Minor",
+  medium: "Moderate",
+  moderate: "Moderate",
+  high: "Major",
+  blocker: "Critical",
+  critical: "Critical",
+  major: "Major",
+  minor: "Minor",
+};
+
+const zSeverityInput = z
+  .string()
+  .transform((s) => SEVERITY_ALIASES[s.trim().toLowerCase()] ?? "Moderate");
+
 const zVerification = z.enum([
   "verified_in_text",
   "needs_external_check",
@@ -190,7 +215,7 @@ const zFinding = z
   .object({
     id: z.string(),
     code: z.string().min(2),
-    severity: zSeverity,
+    severity: zSeverityInput,
     dimension_ids: z.array(z.string()).min(1),
     indicator_ids: z.array(z.string()).default([]),
     location: zLocation,
@@ -208,7 +233,7 @@ const zFinding = z
 const zRiskFlag = z
   .object({
     code: z.string(),
-    severity: zSeverity,
+    severity: zSeverityInput,
     finding_ids: z.array(z.string()).default([]),
   })
   .strict();
@@ -422,13 +447,76 @@ export function dropHallucinatedQuotes(
 /** Body lives in `packages/prompts/prompts/draft-article-review.md` — edit it there. */
 export const ARTICLE_REVIEW_SYSTEM_PROMPT = loadPrompt("draft-article-review");
 
+/** The task the article was commissioned to fill. Dimension H
+ *  (Instruction Compliance, weight 8) can only be scored when the judge
+ *  can see what was actually asked. It could not: the judge received the
+ *  article alone, so H always scored 0 and the 90/100 bar was
+ *  unreachable by construction (max 92, and passing needed 97.8% of the
+ *  rest). These fields close that gap — the drafter already had them. */
+export interface ReviewTaskSpec {
+  topic: string;
+  audience?: string | undefined;
+  language?: string | undefined;
+  durationSec?: number | undefined;
+  /** Extra constraints the operator passed (e.g. `--style`, `--bgm`). */
+  constraints?: string | undefined;
+}
+
+/** What the judge is shown.
+ *
+ *  The review used to pass `markdown.slice(0, 12000)`. A finished
+ *  article is routinely longer than that — the en-US rewrite was 36,658
+ *  chars — so the judge read a prefix that stopped mid-word and then
+ *  reported the truncation as a CONTENT defect: "Section 10 ends
+ *  mid-sentence… the article never finishes", filed Critical, and
+ *  dragged the score down with it. It happened on both drafts and it is
+ *  not something a writer can fix; only the judge can see more.
+ *
+ *  Truncation is still a guard against a runaway draft, but it is now
+ *  (a) far above any real article and (b) LOUD: when the tail is cut,
+ *  the judge is told the article was cut and must not treat the cut as
+ *  the author's failure to write. */
+const JUDGE_ARTICLE_LIMIT = 120_000;
+
+function judgeableArticle(markdown: string): string {
+  if (markdown.length <= JUDGE_ARTICLE_LIMIT) return markdown;
+  const kept = markdown.slice(0, JUDGE_ARTICLE_LIMIT);
+  const omitted = markdown.length - JUDGE_ARTICLE_LIMIT;
+  return `${kept}
+
+---
+
+[NOTE: the article above was truncated for length — ${omitted} more characters were withheld from you. Do NOT report the cut as a structural defect, a missing section, or an unfinished sentence. Judge only what you were given, and if you cannot verify a finding from this excerpt, mark it unverified.]`;
+}
+
 export function buildArticleReviewMessages(
   markdown: string,
   channelProfile?: string,
+  task?: ReviewTaskSpec,
 ): {
   role: "system" | "user";
   content: string;
 }[] {
+  // Without a task spec the judge must still be told to mark H as
+  // not-assessed rather than inventing a requirement it cannot see.
+  const brief = task
+    ? [
+        "## Commissioned task",
+        "",
+        `- topic: ${task.topic}`,
+        task.audience ? `- target audience: ${task.audience}` : null,
+        task.language ? `- narration language: ${task.language}` : null,
+        task.durationSec
+          ? `- target duration: ${task.durationSec} seconds`
+          : null,
+        task.constraints ? `- additional constraints: ${task.constraints}` : null,
+        "",
+        "Score dimension H against THIS task. If a field is absent, judge only what is present and mark the rest `not_assessed`.",
+      ]
+          .filter((l) => l !== null)
+          .join("\n")
+    : "## Commissioned task\n\n(unknown — the judge was not given the task. Mark H1-H3 `not_assessed`; do not assume a requirement you cannot see.)";
+
   return [
     {
       role: "system",
@@ -440,7 +528,7 @@ export function buildArticleReviewMessages(
     },
     {
       role: "user",
-      content: `## Article to judge\n\n${markdown.slice(0, 12000)}\n\nProduce the score JSON.`,
+      content: `${brief}\n\n## Article to judge\n\n${judgeableArticle(markdown)}\n\nProduce the score JSON.`,
     },
   ];
 }
@@ -465,9 +553,10 @@ export async function scoreArticle(
   provider: Provider,
   fallback?: Provider | null,
   channelProfile?: string,
+  task?: ReviewTaskSpec,
 ): Promise<ArticleScore> {
   const out = await chatWithFallback(provider, fallback ?? null, {
-    messages: buildArticleReviewMessages(markdown, channelProfile),
+    messages: buildArticleReviewMessages(markdown, channelProfile, task),
   });
   // CS-14: the judge's reasoning block carries a JSON sketch too —
   // extract it from the ANSWER, not from the thinking.
@@ -646,6 +735,14 @@ export async function runScoredDraft(
         provider,
         fallback,
         input.channelProfile,
+        // Dimension H needs the commission, not just the article —
+        // see ReviewTaskSpec.
+        {
+          topic: input.topic,
+          audience: input.audience,
+          language: input.language,
+          durationSec: input.duration,
+        },
       );
     } catch (err) {
       scoreError = (err as Error).message;

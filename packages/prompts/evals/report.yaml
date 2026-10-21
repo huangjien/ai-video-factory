@@ -2,17 +2,17 @@ schema: prompt-evals-report/1
 cases:
   - case: critical-finding-blocks-passing
     agent: article-review
-    prompt_hash: sha256:08e28640bdbdee906f97147c10b1c8eddc6d570a2e61979b8cba6ee9721091a3
+    prompt_hash: sha256:9998856bd26bef0789535950158d023b71b00179d3c6affd40991807ec1dec1f
     structural: pass
     judged: skipped
   - case: missing-h-flagged
     agent: article-review
-    prompt_hash: sha256:f05ddde90f4dfb366a8b00e9782cecba40aa08d95afbb03522312a9338ac2d5d
+    prompt_hash: sha256:0dec96a385691d088b73bc3ed5d0c53ad28813bdf65c236f8bcc7eb1864480d4
     structural: pass
     judged: skipped
   - case: perfect-draft-grade-a
     agent: article-review
-    prompt_hash: sha256:7fdd3188df4a9931a8e2f8fcfa758764e1c07ff2132af87ca228ae686492b69d
+    prompt_hash: sha256:01e99794c45c82996cc3cec6ea26676e77fcf8bf8109d53109123a385a03fe7e
     structural: pass
     judged: skipped
   - case: feedback-revision-addresses-web-context

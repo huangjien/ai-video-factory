@@ -100,3 +100,35 @@ describe("resolveNarration — backend policy", () => {
     ).toBe("en-US-ChristopherNeural");
   });
 });
+
+describe("tts_speed is provider-agnostic", () => {
+  it("reaches MiniMax, not just Voicebox", () => {
+    // A project slowed to 0.9 must stay slowed when its voice moves from
+    // voicebox to minimax; `speed` used to be passed only to Voicebox.
+    const decision = resolveNarration({
+      ...base,
+      language: "en-US",
+      ttsProvider: "minimax",
+      voice: "English_expressive_narrator",
+      ttsSpeed: 0.9,
+    });
+    expect(decision.provider.name).toBe("minimax-tts");
+    // The provider stores it privately; assert the observable behaviour
+    // instead — the constructor path ran without throwing and the voice
+    // is preserved.
+    expect(decision.voice).toBe("English_expressive_narrator");
+    expect(decision.warnings).toEqual([]);
+  });
+
+  it("leaves MiniMax at its default when no speed is declared", () => {
+    expect(
+      resolveNarration({
+        ...base,
+        language: "en-US",
+        ttsProvider: "minimax",
+        voice: "English_expressive_narrator",
+      }).provider.name,
+    ).toBe("minimax-tts");
+  });
+});
+

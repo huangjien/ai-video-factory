@@ -1,6 +1,6 @@
 case: perfect-draft-grade-a
 agent: article-review
-prompt_hash: sha256:7fdd3188df4a9931a8e2f8fcfa758764e1c07ff2132af87ca228ae686492b69d
+prompt_hash: sha256:01e99794c45c82996cc3cec6ea26676e77fcf8bf8109d53109123a385a03fe7e
 messages:
   - role: system
     bytes: 11075
@@ -19,9 +19,10 @@ messages:
       - "Finding shape:"
       - "Hard rules on the JSON:"
   - role: user
-    bytes: 2927
-    content_sha256: sha256:e085b719b7ea48ea3a00fb957a63611e8c2d08d4a135fe7dbe6771a472c8730e
+    bytes: 3069
+    content_sha256: sha256:467dd224a72feb1f1cc9a6d9aad7ce349716bd6ed5e62552ec45cd58f7a3fc5e
     blocks:
+      - § Commissioned task
       - § Article to judge
       - § 1. The call at 6 p.m.
       - "The phone rang at 5:"

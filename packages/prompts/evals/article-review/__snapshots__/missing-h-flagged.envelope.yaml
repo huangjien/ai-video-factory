@@ -1,6 +1,6 @@
 case: missing-h-flagged
 agent: article-review
-prompt_hash: sha256:f05ddde90f4dfb366a8b00e9782cecba40aa08d95afbb03522312a9338ac2d5d
+prompt_hash: sha256:0dec96a385691d088b73bc3ed5d0c53ad28813bdf65c236f8bcc7eb1864480d4
 messages:
   - role: system
     bytes: 11075
@@ -19,9 +19,10 @@ messages:
       - "Finding shape:"
       - "Hard rules on the JSON:"
   - role: user
-    bytes: 2241
-    content_sha256: sha256:db8e6c410a1072c4c9af79ded5aa4731997279500e519fb5aed0c48ee39bdad6
+    bytes: 2383
+    content_sha256: sha256:2d6a9107fd0efea310e5af9b3ef8b37e055ee1c8a237ed18d01ea8cd2f152c76
     blocks:
+      - § Commissioned task
       - § Article to judge
       - § 1. The first hour
       - § 2. What pairing actually does

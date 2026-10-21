@@ -956,6 +956,7 @@ async function runTts(
     voiceboxHealthy,
     minimaxKey: Boolean(process.env["MINIMAX_API_KEY"]),
     voiceboxSpeed,
+    ttsSpeed: voiceboxSpeed,
     voiceboxSentencePauseSec,
   });
   const provider: TTSProvider = decision.provider;

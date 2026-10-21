@@ -1,6 +1,6 @@
 case: critical-finding-blocks-passing
 agent: article-review
-prompt_hash: sha256:08e28640bdbdee906f97147c10b1c8eddc6d570a2e61979b8cba6ee9721091a3
+prompt_hash: sha256:9998856bd26bef0789535950158d023b71b00179d3c6affd40991807ec1dec1f
 messages:
   - role: system
     bytes: 11075
@@ -19,9 +19,10 @@ messages:
       - "Finding shape:"
       - "Hard rules on the JSON:"
   - role: user
-    bytes: 2180
-    content_sha256: sha256:7fa5cfd268be46d086cc2265283ff0c477bef5f9031fd3ca3038d1e849df67a8
+    bytes: 2322
+    content_sha256: sha256:c517a5c2361260697edc0b4462b0671b4404c4b2379399f5ac7f84ee441c0e88
     blocks:
+      - § Commissioned task
       - § Article to judge
       - § 1. The story people tell about AI at work
       - § 2. What actually happened in the three teams I tracked

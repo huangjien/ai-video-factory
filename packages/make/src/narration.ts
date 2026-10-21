@@ -37,6 +37,9 @@ export function resolveNarration(input: {
   language: string;
   voiceboxHealthy: boolean;
   minimaxKey: boolean;
+  /** The project's `tts_speed`. Passed to whichever provider is chosen —
+   *  Voicebox and MiniMax both honour it, Edge does not. */
+  ttsSpeed?: number | undefined;
   voiceboxSpeed?: number | undefined;
   voiceboxSentencePauseSec?: number | undefined;
 }): NarrationDecision {
@@ -74,7 +77,17 @@ export function resolveNarration(input: {
 
   if (input.ttsProvider === "minimax") {
     if (input.minimaxKey) {
-      return { provider: new MinimaxTTSProvider(), voice: input.voice, warnings };
+      // MiniMax accepts speed on the request (voice_setting.speed),
+      // so honour the project's `tts_speed` here. It used to be passed
+      // only to Voicebox, which meant switching a slowed project from
+      // voicebox to minimax silently snapped it back to 1.0.
+      return {
+        provider: new MinimaxTTSProvider(
+          input.ttsSpeed !== undefined ? { speed: input.ttsSpeed } : {},
+        ),
+        voice: input.voice,
+        warnings,
+      };
     }
     warnings.push(
       `tts_provider "minimax" needs MINIMAX_API_KEY — falling back to Edge TTS`,

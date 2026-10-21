@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { ChatRequest, ChatResponse, Provider } from "@video/llm";
 import {
   ArticleScoreRawSchema,
+  buildArticleReviewMessages,
   DEFAULT_MIN_SCORE,
   MAX_POSSIBLE_SCORE,
   PROFILE,
@@ -475,5 +476,93 @@ describe("renderArticleReviewYaml", () => {
     expect(yaml).toContain("score: null");
     expect(yaml).toContain("passing: false");
     expect(yaml).toContain("final_overall: null");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Dimension H plumbing — the judge must see the commission, not just the
+// article. Without it H always scored 0, capping the bar at 92/100 and
+// making `passing: true` unreachable for every project.
+// ---------------------------------------------------------------------------
+
+describe("buildArticleReviewMessages — dimension H needs the task", () => {
+  const ARTICLE = "# Title\n\nBody.";
+
+  it("includes the commissioned task so H is assessable", () => {
+    const user = buildArticleReviewMessages(ARTICLE, undefined, {
+      topic: "prompt engineering to agentic engineering",
+      audience: "developers",
+      language: "en-US",
+      durationSec: 900,
+    }).find((m) => m.role === "user")!.content;
+    expect(user).toContain("## Commissioned task");
+    expect(user).toContain("prompt engineering to agentic engineering");
+    expect(user).toContain("developers");
+    expect(user).toContain("en-US");
+    expect(user).toContain("900");
+    expect(user).toContain("Score dimension H against THIS task");
+  });
+
+  it("tells the judge to mark H not-assessed when no task was given", () => {
+    const user = buildArticleReviewMessages(ARTICLE).find(
+      (m) => m.role === "user",
+    )!.content;
+    expect(user).toContain("not_assessed");
+    expect(user).toContain("unknown");
+  });
+
+  it("runScoredDraft forwards the task to the judge on every attempt", async () => {
+    const p = new FakeProvider([GOOD_ARTICLE, GOOD_ARTICLE]);
+    await runScoredDraft(INPUT, p, null, { maxAttempts: 2 });
+    const judges = p.requests.filter((r) =>
+      r.messages.some((m) => m.role === "user" && m.content.includes("Article to judge")),
+    );
+    expect(judges.length).toBeGreaterThan(0);
+    for (const j of judges) {
+      expect(j.messages.some((m) => m.content.includes("demo"))).toBe(true);
+    }
+  });
+});
+
+describe("the judge must see the WHOLE article", () => {
+  const user = (md: string, task?: Parameters<typeof buildArticleReviewMessages>[2]) =>
+    buildArticleReviewMessages(md, undefined, task).find(
+      (m) => m.role === "user",
+    )!.content;
+
+  it("passes a 36k-char article through intact", () => {
+    // The rewrite that triggered this: 36,658 chars. The old 12,000 slice
+    // cut it mid-word and the judge called that a Critical content gap.
+    const md = "x".repeat(36658);
+    const content = user(md);
+    expect(content).toContain(md);
+    expect(content).not.toContain("truncated for length");
+  });
+
+  it("flags the cut instead of letting the judge blame the writer", () => {
+    const content = user("y".repeat(200_000));
+    expect(content).toContain("truncated for length");
+    expect(content).toContain("Do NOT report the cut as a structural defect");
+  });
+});
+
+describe("a stray severity label must not discard the whole judgement", () => {
+  it("normalizes 'Informational' onto the four-step scale", () => {
+    const raw = {
+      dimension_scores: [
+        {
+          id: "A",
+          indicators: [{ id: "A1", score: 4, reason: "ok" }],
+        },
+      ],
+      findings: [],
+      risk_flags: [
+        { code: "SOMETHING", severity: "Informational", finding_ids: [] },
+      ],
+      limitations: [],
+    };
+    const parsed = ArticleScoreRawSchema.safeParse(raw);
+    expect(parsed.success).toBe(true);
+    expect(parsed.success && parsed.data.risk_flags[0]!.severity).toBe("Minor");
   });
 });

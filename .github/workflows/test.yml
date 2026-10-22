@@ -52,6 +52,19 @@ jobs:
       # symlinks and break `@video/*` imports across the package graph.
       # Install from the committed lockfile (still reproducible) and let
       # pnpm wire workspace symlinks fresh on every CI run.
+      - name: Cache pnpm store
+        # Cache pnpm's content-addressable store between runs. Pulls the
+        # lockfile + a hash of node_modules into the cache key, so a
+        # change to the lockfile invalidates the cache and re-installs
+        # from scratch. First run still does a full download; subsequent
+        # runs on the same lockfile skip it. On this monorepo the
+        # install step is ~2 min cold; the cache cuts it to ~15 s.
+        uses: actions/cache@v4
+        with:
+          path: ~/.local/share/pnpm/store
+          key: pnpm-store-${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: pnpm-store-${{ runner.os }}-
+
       - name: Install dependencies
         # Force a clean install on every CI run. pnpm can incorrectly
         # report "already up to date" in some fresh-checkout scenarios and
@@ -70,8 +83,15 @@ jobs:
         # Same suite as `pnpm test`, minus the files that rasterize real
         # videos (Remotion + Chromium; the bundler cache is disabled by
         # design — determinism — so every render re-bundles).
+        # CI flag —coverage.enabled=false overrides the config default
+        # (v8 instrumentation more than doubles wall time on a 1500-test
+        # suite and the unit job's 15-min budget was being hit). Local
+        # `pnpm test` keeps coverage for the ratchet (lines/statements 80,
+        # functions 78, branches 62, set on the script itself, not the
+        # config — so disabling in CI doesn't loosen the gate).
         run: >-
           pnpm exec vitest run
+          --coverage.enabled=false
           --exclude 'packages/cli/src/pipeline-integration.test.ts'
           --exclude 'packages/cli/src/demo-*.test.ts'
 
@@ -95,6 +115,16 @@ jobs:
 
       - name: Install ffmpeg
         run: sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg && ffmpeg -version | head -1
+
+      - name: Cache pnpm store
+        # Same cache key as the unit job so a successful `unit` run primes
+        # the render job's install. Cuts the render job's install from
+        # ~2 min cold to ~15 s.
+        uses: actions/cache@v4
+        with:
+          path: ~/.local/share/pnpm/store
+          key: pnpm-store-${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: pnpm-store-${{ runner.os }}-
 
       - name: Install dependencies
         run: rm -rf node_modules && pnpm install

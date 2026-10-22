@@ -14,8 +14,10 @@ import path from "node:path";
 const callBilibili = vi.fn();
 const renderChecklist = vi.fn(() => "## manual upload\n1. open bilibili.com\n");
 vi.mock("@video/bilibili", () => ({
-  callBilibili: (...a: unknown[]) => callBilibili(...a),
-  renderChecklist: (...a: unknown[]) => renderChecklist(...a),
+  callBilibili: (...a: unknown[]) =>
+    (callBilibili as (...x: unknown[]) => unknown)(...a),
+  renderChecklist: (...a: unknown[]) =>
+    (renderChecklist as (...x: unknown[]) => unknown)(...a),
 }));
 
 import { runBilibili } from "./bilibili-command.js";

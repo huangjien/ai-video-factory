@@ -83,7 +83,7 @@ describe("Todo 8 — components batch A (render at frame 0 and mid)", () => {
   it("Terminal renders lines with prompt", () => {
     const html = renderToStaticMarkup(
       <Terminal
-        lines={["ls", "docs"]}
+        lines={["$ ls", "docs"]}
         prompt="$"
         startFrame={0}
         durationInFrames={60}

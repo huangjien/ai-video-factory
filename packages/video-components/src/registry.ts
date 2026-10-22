@@ -89,12 +89,37 @@ const imageProps = z
 
 const flowChartProps = z
   .object({
-    nodes: z.array(z.string().min(1)).min(1),
+    /** Either a plain string (treated as a "process" node) or an
+     *  object with `label` + optional `kind` in
+     *  {start, process, decision, end}. Decision → diamond, start/end
+     *  → filled pill, process → rounded rectangle. */
+    nodes: z
+      .array(
+        z.union([
+          z.string().min(1),
+          z.object({
+            label: z.string().min(1),
+            kind: z
+              .enum(["start", "process", "decision", "end"])
+              .optional(),
+          }),
+        ]),
+      )
+      .min(1),
+    /** Either `[from, to]` tuples (back-compat) or `{from, to, label}`
+     *  objects when an edge needs a label chip ("yes" / "no" / etc.). */
     edges: z
       .array(
-        z.tuple([
-          z.number().int().nonnegative(),
-          z.number().int().nonnegative(),
+        z.union([
+          z.tuple([
+            z.number().int().nonnegative(),
+            z.number().int().nonnegative(),
+          ]),
+          z.object({
+            from: z.number().int().nonnegative(),
+            to: z.number().int().nonnegative(),
+            label: z.string().optional(),
+          }),
         ]),
       )
       .default([]),
@@ -154,6 +179,8 @@ const calloutProps = z
     kind: z.enum(["info", "warning", "success"]).default("info"),
     title: z.string().optional(),
     text: z.string().default(""),
+    /** Optional CTA / action chip rendered in the top-right of the card. */
+    cta: z.string().optional(),
   })
   .passthrough();
 
@@ -423,11 +450,15 @@ export type RegistryPropsByName = {
   Terminal: { title?: string; lines: string[]; prompt?: string };
   Image: { src: string; fit?: "contain" | "cover" };
   FlowChart: {
-    nodes: string[];
-    edges?: [number, number][];
-    direction?: string;
+    nodes: (
+      | string
+      | { label: string; kind?: "start" | "process" | "decision" | "end" }
+    )[];
+    edges?:
+      | ([number, number] | { from: number; to: number; label?: string })[];
+    direction?: "left-to-right" | "top-down";
   };
-  Timeline: { events: { label: string; description?: string }[] };
+  Timeline: { events: { label: string; description?: string; date?: string; featured?: boolean }[] };
   MapInsert: {
     landforms?: { d: string; kind?: "ridge" | "river" | "plain" }[];
     routes?: { d: string }[];
@@ -437,6 +468,7 @@ export type RegistryPropsByName = {
     kind: "info" | "warning" | "success";
     title?: string;
     text: string;
+    cta?: string;
   };
   EndCard: { title: string; subtitle?: string; cta?: string };
   Character: { mouthOpen: number };

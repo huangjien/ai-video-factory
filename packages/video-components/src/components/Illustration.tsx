@@ -78,8 +78,54 @@ export const AnimatedIllustration: FC<IllustrationProps> = ({
         alignItems: "center",
         flexDirection: "column",
         padding: 40,
+        position: "relative",
+        overflow: "hidden",
       }}
     >
+      {/* Soft radial halo — a subtle glow that lifts the illustration
+          off the page background and gives the scene a center of mass
+          without drawing the eye. Themed: uses the theme's accent so
+          it tracks the rest of the composition. */}
+      <div
+        style={{
+          position: "absolute",
+          top: "50%",
+          left: "50%",
+          transform: "translate(-50%, -50%)",
+          width: 1100,
+          height: 700,
+          borderRadius: "50%",
+          background: `radial-gradient(closest-side, ${theme.colors.accent}26, ${theme.colors.accent}00 70%)`,
+          opacity: enterT,
+          pointerEvents: "none",
+        }}
+      />
+      {/* Three floating particle accents — slow drift, low opacity,
+          each at a different phase so the motion never feels synchronized. */}
+      {[0, 1, 2].map((i) => {
+        const phase = drift(localFrame, 240 + i * 37) * Math.PI * 2;
+        const baseX = 200 + i * 720;
+        const baseY = 240 + (i % 2) * 320;
+        const x = baseX + Math.cos(phase) * 18;
+        const y = baseY + Math.sin(phase) * 14;
+        return (
+          <div
+            key={`particle-${i}`}
+            style={{
+              position: "absolute",
+              left: x,
+              top: y,
+              width: 10 + i * 4,
+              height: 10 + i * 4,
+              borderRadius: "50%",
+              backgroundColor: theme.colors.accent,
+              opacity: 0.18 * enterT,
+              pointerEvents: "none",
+            }}
+          />
+        );
+      })}
+
       <h2
         style={{
           color: theme.colors.primary,

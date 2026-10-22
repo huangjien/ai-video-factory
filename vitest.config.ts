@@ -33,6 +33,13 @@ export default defineConfig({
   test: {
     include: ["packages/*/src/**/*.test.{ts,tsx}"],
     passWithNoTests: true,
+    // v0.11.2: a 30-s per-test timeout catches hangs on slow CI runners
+    // (a 2-core Linux box + chromium-pending processes can stall a fork
+    // past 5 min when the local-server mock never resolves). The hook
+    // was a previous CI timeout, so the test now errors out instead of
+    // timing out the whole job. Local runs on macOS complete every
+    // test well under 5 s.
+    testTimeout: 30_000,
     // Hermetic agent env for the whole suite (see file header) — a
     // harness-running-vitest session must not change CLI behavior.
     globalSetup: ["./vitest-global-setup.ts"],

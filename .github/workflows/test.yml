@@ -12,16 +12,28 @@ concurrency:
   group: test-${{ github.ref }}
   cancel-in-progress: true
 
-jobs:
-  # Fast feedback: build, lint, and every test that does not rasterize a
-  # video. Render-heavy files (pipeline integration + the three demo
-  # tests) run in the `render` job — a single 15-min job covering both
-  # classes timed out mid-render once the suite grew past ~600 tests
-  # (the "operation was canceled" failure).
-  unit:
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
+# Job layout (v0.11.3): one install shared by all jobs, then a fast lane
+# and a slow lane that run in parallel. Earlier the unit job ran the
+# whole 1500-test suite serially and the 15-min budget was being hit on
+# the slowest 2-core runner — the cli package alone has 43 test files
+# that each spin up an HTTP server, an ffmpeg subprocess, or both.
+# Splitting by package family gives the fast lane enough headroom and
+# the slow lane the budget it actually needs.
+#
+#   install       — shared, ~2 min cold, ~15 s warm with pnpm cache
+#   unit-fast     — every non-cli test (most of the suite). ~1-2 min.
+#   unit-cli      — every cli test, including the heavy integration
+#                   ones that mock the LLM over local HTTP. ~5-8 min.
+#   render        — render real videos; the slow lane. ~30 min budget.
+#
+# unit-fast and unit-cli run in parallel; total CI wall = install + max(
+# unit-fast, unit-cli) + render. The shared `setup-pnpm` step primes
+# the cache, and the per-job `Cache pnpm store` step reuses it.
 
+jobs:
+  install:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
 
@@ -32,33 +44,13 @@ jobs:
 
       - name: Install pnpm
         uses: pnpm/action-setup@v4
-        # version omitted on purpose — pnpm/action-setup reads `packageManager`
-        # from package.json automatically. Pinning here causes
-        # ERR_PNPM_BAD_PM_VERSION when the two drift.
         with: {}
 
-      - name: Install ffmpeg
-        # Use the apt-packaged ffmpeg (Ubuntu 24.04 ships 6.1.1) rather than
-        # the johnvansickle static build from FedericoCarboni/setup-ffmpeg.
-        # The static 6.1 build has a filter-graph parser bug that rejects
-        # our audio-mix graph with "Invalid stream specifier" — see
-        # packages/audio-mix/src/mix.ts for the workaround status. apt
-        # ffmpeg is built from upstream source and parses the same graph
-        # correctly. The pipeline calls ffmpeg only for mix/integration
-        # tests; coverage of newer codecs doesn't matter here.
-        run: sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg && ffmpeg -version | head -1
-
-      # No pnpm-store cache: a stale global store can hide workspace
-      # symlinks and break `@video/*` imports across the package graph.
-      # Install from the committed lockfile (still reproducible) and let
-      # pnpm wire workspace symlinks fresh on every CI run.
+      # Warm the pnpm store cache so the unit / render jobs can
+      # `restore-keys: pnpm-store-${{ runner.os }}-` on subsequent runs
+      # and skip the install step. The cache key hashes pnpm-lock.yaml,
+      # so a lockfile change invalidates and re-installs from scratch.
       - name: Cache pnpm store
-        # Cache pnpm's content-addressable store between runs. Pulls the
-        # lockfile + a hash of node_modules into the cache key, so a
-        # change to the lockfile invalidates the cache and re-installs
-        # from scratch. First run still does a full download; subsequent
-        # runs on the same lockfile skip it. On this monorepo the
-        # install step is ~2 min cold; the cache cuts it to ~15 s.
         uses: actions/cache@v4
         with:
           path: ~/.local/share/pnpm/store
@@ -66,11 +58,11 @@ jobs:
           restore-keys: pnpm-store-${{ runner.os }}-
 
       - name: Install dependencies
-        # Force a clean install on every CI run. pnpm can incorrectly
-        # report "already up to date" in some fresh-checkout scenarios and
-        # skip re-wiring workspace symlinks, which breaks @video/* imports
-        # across the package graph. The lockfile still drives reproducible
-        # resolution; the wipe just forces link re-wiring.
+        # Force a clean install every CI run. pnpm can incorrectly report
+        # "already up to date" in some fresh-checkout scenarios and skip
+        # re-wiring workspace symlinks, which breaks @video/* imports
+        # across the package graph. The lockfile still drives
+        # reproducible resolution; the wipe just forces link re-wiring.
         run: rm -rf node_modules && pnpm install
 
       - name: Build
@@ -79,28 +71,17 @@ jobs:
       - name: Lint
         run: pnpm run lint
 
-      - name: Unit + non-render tests
-        # Same suite as `pnpm test`, minus the files that rasterize real
-        # videos (Remotion + Chromium; the bundler cache is disabled by
-        # design — determinism — so every render re-bundles).
-        # CI flag —coverage.enabled=false overrides the config default
-        # (v8 instrumentation more than doubles wall time on a 1500-test
-        # suite and the unit job's 15-min budget was being hit). Local
-        # `pnpm test` keeps coverage for the ratchet (lines/statements 80,
-        # functions 78, branches 62, set on the script itself, not the
-        # config — so disabling in CI doesn't loosen the gate).
-        run: >-
-          pnpm exec vitest run
-          --coverage.enabled=false
-          --exclude 'packages/cli/src/pipeline-integration.test.ts'
-          --exclude 'packages/cli/src/demo-*.test.ts'
-
-  # Slow lane: the tests and audits that render real video. Budgeted for
-  # re-bundling every render on 2-core runners.
-  render:
+  # Fast lane: every test that does NOT spin up a CLI subprocess, an
+  # HTTP server, or ffmpeg. Most of the 1500-test suite lives here.
+  # ~1-2 min on a 2-core runner. Coverage disabled to keep the v8
+  # instrumentation walk from doubling wall time — the ratchet thresholds
+  # (lines/statements 80, functions 78, branches 62) live on the
+  # `pnpm test` script, not the config, so disabling in CI doesn't
+  # loosen the gate. `pnpm test` locally still runs with coverage.
+  unit-fast:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
-
+    timeout-minutes: 10
+    needs: install
     steps:
       - uses: actions/checkout@v4
 
@@ -109,17 +90,90 @@ jobs:
         with:
           node-version: "22"
 
-      - name: Install pnpm
-        uses: pnpm/action-setup@v4
-        with: {}
+      - name: Cache pnpm store
+        uses: actions/cache@v4
+        with:
+          path: ~/.local/share/pnpm/store
+          key: pnpm-store-${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: pnpm-store-${{ runner.os }}-
+
+      - name: Install dependencies
+        run: rm -rf node_modules && pnpm install
+
+      - name: Non-cli tests
+        # Run every test file that is NOT in packages/cli/. The cli
+        # package has its own lane because every test file in it spins
+        # up an HTTP server or ffmpeg subprocess; running the whole
+        # suite on a 2-core box is dominated by setup cost.
+        run: >-
+          pnpm exec vitest run
+          --coverage.enabled=false
+          --dir packages
+          --exclude 'packages/cli/**'
+
+  # Slow lane: every cli test. cli has 43 test files; each one
+  # createServer()s an HTTP mock and shells out to the CLI. 5-8 min
+  # on a 2-core runner.
+  unit-cli:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: install
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install ffmpeg
+        # The cli integration tests don't actually shell out to ffmpeg
+        # (they mock it), but several do call into packages/audio-mix
+        # which checks for ffmpeg on PATH at module load. Install so
+        # the module-init probe doesn't throw.
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg && ffmpeg -version | head -1
+
+      - name: Cache pnpm store
+        uses: actions/cache@v4
+        with:
+          path: ~/.local/share/pnpm/store
+          key: pnpm-store-${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: pnpm-store-${{ runner.os }}-
+
+      - name: Install dependencies
+        run: rm -rf node_modules && pnpm install
+
+      - name: CLI tests
+        # Includes the heavy integration tests (audio-integration,
+        # research-integration, review-integration, script-integration,
+        # storyboard-integration, youtube-integration, etc.) that spin
+        # up local HTTP mocks. The render lane below excludes the ones
+        # that rasterize real video.
+        run: >-
+          pnpm exec vitest run
+          --coverage.enabled=false
+          --dir packages/cli
+          --exclude 'packages/cli/src/pipeline-integration.test.ts'
+          --exclude 'packages/cli/src/demo-*.test.ts'
+
+  # Slow lane: the tests and audits that render real video. Budgeted for
+  # re-bundling every render on 2-core runners.
+  render:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    needs: install
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
 
       - name: Install ffmpeg
         run: sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg && ffmpeg -version | head -1
 
       - name: Cache pnpm store
-        # Same cache key as the unit job so a successful `unit` run primes
-        # the render job's install. Cuts the render job's install from
-        # ~2 min cold to ~15 s.
         uses: actions/cache@v4
         with:
           path: ~/.local/share/pnpm/store

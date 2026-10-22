@@ -324,7 +324,7 @@ describe("setting participates in the brief cache identity", () => {
     // thin category hint, v8 = the no-text rule draws the line at
     // READABILITY rather than at the presence of marks. Without each bump,
     // briefs cached by the previous expander wording outlive the change.
-    expect(IMAGE_PROMPT_REVISION).toBe("10");
+    expect(IMAGE_PROMPT_REVISION).toBe("11");
   });
 });
 

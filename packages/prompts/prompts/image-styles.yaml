@@ -22,15 +22,39 @@ editorial:
   promptSuffix: editorial illustration, single visual metaphor, stylized simplified human figures, muted low-saturation palette of ink blue and warm paper cream with a single rust accent, subtle paper texture and visible brushwork, calm sophisticated mood, storybook composition, layered depth, quiet lower third, no text, no letters, no handwriting
 whiteboard:
   systemBlock: |-
-    Style: WHITEBOARD / HAND-DRAWN MARKER SKETCH (teaching mode).
-    - Black ink line-art on a clean white board, with ONE accent color (a single blue) used only for emphasis.
-    - Locked palette: pure black ink #1A1A1A on board white #FFFFFF, with mid-blue #2F6FB5 as the only accent. No other color in any scene — reuse these three in every scene of the video.
-    - Doodle-level simplification: arrows, boxes, circles, simple stick-ish figures, circled highlights. Imperfect linework that reads as a real marker — slightly wobbly, pressure varies.
-    - No shading, no gradients, no color fills, no photorealism.
-    - Lighting is irrelevant by design; do not describe a light source. Read the board as evenly lit paper.
-    - Generous white space. This is a BACKGROUND for draw-on animations, so keep elements sparse and spatially separated so animated overlays have somewhere to land.
-    - Leave breathing room — the lower third and the outer edges stay quiet because caption and title overlays land there.
-  promptSuffix: whiteboard marker sketch, hand-drawn black ink line art with one blue accent color, doodle arrows and boxes, clean white background, slightly imperfect marker linework, large white space, no shading, no fills, quiet lower third, no text, no labels, no letters
+    Style: MODERN WHITEBOARD DIAGRAM (strategy / teaching mode).
+    - Composition reference: the look of a hand-drawn marker diagram on a
+      contemporary office whiteboard — a TED-talk sketch, a strategy-
+      consulting "how it works" diagram, or a UX wireframe. The model has
+      good priors for that visual idiom; lean on it.
+    - Marker physics: a thick chisel-tip whiteboard marker (think Expo or
+      Sharpie-style), even stroke weight along the line, slight rounded
+      end-caps, one blue accent drawn ON TOP of the black lines (not next
+      to them) for emphasis. No calligraphic taper, no brush stroke, no
+      ink quill, no fine-tip pen.
+    - Locked palette: pure black marker #1A1A1A on board white #FFFFFF,
+      with mid-blue #2F6FB5 as the only accent. No other color in any
+      scene — reuse these three in every scene of the video.
+    - Hard exclusions: NOT a medieval manuscript, NOT a parchment
+      page, NOT a chalkboard (no chalk dust, no smudges, no matte
+      texture), NOT an ink wash, NOT a watercolor, NOT a vintage
+      textbook illustration, NOT an old engraving. The lines must
+      read as drawn in the last ten years.
+    - Doodle-level simplification: arrows, boxes, circles, simple
+      stick-ish figures, circled highlights, dotted lines, callout
+      brackets. Imperfect linework that reads as a real marker drawn
+      by a hand — slightly wobbly, pressure varies along a stroke.
+    - No shading, no gradients, no color fills, no photorealism, no
+      texture, no paper grain.
+    - Lighting is irrelevant by design; do not describe a light source.
+      Read the board as evenly lit paper under fluorescent office
+      light.
+    - Generous white space. This is a BACKGROUND for draw-on
+      animations, so keep elements sparse and spatially separated so
+      animated overlays have somewhere to land.
+    - Leave breathing room — the lower third and the outer edges
+      stay quiet because caption and title overlays land there.
+  promptSuffix: modern whiteboard diagram, hand-drawn marker sketch with thick chisel-tip stroke, black marker with one blue accent line on top, doodle arrows boxes circles and stick figures, contemporary office whiteboard aesthetic like a strategy-consulting or TED-talk sketch, clean white background, slightly wobbly hand-drawn linework, large white space, no shading, no fills, no chalk dust, no smudges, no parchment, no manuscript, no ink wash, no watercolor, quiet lower third, no text, no readable letters, no words, no labels, no signs, no captions
 isometric:
   systemBlock: |-
     Style: ISOMETRIC ILLUSTRATION (systems mode).

@@ -73,7 +73,7 @@ const MAX_BRIEF_CHARS = 1400;
 // viewer-readable sign or title does not. The rule text is injected into
 // the expander's system message, so briefs written under the old wording
 // would keep asking for the old thing.
-export const IMAGE_PROMPT_REVISION = "10";
+export const IMAGE_PROMPT_REVISION = "11";
 
 /** Remove the reasoning scaffold that reasoning-enabled chat models emit
  *  ahead of their answer (`<think>…</think>`, an unterminated `<think>`,

@@ -51,11 +51,15 @@ export function wrapText(text: string, maxUnits: number): string[] {
 }
 
 /** A single timed caption cue. `lines` is already wrapped, so consumers
- *  never re-wrap or truncate (CS-07). */
+ *  never re-wrap or truncate (CS-07). `markers`, when set, is the list of
+ *  phrases the renderer should wrap with a yellow-highlight span on every
+ *  cue in the build call. The list is shared across all cues built
+ *  together because the highlight set is per-scene, not per-cue. */
 export interface CaptionCue {
   lines: string[];
   startSec: number;
   endSec: number;
+  markers?: string[];
 }
 
 /** Cues hold at most this many lines, so a caption can never stack past
@@ -116,7 +120,7 @@ function fragmentNarration(text: string): string[] {
 export function buildCaptionCues(
   text: string,
   durationSec: number,
-  opts: { maxUnits?: number; maxLines?: number } = {},
+  opts: { maxUnits?: number; maxLines?: number; markers?: string[] } = {},
 ): CaptionCue[] {
   const maxUnits = opts.maxUnits ?? 24;
   const maxLines = opts.maxLines ?? MAX_CAPTION_LINES;
@@ -157,17 +161,21 @@ export function buildCaptionCues(
   if (groups.length === 0) return [];
 
   const totalUnits = groups.reduce((sum, g) => sum + textUnits(g), 0);
+  const markers =
+    opts.markers && opts.markers.length > 0 ? [...opts.markers] : undefined;
   const cues: CaptionCue[] = [];
   let cursor = 0;
   groups.forEach((group, i) => {
     const share = textUnits(group) / totalUnits;
     const endSec =
       i === groups.length - 1 ? durationSec : cursor + durationSec * share;
-    cues.push({
+    const cue: CaptionCue = {
       lines: wrapText(group, maxUnits).slice(0, maxLines),
       startSec: cursor,
       endSec,
-    });
+    };
+    if (markers !== undefined) cue.markers = markers;
+    cues.push(cue);
     cursor = endSec;
   });
   return cues;

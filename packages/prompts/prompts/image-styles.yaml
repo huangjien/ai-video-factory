@@ -134,3 +134,14 @@ gongbi:
     - Do not render writing. No written characters, calligraphy, inscriptions, seals, signatures or labels anywhere in the image.
     - Leave breathing room — the lower third and the outer edges stay quiet because caption and title overlays land there.
   promptSuffix: gongbi light-colour wash illustration, restrained fine ink linework, low-saturation layered washes, one full-frame scene, aged paper and ink palette with slate blue-green or ochre and a little cinnabar red, credible period dress, simplified distance, quiet lower third, no panel layout, no collage, no calligraphy, no seals, no signature, no text, no letters
+terminal:
+  systemBlock: |-
+    Style: TERMINAL CONSOLE ILLUSTRATION (code-environment mode).
+    - Compose from a black CRT-monitor screen with phosphor-green and soft cyan text glow; the monitor self-illuminates the scene.
+    - Locked palette: deep screen black #0B0F14, phosphor green #33FF66, soft cyan #66E5FF, dim grey #3A4148, surrounding void #060A0E. Reuse these colors in every scene.
+    - ASCII-box borders, command-prompt motifs (">"), file-tree hints, ASCII arrows, scroll bars — the visual language of a CLI environment.
+    - Subtle scan-line texture and a faint CRT vignette; no photorealism, no glossy surfaces, no depth of field.
+    - One clear focal element; keep decoration dense but readable. Crowd the composition with small monospace marks the way a busy terminal dump does.
+    - Lighting: the screen IS the light source. No external sun, no fill, no shadow beyond soft glow against the surrounding void.
+    - Leave breathing room — the lower third and the outer edges stay quiet because caption and title overlays land there.
+  promptSuffix: terminal console illustration, dark CRT screen with phosphor-green and soft cyan glow, ASCII box borders and command-prompt motifs, subtle scan-line texture and faint vignette, ascii arrows and file-tree hints, locked palette of deep screen black phosphor green soft cyan dim grey and surrounding void, no text, no readable letters, no words, no labels, no signs, no captions, no UI chrome

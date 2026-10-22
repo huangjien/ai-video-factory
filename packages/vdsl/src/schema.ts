@@ -711,6 +711,14 @@ const captionsSchema = z
      * hold. Written by sync-durations, which measures the audio.
      */
     speech_sec: z.number().positive().optional(),
+    /**
+     * Yellow-highlighter phrases: the captions overlay wraps each
+     * occurrence in a pale-yellow pill so the viewer's eye lands on the
+     * term. Phrases are matched greedy-left in source order; a wrap that
+     * splits a phrase across two cue lines will only highlight the part
+     * on the line where the match starts.
+     */
+    highlight_terms: z.array(z.string().min(1)).optional(),
   })
   .strict();
 

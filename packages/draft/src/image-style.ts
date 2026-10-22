@@ -51,6 +51,7 @@ export const IMAGE_STYLES = [
   "isometric",
   "paper-cut",
   "gongbi",
+  "terminal",
 ] as const;
 
 export type ImageStyle = (typeof IMAGE_STYLES)[number];

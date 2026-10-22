@@ -1,4 +1,4 @@
-import { execFile } from "node:child_process";
+import { execFile, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import {
   mkdir,
@@ -101,6 +101,107 @@ export type ProgressEmit = (e: ProgressEvent) => void;
 export const noopEmit: ProgressEmit = () => {};
 
 /** Elapsed whole seconds since `t0`. */
+/**
+ * v0.12: run the Pillow text-overlay pass for one project, then stamp
+ * each scene's `visual.props.textOverlaySrc` so the renderer knows
+ * where to look. The Pillow script is intentionally written in Python
+ * — Pillow is the project standard for image-text compositing, and the
+ * CLI language stays out of the way.
+ *
+ * Returns the list of generated overlay files for the run report.
+ */
+async function runTextOverlayPass(
+  projectRoot: string,
+): Promise<string[]> {
+  // The script lives at <repo>/scripts/pillow-text-overlay.py. The
+  // `make` step runs from the repo root (CLI cwd), so the relative
+  // path is stable regardless of which project triggered the run.
+  const scriptPath = path.resolve(
+    process.cwd(),
+    "scripts",
+    "pillow-text-overlay.py",
+  );
+  if (!existsSync(scriptPath)) {
+    return [
+      `text-overlay: skipped — ${path.relative(process.cwd(), scriptPath)} not found`,
+    ];
+  }
+  // Find a python that has Pillow + PyYAML installed. The CLI's
+  // pre-flight (`bash check_setup.sh`) only checks the LLM deps; the
+  // Pillow stack is opt-in, so this step no-ops gracefully when the
+  // user hasn't installed Pillow yet.
+  const pythonCandidates =
+    process.env["VIDEO_PYTHON"] !== undefined
+      ? [process.env["VIDEO_PYTHON"]]
+      : ["python3", "python"];
+  let python: string | undefined;
+  for (const cand of pythonCandidates) {
+    const probe = spawnSync(cand, ["-c", "from PIL import Image, ImageDraw, ImageFont; import yaml"], {
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+    if (probe.status === 0) {
+      python = cand;
+      break;
+    }
+  }
+  if (python === undefined) {
+    return [
+      `text-overlay: skipped — no python with Pillow + PyYAML found (tried ${pythonCandidates.join(", ")})`,
+    ];
+  }
+  const projectSlug = path.basename(projectRoot);
+  const proc = spawnSync(
+    python,
+    [scriptPath, projectSlug],
+    { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] },
+  );
+  if (proc.status !== 0) {
+    const stderr = (proc.stderr ?? "").split("\n").slice(-3).join(" | ");
+    return [`text-overlay: Pillow script failed (exit ${proc.status}) — ${stderr}`];
+  }
+  // Stamp textOverlaySrc into the storyboard's ImageBackground scenes.
+  // The make run is the only place that knows both the project root
+  // and the freshly-generated overlay paths, so the stamp lives here
+  // (not in sync-storyboard, which is keyed on article.md content).
+  const storyboardPath = path.join(
+    projectRoot,
+    "storyboard",
+    "storyboard.yaml",
+  );
+  if (!existsSync(storyboardPath)) {
+    return ["text-overlay: storyboard.yaml missing — nothing to stamp"];
+  }
+  const parsed = parseYaml(readFileSync(storyboardPath, "utf8")) as {
+    scenes?: Array<{
+      id?: string;
+      visual?: { component?: string; props?: Record<string, unknown> };
+    }>;
+  };
+  const overlays: string[] = [];
+  for (const scene of parsed.scenes ?? []) {
+    if (scene.visual?.component !== "ImageBackground") continue;
+    const idNum = scene.id?.match(/scene[-_]?(\d+)/)?.[1];
+    if (idNum === undefined) continue;
+    const overlayPath = path.join(
+      projectRoot,
+      "assets",
+      "images",
+      "text",
+      `scene_${idNum}.png`,
+    );
+    if (!existsSync(overlayPath)) continue;
+    scene.visual.props = { ...(scene.visual.props ?? {}), textOverlaySrc: overlayPath };
+    overlays.push(overlayPath);
+  }
+  writeFileSync(storyboardPath, yamlStringify(parsed), "utf8");
+  return [
+    `text-overlay: Pillow wrote ${overlays.length} overlay file(s)`,
+    `text-overlay: stamped textOverlaySrc on ${overlays.length} scene(s)`,
+    ...(proc.stdout ? [proc.stdout.trim()] : []),
+  ];
+}
+
 function elapsedSinceSec(t0: number): number {
   return Math.round((Date.now() - t0) / 1000);
 }
@@ -296,6 +397,15 @@ export async function runMake(
         onEvent: emit,
       }),
     );
+
+    // 1b. v0.12: Pillow text-overlay pass. Reads storyboard.yaml, walks
+    //     every scene, and writes a transparent PNG to
+    //     assets/images/text/scene_N.png with the scene's key-info
+    //     title rendered on top. The renderer composites this above the
+    //     background image and below the captions strip. Run only when
+    //     at least one scene is an ImageBackground — the script is a
+    //     no-op for non-image scenes, but the noise is not.
+    await step("text-overlay", () => runTextOverlayPass(opts.projectRoot));
 
     // 1b. TTS scenes — narrate each scene's voice-over text.
     await step("tts", () =>

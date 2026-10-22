@@ -250,7 +250,8 @@ export async function resolveImageSources(
   const scenes = await Promise.all(
     plan.scenes.map(async (scene) => {
       if (scene.component === "ImageBackground") {
-        return resolveComponentSrc(scene, warn);
+        const withSrc = await resolveComponentSrc(scene, warn);
+        return resolveTextOverlay(withSrc, plan.projectRoot, warn);
       }
       const bound = await bindSceneBackground(plan, scene);
       return bound;
@@ -293,6 +294,36 @@ async function resolveComponentSrc(
   return {
     ...scene,
     props: { ...scene.props, src: await toDataUrl(src) },
+  };
+}
+
+/** v0.12: inlines the ImageBackground `textOverlaySrc` (a transparent PNG
+ *  produced by `scripts/pillow-text-overlay.py`) as a data URL so the
+ *  headless browser can fetch it. Relative paths are resolved against
+ *  the plan's project root — same convention the `src` resolver uses
+ *  upstream, kept consistent by passing the same warnings handle. */
+async function resolveTextOverlay(
+  scene: RenderPlanScene,
+  projectRoot: string | undefined,
+  warn: (message: string) => void,
+): Promise<RenderPlanScene> {
+  const overlay = scene.props.textOverlaySrc;
+  if (typeof overlay !== "string" || overlay.length === 0) return scene;
+  if (overlay.startsWith("data:")) return scene;
+  const absolute = path.isAbsolute(overlay)
+    ? overlay
+    : projectRoot
+      ? path.join(projectRoot, overlay)
+      : overlay;
+  if (!existsSync(absolute)) {
+    warn(
+      `scene ${scene.id}: textOverlaySrc not found: ${absolute} — rendering without key-info title`,
+    );
+    return scene;
+  }
+  return {
+    ...scene,
+    props: { ...scene.props, textOverlaySrc: await toDataUrl(absolute) },
   };
 }
 

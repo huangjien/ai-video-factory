@@ -90,4 +90,32 @@ describe("buildCaptionCues (CS-07)", () => {
     expect(buildCaptionCues("   ", 10)).toEqual([]);
     expect(buildCaptionCues("有文字。", 0)).toEqual([]);
   });
+
+  describe("markers option (yellow highlighter)", () => {
+    it("attaches markers to every cue when supplied", () => {
+      const cues = buildCaptionCues(
+        "总体叙述。重要短语出现在这里。另一句带有重要短语的尾句。".repeat(3),
+        60,
+        { markers: ["重要短语"] },
+      );
+      expect(cues.length).toBeGreaterThan(1);
+      for (const cue of cues) expect(cue.markers).toEqual(["重要短语"]);
+    });
+
+    it("omits the markers field when no markers are supplied", () => {
+      const cues = buildCaptionCues("普通叙述，没有高亮。", 10);
+      for (const cue of cues) expect(cue.markers).toBeUndefined();
+    });
+
+    it("treats empty-marker as no markers (renderer skips the highlight pass)", () => {
+      const cues = buildCaptionCues("叙述带空 marker。", 10, { markers: [] });
+      for (const cue of cues) expect(cue.markers).toBeUndefined();
+    });
+
+    it("does not mutate the caller's markers array", () => {
+      const input = ["词A", "词B"];
+      buildCaptionCues("词A与词B的对比。".repeat(3), 30, { markers: input });
+      expect(input).toEqual(["词A", "词B"]);
+    });
+  });
 });

@@ -131,6 +131,9 @@ export function compileStoryboard(
       ? {
           cues: buildCaptionCues(captionText, captionWindow, {
             maxUnits: DEFAULT_CAPTION_UNITS,
+            ...(scene.captions?.highlight_terms !== undefined
+              ? { markers: scene.captions.highlight_terms }
+              : {}),
           }),
         }
       : null;

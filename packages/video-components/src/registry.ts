@@ -173,6 +173,10 @@ const imageBackgroundProps = z
     src: z.string().min(1),
     fit: z.enum(["cover", "contain"]).default("cover"),
     kenBurnsScale: z.number().min(0).max(0.5).default(0.08),
+    /** v0.12: transparent PNG key-info title from the Pillow
+     *  text-overlay pass. Composited between the background image
+     *  and the bottom captions strip. */
+    textOverlaySrc: z.string().optional(),
   })
   .passthrough();
 
@@ -439,6 +443,7 @@ export type RegistryPropsByName = {
     src: string;
     fit?: "cover" | "contain";
     kenBurnsScale?: number;
+    textOverlaySrc?: string;
   };
   QuoteBlock: { quote: string; author?: string; source?: string };
   StatGrid: { stats: { value: string; label: string }[]; caption?: string };

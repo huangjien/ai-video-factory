@@ -27,6 +27,13 @@ export interface ImageBackgroundProps {
    *  `CaptionsOverlay` (see `captionStyle.ts`) so the two never
    *  disagree when both fire on the same scene. */
   caption?: string | undefined;
+  /** Optional, transparent PNG layered ABOVE the background image
+   *  and BELOW the bottom captions strip. Used by the
+   *  `pillow-text-overlay.py` pass to plant a large key-info title
+   *  on the scene (canvas size matches the underlying image). The
+   *  renderer resolves a relative `textOverlaySrc` against the
+   *  project root the same way `src` is resolved. */
+  textOverlaySrc?: string | undefined;
   /** Frame height, used to scale the caption. Defaults to the 1080p
    *  target; the renderer passes the real composition height. */
   height?: number | undefined;
@@ -58,6 +65,7 @@ export const ImageBackground: FC<ImageBackgroundProps> = ({
   fit = "cover",
   kenBurnsScale = 0.08,
   caption,
+  textOverlaySrc,
   width = 1920,
   height = 1080,
   startFrame,
@@ -91,6 +99,24 @@ export const ImageBackground: FC<ImageBackgroundProps> = ({
           transform: `scale(${scale}) translate(${tx}px, ${ty}px)`,
         }}
       />
+      {/* Optional transparent PNG key-info title (Pillow pass). Layered
+          above the background image so the outline is readable on any
+          colour, but BELOW the bottom captions strip — the captions
+          track still owns the lower-third typography. */}
+      {textOverlaySrc !== undefined && textOverlaySrc.length > 0 ? (
+        <img
+          src={textOverlaySrc}
+          alt=""
+          style={{
+            position: "absolute",
+            inset: 0,
+            width: "100%",
+            height: "100%",
+            objectFit: "fill",
+            pointerEvents: "none",
+          }}
+        />
+      ) : null}
       {/* Bottom-weighted, not a full-frame wash: captionStyle.ts already gives
           every glyph a 0.92-alpha outline, so only the caption band needs
           contrast. A full wash cost a paper-white ground half its luma. */}

@@ -144,6 +144,7 @@ const IMAGE_STYLE_NOTES: Record<string, string> = {
   isometric: "fixed axonometric view; systems and processes",
   "paper-cut": "layered tactile collage; narrative scenes",
   gongbi: "restrained ink linework, low-saturation washes; historical scenes",
+  terminal: "dark CRT console with phosphor-green and cyan glow; code/CLI environments",
 };
 
 const IMAGE_STYLE_CHOICES: readonly { value: string; note: string }[] =

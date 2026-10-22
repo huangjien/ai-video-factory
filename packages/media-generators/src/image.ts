@@ -26,6 +26,10 @@ export class ImageGenerationError extends Error {
   readonly provider: string;
   readonly status?: number;
   readonly body_excerpt?: string;
+  /** Set when the error came from the client's own request deadline
+   *  firing (MiniMaxImageProvider's `requestTimeoutMs` default 120s).
+   *  Distinct from `status`, which is the upstream HTTP code. */
+  readonly timeoutMs?: number;
   constructor(message: string, provider: string) {
     super(message);
     this.name = "ImageGenerationError";

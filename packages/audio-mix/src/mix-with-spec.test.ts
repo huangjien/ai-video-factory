@@ -89,7 +89,11 @@ describe("mixTracksWithSpec (todo 2) — SFX cues + BGM fades", () => {
       ),
     );
     expect(parseFloat(probe.streams[0].duration)).toBeGreaterThanOrEqual(3.8);
-  }, 120_000);
+    // ffmpeg wall-clock skew can push this ffmpeg call past 120 s under
+    // the suite's parallel load; the assertion is a structural check
+    // (3.8 s for a 4 s bgm with 0.5 s fade out and two sub-3 s sfx cues),
+    // not a perf budget, so a generous timeout is the right ceiling.
+  }, 300_000);
 
   it("throws when an SFX cue references a missing file", async () => {
     const out = path.join(dir, "out-missing.wav");

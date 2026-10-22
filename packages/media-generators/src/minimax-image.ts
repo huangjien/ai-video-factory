@@ -12,6 +12,16 @@ export interface MiniMaxImageProviderOptions {
   /** Override the default retry sleeps (default: [1000, 2000, 4000]). Tests use [1,1,1]. */
   retrySleeps?: number[] | undefined;
   /**
+   * Hard ceiling on a single in-flight HTTP request to the image
+   * endpoint. The remote API has its own timeout semantics that
+   * `fetch` does not enforce — without this, a hung TCP connection
+   * stalls `video make` indefinitely (observed: a 12-minute hang on
+   * a network blip). Default 120 s: tight enough that a dropped
+   * connection is reported quickly, generous enough that a slow
+   * generation finishes normally. A timed-out request is reported as
+   * `ImageGenerationError` with `timeoutMs` on the error. */
+  requestTimeoutMs?: number | undefined;
+  /**
    * Let the server rewrite the prompt before generating (default false).
    *
    * Our prompt is a hand-specified six-part brief whose palette lock and
@@ -24,6 +34,7 @@ export interface MiniMaxImageProviderOptions {
 }
 
 const DEFAULT_MODEL = "image-01";
+const DEFAULT_REQUEST_TIMEOUT_MS = 120_000;
 
 /** `prompt` is documented as max 1500 characters
  *  (platform.minimax.io/docs/api-reference/image-generation-t2i, read
@@ -72,6 +83,7 @@ export class MiniMaxImageProvider implements ImageProvider {
   private readonly apiHost: string;
   private readonly defaultModel: string;
   private readonly retrySleeps: number[];
+  private readonly requestTimeoutMs: number;
   private readonly promptOptimizer: boolean;
 
   constructor(opts: MiniMaxImageProviderOptions = {}) {
@@ -81,6 +93,8 @@ export class MiniMaxImageProvider implements ImageProvider {
       "https://api.minimax.io";
     this.defaultModel = opts.defaultModel ?? DEFAULT_MODEL;
     this.retrySleeps = opts.retrySleeps ?? [1000, 2000, 4000];
+    this.requestTimeoutMs =
+      opts.requestTimeoutMs ?? DEFAULT_REQUEST_TIMEOUT_MS;
     this.promptOptimizer = opts.promptOptimizer ?? false;
   }
 
@@ -103,24 +117,48 @@ export class MiniMaxImageProvider implements ImageProvider {
     }
     const data = await withRetry(
       async () => {
-        const res = await fetch(`${this.apiHost}/v1/image_generation`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${key}`,
-          },
-          body: JSON.stringify({
-            model: this.defaultModel,
-            prompt: req.prompt,
-            aspect_ratio: closestAspectRatio(req.width, req.height),
-            response_format: "base64",
-            n: 1,
-            // Sent explicitly rather than omitted. The API default is
-            // false today, but a brief this carefully composed must not
-            // be silently rewritten because a server default moved.
-            prompt_optimizer: this.promptOptimizer,
-          }),
-        });
+        // The remote API times out at the network's whim, and `fetch`
+        // does not honour any default — the documented observed behavior
+        // is a TCP-level hang that stalls the whole pipeline until a
+        // parent process kills it. Race a deadline against the fetch
+        // and abort the request if the API hasn't answered by then.
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), this.requestTimeoutMs);
+        let res: Response;
+        try {
+          res = await fetch(`${this.apiHost}/v1/image_generation`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${key}`,
+            },
+            body: JSON.stringify({
+              model: this.defaultModel,
+              prompt: req.prompt,
+              aspect_ratio: closestAspectRatio(req.width, req.height),
+              response_format: "base64",
+              n: 1,
+              // Sent explicitly rather than omitted. The API default is
+              // false today, but a brief this carefully composed must not
+              // be silently rewritten because a server default moved.
+              prompt_optimizer: this.promptOptimizer,
+            }),
+            signal: controller.signal,
+          });
+        } catch (err) {
+          if ((err as { name?: string }).name === "AbortError") {
+            const e = new ImageGenerationError(
+              `MiniMax image request timed out after ${this.requestTimeoutMs}ms`,
+              this.name,
+            );
+            (e as ImageGenerationError & { timeoutMs: number }).timeoutMs =
+              this.requestTimeoutMs;
+            throw e;
+          }
+          throw err;
+        } finally {
+          clearTimeout(timer);
+        }
         const text = await res.text();
         if (!res.ok) {
           const excerpt = text.slice(0, 200);
@@ -142,7 +180,11 @@ export class MiniMaxImageProvider implements ImageProvider {
         };
       },
       {
-        isRetriable: (err) => !/MiniMax image API 4\d\d/.test(String(err)),
+        // Timeout is the client's cap on a hung connection. The server
+        // hasn't hung anything; we may legitimately retry the same
+        // request later. Internal errors are also retried (they sometimes
+        // resolve on a second attempt), only 4xx is not.
+        isRetriable: (err) => !/MiniMax image API (?:4\d\d|request timed out)/.test(String(err)),
         sleeps: this.retrySleeps,
       },
     );

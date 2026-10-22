@@ -2,7 +2,11 @@ import type { Provider } from "@video/llm";
 import { chatWithFallback } from "@video/llm";
 import { parse as parseYaml } from "yaml";
 import { buildMessages, type AudioPlanInput } from "./prompt.js";
-import { AudioConfigSchema, DEFAULT_AUDIO_CONFIG, type AudioConfig } from "./schemas.js";
+import {
+  AudioConfigSchema,
+  DEFAULT_AUDIO_CONFIG,
+  type AudioConfig,
+} from "./schemas.js";
 
 export class AudioPlanError extends Error {
   override readonly cause: unknown;
@@ -84,7 +88,10 @@ export async function callAudioPlan(
       );
     }
   }
-  const merged: AudioConfig = { ...DEFAULT_AUDIO_CONFIG, ...(parsed as AudioConfig) };
+  const merged: AudioConfig = {
+    ...DEFAULT_AUDIO_CONFIG,
+    ...(parsed as AudioConfig),
+  };
   const validation = AudioConfigSchema.safeParse(merged);
   if (!validation.success) {
     throw new AudioPlanError(

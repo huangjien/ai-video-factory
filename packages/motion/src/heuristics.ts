@@ -63,7 +63,9 @@ const COMPONENT_ENTRANCE: ReadonlyArray<{
   { match: /^(Character|EndCard)$/, type: "scale" },
 ];
 
-export function entranceTypeForComponent(component: string): "draw" | "write" | "fade" | "scale" {
+export function entranceTypeForComponent(
+  component: string,
+): "draw" | "write" | "fade" | "scale" {
   for (const rule of COMPONENT_ENTRANCE) {
     if (rule.match.test(component)) return rule.type;
   }

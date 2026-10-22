@@ -29,7 +29,7 @@ export const Terminal: FC<TerminalProps> = ({
   const hasAnimations = Array.isArray(animations) && animations.length > 0;
   const sceneSec =
     durationInFrames > 0
-      ? frame * ((durationInFrames / 30) / durationInFrames)
+      ? frame * (durationInFrames / 30 / durationInFrames)
       : frame / 30;
 
   // Per-line visibility: when animations present, reveal each line
@@ -44,7 +44,9 @@ export const Terminal: FC<TerminalProps> = ({
   });
 
   const visibleText = hasAnimations
-    ? perLine.map((p) => (p.chars ?? 0) > 0 ? p.line.slice(0, p.chars) : "").join("\n")
+    ? perLine
+        .map((p) => ((p.chars ?? 0) > 0 ? p.line.slice(0, p.chars) : ""))
+        .join("\n")
     : typewriter(frame, lines.join("\n"), 1.5);
   return (
     <AbsoluteFill

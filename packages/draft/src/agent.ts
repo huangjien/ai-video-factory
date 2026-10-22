@@ -81,8 +81,7 @@ export async function callDraft(
 
 /** Result of attempting to parse the LLM response into JSON. */
 type ParseResult =
-  | { ok: true; value: RawArticle }
-  | { ok: false; error: unknown };
+  { ok: true; value: RawArticle } | { ok: false; error: unknown };
 
 /** Tolerant parser — handles fenced JSON, surrounding prose, and minor
  * brace-mismatch errors by extracting the largest balanced JSON object. */
@@ -192,9 +191,7 @@ function renderArticleMd(input: DraftInput, r: RawArticle): string {
       `    caption: ${yamlScalar(s.caption ?? "")}`,
       `    visual: ${yamlScalar(s.visual ?? "")}`,
       `    narration: |`,
-      ...(s.narration ?? "")
-        .split("\n")
-        .map((line) => `      ${line}`),
+      ...(s.narration ?? "").split("\n").map((line) => `      ${line}`),
     ]),
     "```",
     "",

@@ -135,9 +135,24 @@ export async function makeContactSheet(
   const cols = Math.ceil(Math.sqrt(frames));
   const rows = Math.ceil(frames / cols);
   const thumbWidth = opts.thumbWidth ?? 320;
-  const vf = contactSheetFilter(frames / info.duration, thumbWidth, cols, rows, opts.caption);
+  const vf = contactSheetFilter(
+    frames / info.duration,
+    thumbWidth,
+    cols,
+    rows,
+    opts.caption,
+  );
   await mkdir(path.dirname(outPath), { recursive: true });
-  await execFileAsync("ffmpeg", ["-y", "-i", file, "-vf", vf, "-frames:v", "1", outPath]);
+  await execFileAsync("ffmpeg", [
+    "-y",
+    "-i",
+    file,
+    "-vf",
+    vf,
+    "-frames:v",
+    "1",
+    outPath,
+  ]);
 }
 
 /** Pure filter-string builder (unit-testable without ffmpeg). */
@@ -151,7 +166,10 @@ export function contactSheetFilter(
   const base = `fps=${fps},scale=${thumbWidth}:-1,tile=${cols}x${rows}`;
   const font = caption ? firstSystemFont() : null;
   if (!caption || !font) return base;
-  const escaped = caption.replace(/\\/g, "\\\\").replace(/'/g, "\\'").replace(/:/g, "\\:");
+  const escaped = caption
+    .replace(/\\/g, "\\\\")
+    .replace(/'/g, "\\'")
+    .replace(/:/g, "\\:");
   return (
     base +
     `,drawtext=fontfile='${font}':text='${escaped}':x=8:y=h-th-8:fontsize=20:fontcolor=white:box=1:boxcolor=black@0.6:boxborderw=6`
@@ -411,10 +429,9 @@ export async function writeQaArtifacts(
     JSON.stringify(report, null, 2),
     "utf8",
   );
-  const caption =
-    report.advisory?.laya
-      ? `laya: ${report.advisory.laya.verdict} (conf ${report.advisory.laya.confidence.toFixed(2)})`
-      : undefined;
+  const caption = report.advisory?.laya
+    ? `laya: ${report.advisory.laya.verdict} (conf ${report.advisory.laya.confidence.toFixed(2)})`
+    : undefined;
   await makeContactSheet(videoPath, path.join(qaDir, "contact-sheet.png"), {
     ...(caption !== undefined ? { caption } : {}),
   });
@@ -481,8 +498,7 @@ export async function triageReportWithLaya(
     return null;
   }
   const v = answer.value;
-  const verdict =
-    v === "pass" || v === "review" || v === "block" ? v : null;
+  const verdict = v === "pass" || v === "review" || v === "block" ? v : null;
   if (verdict === null) return null;
   return {
     verdict,

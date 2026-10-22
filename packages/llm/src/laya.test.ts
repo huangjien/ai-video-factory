@@ -29,10 +29,7 @@ const healthBody = () => ({
   device: "cpu",
 });
 
-const decisionBody = (
-  answerConfidence: number,
-  choice = "baseline_ok",
-) => ({
+const decisionBody = (answerConfidence: number, choice = "baseline_ok") => ({
   model: "laya-rl-agent",
   answers: {
     needs_llm: {
@@ -200,8 +197,8 @@ describe("LayaClient.decide", () => {
     });
     await client.decide("a", questions);
     await client.decide("b", questions);
-    const healthCalls = fetchImpl.mock.calls.filter(
-      (c) => String(c[0]).endsWith("/health"),
+    const healthCalls = fetchImpl.mock.calls.filter((c) =>
+      String(c[0]).endsWith("/health"),
     ).length;
     expect(healthCalls).toBe(1);
   });

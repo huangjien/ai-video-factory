@@ -39,11 +39,13 @@ export const BigIdea: FC<BigIdeaProps> = ({
   const sceneSec = durationInFrames > 0 ? frame / 30 : 0;
   const tokens = tokenize(text);
   const revealP = hasAnimations
-    ? progressFor(animations, "__reveal__", sceneSec, Math.max(0.5, durationInFrames * 0.5))
-    : Math.max(
-        0,
-        Math.min(1, frame / Math.max(1, durationInFrames * 0.55)),
-      );
+    ? progressFor(
+        animations,
+        "__reveal__",
+        sceneSec,
+        Math.max(0.5, durationInFrames * 0.5),
+      )
+    : Math.max(0, Math.min(1, frame / Math.max(1, durationInFrames * 0.55)));
   const shownF = revealP * tokens.length;
   return (
     <AbsoluteFill
@@ -87,7 +89,10 @@ export const BigIdea: FC<BigIdeaProps> = ({
           }}
         >
           {tokens.map((tok, i) => (
-            <span key={i} style={{ opacity: Math.max(0, Math.min(1, shownF - i)) }}>
+            <span
+              key={i}
+              style={{ opacity: Math.max(0, Math.min(1, shownF - i)) }}
+            >
               {tok}
               {/[\u4e00-\u9fa5]/.test(text) ? "" : " "}
             </span>

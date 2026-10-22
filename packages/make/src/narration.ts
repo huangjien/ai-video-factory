@@ -45,7 +45,11 @@ export function resolveNarration(input: {
 }): NarrationDecision {
   const warnings: string[] = [];
   if (input.fake) {
-    return { provider: new FakeTTSProvider({ sampleBytes: 256 }), voice: input.voice, warnings };
+    return {
+      provider: new FakeTTSProvider({ sampleBytes: 256 }),
+      voice: input.voice,
+      warnings,
+    };
   }
 
   const edgeDefault = input.language === "en-US" ? EN_VOICE : ZH_VOICE;
@@ -54,8 +58,12 @@ export function resolveNarration(input: {
     if (input.voiceboxHealthy) {
       return {
         provider: new VoiceboxTTSProvider({
-          ...(input.voiceboxSpeed !== undefined ? { speed: input.voiceboxSpeed } : {}),
-          ...(input.voiceboxSentencePauseSec !== undefined ? { sentencePauseSec: input.voiceboxSentencePauseSec } : {}),
+          ...(input.voiceboxSpeed !== undefined
+            ? { speed: input.voiceboxSpeed }
+            : {}),
+          ...(input.voiceboxSentencePauseSec !== undefined
+            ? { sentencePauseSec: input.voiceboxSentencePauseSec }
+            : {}),
         }),
         voice: input.voice,
         warnings,
@@ -95,10 +103,7 @@ export function resolveNarration(input: {
     return { provider: new EdgeTTSProvider(), voice: edgeDefault, warnings };
   }
 
-  if (
-    input.ttsProvider !== undefined &&
-    input.ttsProvider !== "edge"
-  ) {
+  if (input.ttsProvider !== undefined && input.ttsProvider !== "edge") {
     warnings.push(
       `unknown tts_provider "${input.ttsProvider}" — falling back to Edge TTS`,
     );

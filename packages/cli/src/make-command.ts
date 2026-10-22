@@ -122,7 +122,7 @@ export function registerMake(program: Command): void {
       "--sfx-dir <dir>",
       "local SFX library dir — sfx cue tags resolve to {tag}.wav inside it (default: mock silent placeholder)",
     )
-.option("--dry-run", "log which steps would run without executing them")
+    .option("--dry-run", "log which steps would run without executing them")
     .action(
       async (
         project: string,

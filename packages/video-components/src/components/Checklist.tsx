@@ -70,7 +70,12 @@ export const Checklist: FC<ChecklistProps> = ({
               gap: 28,
             }}
           >
-            <svg width={56} height={56} viewBox="0 0 56 56" style={{ flexShrink: 0 }}>
+            <svg
+              width={56}
+              height={56}
+              viewBox="0 0 56 56"
+              style={{ flexShrink: 0 }}
+            >
               <circle
                 cx={28}
                 cy={28}

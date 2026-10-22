@@ -67,7 +67,9 @@ describe("motion prompt", () => {
       guidance: "stagger list entrances 60ms",
     });
     expect(withGuidance[0]?.content).toContain("stagger list entrances 60ms");
-    expect(withGuidance[0]?.content).not.toContain("Skill guidance unavailable");
+    expect(withGuidance[0]?.content).not.toContain(
+      "Skill guidance unavailable",
+    );
 
     const bare = buildMotionMessages(BASE);
     expect(bare[0]?.content).toContain("Skill guidance unavailable");
@@ -80,12 +82,18 @@ describe("buildMotionMessages — still-first channel (CS-09)", () => {
     durationSec: 12,
     index: 0,
     component: "ImageBackground",
-    baseline: { animations: [], transition: { in: "fade" as const, out: "cut" as const } },
+    baseline: {
+      animations: [],
+      transition: { in: "fade" as const, out: "cut" as const },
+    },
     guidance: null,
   };
 
   it("appends the still-first block last, overriding the 2-5 quota", () => {
-    const msg = buildMotionMessages({ ...input, channelProfile: "chinese-storybook" });
+    const msg = buildMotionMessages({
+      ...input,
+      channelProfile: "chinese-storybook",
+    });
     const content = msg[0]!.content;
     expect(content).toContain("chinese-storybook");
     // The quota the block must override is still present above it...
@@ -108,7 +116,8 @@ describe("buildMotionMessages — still-first channel (CS-09)", () => {
 
   it("leaves every other profile's prompt untouched", () => {
     const plain = buildMotionMessages(input)[0]!.content;
-    const other = buildMotionMessages({ ...input, channelProfile: "x" })[0]!.content;
+    const other = buildMotionMessages({ ...input, channelProfile: "x" })[0]!
+      .content;
     expect(plain).not.toContain("chinese-storybook");
     expect(other).toBe(plain);
   });

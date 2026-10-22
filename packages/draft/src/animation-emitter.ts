@@ -85,7 +85,10 @@ function emitFlowChartAnimations(
 ): TimelineAnimation[] {
   const nodes = (props.nodes as unknown[]) ?? [];
   const out: TimelineAnimation[] = [];
-  const { perElementSec, totalBudget } = budget(ctx.sceneDurationSec, nodes.length);
+  const { perElementSec, totalBudget } = budget(
+    ctx.sceneDurationSec,
+    nodes.length,
+  );
   let cursor = 0;
   nodes.forEach((n, i) => {
     const target = nodeId(n, i);
@@ -128,7 +131,10 @@ function emitTerminalAnimations(
   const lines = (props.lines as string[]) ?? [];
   const out: TimelineAnimation[] = [];
   if (lines.length === 0) return out;
-  const perElementSec = Math.max(0.25, ctx.sceneDurationSec / (lines.length * 4));
+  const perElementSec = Math.max(
+    0.25,
+    ctx.sceneDurationSec / (lines.length * 4),
+  );
   let cursor = 0;
   lines.forEach((_, i) => {
     out.push({
@@ -418,7 +424,10 @@ function emitCycleAnimations(
 // ---------------------------------------------------------------------------
 // helpers
 // ---------------------------------------------------------------------------
-function budget(sceneDurationSec: number, elementCount: number): {
+function budget(
+  sceneDurationSec: number,
+  elementCount: number,
+): {
   perElementSec: number;
   totalBudget: number;
 } {
@@ -442,7 +451,9 @@ function fitWithin(
   startSec: number,
   sceneDurationSec: number,
 ): number {
-  return round2(Math.max(0.05, Math.min(durationSec, sceneDurationSec - startSec)));
+  return round2(
+    Math.max(0.05, Math.min(durationSec, sceneDurationSec - startSec)),
+  );
 }
 
 /** Narrow `value` to a record that has `prop` as a string. The return

@@ -41,7 +41,11 @@ export async function buildContactSheet(
   opts: ContactSheetOptions,
 ): Promise<ContactSheetResult> {
   if (!existsSync(opts.imagesDir)) {
-    return { ok: false, outPath: opts.outPath, error: `no images dir: ${opts.imagesDir}` };
+    return {
+      ok: false,
+      outPath: opts.outPath,
+      error: `no images dir: ${opts.imagesDir}`,
+    };
   }
   const workDir = await mkdtemp(path.join(tmpdir(), "contact-sheet-"));
   const labelsPath = path.join(workDir, "labels.json");

@@ -92,9 +92,9 @@ describe("workflow verb wrappers — happy paths", () => {
 
   it("runRollback rejects an unknown checkpoint id via the wrapper", async () => {
     await makeProject("wf-rb");
-    expect(
-      await runRollback("wf-rb", "no-such-checkpoint", projectsRoot),
-    ).toBe(1);
+    expect(await runRollback("wf-rb", "no-such-checkpoint", projectsRoot)).toBe(
+      1,
+    );
   });
 });
 
@@ -171,13 +171,7 @@ describe("registerWorkflow — commander one-argument forms", () => {
       .spyOn(console, "error")
       .mockImplementation((m?: unknown) => void String(m));
     const p = program();
-    await p.parseAsync([
-      "node",
-      "video",
-      "reject",
-      "--cwd",
-      projectsRoot,
-    ]);
+    await p.parseAsync(["node", "video", "reject", "--cwd", projectsRoot]);
     expect(process.exitCode).toBe(1);
     expect(err.mock.calls.flat().join(" ")).toContain("missing reason");
     process.exitCode = 0;

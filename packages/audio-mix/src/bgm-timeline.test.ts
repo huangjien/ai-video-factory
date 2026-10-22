@@ -17,10 +17,7 @@ const resolve = (track: string) => `/assets/${track}.wav`;
 describe("planBgmWindows", () => {
   it("cuts ordered windows and runs the last one to the end", () => {
     const w = planBgmWindows(
-      [
-        { track: "calm", until_sec: 18 },
-        { track: "epic" },
-      ],
+      [{ track: "calm", until_sec: 18 }, { track: "epic" }],
       332,
       resolve,
     );
@@ -75,10 +72,7 @@ describe("planBgmWindows", () => {
 describe("buildBgmTimelineArgs", () => {
   it("builds a looped, trimmed, real-acrossfade filtergraph", () => {
     const windows = planBgmWindows(
-      [
-        { track: "calm", until_sec: 18 },
-        { track: "epic" },
-      ],
+      [{ track: "calm", until_sec: 18 }, { track: "epic" }],
       40,
       resolve,
     );

@@ -52,9 +52,8 @@ export async function runApprove(
       console.error("approve visuals: missing <project> argument");
       return 1;
     }
-    const { approveVisualsCheckpointCli } = await import(
-      "./visuals-command.js"
-    );
+    const { approveVisualsCheckpointCli } =
+      await import("./visuals-command.js");
     return approveVisualsCheckpointCli(projectName, cwd);
   }
   const root = await rootOf(projectName, cwd);
@@ -123,10 +122,13 @@ export async function runResume(
       const makeReport = await runMake({ projectRoot: root });
       const failed = makeReport.steps.filter((s) => s.status === "fail");
       if (failed.length > 0) {
-        for (const s of failed) console.error(`  failed step: ${s.name} — ${s.message ?? ""}`);
+        for (const s of failed)
+          console.error(`  failed step: ${s.name} — ${s.message ?? ""}`);
         return 1;
       }
-      console.log(`✓ resume complete: ${makeReport.outputFiles.length} output(s)`);
+      console.log(
+        `✓ resume complete: ${makeReport.outputFiles.length} output(s)`,
+      );
       return 0;
     } catch (err) {
       console.error(`resume: pipeline failed: ${(err as Error).message}`);
@@ -145,7 +147,9 @@ export async function runResume(
   console.log(
     `Resume from stage ${state.current_stage} at status ${state.status} (last successful run stage: ${last ?? "none"}).`,
   );
-  console.log(`  next: ${next[state.current_stage] ?? "video status for details"}`);
+  console.log(
+    `  next: ${next[state.current_stage] ?? "video status for details"}`,
+  );
   return 0;
 }
 
@@ -176,105 +180,119 @@ async function readLine(): Promise<string> {
 }
 
 export function registerWorkflow(program: Command): void {
-program
-  .command("approve")
-  .argument("[stage]", "stage to approve (defaults to current_stage)")
-  .argument("[project]", "project name (slug) — optional")
-  .option("--cwd <dir>", "project root")
-  .option(
-    "--force",
-    "bypass state-machine legality check (emergency use only); prints [FORCE] warning and records [forced] in audit trail",
-  )
-  .action(
-    async (
-      stage: string | undefined,
-      project: string | undefined,
-      opts: { cwd?: string; force?: boolean },
-    ) => {
-      process.exitCode = await runApprove(project, stage, opts.cwd, opts.force);
-    },
-  );
+  program
+    .command("approve")
+    .argument("[stage]", "stage to approve (defaults to current_stage)")
+    .argument("[project]", "project name (slug) — optional")
+    .option("--cwd <dir>", "project root")
+    .option(
+      "--force",
+      "bypass state-machine legality check (emergency use only); prints [FORCE] warning and records [forced] in audit trail",
+    )
+    .action(
+      async (
+        stage: string | undefined,
+        project: string | undefined,
+        opts: { cwd?: string; force?: boolean },
+      ) => {
+        process.exitCode = await runApprove(
+          project,
+          stage,
+          opts.cwd,
+          opts.force,
+        );
+      },
+    );
 
-program
-  .command("reject")
-  .argument("[project]", "project name (slug) — optional")
-  .argument("[reason]", "reason code (e.g. wrong-content, wrong-pacing)")
-  .option("--cwd <dir>", "project root")
-  .action(
-    async (
-      project: string | undefined,
-      reason: string | undefined,
-      opts: { cwd?: string },
-    ) => {
-      // One-argument form: `video reject wrong-content` — the arg is the
-      // reason, the project auto-discovers (documented usage).
-      if (reason === undefined && project !== undefined) {
-        reason = project;
-        project = undefined;
-      }
-      if (reason === undefined) {
-        console.error("reject: missing reason (e.g. video reject wrong-content)");
-        process.exitCode = 1;
-        return;
-      }
-      process.exitCode = await runReject(project, reason, opts.cwd);
-    },
-  );
+  program
+    .command("reject")
+    .argument("[project]", "project name (slug) — optional")
+    .argument("[reason]", "reason code (e.g. wrong-content, wrong-pacing)")
+    .option("--cwd <dir>", "project root")
+    .action(
+      async (
+        project: string | undefined,
+        reason: string | undefined,
+        opts: { cwd?: string },
+      ) => {
+        // One-argument form: `video reject wrong-content` — the arg is the
+        // reason, the project auto-discovers (documented usage).
+        if (reason === undefined && project !== undefined) {
+          reason = project;
+          project = undefined;
+        }
+        if (reason === undefined) {
+          console.error(
+            "reject: missing reason (e.g. video reject wrong-content)",
+          );
+          process.exitCode = 1;
+          return;
+        }
+        process.exitCode = await runReject(project, reason, opts.cwd);
+      },
+    );
 
-program
-  .command("rollback")
-  .argument("[project]", "project name (slug) — optional")
-  .argument("[checkpoint-id]", "checkpoint to roll back to")
-  .option("--cwd <dir>", "project root")
-  .action(
-    async (
-      project: string | undefined,
-      id: string | undefined,
-      opts: { cwd?: string },
-    ) => {
-      // One-argument form: `video rollback <checkpoint-id>` — auto-discovers
-      // the project (documented usage; optional-before-required would
-      // otherwise make this form unparsable).
-      if (id === undefined && project !== undefined) {
-        id = project;
-        project = undefined;
-      }
-      if (id === undefined) {
-        console.error("rollback: missing checkpoint-id (video rollback <id>)");
-        process.exitCode = 1;
-        return;
-      }
-      process.exitCode = await runRollback(project, id, opts.cwd);
-    },
-  );
+  program
+    .command("rollback")
+    .argument("[project]", "project name (slug) — optional")
+    .argument("[checkpoint-id]", "checkpoint to roll back to")
+    .option("--cwd <dir>", "project root")
+    .action(
+      async (
+        project: string | undefined,
+        id: string | undefined,
+        opts: { cwd?: string },
+      ) => {
+        // One-argument form: `video rollback <checkpoint-id>` — auto-discovers
+        // the project (documented usage; optional-before-required would
+        // otherwise make this form unparsable).
+        if (id === undefined && project !== undefined) {
+          id = project;
+          project = undefined;
+        }
+        if (id === undefined) {
+          console.error(
+            "rollback: missing checkpoint-id (video rollback <id>)",
+          );
+          process.exitCode = 1;
+          return;
+        }
+        process.exitCode = await runRollback(project, id, opts.cwd);
+      },
+    );
 
-program
-  .command("resume")
-  .argument("[project]", "project name (slug) — optional")
-  .option("--cwd <dir>", "project root")
-  .action(async (project: string | undefined, opts: { cwd?: string }) => {
-    process.exitCode = await runResume(project, opts.cwd);
-  });
+  program
+    .command("resume")
+    .argument("[project]", "project name (slug) — optional")
+    .option("--cwd <dir>", "project root")
+    .action(async (project: string | undefined, opts: { cwd?: string }) => {
+      process.exitCode = await runResume(project, opts.cwd);
+    });
 
-program
-  .command("reset")
-  .argument("[project]", "project name (slug) — optional")
-  .argument(
-    "[to-stage]",
-    "stage to set current_stage to after reset (default: init; one of init|storyboard|compile|render|review|final)",
-  )
-  .option("--cwd <dir>", "project root")
-  .option(
-    "--force",
-    "rewind even when the project is in FINAL_APPROVED (the only state from which reset normally refuses); prints [FORCE] warning and records [forced] in audit trail",
-  )
-  .action(
-    async (
-      project: string | undefined,
-      toStage: string | undefined,
-      opts: { cwd?: string; force?: boolean },
-    ) => {
-      process.exitCode = await runReset(project, toStage, opts.cwd, opts.force);
-    },
-  );
+  program
+    .command("reset")
+    .argument("[project]", "project name (slug) — optional")
+    .argument(
+      "[to-stage]",
+      "stage to set current_stage to after reset (default: init; one of init|storyboard|compile|render|review|final)",
+    )
+    .option("--cwd <dir>", "project root")
+    .option(
+      "--force",
+      "rewind even when the project is in FINAL_APPROVED (the only state from which reset normally refuses); prints [FORCE] warning and records [forced] in audit trail",
+    )
+    .action(
+      async (
+        project: string | undefined,
+        toStage: string | undefined,
+        opts: { cwd?: string; force?: boolean },
+      ) => {
+        process.exitCode = await runReset(
+          project,
+          toStage,
+          opts.cwd,
+          opts.force,
+        );
+      },
+    );
 }

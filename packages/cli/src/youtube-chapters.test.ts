@@ -142,7 +142,9 @@ describe("youtube packaging uses the RENDERED scene durations", () => {
     seed(path.join(cwd, "projects", "demo"), [20, 20], [10.5, 9.5]);
     sent.length = 0;
 
-    expect(await runYouTube({ project: "demo", cwd, model: "minimax" })).toBe(0);
+    expect(await runYouTube({ project: "demo", cwd, model: "minimax" })).toBe(
+      0,
+    );
 
     const sb = storyboardBlock();
     expect(sb).toContain("duration: 10.5");
@@ -157,7 +159,9 @@ describe("youtube packaging uses the RENDERED scene durations", () => {
     seed(path.join(cwd, "projects", "demo2"), [20, 20], [10.5, 9.5, 3]);
     sent.length = 0;
 
-    expect(await runYouTube({ project: "demo2", cwd, model: "minimax" })).toBe(0);
+    expect(await runYouTube({ project: "demo2", cwd, model: "minimax" })).toBe(
+      0,
+    );
 
     const sb = storyboardBlock();
     expect(sb).toContain("duration: 20");
@@ -173,7 +177,9 @@ describe("youtube packaging uses the RENDERED scene durations", () => {
     writeFileSync(path.join(root, "state.yaml"), "status: DRAFT\n");
     sent.length = 0;
 
-    expect(await runYouTube({ project: "demo3", cwd, model: "minimax" })).toBe(0);
+    expect(await runYouTube({ project: "demo3", cwd, model: "minimax" })).toBe(
+      0,
+    );
 
     expect(storyboardBlock()).toContain("duration: 20");
   });

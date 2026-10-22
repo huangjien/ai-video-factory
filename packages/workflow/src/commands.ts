@@ -37,7 +37,10 @@ function machineStateOf(state: {
   status: MachineState["status"];
   current_stage: string;
 }): MachineState {
-  return { status: state.status, stage: state.current_stage as MachineState["stage"] };
+  return {
+    status: state.status,
+    stage: state.current_stage as MachineState["stage"],
+  };
 }
 
 /** Approve a checkpoint (the human gate). `stage` defaults to the
@@ -52,7 +55,8 @@ export async function approveCheckpoint(
     (await readProjectState(root))?.current_stage ??
     ""
   ).trim();
-  if (!target) return { ok: false, error: "approve: could not determine stage" };
+  if (!target)
+    return { ok: false, error: "approve: could not determine stage" };
   if (!(V01_STAGES as readonly string[]).includes(target)) {
     return { ok: false, error: `approve: unknown stage "${target}"` };
   }
@@ -261,7 +265,10 @@ export async function resetProject(
   }
   const state = await readProjectState(root);
   if (!state) {
-    return { ok: false, error: "reset: no project state found; nothing to reset" };
+    return {
+      ok: false,
+      error: "reset: no project state found; nothing to reset",
+    };
   }
 
   let next: ReturnType<typeof transition>;
@@ -273,7 +280,10 @@ export async function resetProject(
     );
   } catch (err) {
     if (opts.force) {
-      return { ok: false, error: `[FORCE] cannot reset: ${(err as Error).message}` };
+      return {
+        ok: false,
+        error: `[FORCE] cannot reset: ${(err as Error).message}`,
+      };
     }
     return {
       ok: false,
@@ -298,7 +308,9 @@ export async function resetProject(
   await invalidateCheckpoint(
     root,
     target as (typeof V01_STAGES)[number],
-    opts.force ? "invalidated by video reset --force" : "invalidated by video reset",
+    opts.force
+      ? "invalidated by video reset --force"
+      : "invalidated by video reset",
   );
   return {
     ok: true,

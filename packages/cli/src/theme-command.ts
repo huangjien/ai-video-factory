@@ -56,14 +56,20 @@ const MOOD: Record<string, string> = {
 /** Compact index: one row per theme with a swatch. */
 export function themeIndex(): string {
   const banner = brandBannerLine();
-  const header = channelHeader(`themes · ${THEME_NAMES.length} available`, "index");
+  const header = channelHeader(
+    `themes · ${THEME_NAMES.length} available`,
+    "index",
+  );
   const lines: string[] = [banner, header, ""];
   for (const name of THEME_NAMES) {
     const t = THEMES[name];
     if (!t) continue;
-    const swatch = paint(t.colors.background, "  ") + paint(t.colors.accent, "  ");
+    const swatch =
+      paint(t.colors.background, "  ") + paint(t.colors.accent, "  ");
     const mood = MOOD[name] ?? "";
-    lines.push(`  ${swatch} ${name.padEnd(18)} ${t.colors.background} bg · ${t.colors.accent} accent${mood ? `  · ${mood}` : ""}`);
+    lines.push(
+      `  ${swatch} ${name.padEnd(18)} ${t.colors.background} bg · ${t.colors.accent} accent${mood ? `  · ${mood}` : ""}`,
+    );
   }
   lines.push("");
   lines.push("Run `video theme <name>` for the full palette.");
@@ -155,19 +161,20 @@ export function runTheme(opts: ThemeOptions): number {
 }
 
 export function registerTheme(program: Command): void {
-program
-  .command("theme")
-  .description(
-    "Theme inspector (palette index + per-theme detail + project resolver)",
-  )
-  .argument("[name]", "theme name (omit to list every available theme)")
-  .option("--cwd <dir>", "project root — resolve style.theme from this project")
-  .action(
-    async (name: string | undefined, opts: { cwd?: string }) => {
+  program
+    .command("theme")
+    .description(
+      "Theme inspector (palette index + per-theme detail + project resolver)",
+    )
+    .argument("[name]", "theme name (omit to list every available theme)")
+    .option(
+      "--cwd <dir>",
+      "project root — resolve style.theme from this project",
+    )
+    .action(async (name: string | undefined, opts: { cwd?: string }) => {
       process.exitCode = runTheme({
         ...(name !== undefined ? { name } : {}),
         ...(opts.cwd !== undefined ? { cwd: opts.cwd } : {}),
       });
-    },
-  );
+    });
 }

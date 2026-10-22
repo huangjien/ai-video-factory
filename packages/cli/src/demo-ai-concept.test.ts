@@ -1,5 +1,12 @@
 import { execFileSync } from "node:child_process";
-import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import {
+  copyFileSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -27,8 +34,12 @@ function makeSilentWav(projectDir: string, sceneId: string): void {
     "ffmpeg",
     [
       "-y",
-      "-f", "lavfi", "-i", "anullsrc=r=44100:cl=mono",
-      "-t", String(SCENE_SECONDS),
+      "-f",
+      "lavfi",
+      "-i",
+      "anullsrc=r=44100:cl=mono",
+      "-t",
+      String(SCENE_SECONDS),
       path.join(projectDir, "assets", "audio", `${sceneId}.wav`),
     ],
     { stdio: "ignore" },
@@ -56,7 +67,14 @@ describe("Demo 2 — AI Concept end to end (T7.3, plan §35)", () => {
       path.join(EXAMPLE_DIR, "captions", "zh-CN.srt"),
       path.join(projectDir, "captions", "zh-CN.srt"),
     );
-    for (const sceneId of ["scene-01", "scene-02", "scene-03", "scene-04", "scene-05", "scene-06"]) {
+    for (const sceneId of [
+      "scene-01",
+      "scene-02",
+      "scene-03",
+      "scene-04",
+      "scene-05",
+      "scene-06",
+    ]) {
       makeSilentWav(projectDir, sceneId);
     }
 
@@ -75,11 +93,17 @@ describe("Demo 2 — AI Concept end to end (T7.3, plan §35)", () => {
     const stats = execFileSync(
       "ffmpeg",
       [
-        "-ss", "55",
-        "-i", path.join(projectDir, "output", "preview-faststart.mp4"),
-        "-frames:v", "1",
-        "-vf", "signalstats,metadata=print:file=-",
-        "-f", "null", "-",
+        "-ss",
+        "55",
+        "-i",
+        path.join(projectDir, "output", "preview-faststart.mp4"),
+        "-frames:v",
+        "1",
+        "-vf",
+        "signalstats,metadata=print:file=-",
+        "-f",
+        "null",
+        "-",
       ],
       { encoding: "utf8" },
     );

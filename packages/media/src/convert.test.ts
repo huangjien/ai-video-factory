@@ -14,8 +14,16 @@ async function silentMp3(seconds: number): Promise<Uint8Array> {
   try {
     const out = path.join(dir, "a.mp3");
     await execFileAsync("ffmpeg", [
-      "-y", "-f", "lavfi", "-i", `anullsrc=r=44100:cl=mono`,
-      "-t", String(seconds), "-b:a", "64k", out,
+      "-y",
+      "-f",
+      "lavfi",
+      "-i",
+      `anullsrc=r=44100:cl=mono`,
+      "-t",
+      String(seconds),
+      "-b:a",
+      "64k",
+      out,
     ]);
     return new Uint8Array(await readFile(out));
   } finally {
@@ -29,8 +37,13 @@ async function wavSeconds(bytes: Uint8Array): Promise<number> {
     const p = path.join(dir, "o.wav");
     await writeFile(p, bytes);
     const { stdout } = await execFileAsync("ffprobe", [
-      "-v", "error", "-show_entries", "format=duration",
-      "-of", "default=noprint_wrappers=1:nokey=1", p,
+      "-v",
+      "error",
+      "-show_entries",
+      "format=duration",
+      "-of",
+      "default=noprint_wrappers=1:nokey=1",
+      p,
     ]);
     return Number.parseFloat(stdout.trim());
   } finally {

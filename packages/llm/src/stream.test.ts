@@ -8,7 +8,10 @@ describe("isHeadersTimeout", () => {
 
   it("recognizes the code inside .cause", () => {
     expect(
-      isHeadersTimeout({ message: "fetch failed", cause: { code: "UND_ERR_HEADERS_TIMEOUT" } }),
+      isHeadersTimeout({
+        message: "fetch failed",
+        cause: { code: "UND_ERR_HEADERS_TIMEOUT" },
+      }),
     ).toBe(true);
   });
 
@@ -138,16 +141,25 @@ describe("chatStream", () => {
     global.fetch = (async (u: string | URL | Request, init?: RequestInit) => {
       url = String(u);
       captured = init;
-      return okResponse(sseStream(['data: {"choices":[{"delta":{"content":"x"}}]}\n\n']));
+      return okResponse(
+        sseStream(['data: {"choices":[{"delta":{"content":"x"}}]}\n\n']),
+      );
     }) as typeof fetch;
     try {
-      await chatStream({ url: "http://x", headers: { "x-k": "1" }, body: { model: "m" }, timeoutMs: 1_000 });
+      await chatStream({
+        url: "http://x",
+        headers: { "x-k": "1" },
+        body: { model: "m" },
+        timeoutMs: 1_000,
+      });
       expect(url).toBe("http://x");
       const req = captured as RequestInit | undefined;
       expect((req?.headers as Record<string, string> | undefined)?.Accept).toBe(
         "text/event-stream",
       );
-      expect((req?.headers as Record<string, string> | undefined)?.["x-k"]).toBe("1");
+      expect(
+        (req?.headers as Record<string, string> | undefined)?.["x-k"],
+      ).toBe("1");
       const body = JSON.parse(String(req?.body));
       expect(body.stream).toBe(true);
       expect(body.model).toBe("m");
@@ -158,14 +170,18 @@ describe("chatStream", () => {
 
   it("throws with `status` when the server returns a non-2xx", async () => {
     const original = global.fetch;
-    global.fetch = (async () => errResponse(503, "down for maintenance")) as typeof fetch;
+    global.fetch = (async () =>
+      errResponse(503, "down for maintenance")) as typeof fetch;
     try {
       const err = await chatStream({
         url: "http://x",
         headers: {},
         body: {},
         timeoutMs: 1_000,
-      }).then(() => null, (e) => e);
+      }).then(
+        () => null,
+        (e) => e,
+      );
       expect(err).toBeInstanceOf(Error);
       expect((err as { status?: number }).status).toBe(503);
       expect(String(err?.message).slice(0, 30)).toContain("stream API 503");
@@ -176,14 +192,18 @@ describe("chatStream", () => {
 
   it("throws on a body-less 2xx (defends against a misbehaving server)", async () => {
     const original = global.fetch;
-    global.fetch = (async () => new Response(null, { status: 200 })) as typeof fetch;
+    global.fetch = (async () =>
+      new Response(null, { status: 200 })) as typeof fetch;
     try {
       const err = await chatStream({
         url: "http://x",
         headers: {},
         body: {},
         timeoutMs: 1_000,
-      }).then(() => null, (e) => e);
+      }).then(
+        () => null,
+        (e) => e,
+      );
       expect(String((err as Error).message)).toContain("no body");
     } finally {
       global.fetch = original;
@@ -197,7 +217,9 @@ describe("stripReasoning", () => {
   });
 
   it("strips a <think>…</think> block once", () => {
-    expect(stripReasoning("<think>reasoning</think>final answer")).toBe("final answer");
+    expect(stripReasoning("<think>reasoning</think>final answer")).toBe(
+      "final answer",
+    );
   });
 
   it("only removes from the LAST opening tag (later thoughts beat earlier)", () => {

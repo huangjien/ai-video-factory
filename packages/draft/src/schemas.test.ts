@@ -180,7 +180,11 @@ describe("buildMessages (prompt structure)", () => {
       language: "zh-CN",
       duration: 40,
       webContext: [
-        { url: "https://example.com", title: "Ex", snippet: "An important snippet about X." },
+        {
+          url: "https://example.com",
+          title: "Ex",
+          snippet: "An important snippet about X.",
+        },
       ],
     });
     expect(m[1]?.content).toContain("An important snippet about X");
@@ -209,9 +213,7 @@ describe("buildMessages (prompt structure)", () => {
     });
     expect(m[1]?.content).toContain("The user's major idea");
     expect(m[1]?.content).toContain("do NOT change");
-    expect(m[1]?.content).toContain(
-      "长视频测试的核心是漂移检测，不是堆指标。",
-    );
+    expect(m[1]?.content).toContain("长视频测试的核心是漂移检测，不是堆指标。");
   });
 });
 
@@ -248,7 +250,11 @@ describe("articleToStoryboardYaml (VDSL sync)", () => {
     const yaml = articleToStoryboardYaml(fixture);
     const parsed = parseYaml(yaml) as Record<string, unknown>;
     expect(parsed["schema_version"]).toBe("0.2");
-    expect(parsed["project"]).toMatchObject({ id: "ai-think", language: "zh-CN", fps: 30 });
+    expect(parsed["project"]).toMatchObject({
+      id: "ai-think",
+      language: "zh-CN",
+      fps: 30,
+    });
     expect(parsed["style"]).toMatchObject({ theme: "paper-light" });
   });
 
@@ -271,7 +277,9 @@ describe("articleToStoryboardYaml (VDSL sync)", () => {
 
   it("emits one scene per article scene with zero-padded IDs", () => {
     const yaml = articleToStoryboardYaml(fixture);
-    const parsed = parseYaml(yaml) as { scenes: { id: string; duration: number }[] };
+    const parsed = parseYaml(yaml) as {
+      scenes: { id: string; duration: number }[];
+    };
     expect(parsed.scenes).toHaveLength(2);
     expect(parsed.scenes[0]?.id).toBe("scene-01");
     expect(parsed.scenes[0]?.duration).toBe(8);
@@ -282,7 +290,9 @@ describe("articleToStoryboardYaml (VDSL sync)", () => {
   it("uses Title for the first scene, with the film's title as the subtitle", () => {
     const yaml = articleToStoryboardYaml(fixture);
     const parsed = parseYaml(yaml) as {
-      scenes: { visual: { component: string; props: Record<string, string> } }[];
+      scenes: {
+        visual: { component: string; props: Record<string, string> };
+      }[];
     };
     expect(parsed.scenes[0]?.visual.component).toBe("Title");
     expect(parsed.scenes[0]?.visual.props.text).toBe("开场");
@@ -319,11 +329,17 @@ describe("articleToStoryboardYaml (VDSL sync)", () => {
   it("uses AnimatedIllustration for subsequent scenes (caption + visual)", () => {
     const yaml = articleToStoryboardYaml(fixture);
     const parsed = parseYaml(yaml) as {
-      scenes: { visual: { component: string; props: Record<string, string> } }[];
+      scenes: {
+        visual: { component: string; props: Record<string, string> };
+      }[];
     };
     expect(parsed.scenes[1]?.visual.component).toBe("AnimatedIllustration");
-    expect(parsed.scenes[1]?.visual.props.text).toBe(fixture.scenes[1]?.caption);
-    expect(parsed.scenes[1]?.visual.props.visual).toBe(fixture.scenes[1]?.visual);
+    expect(parsed.scenes[1]?.visual.props.text).toBe(
+      fixture.scenes[1]?.caption,
+    );
+    expect(parsed.scenes[1]?.visual.props.visual).toBe(
+      fixture.scenes[1]?.visual,
+    );
   });
 
   it("escapes newlines and quotes in narration so the YAML parses", () => {
@@ -335,7 +351,7 @@ describe("articleToStoryboardYaml (VDSL sync)", () => {
           duration: 8,
           caption: "X",
           visual: "",
-          narration: "line one\nline two with \"quote\"",
+          narration: 'line one\nline two with "quote"',
         },
       ],
     };
@@ -409,7 +425,10 @@ scenes:
   });
 
   it("recoverEmptyNarrations back-fills each scene from the matching section body", () => {
-    const { parseArticleLenient, recoverEmptyNarrations } = require("@video/draft");
+    const {
+      parseArticleLenient,
+      recoverEmptyNarrations,
+    } = require("@video/draft");
     const parsed = parseArticleLenient(MALFORMED_ARTICLE);
     const { article, recoveredCount } = recoverEmptyNarrations(parsed);
     expect(recoveredCount).toBe(4);
@@ -420,7 +439,10 @@ scenes:
   });
 
   it("does not touch scenes that already have narration", () => {
-    const { parseArticleLenient, recoverEmptyNarrations } = require("@video/draft");
+    const {
+      parseArticleLenient,
+      recoverEmptyNarrations,
+    } = require("@video/draft");
     const md = MALFORMED_ARTICLE.replace(
       'caption: D\n    visual: ""\n    narration: ""',
       'caption: D\n    visual: ""\n    narration: "kept verbatim"',
@@ -479,11 +501,13 @@ describe("schema edge cases", () => {
       narration: "n",
     };
     expect(
-      SceneBlockSchema.safeParse({ scenes: [{ ...base, duration: 0 }] }).success,
+      SceneBlockSchema.safeParse({ scenes: [{ ...base, duration: 0 }] })
+        .success,
     ).toBe(false);
     expect(
-      SceneBlockSchema.safeParse({ scenes: [{ ...base, duration: 5, caption: "" }] })
-        .success,
+      SceneBlockSchema.safeParse({
+        scenes: [{ ...base, duration: 5, caption: "" }],
+      }).success,
     ).toBe(false);
   });
 });
@@ -562,7 +586,9 @@ describe("articleToStoryboardYaml — theme + captions flags", () => {
     });
 
     it("routes the opening shot to the image path under a profile", () => {
-      const comps = componentsOf(withProfile({ channel_profile: "chinese-storybook" }));
+      const comps = componentsOf(
+        withProfile({ channel_profile: "chinese-storybook" }),
+      );
       expect(comps[0]).toBe("AnimatedIllustration");
       expect(comps).not.toContain("Title");
     });
@@ -584,7 +610,9 @@ describe("scene text overlay (CS-06)", () => {
 
   it("overlays the article's H1 on the opening shot under a profile", () => {
     const board = parseYaml(
-      articleToStoryboardYaml(withProfile({ channel_profile: "chinese-storybook" })),
+      articleToStoryboardYaml(
+        withProfile({ channel_profile: "chinese-storybook" }),
+      ),
     ) as { scenes: { id: string; overlay?: { title?: string } }[] };
     expect(board.scenes[0]?.overlay?.title).toBe("AI 思维链");
     // The title rides the FIRST shot — it is not a scene of its own.
@@ -592,7 +620,9 @@ describe("scene text overlay (CS-06)", () => {
   });
 
   it("gives no overlay at all when no profile is set", () => {
-    const board = parseYaml(articleToStoryboardYaml(parseArticle(SAMPLE_MD))) as {
+    const board = parseYaml(
+      articleToStoryboardYaml(parseArticle(SAMPLE_MD)),
+    ) as {
       scenes: { overlay?: unknown }[];
     };
     for (const s of board.scenes) expect(s.overlay).toBeUndefined();
@@ -600,7 +630,9 @@ describe("scene text overlay (CS-06)", () => {
 
   it("writes a chapter name only where a prose section turns", () => {
     const board = parseYaml(
-      articleToStoryboardYaml(withProfile({ channel_profile: "chinese-storybook" })),
+      articleToStoryboardYaml(
+        withProfile({ channel_profile: "chinese-storybook" }),
+      ),
     ) as {
       scenes: { id: string; overlay?: { title?: string; chapter?: string } }[];
     };
@@ -617,7 +649,9 @@ describe("scene text overlay (CS-06)", () => {
     // A `props:` key with no children parses as null, and the VDSL visual
     // schema requires an object — the compile step refuses the board
     // otherwise. An empty props object must be written as `{}`.
-    const board = parseYaml(articleToStoryboardYaml(parseArticle(SAMPLE_MD))) as {
+    const board = parseYaml(
+      articleToStoryboardYaml(parseArticle(SAMPLE_MD)),
+    ) as {
       scenes: { visual: { props: unknown } }[];
     };
     for (const s of board.scenes) {

@@ -108,9 +108,7 @@ describe("video storyboard end-to-end (todo 6) — mock MiniMax", () => {
 
   it("prompt_hash is sha256 of the messages actually sent (changes when messages change)", async () => {
     const { createHash } = await import("node:crypto");
-    const sha256Of = (
-      messages: { role: string; content: string }[],
-    ): string =>
+    const sha256Of = (messages: { role: string; content: string }[]): string =>
       "sha256:" +
       createHash("sha256")
         .update(

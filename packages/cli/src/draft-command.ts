@@ -28,7 +28,12 @@ import {
 } from "@video/audio-plan";
 import { resolveProjectDir } from "./project-path.js";
 import { withProgress } from "./ui.js";
-import { maybeAgentAsk, resolveAskTrigger, detectAgentEnv, type AskCtx } from "./agent-ask.js";
+import {
+  maybeAgentAsk,
+  resolveAskTrigger,
+  detectAgentEnv,
+  type AskCtx,
+} from "./agent-ask.js";
 import { voiceboxStatus, parseTtsChoice } from "@video/tts";
 
 export interface DraftOptions {
@@ -280,7 +285,10 @@ export async function runDraft(opts: DraftOptions): Promise<number> {
   // it only runs when the gate could actually ask.
   let askCtx: AskCtx | undefined;
   const askTrigger = resolveAskTrigger(opts);
-  if (askTrigger.mode !== "off" && (askTrigger.mode === "force" || detectAgentEnv())) {
+  if (
+    askTrigger.mode !== "off" &&
+    (askTrigger.mode === "force" || detectAgentEnv())
+  ) {
     const status = await voiceboxStatus();
     if (status.healthy && status.profiles.length > 0) {
       askCtx = { voiceboxProfiles: status.profiles };
@@ -376,7 +384,9 @@ export async function runDraft(opts: DraftOptions): Promise<number> {
                 (r) => r.severity === "Critical",
               );
               const blockerNote =
-                blockers.length > 0 ? ` [blocker: ${blockers.map((r) => r.code).join(", ")}]` : "";
+                blockers.length > 0
+                  ? ` [blocker: ${blockers.map((r) => r.code).join(", ")}]`
+                  : "";
               console.log(
                 `  review ${a.attempt}/${total}: overall=${s.computed.overall_score} grade=${s.computed.grade} coverage=${s.computed.coverage}% → ${s.total}/100${blockerNote}  ${verdict}`,
               );

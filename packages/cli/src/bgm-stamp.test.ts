@@ -1,4 +1,13 @@
-import { afterEach, beforeAll, beforeEach, afterAll, describe, expect, it, vi } from "vitest";
+import {
+  afterEach,
+  beforeAll,
+  beforeEach,
+  afterAll,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest";
 import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
@@ -155,7 +164,9 @@ describe("writeAudioConfigIfAbsent — --bgm stamping (fresh write)", () => {
     const onDisk = await readAudioConfig();
     expect(onDisk).toContain('bgm: "lofi-beats"');
     // Only the bgm line changed.
-    expect(onDisk).toBe(FIXTURE_YAML.replace('bgm: "calm"', 'bgm: "lofi-beats"'));
+    expect(onDisk).toBe(
+      FIXTURE_YAML.replace('bgm: "calm"', 'bgm: "lofi-beats"'),
+    );
   });
 
   it("with skip (--no-audio-plan), never attempts stamping", async () => {
@@ -244,9 +255,7 @@ describe("runDraft — --bgm with an existing audio-config.yaml (§11 item 7)", 
     const existing = path.join(proj, "audio-config.yaml");
     await writeFile(existing, "voice: keep-me\n", "utf8");
 
-    const errSpy = vi
-      .spyOn(console, "error")
-      .mockImplementation(() => {});
+    const errSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     vi.spyOn(console, "log").mockImplementation(() => {});
 
     try {

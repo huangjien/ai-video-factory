@@ -315,22 +315,30 @@ describe("MiniMaxImageProvider — verified API contract", () => {
 // share state.
 describe("MiniMaxImageProvider — request timeout", () => {
   function makeSlowServer(delayMs: number) {
-    const server = createServer((_req: IncomingMessage, res: ServerResponse) => {
-      setTimeout(() => {
-        res.statusCode = 200;
-        res.setHeader("Content-Type", "application/json");
-        res.end(
-          JSON.stringify({
-            data: { image_base64: [TINY_JPEG_B64] },
-            metadata: { success_count: 1, failed_count: 0 },
-            base_resp: { status_code: 0, status_msg: "success" },
-          }),
-        );
-      }, delayMs);
-    });
+    const server = createServer(
+      (_req: IncomingMessage, res: ServerResponse) => {
+        setTimeout(() => {
+          res.statusCode = 200;
+          res.setHeader("Content-Type", "application/json");
+          res.end(
+            JSON.stringify({
+              data: { image_base64: [TINY_JPEG_B64] },
+              metadata: { success_count: 1, failed_count: 0 },
+              base_resp: { status_code: 0, status_msg: "success" },
+            }),
+          );
+        }, delayMs);
+      },
+    );
     return listen(server).then(async (url) => {
-      try { return { url, close: () => new Promise<void>((r) => server.close(() => r())) }; }
-      finally { /* serve is closed by tests via close() */ }
+      try {
+        return {
+          url,
+          close: () => new Promise<void>((r) => server.close(() => r())),
+        };
+      } finally {
+        /* serve is closed by tests via close() */
+      }
     });
   }
 
@@ -347,14 +355,18 @@ describe("MiniMaxImageProvider — request timeout", () => {
         retrySleeps: [1, 1, 1],
       });
       const t0 = Date.now();
-      await expect(p.generate({ prompt: "x", width: 1024, height: 1024 })).rejects.toMatchObject({
+      await expect(
+        p.generate({ prompt: "x", width: 1024, height: 1024 }),
+      ).rejects.toMatchObject({
         name: "ImageGenerationError",
         message: expect.stringContaining("timed out after 150ms"),
         timeoutMs: 150,
       });
       // A timeout throws immediately (no retry); if it retried, we'd see 1s+.
       expect(Date.now() - t0).toBeLessThan(2_000);
-    } finally { await close(); }
+    } finally {
+      await close();
+    }
   });
 
   it("returns a normal result when the server replies within budget", async () => {
@@ -366,10 +378,16 @@ describe("MiniMaxImageProvider — request timeout", () => {
         requestTimeoutMs: 5_000,
         retrySleeps: [1, 1, 1],
       });
-      const result = await p.generate({ prompt: "ok", width: 1024, height: 1024 });
+      const result = await p.generate({
+        prompt: "ok",
+        width: 1024,
+        height: 1024,
+      });
       expect(result.contentType).toBe("image/jpeg");
       expect(result.bytes.length).toBeGreaterThan(0);
-    } finally { await close(); }
+    } finally {
+      await close();
+    }
   });
 
   it("defaults requestTimeoutMs to 120_000", () => {

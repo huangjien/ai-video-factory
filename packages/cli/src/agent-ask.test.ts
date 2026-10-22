@@ -122,9 +122,9 @@ describe("detectAgentEnv", () => {
       via: "OPENCODE_PID",
     });
     // OPENCODE=1 is set alongside it; either alone proves an opencode child.
-    expect(detectAgentEnv({ OPENCODE: "1", OPENCODE_PID: "61981" })?.harness).toBe(
-      "opencode",
-    );
+    expect(
+      detectAgentEnv({ OPENCODE: "1", OPENCODE_PID: "61981" })?.harness,
+    ).toBe("opencode");
   });
 
   it("does not fire on opencode user-config overrides (OPENCODE_PID is the only stable marker)", () => {

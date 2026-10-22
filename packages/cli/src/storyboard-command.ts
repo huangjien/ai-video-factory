@@ -72,7 +72,9 @@ export async function runStoryboard(opts: StoryboardOptions): Promise<number> {
 
   // Refuse to overwrite a human-approved storyboard (or a FINAL_APPROVED
   // project) unless explicitly forced — before spending any LLM tokens.
-  if (!(await assertStageWritable(projectRoot, "storyboard", opts.force === true))) {
+  if (
+    !(await assertStageWritable(projectRoot, "storyboard", opts.force === true))
+  ) {
     return 1;
   }
 
@@ -225,63 +227,63 @@ function summarizeClaims(yamlText: string): string {
 export type { Storyboard };
 
 export function registerStoryboard(program: Command): void {
-program
-  .command("storyboard")
-  .argument("<topic>", "topic to draft a storyboard for")
-  .option("--cwd <dir>", "base directory for the project")
-  .option(
-    "--model <provider>",
-    "model provider: minimax|glm (default from config)",
-  )
-  .option("--lang <lang>", "language: zh-CN|en-US (default zh-CN)")
-  .option("--duration <seconds>", "total duration target", (v) =>
-    parseInt(v, 10),
-  )
-  .option("--audience <text>", "target audience (default: developers)")
-  .option("--style <text>", "visual style (default: paper-light)")
-  .option(
-    "--from-research <dir>",
-    "consume approved research from this directory",
-  )
-  .option(
-    "--from-script <file>",
-    "consume approved script from this file (e.g. script/script.zh-CN.md)",
-  )
-  .option(
-    "--force",
-    "redraft even when the storyboard checkpoint is approved or the project is FINAL_APPROVED (prints a warning)",
-  )
-  .action(
-    async (
-      topic: string,
-      opts: {
-        cwd?: string;
-        model?: "minimax" | "glm";
-        lang?: "zh-CN" | "en-US";
-        duration?: number;
-        audience?: string;
-        style?: string;
-        fromResearch?: string;
-        fromScript?: string;
-        force?: boolean;
+  program
+    .command("storyboard")
+    .argument("<topic>", "topic to draft a storyboard for")
+    .option("--cwd <dir>", "base directory for the project")
+    .option(
+      "--model <provider>",
+      "model provider: minimax|glm (default from config)",
+    )
+    .option("--lang <lang>", "language: zh-CN|en-US (default zh-CN)")
+    .option("--duration <seconds>", "total duration target", (v) =>
+      parseInt(v, 10),
+    )
+    .option("--audience <text>", "target audience (default: developers)")
+    .option("--style <text>", "visual style (default: paper-light)")
+    .option(
+      "--from-research <dir>",
+      "consume approved research from this directory",
+    )
+    .option(
+      "--from-script <file>",
+      "consume approved script from this file (e.g. script/script.zh-CN.md)",
+    )
+    .option(
+      "--force",
+      "redraft even when the storyboard checkpoint is approved or the project is FINAL_APPROVED (prints a warning)",
+    )
+    .action(
+      async (
+        topic: string,
+        opts: {
+          cwd?: string;
+          model?: "minimax" | "glm";
+          lang?: "zh-CN" | "en-US";
+          duration?: number;
+          audience?: string;
+          style?: string;
+          fromResearch?: string;
+          fromScript?: string;
+          force?: boolean;
+        },
+      ) => {
+        process.exitCode = await runStoryboard({
+          topic,
+          ...(opts.cwd !== undefined ? { cwd: opts.cwd } : {}),
+          ...(opts.model !== undefined ? { model: opts.model } : {}),
+          ...(opts.lang !== undefined ? { lang: opts.lang } : {}),
+          ...(opts.duration !== undefined ? { duration: opts.duration } : {}),
+          ...(opts.audience !== undefined ? { audience: opts.audience } : {}),
+          ...(opts.style !== undefined ? { style: opts.style } : {}),
+          ...(opts.fromResearch !== undefined
+            ? { fromResearch: opts.fromResearch }
+            : {}),
+          ...(opts.fromScript !== undefined
+            ? { fromScript: opts.fromScript }
+            : {}),
+          ...(opts.force !== undefined ? { force: opts.force } : {}),
+        });
       },
-    ) => {
-      process.exitCode = await runStoryboard({
-        topic,
-        ...(opts.cwd !== undefined ? { cwd: opts.cwd } : {}),
-        ...(opts.model !== undefined ? { model: opts.model } : {}),
-        ...(opts.lang !== undefined ? { lang: opts.lang } : {}),
-        ...(opts.duration !== undefined ? { duration: opts.duration } : {}),
-        ...(opts.audience !== undefined ? { audience: opts.audience } : {}),
-        ...(opts.style !== undefined ? { style: opts.style } : {}),
-        ...(opts.fromResearch !== undefined
-          ? { fromResearch: opts.fromResearch }
-          : {}),
-        ...(opts.fromScript !== undefined
-          ? { fromScript: opts.fromScript }
-          : {}),
-        ...(opts.force !== undefined ? { force: opts.force } : {}),
-      });
-    },
-  );
+    );
 }

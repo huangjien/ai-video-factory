@@ -46,9 +46,7 @@ export class MiniMaxProvider implements Provider {
       ...(req.temperature !== undefined
         ? { temperature: req.temperature }
         : {}),
-      ...(req.response_format
-        ? { response_format: req.response_format }
-        : {}),
+      ...(req.response_format ? { response_format: req.response_format } : {}),
     };
     let body: string;
     try {

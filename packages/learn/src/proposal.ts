@@ -26,7 +26,10 @@ export function skillUpdateProposal(store: LessonStore): string {
   ];
 
   const sections: [string, typeof active][] = [
-    ["Image-prompt rules (already active — these steer prompts automatically)", imageRules],
+    [
+      "Image-prompt rules (already active — these steer prompts automatically)",
+      imageRules,
+    ],
     ["Draft / article rules", draftRules],
     ["Render / output rules", renderRules],
     ["Skill-process rules", active],

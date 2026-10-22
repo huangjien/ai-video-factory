@@ -40,8 +40,7 @@ function normalizeForMatch(s: string): string {
 }
 
 export type ResolvedProject =
-  | { ok: true; root: string }
-  | { ok: false; message: string };
+  { ok: true; root: string } | { ok: false; message: string };
 
 /**
  * Resolve a user-supplied project argument to an existing project dir.
@@ -56,10 +55,7 @@ export type ResolvedProject =
  *
  * Zero matches → error listing every project under `projects/`.
  */
-export function resolveProjectDir(
-  arg: string,
-  cwd?: string,
-): ResolvedProject {
+export function resolveProjectDir(arg: string, cwd?: string): ResolvedProject {
   const base = path.resolve(cwd ?? ".");
   const trimmed = arg.trim();
   if (trimmed.length === 0) {

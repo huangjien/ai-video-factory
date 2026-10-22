@@ -25,7 +25,9 @@ export function promptRules(store: LessonStore, scope: LessonScope): string {
   if (active.length === 0) return "";
   const lines = active.map((lesson) => {
     const strength =
-      lesson.seenCount > 1 ? ` (raised ${lesson.seenCount}×)` : " (high confidence)";
+      lesson.seenCount > 1
+        ? ` (raised ${lesson.seenCount}×)`
+        : " (high confidence)";
     return `- ${lesson.statement}${strength}`;
   });
   return [
@@ -51,6 +53,8 @@ export function summarizeStore(store: LessonStore): string[] {
     ).length;
     lines.push(`  ${scope}: ${all.length} total, ${active} active`);
   }
-  lines.push("  (a lesson becomes active after 2 reviews, or when marked high-confidence)");
+  lines.push(
+    "  (a lesson becomes active after 2 reviews, or when marked high-confidence)",
+  );
   return lines;
 }

@@ -258,11 +258,15 @@ scenes:
   });
 
   it("accepts an animations[].target that names a real canvas element id", async () => {
-    const result = await validateProject(doodleSceneYaml("d1"), "storyboard.yaml", {
-      projectRoot: fixtureProject(),
-      registry,
-      probeAudio: okProbe,
-    });
+    const result = await validateProject(
+      doodleSceneYaml("d1"),
+      "storyboard.yaml",
+      {
+        projectRoot: fixtureProject(),
+        registry,
+        probeAudio: okProbe,
+      },
+    );
     expect(result.ok).toBe(true);
   });
 });

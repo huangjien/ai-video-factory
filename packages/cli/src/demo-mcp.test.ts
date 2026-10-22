@@ -1,5 +1,12 @@
 import { execFileSync } from "node:child_process";
-import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import {
+  copyFileSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -30,8 +37,12 @@ function makeSilentWav(projectDir: string, sceneId: string): void {
     "ffmpeg",
     [
       "-y",
-      "-f", "lavfi", "-i", "anullsrc=r=44100:cl=mono",
-      "-t", String(SCENE_SECONDS),
+      "-f",
+      "lavfi",
+      "-i",
+      "anullsrc=r=44100:cl=mono",
+      "-t",
+      String(SCENE_SECONDS),
       path.join(projectDir, "assets", "audio", `${sceneId}.wav`),
     ],
     { stdio: "ignore" },
@@ -48,7 +59,10 @@ describe("Demo 1 — MCP Explainer end to end (T7.2, plan §35)", () => {
 
   it("renders the committed example through the full pipeline", async () => {
     // §36: storyboard can be human-authored and validated.
-    const storyboard = readFileSync(path.join(EXAMPLE_DIR, "storyboard.yaml"), "utf8");
+    const storyboard = readFileSync(
+      path.join(EXAMPLE_DIR, "storyboard.yaml"),
+      "utf8",
+    );
     expect(storyboard).toContain("FlowChart");
 
     cwd = mkdtempSync(path.join(tmpdir(), "video-demo-mcp-"));
@@ -63,7 +77,13 @@ describe("Demo 1 — MCP Explainer end to end (T7.2, plan §35)", () => {
       path.join(EXAMPLE_DIR, "captions", "zh-CN.srt"),
       path.join(projectDir, "captions", "zh-CN.srt"),
     );
-    for (const sceneId of ["scene-01", "scene-02", "scene-03", "scene-04", "scene-05"]) {
+    for (const sceneId of [
+      "scene-01",
+      "scene-02",
+      "scene-03",
+      "scene-04",
+      "scene-05",
+    ]) {
       makeSilentWav(projectDir, sceneId);
     }
 
@@ -82,8 +102,12 @@ describe("Demo 1 — MCP Explainer end to end (T7.2, plan §35)", () => {
     // Preview renders all five scenes (canvas + remotion families)
     // and produces the QA report + contact sheet.
     expect(await runPreview("mcp-explainer", cwd)).toBe(0);
-    expect(existsSync(path.join(projectDir, "qa", "render-report.json"))).toBe(true);
-    expect(existsSync(path.join(projectDir, "qa", "contact-sheet.png"))).toBe(true);
+    expect(existsSync(path.join(projectDir, "qa", "render-report.json"))).toBe(
+      true,
+    );
+    expect(existsSync(path.join(projectDir, "qa", "contact-sheet.png"))).toBe(
+      true,
+    );
 
     // Scene versions exist (§26) — recorded at preview.
     expect(
@@ -103,11 +127,17 @@ describe("Demo 1 — MCP Explainer end to end (T7.2, plan §35)", () => {
     const stats = execFileSync(
       "ffmpeg",
       [
-        "-ss", "40",
-        "-i", path.join(projectDir, "output", "preview-faststart.mp4"),
-        "-frames:v", "1",
-        "-vf", "signalstats,metadata=print:file=-",
-        "-f", "null", "-",
+        "-ss",
+        "40",
+        "-i",
+        path.join(projectDir, "output", "preview-faststart.mp4"),
+        "-frames:v",
+        "1",
+        "-vf",
+        "signalstats,metadata=print:file=-",
+        "-f",
+        "null",
+        "-",
       ],
       { encoding: "utf8" },
     );

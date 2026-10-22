@@ -12,11 +12,22 @@ const PROFILE = {
   schema: "character-profile/1",
   id: "li_shimin",
   name: "李世民",
-  identity: { era_region: "Tang-dynasty China, 626-630 CE", role: "秦王 / 唐太宗" },
+  identity: {
+    era_region: "Tang-dynasty China, 626-630 CE",
+    role: "秦王 / 唐太宗",
+  },
   anchors: {
-    face_shape: { value: "圆润下颌，颧骨柔和", basis: "inferred", note: "工笔传统帝王面相" },
+    face_shape: {
+      value: "圆润下颌，颧骨柔和",
+      basis: "inferred",
+      note: "工笔传统帝王面相",
+    },
     silhouette: { value: "肩背舒展，站姿稳定", basis: "inferred" },
-    hair: { value: "高髻束发", basis: "sourced", source: "《旧唐书·太宗本纪》" },
+    hair: {
+      value: "高髻束发",
+      basis: "sourced",
+      source: "《旧唐书·太宗本纪》",
+    },
   },
   variants: [
     {
@@ -33,7 +44,12 @@ const PROFILE = {
     },
   ],
   references: [
-    { style: "gongbi", version: "v1", status: "superseded", file: "refs/gongbi/v1.jpg" },
+    {
+      style: "gongbi",
+      version: "v1",
+      status: "superseded",
+      file: "refs/gongbi/v1.jpg",
+    },
     {
       style: "gongbi",
       version: "v2",
@@ -42,7 +58,12 @@ const PROFILE = {
       reviewedBy: "huangjien",
       reviewedAt: "2026-10-19",
     },
-    { style: "manga", version: "v1", status: "candidate", file: "refs/manga/v1.jpg" },
+    {
+      style: "manga",
+      version: "v1",
+      status: "candidate",
+      file: "refs/manga/v1.jpg",
+    },
   ],
 };
 
@@ -71,7 +92,9 @@ describe("CharacterProfileSchema — provenance is a field, not prose", () => {
 
 describe("CharacterProfileSchema — references are versioned and reviewed", () => {
   it("keeps superseded versions on record", () => {
-    const versions = profile().references.map((r) => `${r.version}:${r.status}`);
+    const versions = profile().references.map(
+      (r) => `${r.version}:${r.status}`,
+    );
     expect(versions).toContain("v1:superseded");
     expect(versions).toContain("v2:approved");
   });
@@ -98,7 +121,9 @@ describe("CharacterProfileSchema — references are versioned and reviewed", () 
   it("rejects a duplicate variant id", () => {
     const bad = structuredClone(PROFILE);
     bad.variants.push(structuredClone(bad.variants[0]!));
-    expect(() => CharacterProfileSchema.parse(bad)).toThrow(/duplicate variant/);
+    expect(() => CharacterProfileSchema.parse(bad)).toThrow(
+      /duplicate variant/,
+    );
   });
 });
 
@@ -133,9 +158,9 @@ describe("variants share the identity, override only what differs", () => {
   });
 
   it("throws on an unknown variant rather than silently dropping it", () => {
-    expect(() => anchorsForVariant(profile(), "li_shimin__nonexistent")).toThrow(
-      /no variant/,
-    );
+    expect(() =>
+      anchorsForVariant(profile(), "li_shimin__nonexistent"),
+    ).toThrow(/no variant/);
   });
 
   it("emits one prompt line per anchor", () => {

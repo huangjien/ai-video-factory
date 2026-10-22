@@ -70,7 +70,9 @@ describe("CaptionsOverlay — only the active cue draws (CS-07)", () => {
   it("never stacks more than one cue at a time", () => {
     for (const t of [0, 1, 1.99, 2, 3, 3.99]) {
       const html = frameAt(t);
-      expect(html.includes("第一句。") && html.includes("第二句。")).toBe(false);
+      expect(html.includes("第一句。") && html.includes("第二句。")).toBe(
+        false,
+      );
     }
   });
 

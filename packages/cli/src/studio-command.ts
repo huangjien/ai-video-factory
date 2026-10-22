@@ -57,26 +57,29 @@ export async function runStudio(opts: StudioOptions): Promise<number> {
 }
 
 export function registerStudio(program: Command): void {
-program
-  .command("studio")
-  .description(
-    "Open the project in Remotion Studio (live preview; regenerated from the storyboard on each launch)",
-  )
-  .argument("[project]", "project name (slug) — optional if exactly one project exists")
-  .option("--cwd <dir>", "project root base directory")
-  .option("--port <n>", "port for the Studio web server", (v) =>
-    parseInt(v, 10),
-  )
-  .action(
-    async (
-      project: string | undefined,
-      opts: { cwd?: string; port?: number },
-    ) => {
-      process.exitCode = await runStudio({
-        ...(project !== undefined ? { project } : {}),
-        ...(opts.cwd !== undefined ? { cwd: opts.cwd } : {}),
-        ...(opts.port !== undefined ? { port: opts.port } : {}),
-      });
-    },
-  );
+  program
+    .command("studio")
+    .description(
+      "Open the project in Remotion Studio (live preview; regenerated from the storyboard on each launch)",
+    )
+    .argument(
+      "[project]",
+      "project name (slug) — optional if exactly one project exists",
+    )
+    .option("--cwd <dir>", "project root base directory")
+    .option("--port <n>", "port for the Studio web server", (v) =>
+      parseInt(v, 10),
+    )
+    .action(
+      async (
+        project: string | undefined,
+        opts: { cwd?: string; port?: number },
+      ) => {
+        process.exitCode = await runStudio({
+          ...(project !== undefined ? { project } : {}),
+          ...(opts.cwd !== undefined ? { cwd: opts.cwd } : {}),
+          ...(opts.port !== undefined ? { port: opts.port } : {}),
+        });
+      },
+    );
 }

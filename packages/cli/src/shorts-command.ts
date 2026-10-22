@@ -180,7 +180,8 @@ export async function runShorts(opts: ShortsOptions): Promise<number> {
     if (start < 0) {
       try {
         const timings = await readSceneTimings(projectRoot);
-        const scene1Dur = timings.find((t) => t.id === "scene-01")?.duration ?? 0;
+        const scene1Dur =
+          timings.find((t) => t.id === "scene-01")?.duration ?? 0;
         start = scene1Dur > 0 ? scene1Dur : 0;
       } catch {
         start = 0;
@@ -233,41 +234,48 @@ export async function runShorts(opts: ShortsOptions): Promise<number> {
 }
 
 export function registerShorts(program: Command): void {
-program
-  .command("shorts")
-  .argument("<project>", "project to clip: topic, folder name, path, or unique prefix")
-  .option("--cwd <dir>", "base directory for the project")
-  .option(
-    "--duration <seconds>",
-    "short clip length in seconds (default: 60 for mock; 5 for minimax)",
-    (v) => parseInt(v, 10),
-  )
-  .option(
-    "--start <seconds>",
-    "start offset into the final.mp4 (mock provider only, default 0)",
-    (v) => parseInt(v, 10),
-  )
-  .option(
-    "--provider <name>",
-    "video provider: mock|minimax (default mock — minimax needs MINIMAX_API_KEY)",
-  )
-  .action(
-    async (
-      project: string,
-      opts: {
-        cwd?: string;
-        duration?: number;
-        start?: number;
-        provider?: "mock" | "minimax";
+  program
+    .command("shorts")
+    .argument(
+      "<project>",
+      "project to clip: topic, folder name, path, or unique prefix",
+    )
+    .option("--cwd <dir>", "base directory for the project")
+    .option(
+      "--duration <seconds>",
+      "short clip length in seconds (default: 60 for mock; 5 for minimax)",
+      (v) => parseInt(v, 10),
+    )
+    .option(
+      "--start <seconds>",
+      "start offset into the final.mp4 (mock provider only, default 0)",
+      (v) => parseInt(v, 10),
+    )
+    .option(
+      "--provider <name>",
+      "video provider: mock|minimax (default mock — minimax needs MINIMAX_API_KEY)",
+    )
+    .action(
+      async (
+        project: string,
+        opts: {
+          cwd?: string;
+          duration?: number;
+          start?: number;
+          provider?: "mock" | "minimax";
+        },
+      ) => {
+        process.exitCode = await runShorts({
+          project,
+          ...(opts.cwd !== undefined ? { cwd: opts.cwd } : {}),
+          ...(opts.duration !== undefined
+            ? { durationSec: opts.duration }
+            : {}),
+          ...(opts.start !== undefined ? { startSec: opts.start } : {}),
+          ...(opts.provider !== undefined
+            ? { providerName: opts.provider }
+            : {}),
+        });
       },
-    ) => {
-      process.exitCode = await runShorts({
-        project,
-        ...(opts.cwd !== undefined ? { cwd: opts.cwd } : {}),
-        ...(opts.duration !== undefined ? { durationSec: opts.duration } : {}),
-        ...(opts.start !== undefined ? { startSec: opts.start } : {}),
-        ...(opts.provider !== undefined ? { providerName: opts.provider } : {}),
-      });
-    },
-  );
+    );
 }

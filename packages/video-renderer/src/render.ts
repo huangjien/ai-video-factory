@@ -16,7 +16,11 @@ import { promisify } from "node:util";
 import { bundle } from "@remotion/bundler";
 import { renderMedia, selectComposition } from "@remotion/renderer";
 import { sharedBrowser } from "./browser.js";
-import { slicePlanScene, type RenderPlan, type RenderPlanScene } from "@video/vdsl";
+import {
+  slicePlanScene,
+  type RenderPlan,
+  type RenderPlanScene,
+} from "@video/vdsl";
 
 const execFileAsync = promisify(execFile);
 
@@ -29,9 +33,7 @@ const rootSrcPath = `${rendererDir}/Root.${ext}`;
  * os.tmpdir() per render (plus `remotion-v*-assets*` dirs) and never
  * removes them — hundreds of renders accumulate tens of GB. This sweep
  * removes entries older than `maxAgeMs`. Fire-and-forget; never throws. */
-async function sweepRemotionTemp(
-  maxAgeMs: number = 3600_000,
-): Promise<number> {
+async function sweepRemotionTemp(maxAgeMs: number = 3600_000): Promise<number> {
   const tmp = tmpdir();
   let removed = 0;
   let entries: string[];
@@ -275,7 +277,11 @@ export async function resolveImageSources(
       };
     }
   }
-  return { ...plan, scenes, ...(brand ? { style: { ...plan.style, brand } } : {}) };
+  return {
+    ...plan,
+    scenes,
+    ...(brand ? { style: { ...plan.style, brand } } : {}),
+  };
 }
 
 /** Inlines an ImageBackground scene's own `src` as a data URL. */
@@ -341,7 +347,12 @@ async function bindSceneBackground(
   const idNum = scene.id.match(/scene[-_]?(\d+)/)?.[1];
   const n = String(idNum ? parseInt(idNum, 10) : scene.index + 1);
   for (const ext of [".jpg", ".jpeg", ".png", ".webp"]) {
-    const file = path.join(plan.projectRoot, "assets", "images", `scene_${n}${ext}`);
+    const file = path.join(
+      plan.projectRoot,
+      "assets",
+      "images",
+      `scene_${n}${ext}`,
+    );
     if (!existsSync(file)) continue;
     return { ...scene, backgroundSrc: await toDataUrl(file) };
   }

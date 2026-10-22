@@ -84,66 +84,68 @@ export const SceneBlockSchema = z
   .object({
     scenes: z
       .array(
-        z.object({
-          id: z.string().min(1),
-          duration: z.number().int().positive(),
-          caption: z.string().min(1),
-          visual: z.string().min(1),
-          narration: z.string().min(1),
-          /** CS-12: the characters on screen, cited by their stable
-           *  character-bible id and (optionally) the appearance variant.
-           *  The image brief then splices that character's anchors in, so
-           *  the same person reads the same across scenes and films. */
-          characters: z
-            .array(
-              z
-                .object({
-                  id: z.string().min(1),
-                  variant: z.string().min(1).optional(),
-                })
-                .passthrough(),
-            )
-            .optional(),
-          /** CS-03: seconds of silence held AFTER this scene's narration.
-           *  The channel's 留白 — the still frame keeps breathing after the
-           *  voice stops, which is what brings the spoken share down to
-           *  55–70% of the runtime. It is padded into the narration WAV,
-           *  so the scene's measured length IS speech + hold. */
-          hold_after_sec: z.number().min(0).max(30).optional(),
-          /** CS-14: the map geometry for a MapInsert scene — authored,
-           *  not generated. The image model invents geography, so the
-           *  shapes and routes come from the article (the source of
-           *  truth) and carry their own source note. */
-          map: z
-            .object({
-              landforms: z
-                .array(
-                  z
-                    .object({
-                      d: z.string().min(1),
-                      kind: z.enum(["ridge", "river", "plain"]).optional(),
-                    })
-                    .passthrough(),
-                )
-                .optional(),
-              routes: z
-                .array(z.object({ d: z.string().min(1) }).passthrough())
-                .optional(),
-              markers: z
-                .array(
-                  z
-                    .object({
-                      x: z.number(),
-                      y: z.number(),
-                      kind: z.enum(["start", "city", "battle"]).optional(),
-                    })
-                    .passthrough(),
-                )
-                .optional(),
-            })
-            .passthrough()
-            .optional(),
-        }).passthrough(),
+        z
+          .object({
+            id: z.string().min(1),
+            duration: z.number().int().positive(),
+            caption: z.string().min(1),
+            visual: z.string().min(1),
+            narration: z.string().min(1),
+            /** CS-12: the characters on screen, cited by their stable
+             *  character-bible id and (optionally) the appearance variant.
+             *  The image brief then splices that character's anchors in, so
+             *  the same person reads the same across scenes and films. */
+            characters: z
+              .array(
+                z
+                  .object({
+                    id: z.string().min(1),
+                    variant: z.string().min(1).optional(),
+                  })
+                  .passthrough(),
+              )
+              .optional(),
+            /** CS-03: seconds of silence held AFTER this scene's narration.
+             *  The channel's 留白 — the still frame keeps breathing after the
+             *  voice stops, which is what brings the spoken share down to
+             *  55–70% of the runtime. It is padded into the narration WAV,
+             *  so the scene's measured length IS speech + hold. */
+            hold_after_sec: z.number().min(0).max(30).optional(),
+            /** CS-14: the map geometry for a MapInsert scene — authored,
+             *  not generated. The image model invents geography, so the
+             *  shapes and routes come from the article (the source of
+             *  truth) and carry their own source note. */
+            map: z
+              .object({
+                landforms: z
+                  .array(
+                    z
+                      .object({
+                        d: z.string().min(1),
+                        kind: z.enum(["ridge", "river", "plain"]).optional(),
+                      })
+                      .passthrough(),
+                  )
+                  .optional(),
+                routes: z
+                  .array(z.object({ d: z.string().min(1) }).passthrough())
+                  .optional(),
+                markers: z
+                  .array(
+                    z
+                      .object({
+                        x: z.number(),
+                        y: z.number(),
+                        kind: z.enum(["start", "city", "battle"]).optional(),
+                      })
+                      .passthrough(),
+                  )
+                  .optional(),
+              })
+              .passthrough()
+              .optional(),
+          })
+          .passthrough(),
       )
       .min(1),
   })
@@ -209,7 +211,8 @@ export function articleToStoryboardYaml(
     `scenes:`,
   ];
   const captionsOn = f.no_captions !== true;
-  const captionSource = f.captions_source === "caption" ? "caption" : "narration";
+  const captionSource =
+    f.captions_source === "caption" ? "caption" : "narration";
   // Map scenes → prose sections (same 1:N rule as recoverEmptyNarrations)
   // so visual builders can pull structured data from the article body.
   const sections = parseProseSections(article.proseBody);
@@ -280,11 +283,7 @@ export function articleToStoryboardYaml(
         overlay.push(`      title: ${yamlStr(article.title)}`);
       }
       // A section turn: this scene opens a new prose section (not the first).
-      if (
-        section !== null &&
-        i > 0 &&
-        sectionIdx !== previousSectionIdx
-      ) {
+      if (section !== null && i > 0 && sectionIdx !== previousSectionIdx) {
         overlay.push(`      chapter: ${yamlStr(section.heading)}`);
       }
       if (overlay.length > 0) {
@@ -368,7 +367,10 @@ function propsToYamlLines(
     }
     if (v && typeof v === "object") {
       out.push(`${indent}${k}:`);
-      const nested = propsToYamlLines(v as Record<string, unknown>, indent + "  ");
+      const nested = propsToYamlLines(
+        v as Record<string, unknown>,
+        indent + "  ",
+      );
       out.push(...nested);
       continue;
     }
@@ -493,7 +495,11 @@ export function recoverEmptyNarrations(article: ParsedArticle): {
       sections.length - 1,
     );
     const section = sections[sectionIdx]!;
-    const slice = sliceSectionForScene(section.body, i % perSection, perSection);
+    const slice = sliceSectionForScene(
+      section.body,
+      i % perSection,
+      perSection,
+    );
     if (slice.length > 0) {
       scene.narration = slice;
       recoveredCount++;
@@ -544,7 +550,14 @@ function sliceSectionForScene(
   const sentenceEnds: number[] = [];
   for (let i = 0; i < body.length; i++) {
     const ch = body[i];
-    if (ch === "。" || ch === "！" || ch === "？" || ch === "." || ch === "!" || ch === "?") {
+    if (
+      ch === "。" ||
+      ch === "！" ||
+      ch === "？" ||
+      ch === "." ||
+      ch === "!" ||
+      ch === "?"
+    ) {
       sentenceEnds.push(i);
     }
   }
@@ -568,13 +581,15 @@ const SceneBlockLenientSchema = z
   .object({
     scenes: z
       .array(
-        z.object({
-          id: z.string().min(1),
-          duration: z.number().int().positive(),
-          caption: z.string(),
-          visual: z.string(),
-          narration: z.string(),
-        }).passthrough(),
+        z
+          .object({
+            id: z.string().min(1),
+            duration: z.number().int().positive(),
+            caption: z.string(),
+            visual: z.string(),
+            narration: z.string(),
+          })
+          .passthrough(),
       )
       .min(1),
   })
@@ -587,7 +602,9 @@ function splitFrontmatter(md: string): {
   const re = /^---\r?\n([\s\S]*?)\r?\n---\r?\n?/;
   const m = md.match(re);
   if (!m) {
-    throw new Error("article.md is missing YAML frontmatter (--- ... --- at top)");
+    throw new Error(
+      "article.md is missing YAML frontmatter (--- ... --- at top)",
+    );
   }
   const fmRaw = m[1] ?? "";
   const body = md.slice(m[0].length);

@@ -114,10 +114,13 @@ describe("character anchors reach the image brief (CS-12)", () => {
   });
 
   it("adds nothing when a scene cites no character", () => {
-    const plain = buildScenePromptMessages({ id: "s", visual: "v" }, {
-      characterRoot: BIBLE,
-    })[1]!.content;
-    expect(plain).not.toContain("Character \"");
+    const plain = buildScenePromptMessages(
+      { id: "s", visual: "v" },
+      {
+        characterRoot: BIBLE,
+      },
+    )[1]!.content;
+    expect(plain).not.toContain('Character "');
   });
 
   it("adds nothing for a character that has no profile", () => {
@@ -125,6 +128,6 @@ describe("character anchors reach the image brief (CS-12)", () => {
       { id: "s", visual: "v", characters: [{ id: "nobody" }] },
       { characterRoot: BIBLE },
     )[1]!.content;
-    expect(plain).not.toContain("Character \"");
+    expect(plain).not.toContain('Character "');
   });
 });

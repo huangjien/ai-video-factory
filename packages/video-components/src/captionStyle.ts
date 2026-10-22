@@ -83,10 +83,7 @@ export function captionContainerStyle(height: number): CSSProperties {
 
 /** Per-line box: max-width as a fraction of frame width, padding inset
  * only so the outline has room to render (there is no plate). */
-export function captionLineStyle(
-  width: number,
-  height: number,
-): CSSProperties {
+export function captionLineStyle(width: number, height: number): CSSProperties {
   const fontSize = captionFontSize(height);
   return {
     maxWidth: Math.round(width * CAPTION_MAX_WIDTH_RATIO),

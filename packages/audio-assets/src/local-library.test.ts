@@ -16,10 +16,22 @@ describe("local-library", () => {
   beforeAll(() => {
     dir = mkdtempSync(path.join(tmpdir(), "video-bgm-lib-"));
     // 4 sample tracks covering multiple moods and two formats.
-    writeFileSync(path.join(dir, "ambient-take-your-pick.mp3"), Buffer.from([0xff]));
-    writeFileSync(path.join(dir, "ambient-take-your-pick.license.txt"), "Source: ...\n");
-    writeFileSync(path.join(dir, "rock-not-the-only-one.mp3"), Buffer.from([0xff]));
-    writeFileSync(path.join(dir, "kids-twinkle-twinkle.mp3"), Buffer.from([0xff]));
+    writeFileSync(
+      path.join(dir, "ambient-take-your-pick.mp3"),
+      Buffer.from([0xff]),
+    );
+    writeFileSync(
+      path.join(dir, "ambient-take-your-pick.license.txt"),
+      "Source: ...\n",
+    );
+    writeFileSync(
+      path.join(dir, "rock-not-the-only-one.mp3"),
+      Buffer.from([0xff]),
+    );
+    writeFileSync(
+      path.join(dir, "kids-twinkle-twinkle.mp3"),
+      Buffer.from([0xff]),
+    );
     writeFileSync(path.join(dir, "calm.wav"), Buffer.from([0x52, 0x49]));
     writeFileSync(path.join(dir, "ignored.txt"), "not audio");
   });
@@ -87,7 +99,9 @@ describe("local-library", () => {
 
   describe("resolveBgmTag", () => {
     it("prefers the project-local override over the curated library", () => {
-      const projectDir = mkdtempSync(path.join(tmpdir(), "video-resolve-proj-"));
+      const projectDir = mkdtempSync(
+        path.join(tmpdir(), "video-resolve-proj-"),
+      );
       writeFileSync(
         path.join(projectDir, "ambient-take-your-pick.mp3"),
         Buffer.from([0x52, 0x49]),
@@ -103,7 +117,9 @@ describe("local-library", () => {
     });
 
     it("falls back to the curated library when the project has no override", () => {
-      const projectDir = mkdtempSync(path.join(tmpdir(), "video-resolve-empty-"));
+      const projectDir = mkdtempSync(
+        path.join(tmpdir(), "video-resolve-empty-"),
+      );
       const r = resolveBgmTag({
         tag: "calm",
         projectDir,

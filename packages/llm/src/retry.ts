@@ -116,7 +116,10 @@ export async function chatWithFallback(
   fallback: import("./provider.js").Provider | null,
   req: import("./provider.js").ChatRequest,
   opts: { sleeps?: number[] | undefined } = {},
-): Promise<{ provider: string; response: import("./provider.js").ChatResponse }> {
+): Promise<{
+  provider: string;
+  response: import("./provider.js").ChatResponse;
+}> {
   try {
     const response = await withRetry(() => primary.chat(req), {
       sleeps: opts.sleeps,
@@ -128,7 +131,9 @@ export async function chatWithFallback(
     // Strip `model`: the fallback must use its own default model.
     const fallbackReq: import("./provider.js").ChatRequest = {
       messages: req.messages,
-      ...(req.temperature !== undefined ? { temperature: req.temperature } : {}),
+      ...(req.temperature !== undefined
+        ? { temperature: req.temperature }
+        : {}),
       ...(req.response_format ? { response_format: req.response_format } : {}),
     };
     const response = await fallback.chat(fallbackReq);

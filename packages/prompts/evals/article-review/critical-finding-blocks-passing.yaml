@@ -29,4 +29,4 @@ expects:
   - axis: critical-finding-detected
     min: 7
 provenance:
-  source: 'Self-contradicting article (intro claims AI tools have not changed real work; §3 and §5 assert the opposite and the central claim hangs on that misstatement) — the rubric must flag a Critical finding, the kind of finding the loop treats as a hard blocker regardless of overall_score.'
+  source: "Self-contradicting article (intro claims AI tools have not changed real work; §3 and §5 assert the opposite and the central claim hangs on that misstatement) — the rubric must flag a Critical finding, the kind of finding the loop treats as a hard blocker regardless of overall_score."

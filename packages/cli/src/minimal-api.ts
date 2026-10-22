@@ -1,7 +1,4 @@
-import {
-  DEFAULT_THEME_NAME,
-  THEME_NAMES,
-} from "@video/video-components";
+import { DEFAULT_THEME_NAME, THEME_NAMES } from "@video/video-components";
 
 /** One row of the README "Minimal API (recommended)" table. */
 export interface MinimalApiCommand {
@@ -23,7 +20,8 @@ export const MINIMAL_API_COMMANDS: readonly MinimalApiCommand[] = [
   },
   {
     invocation: "video audio-plan <project>",
-    purpose: "(optional) regenerate `audio-config.yaml` after hand-editing article.md",
+    purpose:
+      "(optional) regenerate `audio-config.yaml` after hand-editing article.md",
   },
   {
     invocation: "video make <project>",
@@ -98,7 +96,11 @@ export const APPROVAL_STAGES: readonly string[] = [
   "visuals (opt-in, v0.8)",
 ];
 
-function wrapWords(text: string, maxWidth: number, continuationIndent = 0): string[] {
+function wrapWords(
+  text: string,
+  maxWidth: number,
+  continuationIndent = 0,
+): string[] {
   const indent = " ".repeat(continuationIndent);
   const lines: string[] = [];
   let current = "";
@@ -116,7 +118,11 @@ function wrapWords(text: string, maxWidth: number, continuationIndent = 0): stri
   return lines;
 }
 
-const BANNER_CORE_STEPS: readonly { cmd: string; desc: string; cont?: string[] }[] = [
+const BANNER_CORE_STEPS: readonly {
+  cmd: string;
+  desc: string;
+  cont?: string[];
+}[] = [
   { cmd: "video new <topic>", desc: "scaffold projects/<topic>/" },
   {
     cmd: "video draft <topic>",
@@ -126,7 +132,10 @@ const BANNER_CORE_STEPS: readonly { cmd: string; desc: string; cont?: string[] }
       " --no-review, --min-score, --max-attempts)",
     ],
   },
-  { cmd: "video approve storyboard", desc: "human gate (one of the two checkpoints)" },
+  {
+    cmd: "video approve storyboard",
+    desc: "human gate (one of the two checkpoints)",
+  },
   { cmd: "video make <topic>", desc: "render → projects/<topic>/output/" },
 ];
 

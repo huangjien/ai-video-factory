@@ -36,8 +36,9 @@ describe("AudioConfigSchema", () => {
       }).success,
     ).toBe(false);
     expect(
-      AudioConfigSchema.safeParse({ bgm_tracks: [{ track: "calm", until_sec: 0 }] })
-        .success,
+      AudioConfigSchema.safeParse({
+        bgm_tracks: [{ track: "calm", until_sec: 0 }],
+      }).success,
     ).toBe(false);
     expect(AudioConfigSchema.safeParse({ bgm_tracks: [] }).success).toBe(false);
   });
@@ -48,7 +49,9 @@ describe("AudioConfigSchema", () => {
   });
 
   it("rejects fades > 10s (sanity)", () => {
-    expect(AudioConfigSchema.safeParse({ bgm_fade_in_sec: 100 }).success).toBe(false);
+    expect(AudioConfigSchema.safeParse({ bgm_fade_in_sec: 100 }).success).toBe(
+      false,
+    );
   });
 
   it("accepts pause_between_sentences_sec 0–5 sec", () => {

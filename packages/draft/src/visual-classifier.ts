@@ -210,9 +210,8 @@ const COMPONENT_NAMES: readonly ComponentName[] = [
 /** Components the Laya assist may pick (v0.6 plan D2): everything except
  * Title (first-scene-only) and DoodleScene (never auto-selected — user
  * request 2026-10-03). */
-export const LAYA_VISUAL_COMPONENTS: readonly ComponentName[] = COMPONENT_NAMES.filter(
-  (c) => c !== "Title" && c !== "DoodleScene",
-);
+export const LAYA_VISUAL_COMPONENTS: readonly ComponentName[] =
+  COMPONENT_NAMES.filter((c) => c !== "Title" && c !== "DoodleScene");
 
 /** What the Laya assist returns per scene: the chosen component plus the
  * telemetry the `laya-decisions.jsonl` row needs. */

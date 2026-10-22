@@ -24,7 +24,14 @@ import {
 } from "@video/draft";
 import { MiniMaxProvider } from "@video/llm";
 import { parse as parseYaml, stringify as yamlStringify } from "yaml";
-import { FakeTTSProvider, EdgeTTSProvider, VoiceboxTTSProvider, MinimaxTTSProvider, voiceboxStatus, type TTSProvider } from "@video/tts";
+import {
+  FakeTTSProvider,
+  EdgeTTSProvider,
+  VoiceboxTTSProvider,
+  MinimaxTTSProvider,
+  voiceboxStatus,
+  type TTSProvider,
+} from "@video/tts";
 import { resolveNarration } from "./narration.js";
 import {
   buildCaptionCues,
@@ -110,9 +117,7 @@ export const noopEmit: ProgressEmit = () => {};
  *
  * Returns the list of generated overlay files for the run report.
  */
-async function runTextOverlayPass(
-  projectRoot: string,
-): Promise<string[]> {
+async function runTextOverlayPass(projectRoot: string): Promise<string[]> {
   // The script lives at <repo>/scripts/pillow-text-overlay.py. The
   // `make` step runs from the repo root (CLI cwd), so the relative
   // path is stable regardless of which project triggered the run.
@@ -136,10 +141,14 @@ async function runTextOverlayPass(
       : ["python3", "python"];
   let python: string | undefined;
   for (const cand of pythonCandidates) {
-    const probe = spawnSync(cand, ["-c", "from PIL import Image, ImageDraw, ImageFont; import yaml"], {
-      encoding: "utf8",
-      stdio: ["ignore", "pipe", "pipe"],
-    });
+    const probe = spawnSync(
+      cand,
+      ["-c", "from PIL import Image, ImageDraw, ImageFont; import yaml"],
+      {
+        encoding: "utf8",
+        stdio: ["ignore", "pipe", "pipe"],
+      },
+    );
     if (probe.status === 0) {
       python = cand;
       break;
@@ -151,14 +160,15 @@ async function runTextOverlayPass(
     ];
   }
   const projectSlug = path.basename(projectRoot);
-  const proc = spawnSync(
-    python,
-    [scriptPath, projectSlug],
-    { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] },
-  );
+  const proc = spawnSync(python, [scriptPath, projectSlug], {
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"],
+  });
   if (proc.status !== 0) {
     const stderr = (proc.stderr ?? "").split("\n").slice(-3).join(" | ");
-    return [`text-overlay: Pillow script failed (exit ${proc.status}) — ${stderr}`];
+    return [
+      `text-overlay: Pillow script failed (exit ${proc.status}) — ${stderr}`,
+    ];
   }
   // Stamp textOverlaySrc into the storyboard's ImageBackground scenes.
   // The make run is the only place that knows both the project root
@@ -191,7 +201,10 @@ async function runTextOverlayPass(
       `scene_${idNum}.png`,
     );
     if (!existsSync(overlayPath)) continue;
-    scene.visual.props = { ...(scene.visual.props ?? {}), textOverlaySrc: overlayPath };
+    scene.visual.props = {
+      ...(scene.visual.props ?? {}),
+      textOverlaySrc: overlayPath,
+    };
     overlays.push(overlayPath);
   }
   writeFileSync(storyboardPath, yamlStringify(parsed), "utf8");
@@ -537,10 +550,12 @@ export function preserveMotionPlan(
         kept += 1;
       }
     }
-    const oldProps = (old["visual"] as { props?: Record<string, unknown> } | undefined)
-      ?.props;
-    const newProps = (scene["visual"] as { props?: Record<string, unknown> } | undefined)
-      ?.props;
+    const oldProps = (
+      old["visual"] as { props?: Record<string, unknown> } | undefined
+    )?.props;
+    const newProps = (
+      scene["visual"] as { props?: Record<string, unknown> } | undefined
+    )?.props;
     if (
       oldProps?.["kenBurnsScale"] !== undefined &&
       newProps !== undefined &&
@@ -1393,7 +1408,13 @@ async function runMix(
   const slug = path.basename(projectRoot);
   const workspaceRoot = path.dirname(path.dirname(projectRoot));
   // Fail with the actual fix instead of Node's raw module-not-found stack.
-  const cliEntry = path.join(workspaceRoot, "packages", "cli", "dist", "index.js");
+  const cliEntry = path.join(
+    workspaceRoot,
+    "packages",
+    "cli",
+    "dist",
+    "index.js",
+  );
   if (!existsSync(cliEntry)) {
     throw new Error(
       `mix step needs the built CLI — run \`pnpm build\` first (missing ${cliEntry})`,
@@ -1543,6 +1564,5 @@ async function collectOutputs(projectRoot: string): Promise<string[]> {
   }
   return out;
 }
-
 
 export { MockAudioAssetProvider };

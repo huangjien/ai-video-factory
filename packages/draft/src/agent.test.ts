@@ -71,7 +71,12 @@ describe("callDraft (JSON-mode assembly)", () => {
     });
     const p = new GLMProvider({ baseUrl });
     const { markdown } = await callDraft(
-      { topic: "AI 思维链", audience: "developers", language: "zh-CN", duration: 40 },
+      {
+        topic: "AI 思维链",
+        audience: "developers",
+        language: "zh-CN",
+        duration: 40,
+      },
       p,
     );
     expect(markdown.startsWith("---\n")).toBe(true);
@@ -93,7 +98,12 @@ describe("callDraft (JSON-mode assembly)", () => {
     });
     const p = new GLMProvider({ baseUrl });
     const { markdown } = await callDraft(
-      { topic: "AI chain of thought", audience: "developers", language: "en-US", duration: 40 },
+      {
+        topic: "AI chain of thought",
+        audience: "developers",
+        language: "en-US",
+        duration: 40,
+      },
       p,
     );
     expect(markdown).toContain("voice: en-US-ChristopherNeural");
@@ -102,7 +112,15 @@ describe("callDraft (JSON-mode assembly)", () => {
   it("falls back to defaults when LLM omits fields", async () => {
     const partial = {
       title: "Topic",
-      scenes: [{ id: "scene_1", duration: 40, caption: "x", visual: "y", narration: "z" }],
+      scenes: [
+        {
+          id: "scene_1",
+          duration: 40,
+          caption: "x",
+          visual: "y",
+          narration: "z",
+        },
+      ],
     };
     responseBody = JSON.stringify({
       choices: [{ message: { content: JSON.stringify(partial) } }],
@@ -170,13 +188,16 @@ const DRAFT_INPUT = {
 };
 
 describe("extractBalancedJson", () => {
-
   it("extracts the object out of surrounding prose", () => {
-    expect(extractBalancedJson('sure! {"a":1} hope this helps')).toBe('{"a":1}');
+    expect(extractBalancedJson('sure! {"a":1} hope this helps')).toBe(
+      '{"a":1}',
+    );
   });
 
   it("handles nesting", () => {
-    expect(extractBalancedJson('x {"a":{"b":{"c":1}}} y')).toBe('{"a":{"b":{"c":1}}}');
+    expect(extractBalancedJson('x {"a":{"b":{"c":1}}} y')).toBe(
+      '{"a":{"b":{"c":1}}}',
+    );
   });
 
   it("ignores braces inside strings and escape sequences", () => {
@@ -213,7 +234,9 @@ describe("callDraft — tolerant parsing + retry", () => {
   });
 
   it("accepts JSON embedded in prose via the balanced extractor", async () => {
-    const p = fakeProvider(() => `Here is your article:\n${validArticleJson}\nDone!`);
+    const p = fakeProvider(
+      () => `Here is your article:\n${validArticleJson}\nDone!`,
+    );
     const r = await callDraft(DRAFT_INPUT, p);
     expect(r.markdown).toContain("## Scenes");
     expect(p.calls).toBe(1);
@@ -226,7 +249,11 @@ describe("callDraft — tolerant parsing + retry", () => {
       calls: 0,
       async chat(req: import("@video/llm").ChatRequest) {
         this.calls++;
-        if (++n === 1) return { content: "I will write a great article about it.", usage: { input: 1, output: 1 } };
+        if (++n === 1)
+          return {
+            content: "I will write a great article about it.",
+            usage: { input: 1, output: 1 },
+          };
         expect(req.messages.at(-1)?.content).toContain("not valid JSON");
         return { content: validArticleJson, usage: { input: 1, output: 1 } };
       },
@@ -255,7 +282,13 @@ describe("callDraft — provider fallback routing", () => {
       hook: "H",
       sections: [],
       scenes: [
-        { id: "scene_1", duration: 5, caption: "c", visual: "v", narration: "n" },
+        {
+          id: "scene_1",
+          duration: 5,
+          caption: "c",
+          visual: "v",
+          narration: "n",
+        },
       ],
     });
 
@@ -316,7 +349,13 @@ describe("callDraft — markdown assembly edges", () => {
       title: "T",
       hook: "H",
       scenes: [
-        { id: "scene_1", duration: 5, caption: "key: value #hash", visual: "v", narration: "n" },
+        {
+          id: "scene_1",
+          duration: 5,
+          caption: "key: value #hash",
+          visual: "v",
+          narration: "n",
+        },
       ],
     });
     expect(r.markdown).toContain('caption: "key: value #hash"');

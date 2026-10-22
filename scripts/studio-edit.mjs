@@ -11,9 +11,8 @@
  *
  * Usage: node scripts/studio-edit.mjs <project> <youtubeVideoId>
  */
-import { readFileSync, writeFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { resolve, basename } from "node:path";
-import { execSync } from "node:child_process";
 
 const [projectArg, videoId] = process.argv.slice(2);
 if (!projectArg || !videoId) {
@@ -25,9 +24,11 @@ const projectRoot = resolve("projects", projectArg);
 const ytDir = resolve(projectRoot, "youtube");
 
 const title = readFileSync(resolve(ytDir, "title.txt"), "utf8").trim();
-const description = readFileSync(resolve(ytDir, "description.md"), "utf8").trim();
+const description = readFileSync(
+  resolve(ytDir, "description.md"),
+  "utf8",
+).trim();
 const thumbPath = resolve(ytDir, "thumbnail.jpg");
-const chaptersPath = resolve(ytDir, "chapters.vtt");
 
 // Tags are part of the description footer "#AIAgents #ReliableAI" — extract
 // them as separate tags[] the YouTube API understands.
@@ -83,7 +84,8 @@ async function getVideoMeta(accessToken) {
     { method: "GET" },
     accessToken,
   );
-  if (!res.ok) throw new Error(`getVideo failed: ${res.status} ${await res.text()}`);
+  if (!res.ok)
+    throw new Error(`getVideo failed: ${res.status} ${await res.text()}`);
   const json = await res.json();
   return json.items?.[0] ?? null;
 }
@@ -144,10 +146,10 @@ async function setThumbnail(accessToken, filePath) {
       tags,
     };
     const updated = await updateVideo(accessToken, newSnippet);
+    console.log(`UPDATED title: ${updated.snippet.title.slice(0, 80)}…`);
     console.log(
-      `UPDATED title: ${updated.snippet.title.slice(0, 80)}…`,
+      `UPDATED description (${updated.snippet.description.length} chars)`,
     );
-    console.log(`UPDATED description (${updated.snippet.description.length} chars)`);
     console.log(`UPDATED tags: ${updated.snippet.tags?.join(", ") ?? ""}`);
   } else {
     console.log("Skipping metadata update (--thumbnail-only)");

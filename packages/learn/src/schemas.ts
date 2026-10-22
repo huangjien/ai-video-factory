@@ -19,7 +19,12 @@ import { z } from "zod";
  */
 
 /** Where a lesson is allowed to take effect. */
-export const LESSON_SCOPES = ["image-prompt", "draft", "render", "skill"] as const;
+export const LESSON_SCOPES = [
+  "image-prompt",
+  "draft",
+  "render",
+  "skill",
+] as const;
 export type LessonScope = (typeof LESSON_SCOPES)[number];
 
 export const ReviewQuestionSchema = z.object({

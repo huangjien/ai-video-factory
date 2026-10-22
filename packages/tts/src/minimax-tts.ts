@@ -64,10 +64,7 @@ export class MinimaxTTSProvider implements TTSProvider {
   async synthesize(req: TTSRequest): Promise<TTSResult> {
     const key = process.env["MINIMAX_API_KEY"];
     if (!key) {
-      throw new TTSError(
-        "MINIMAX_API_KEY not set in environment",
-        this.name,
-      );
+      throw new TTSError("MINIMAX_API_KEY not set in environment", this.name);
     }
 
     const pause = req.pauseBetweenSentencesSec ?? 0;
@@ -92,12 +89,11 @@ export class MinimaxTTSProvider implements TTSProvider {
     };
     // language_boost speeds up nothing but stabilizes code switching; the
     // article languages map 1:1, anything exotic goes to "auto".
-    const languageBoost =
-      req.language.startsWith("zh")
-        ? "Chinese"
-        : req.language.startsWith("en")
-          ? "English"
-          : "auto";
+    const languageBoost = req.language.startsWith("zh")
+      ? "Chinese"
+      : req.language.startsWith("en")
+        ? "English"
+        : "auto";
 
     let res: Response;
     try {

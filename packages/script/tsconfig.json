@@ -5,5 +5,9 @@
     "rootDir": "src"
   },
   "include": ["src"],
-  "references": [{ "path": "../llm" }, { "path": "../prompts" }, { "path": "../research" }]
+  "references": [
+    { "path": "../llm" },
+    { "path": "../prompts" },
+    { "path": "../research" }
+  ]
 }

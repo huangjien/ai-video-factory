@@ -72,13 +72,9 @@ describe("expandScenePrompt style injection", () => {
   it("injects the style system block and appends the suffix", async () => {
     const dir = await mkdtemp(path.join(tmpdir(), "img-style-"));
     const provider = new FakeExpander();
-    const out = await expandScenePrompt(
-      scene,
-      provider,
-      dir,
-      2,
-      { style: "editorial" },
-    );
+    const out = await expandScenePrompt(scene, provider, dir, 2, {
+      style: "editorial",
+    });
     const system = provider.lastRequest!.messages[0]!.content;
     expect(system).toContain("EDITORIAL ILLUSTRATION");
     // The no-text rule lives in image-no-text-rules.md, injected by

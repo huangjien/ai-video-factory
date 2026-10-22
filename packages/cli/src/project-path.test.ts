@@ -32,13 +32,15 @@ describe("resolveProjectDir", () => {
   it("resolves the exact folder name", () => {
     const r = resolveProjectDir("harness-engineering", base);
     expect(r.ok).toBe(true);
-    if (r.ok) expect(r.root).toBe(path.join(projectsDir, "harness-engineering"));
+    if (r.ok)
+      expect(r.root).toBe(path.join(projectsDir, "harness-engineering"));
   });
 
   it("resolves a human topic with spaces and capitals to its slug", () => {
     const r = resolveProjectDir("Harness Engineering", base);
     expect(r.ok).toBe(true);
-    if (r.ok) expect(r.root).toBe(path.join(projectsDir, "harness-engineering"));
+    if (r.ok)
+      expect(r.root).toBe(path.join(projectsDir, "harness-engineering"));
   });
 
   it("is separator- and case-insensitive (underscore, mixed case)", () => {

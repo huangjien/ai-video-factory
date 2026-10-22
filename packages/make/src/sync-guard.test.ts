@@ -23,13 +23,22 @@ describe("syncStoryboardDurations threshold guard (fix for 0.03s bug)", () => {
 
     // Fake TTS placeholder: 0.03s silence (exactly what FakeTTSProvider emits)
     await execFileAsync("ffmpeg", [
-      "-y", "-f", "lavfi", "-i", "anullsrc=r=44100:cl=mono",
-      "-t", "0.03",
+      "-y",
+      "-f",
+      "lavfi",
+      "-i",
+      "anullsrc=r=44100:cl=mono",
+      "-t",
+      "0.03",
       path.join(dir, "assets", "audio", "scene_1.wav"),
     ]);
     // Real TTS length: 5s tone
     await execFileAsync("ffmpeg", [
-      "-y", "-f", "lavfi", "-i", "sine=frequency=440:duration=5",
+      "-y",
+      "-f",
+      "lavfi",
+      "-i",
+      "sine=frequency=440:duration=5",
       path.join(dir, "assets", "audio", "scene_2.wav"),
     ]);
 
@@ -46,8 +55,14 @@ describe("syncStoryboardDurations threshold guard (fix for 0.03s bug)", () => {
 
   it("placeholder WAV (0.03s) is below the >=1s threshold and must be skipped", async () => {
     const { stdout } = await execFileAsync("ffprobe", [
-      "-v", "error", "-select_streams", "a:0",
-      "-show_entries", "stream=duration", "-of", "csv=p=0",
+      "-v",
+      "error",
+      "-select_streams",
+      "a:0",
+      "-show_entries",
+      "stream=duration",
+      "-of",
+      "csv=p=0",
       path.join(dir, "assets", "audio", "scene_1.wav"),
     ]);
     const sec = parseFloat(stdout.trim());
@@ -58,8 +73,14 @@ describe("syncStoryboardDurations threshold guard (fix for 0.03s bug)", () => {
 
   it("real WAV (5s) passes the >=1s threshold", async () => {
     const { stdout } = await execFileAsync("ffprobe", [
-      "-v", "error", "-select_streams", "a:0",
-      "-show_entries", "stream=duration", "-of", "csv=p=0",
+      "-v",
+      "error",
+      "-select_streams",
+      "a:0",
+      "-show_entries",
+      "stream=duration",
+      "-of",
+      "csv=p=0",
       path.join(dir, "assets", "audio", "scene_2.wav"),
     ]);
     const sec = parseFloat(stdout.trim());
@@ -74,8 +95,14 @@ describe("syncStoryboardDurations threshold guard (fix for 0.03s bug)", () => {
     const durations = new Map<string, number>();
     for (const w of wavs) {
       const { stdout } = await execFileAsync("ffprobe", [
-        "-v", "error", "-select_streams", "a:0",
-        "-show_entries", "stream=duration", "-of", "csv=p=0",
+        "-v",
+        "error",
+        "-select_streams",
+        "a:0",
+        "-show_entries",
+        "stream=duration",
+        "-of",
+        "csv=p=0",
         path.join(dir, "assets", "audio", w),
       ]);
       const sec = parseFloat(stdout.trim());

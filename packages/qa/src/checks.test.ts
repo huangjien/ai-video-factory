@@ -27,41 +27,37 @@ const execFileAsync = promisify(execFile);
 async function makeFixtureVideo(outPath: string): Promise<void> {
   await execFileAsync("ffmpeg", [
     "-y",
-    "-f", "lavfi", "-i", "testsrc=size=320x180:rate=30:duration=2",
-    "-f", "lavfi", "-i", "color=black:size=320x180:rate=30:duration=1",
-    "-filter_complex", "[0:v][1:v]concat=n=2:v=1:a=0[out]",
-    "-map", "[out]",
-    "-pix_fmt", "yuv420p",
+    "-f",
+    "lavfi",
+    "-i",
+    "testsrc=size=320x180:rate=30:duration=2",
+    "-f",
+    "lavfi",
+    "-i",
+    "color=black:size=320x180:rate=30:duration=1",
+    "-filter_complex",
+    "[0:v][1:v]concat=n=2:v=1:a=0[out]",
+    "-map",
+    "[out]",
+    "-pix_fmt",
+    "yuv420p",
     outPath,
   ]);
 }
 
-function plan(scenes: Partial<RenderPlan["scenes"][number]>[] = []): RenderPlan {
+function plan(
+  scenes: Partial<RenderPlan["scenes"][number]>[] = [],
+): RenderPlan {
   return {
     project: { id: "qa", language: "zh-CN", fps: 30, width: 320, height: 180 },
     style: { theme: "dark-tech" },
     totalFrames: 90,
-    scenes: scenes.length > 0
-      ? (scenes.map((s, i) => ({
-          id: `scene-0${i + 1}`,
-          index: i,
-          startFrame: i * 90,
-          durationInFrames: 90,
-          component: "Title",
-          renderer: "remotion",
-          props: {},
-          animation: { entrance: "none", emphasis: "none", exit: "none" },
-          animations: [],
-          transition: null,
-          captions: null,
-          audio: null,
-          ...s,
-        })) as RenderPlan["scenes"])
-      : [
-          {
-            id: "scene-01",
-            index: 0,
-            startFrame: 0,
+    scenes:
+      scenes.length > 0
+        ? (scenes.map((s, i) => ({
+            id: `scene-0${i + 1}`,
+            index: i,
+            startFrame: i * 90,
             durationInFrames: 90,
             component: "Title",
             renderer: "remotion",
@@ -71,8 +67,24 @@ function plan(scenes: Partial<RenderPlan["scenes"][number]>[] = []): RenderPlan 
             transition: null,
             captions: null,
             audio: null,
-          },
-        ],
+            ...s,
+          })) as RenderPlan["scenes"])
+        : [
+            {
+              id: "scene-01",
+              index: 0,
+              startFrame: 0,
+              durationInFrames: 90,
+              component: "Title",
+              renderer: "remotion",
+              props: {},
+              animation: { entrance: "none", emphasis: "none", exit: "none" },
+              animations: [],
+              transition: null,
+              captions: null,
+              audio: null,
+            },
+          ],
   };
 }
 
@@ -98,7 +110,11 @@ describe("T6.1 extended QA checks — injected defects are caught with fixes", (
     // 3s narration WAV vs a 1s scene (30 frames @30fps).
     const wav = path.join(dir, "long.wav");
     await execFileAsync("ffmpeg", [
-      "-y", "-f", "lavfi", "-i", "sine=frequency=440:duration=3",
+      "-y",
+      "-f",
+      "lavfi",
+      "-i",
+      "sine=frequency=440:duration=3",
       wav,
     ]);
     mkdirSync(path.join(dir, "assets", "audio"), { recursive: true });
@@ -117,7 +133,9 @@ describe("T6.1 extended QA checks — injected defects are caught with fixes", (
       path.join(dir, "captions", "zh-CN.srt"),
       "1\n00:00:02,000 --> 00:00:02,500\nlater\n\n2\n00:00:00,500 --> 00:00:01,000\nearlier\n",
     );
-    const p = plan([{ captions: { cues: [{ lines: ["x"], startSec: 0, endSec: 1 }] } }]);
+    const p = plan([
+      { captions: { cues: [{ lines: ["x"], startSec: 0, endSec: 1 }] } },
+    ]);
     const { findings } = await checkCaptions(p, dir, 3);
     const hit = findings.find((f) => f.message.includes("non-monotonic"));
     expect(hit?.level).toBe("error");
@@ -129,16 +147,31 @@ describe("T6.1 extended QA checks — injected defects are caught with fixes", (
       path.join(dir, "captions", "zh-CN.srt"),
       "1\n00:00:00,000 --> 00:00:09,900\nway past the 3s video\n",
     );
-    const p = plan([{ captions: { cues: [{ lines: ["x"], startSec: 0, endSec: 1 }] } }]);
+    const p = plan([
+      { captions: { cues: [{ lines: ["x"], startSec: 0, endSec: 1 }] } },
+    ]);
     const { findings } = await checkCaptions(p, dir, 3);
-    const hit = findings.find((f) => f.message.includes("past the video") || f.message.includes("ends at"));
+    const hit = findings.find(
+      (f) =>
+        f.message.includes("past the video") || f.message.includes("ends at"),
+    );
     expect(hit?.level).toBe("warn");
     expect(hit?.fix).toContain("video make");
   });
 
   it("DEFECT 4 — captions overflowing the safe area are an error", async () => {
     const p = plan([
-      { captions: { cues: [{ lines: ["line1", "line2", "line3", "line4"], startSec: 0, endSec: 1 }] } },
+      {
+        captions: {
+          cues: [
+            {
+              lines: ["line1", "line2", "line3", "line4"],
+              startSec: 0,
+              endSec: 1,
+            },
+          ],
+        },
+      },
     ]);
     const { findings } = await checkCaptions(p, dir, 3);
     const hit = findings.find((f) => f.check === "captionFit");
@@ -159,16 +192,13 @@ describe("T6.1 extended QA checks — injected defects are caught with fixes", (
   });
 
   it("scene-boundary detection finds the hard cut at 2.0s", async () => {
-    const p = plan([
-      {},
-      { startFrame: 60, durationInFrames: 30 },
-    ]);
+    const p = plan([{}, { startFrame: 60, durationInFrames: 30 }]);
     p.totalFrames = 90;
     const { checks } = await checkSceneBoundaries(p, video);
     expect(checks.expectedStartsSec).toEqual([2]);
-    expect(
-      checks.detectedCutsSec.some((d) => Math.abs(d - 2) <= 0.5),
-    ).toBe(true);
+    expect(checks.detectedCutsSec.some((d) => Math.abs(d - 2) <= 0.5)).toBe(
+      true,
+    );
     expect(checks.ok).toBe(true);
   });
 });

@@ -70,7 +70,9 @@ describe("MiniMaxWebSearch (todo 2) — platform.minimax.io docs", () => {
     });
     statusToSend = 200;
     responseBody = {
-      organic: [{ link: "https://example.com/1", title: "First", snippet: "x" }],
+      organic: [
+        { link: "https://example.com/1", title: "First", snippet: "x" },
+      ],
       related_searches: [],
       base_resp: { status_code: 0, status_msg: "ok" },
     };

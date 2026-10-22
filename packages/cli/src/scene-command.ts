@@ -51,8 +51,7 @@ export async function runSceneList(
       return 0;
     }
     for (const v of versions) {
-      const approved =
-        approval?.version === v.version ? "  ← approved" : "";
+      const approved = approval?.version === v.version ? "  ← approved" : "";
       console.log(
         `${sceneId} v${v.version}  ${v.hash.slice(0, 19)}…  ${v.createdAt}${approved}${v.note ? `  (${v.note})` : ""}`,
       );
@@ -126,7 +125,9 @@ export async function runSceneRestore(
       }
     }
   }
-  console.log(`✓ restored ${sceneId} to v${version} — only that scene re-renders`);
+  console.log(
+    `✓ restored ${sceneId} to v${version} — only that scene re-renders`,
+  );
   return 0;
 }
 
@@ -182,74 +183,76 @@ export async function runSceneApprove(
 }
 
 export function registerScene(program: Command): void {
-const scene = program
-  .command("scene")
-  .description("per-scene version history (plan §26): list, restore, approve");
+  const scene = program
+    .command("scene")
+    .description(
+      "per-scene version history (plan §26): list, restore, approve",
+    );
 
-scene
-  .command("list")
-  .argument("[project]", "project name (slug)")
-  .argument("[sceneId]", "scene id — omit to list all scenes")
-  .option("--cwd <dir>", "project root base directory")
-  .action(
-    async (
-      project: string | undefined,
-      sceneId: string | undefined,
-      opts: { cwd?: string },
-    ) => {
-      process.exitCode = await runSceneList(project, sceneId, opts.cwd);
-    },
-  );
+  scene
+    .command("list")
+    .argument("[project]", "project name (slug)")
+    .argument("[sceneId]", "scene id — omit to list all scenes")
+    .option("--cwd <dir>", "project root base directory")
+    .action(
+      async (
+        project: string | undefined,
+        sceneId: string | undefined,
+        opts: { cwd?: string },
+      ) => {
+        process.exitCode = await runSceneList(project, sceneId, opts.cwd);
+      },
+    );
 
-scene
-  .command("restore")
-  .argument("<project>", "project name (slug)")
-  .argument("<sceneId>", "scene id to restore")
-  .argument("<version>", "version number to restore (see scene list)", (v) =>
-    parseInt(v, 10),
-  )
-  .option("--cwd <dir>", "project root base directory")
-  .action(
-    async (
-      project: string,
-      sceneId: string,
-      version: number,
-      opts: { cwd?: string },
-    ) => {
-      process.exitCode = await runSceneRestore(
-        project,
-        sceneId,
-        version,
-        opts.cwd,
-      );
-    },
-  );
+  scene
+    .command("restore")
+    .argument("<project>", "project name (slug)")
+    .argument("<sceneId>", "scene id to restore")
+    .argument("<version>", "version number to restore (see scene list)", (v) =>
+      parseInt(v, 10),
+    )
+    .option("--cwd <dir>", "project root base directory")
+    .action(
+      async (
+        project: string,
+        sceneId: string,
+        version: number,
+        opts: { cwd?: string },
+      ) => {
+        process.exitCode = await runSceneRestore(
+          project,
+          sceneId,
+          version,
+          opts.cwd,
+        );
+      },
+    );
 
-scene
-  .command("approve")
-  .argument("<project>", "project name (slug)")
-  .argument("<sceneId>", "scene id to approve")
-  .argument(
-    "[version]",
-    "version number — defaults to the version matching the current storyboard",
-    (v) => parseInt(v, 10),
-  )
-  .option("--note <text>", "review note stored with the approval")
-  .option("--cwd <dir>", "project root base directory")
-  .action(
-    async (
-      project: string,
-      sceneId: string,
-      version: number | undefined,
-      opts: { note?: string; cwd?: string },
-    ) => {
-      process.exitCode = await runSceneApprove(
-        project,
-        sceneId,
-        version,
-        opts.note,
-        opts.cwd,
-      );
-    },
-  );
+  scene
+    .command("approve")
+    .argument("<project>", "project name (slug)")
+    .argument("<sceneId>", "scene id to approve")
+    .argument(
+      "[version]",
+      "version number — defaults to the version matching the current storyboard",
+      (v) => parseInt(v, 10),
+    )
+    .option("--note <text>", "review note stored with the approval")
+    .option("--cwd <dir>", "project root base directory")
+    .action(
+      async (
+        project: string,
+        sceneId: string,
+        version: number | undefined,
+        opts: { note?: string; cwd?: string },
+      ) => {
+        process.exitCode = await runSceneApprove(
+          project,
+          sceneId,
+          version,
+          opts.note,
+          opts.cwd,
+        );
+      },
+    );
 }

@@ -78,8 +78,8 @@ export async function validateProject(
         typeof props.data.src === "string"
       ) {
         // The image step writes absolute src; path.join with an
-// absolute segment on this Node version concatenates rather than
-// replaces — detect and use the absolute path verbatim.
+        // absolute segment on this Node version concatenates rather than
+        // replaces — detect and use the absolute path verbatim.
         const src = path.isAbsolute(props.data.src)
           ? props.data.src
           : path.join(opts.projectRoot, props.data.src);
@@ -160,7 +160,7 @@ export async function validateProject(
           file,
           field: `${base.join(".")}.animations.${a}`,
           line: line([...base, "animations", a]),
-          message: `Animation "${anim.id}" (${anim.type}) runs ${ (anim.start + anim.duration).toFixed(2) }s but scene duration is ${scene.duration}s — it would be clipped.`,
+          message: `Animation "${anim.id}" (${anim.type}) runs ${(anim.start + anim.duration).toFixed(2)}s but scene duration is ${scene.duration}s — it would be clipped.`,
           fix: "Shorten the animation or increase the scene duration.",
         });
       }

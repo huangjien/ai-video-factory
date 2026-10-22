@@ -60,10 +60,18 @@ export async function runAudioPlan(opts: AudioPlanOptions): Promise<number> {
       const parsed = parseArticleWithRecovery(articleMd);
       article = parsed.article;
       if (parsed.recoveredCount > 0) {
-        console.error(`! article.md had ${parsed.recoveredCount} empty scene narrations`);
-        console.error(`  (the LLM put all content in ## section bodies — recovered from them)`);
-        console.error(`  next: re-run \`video draft --from ${articlePath}\` to regenerate cleanly,`);
-        console.error(`        or hand-edit each scene's narration in article.md.`);
+        console.error(
+          `! article.md had ${parsed.recoveredCount} empty scene narrations`,
+        );
+        console.error(
+          `  (the LLM put all content in ## section bodies — recovered from them)`,
+        );
+        console.error(
+          `  next: re-run \`video draft --from ${articlePath}\` to regenerate cleanly,`,
+        );
+        console.error(
+          `        or hand-edit each scene's narration in article.md.`,
+        );
       }
     } catch (err) {
       console.error(`failed to parse article.md: ${(err as Error).message}`);
@@ -116,39 +124,36 @@ export async function runAudioPlan(opts: AudioPlanOptions): Promise<number> {
 }
 
 export function registerAudioPlan(program: Command): void {
-program
-  .command("audio-plan")
-  .argument("<project>", "project: topic, folder name, path, or unique prefix")
-  .option("--cwd <dir>", "base directory for the project")
-  .option(
-    "--model <provider>",
-    "model provider: minimax|glm (default: glm)",
-  )
-  .option(
-    "--from <file>",
-    "path to an existing audio-config.yaml to revise",
-  )
-  .option(
-    "--strict",
-    "fail loudly on empty scene narrations instead of auto-recovering from section bodies",
-  )
-  .action(
-    async (
-      project: string,
-      opts: {
-        cwd?: string;
-        model?: "minimax" | "glm";
-        from?: string;
-        strict?: boolean;
+  program
+    .command("audio-plan")
+    .argument(
+      "<project>",
+      "project: topic, folder name, path, or unique prefix",
+    )
+    .option("--cwd <dir>", "base directory for the project")
+    .option("--model <provider>", "model provider: minimax|glm (default: glm)")
+    .option("--from <file>", "path to an existing audio-config.yaml to revise")
+    .option(
+      "--strict",
+      "fail loudly on empty scene narrations instead of auto-recovering from section bodies",
+    )
+    .action(
+      async (
+        project: string,
+        opts: {
+          cwd?: string;
+          model?: "minimax" | "glm";
+          from?: string;
+          strict?: boolean;
+        },
+      ) => {
+        process.exitCode = await runAudioPlan({
+          project,
+          ...(opts.cwd !== undefined ? { cwd: opts.cwd } : {}),
+          ...(opts.model !== undefined ? { model: opts.model } : {}),
+          ...(opts.from !== undefined ? { from: opts.from } : {}),
+          ...(opts.strict === true ? { strict: opts.strict } : {}),
+        });
       },
-    ) => {
-      process.exitCode = await runAudioPlan({
-        project,
-        ...(opts.cwd !== undefined ? { cwd: opts.cwd } : {}),
-        ...(opts.model !== undefined ? { model: opts.model } : {}),
-        ...(opts.from !== undefined ? { from: opts.from } : {}),
-        ...(opts.strict === true ? { strict: opts.strict } : {}),
-      });
-    },
-  );
+    );
 }

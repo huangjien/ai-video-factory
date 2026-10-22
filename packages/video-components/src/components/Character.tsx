@@ -83,8 +83,24 @@ export const Character: FC<CharacterProps> = ({
           <circle cx={94} cy={60} r={4} fill="#5eead4" opacity={blink} />
           <circle cx={126} cy={60} r={4} fill="#5eead4" opacity={blink} />
           {/* Eyelid lines when blinking */}
-          <line x1={86} y1={60} x2={102} y2={60} stroke={theme.colors.accent} strokeWidth={1.5} opacity={1 - blink} />
-          <line x1={118} y1={60} x2={134} y2={60} stroke={theme.colors.accent} strokeWidth={1.5} opacity={1 - blink} />
+          <line
+            x1={86}
+            y1={60}
+            x2={102}
+            y2={60}
+            stroke={theme.colors.accent}
+            strokeWidth={1.5}
+            opacity={1 - blink}
+          />
+          <line
+            x1={118}
+            y1={60}
+            x2={134}
+            y2={60}
+            stroke={theme.colors.accent}
+            strokeWidth={1.5}
+            opacity={1 - blink}
+          />
           {/* Mouth — opens/closes with speech */}
           <ellipse
             cx={110}

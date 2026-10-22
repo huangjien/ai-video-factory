@@ -3,7 +3,7 @@ import { brandSchema, compileStoryboard, type Storyboard } from "./index.js";
 
 const minimalBoard = (style: Record<string, unknown>): string =>
   [
-    "schema_version: \"0.2\"",
+    'schema_version: "0.2"',
     "project:",
     "  id: demo",
     "  language: zh-CN",
@@ -61,7 +61,10 @@ describe("brandSchema", () => {
 describe("storyboard style.brand passthrough", () => {
   it("compile carries the brand block into the RenderPlan", () => {
     const { renderPlan } = compileStoryboard(
-      minimalBoard({ theme: "ocean-deep", brand: { name: "品牌", corner: "top-right" } }),
+      minimalBoard({
+        theme: "ocean-deep",
+        brand: { name: "品牌", corner: "top-right" },
+      }),
       "/tmp",
     );
     expect(renderPlan.style.brand?.name).toBe("品牌");

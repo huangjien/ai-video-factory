@@ -102,7 +102,7 @@ describe("MiniMaxProvider (todo 2) — platform.minimax.io docs", () => {
     };
   });
 
-it("default model is MiniMax-M3 when not specified", async () => {
+  it("default model is MiniMax-M3 when not specified", async () => {
     process.env["MINIMAX_API_KEY"] = "test-key";
     const p = new MiniMaxProvider({ apiHost: baseUrl });
     await p.chat(baseReq);

@@ -103,7 +103,10 @@ scenes:
 `;
 
   it("applies defaults.renderer to scenes that omit visual.renderer", () => {
-    const result = validateStoryboard(withDefaults("canvas"), "storyboard.yaml");
+    const result = validateStoryboard(
+      withDefaults("canvas"),
+      "storyboard.yaml",
+    );
     expect(result.ok).toBe(true);
     if (result.ok) {
       expect(result.data.scenes[0]?.visual.renderer).toBe("canvas");
@@ -111,7 +114,10 @@ scenes:
   });
 
   it("per-scene renderer overrides the project default", () => {
-    const result = validateStoryboard(withDefaults("canvas"), "storyboard.yaml");
+    const result = validateStoryboard(
+      withDefaults("canvas"),
+      "storyboard.yaml",
+    );
     expect(result.ok).toBe(true);
     if (result.ok) {
       expect(result.data.scenes[1]?.visual.renderer).toBe("remotion");
@@ -129,7 +135,10 @@ scenes:
   });
 
   it("coerces synonyms in defaults.renderer (hand-drawn → canvas)", () => {
-    const result = validateStoryboard(withDefaults("hand-drawn"), "storyboard.yaml");
+    const result = validateStoryboard(
+      withDefaults("hand-drawn"),
+      "storyboard.yaml",
+    );
     expect(result.ok).toBe(true);
     if (result.ok) {
       expect(result.data.scenes[0]?.visual.renderer).toBe("canvas");
@@ -153,7 +162,9 @@ scenes:
     const result = validateStoryboard(yamlText, "storyboard.yaml");
     expect(result.ok).toBe(false);
     if (!result.ok) {
-      expect(result.errors.some((e) => e.field.includes("defaults"))).toBe(true);
+      expect(result.errors.some((e) => e.field.includes("defaults"))).toBe(
+        true,
+      );
     }
   });
 });
@@ -196,19 +207,22 @@ ${scenes}${plainScene(`scene-9${maps}`)}
   };
 
   it("accepts exactly one map insert under chinese-storybook", () => {
-    expect(validateStoryboard(board("chinese-storybook", 1), "storyboard.yaml").ok).toBe(
-      true,
-    );
+    expect(
+      validateStoryboard(board("chinese-storybook", 1), "storyboard.yaml").ok,
+    ).toBe(true);
   });
 
   it("accepts a film with no map insert at all", () => {
-    expect(validateStoryboard(board("chinese-storybook", 0), "storyboard.yaml").ok).toBe(
-      true,
-    );
+    expect(
+      validateStoryboard(board("chinese-storybook", 0), "storyboard.yaml").ok,
+    ).toBe(true);
   });
 
   it("rejects a second map insert under the profile", () => {
-    const result = validateStoryboard(board("chinese-storybook", 2), "storyboard.yaml");
+    const result = validateStoryboard(
+      board("chinese-storybook", 2),
+      "storyboard.yaml",
+    );
     expect(result.ok).toBe(false);
     if (!result.ok) {
       expect(result.errors.map((e) => e.message).join(" ")).toMatch(

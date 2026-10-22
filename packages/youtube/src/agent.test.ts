@@ -7,7 +7,7 @@ const GOOD_YAML = [
   'title: "读者为什么弃书"',
   "description: |",
   "  正文一段。",
-  "  Key claim: 把\"写好小说\"换成\"减少弃读\"。",
+  '  Key claim: 把"写好小说"换成"减少弃读"。',
   "chapters:",
   '  - timestamp: "00:00"',
   '    title: "开场"',
@@ -68,7 +68,10 @@ describe("callYouTube — a content failure falls through to the fallback provid
       name: "minimax",
       async chat(): Promise<ChatResponse> {
         fallbackCalls += 1;
-        return { content: GOOD_YAML, usage: { input_tokens: 1, output_tokens: 1 } as never };
+        return {
+          content: GOOD_YAML,
+          usage: { input_tokens: 1, output_tokens: 1 } as never,
+        };
       },
     };
     const res = await callYouTube(
@@ -80,7 +83,6 @@ describe("callYouTube — a content failure falls through to the fallback provid
     expect(fallbackCalls).toBe(0);
   });
 });
-
 
 describe("extractYaml — a reasoning model's sketch is not the answer", () => {
   it("skips a YAML sketch inside <think> and takes the real answer", () => {
@@ -110,6 +112,6 @@ describe("extractYaml — a reasoning model's sketch is not the answer", () => {
   });
 
   it("still handles a plain fenced answer", () => {
-    expect(extractYaml('```yaml\ntitle: "x"\n```')).toContain("title: \"x\"");
+    expect(extractYaml('```yaml\ntitle: "x"\n```')).toContain('title: "x"');
   });
 });

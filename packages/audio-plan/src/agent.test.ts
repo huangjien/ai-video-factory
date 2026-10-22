@@ -1,11 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { ChatRequest, ChatResponse, Provider } from "@video/llm";
 import { parseArticle, type ParsedArticle } from "@video/draft";
-import {
-  AudioPlanError,
-  callAudioPlan,
-  renderAudioConfig,
-} from "./agent.js";
+import { AudioPlanError, callAudioPlan, renderAudioConfig } from "./agent.js";
 
 function fakeProvider(content: string): Provider & { calls: ChatRequest[] } {
   const calls: ChatRequest[] = [];

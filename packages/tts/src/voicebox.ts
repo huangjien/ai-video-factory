@@ -59,7 +59,9 @@ export async function voiceboxStatus(opts?: {
   fetchImpl?: typeof fetch;
 }): Promise<{ healthy: boolean; profiles: string[] }> {
   const baseUrl = (
-    opts?.baseUrl ?? process.env.VOICEBOX_URL ?? "http://127.0.0.1:17493"
+    opts?.baseUrl ??
+    process.env.VOICEBOX_URL ??
+    "http://127.0.0.1:17493"
   ).replace(/\/+$/, "");
   const fetchImpl = opts?.fetchImpl ?? fetch;
   try {
@@ -143,16 +145,18 @@ export class VoiceboxTTSProvider implements TTSProvider {
 
   constructor(opts: VoiceboxTTSProviderOptions = {}) {
     this.baseUrl = (
-      opts.baseUrl ?? process.env.VOICEBOX_URL ?? "http://127.0.0.1:17493"
+      opts.baseUrl ??
+      process.env.VOICEBOX_URL ??
+      "http://127.0.0.1:17493"
     ).replace(/\/+$/, "");
     this.modelSize = opts.modelSize;
     this.engine = opts.engine;
     this.pollIntervalMs = opts.pollIntervalMs ?? 2000;
     this.timeoutMs = opts.timeoutMs ?? 600_000;
     this.fetchImpl = opts.fetchImpl ?? fetch;
-      this.speed = opts.speed;
+    this.speed = opts.speed;
     this.sentencePauseSec = opts.sentencePauseSec ?? 0;
-}
+  }
 
   async synthesize(req: TTSRequest): Promise<TTSResult> {
     const profileId = await this.resolveProfileId(req.voice);
@@ -162,7 +166,8 @@ export class VoiceboxTTSProvider implements TTSProvider {
     // audio with this many seconds of silence between. Qwen3-TTS has no
     // native pause marker — this is the only way to get inter-sentence
     // breathing room while keeping the cloned voice.
-    const sentences = this.sentencePauseSec > 0 ? splitSentences(req.text) : null;
+    const sentences =
+      this.sentencePauseSec > 0 ? splitSentences(req.text) : null;
 
     if (sentences !== null) {
       const pieces: Array<{ audio: Uint8Array; durationMs: number }> = [];
@@ -178,7 +183,11 @@ export class VoiceboxTTSProvider implements TTSProvider {
     }
 
     const one = await this.generateOne(req.text, profileId, req.language);
-    return this.applyTempo({ audio: one.audio, durationMs: one.durationMs, words: [] });
+    return this.applyTempo({
+      audio: one.audio,
+      durationMs: one.durationMs,
+      words: [],
+    });
   }
 
   /**
@@ -199,7 +208,8 @@ export class VoiceboxTTSProvider implements TTSProvider {
     }
     const { execFile } = await import("node:child_process");
     const { promisify } = await import("node:util");
-    const { mkdtemp, writeFile, readFile, rm } = await import("node:fs/promises");
+    const { mkdtemp, writeFile, readFile, rm } =
+      await import("node:fs/promises");
     const { tmpdir } = await import("node:os");
     const { join } = await import("node:path");
     const execFileAsync = promisify(execFile);
@@ -287,7 +297,8 @@ export class VoiceboxTTSProvider implements TTSProvider {
     // smaller of the two so the caller gets a real upper bound. Warn on
     // >5% mismatch so we notice if the backend starts lying more often.
     const { execFileSync } = await import("node:child_process");
-    const { mkdtempSync, writeFileSync, readFileSync, rmSync } = await import("node:fs");
+    const { mkdtempSync, writeFileSync, readFileSync, rmSync } =
+      await import("node:fs");
     const { tmpdir } = await import("node:os");
     const { join } = await import("node:path");
     let actualSec = 0;
@@ -296,7 +307,15 @@ export class VoiceboxTTSProvider implements TTSProvider {
       writeFileSync(join(probeDir, "x.wav"), audio);
       const stdout = execFileSync(
         "ffprobe",
-        ["-v", "error", "-show_entries", "format=duration", "-of", "default=noprint_wrappers=1:nokey=1", join(probeDir, "x.wav")],
+        [
+          "-v",
+          "error",
+          "-show_entries",
+          "format=duration",
+          "-of",
+          "default=noprint_wrappers=1:nokey=1",
+          join(probeDir, "x.wav"),
+        ],
         { encoding: "utf8" as const, timeout: 5000 },
       );
       actualSec = Number.parseFloat(String(stdout).trim());
@@ -304,10 +323,15 @@ export class VoiceboxTTSProvider implements TTSProvider {
     } catch {
       // ffprobe missing or failed — keep the backend's duration.
     } finally {
-      try { rmSync(probeDir, { recursive: true, force: true }); } catch { /* ignore */ }
+      try {
+        rmSync(probeDir, { recursive: true, force: true });
+      } catch {
+        /* ignore */
+      }
     }
     const reportedSec = entry.duration ?? 0;
-    const useSec = actualSec > 0 ? Math.min(reportedSec, actualSec) : reportedSec;
+    const useSec =
+      actualSec > 0 ? Math.min(reportedSec, actualSec) : reportedSec;
     if (reportedSec > 0 && actualSec > 0) {
       const diff = Math.abs(reportedSec - actualSec) / reportedSec;
       if (diff > 0.05) {
@@ -328,9 +352,11 @@ export class VoiceboxTTSProvider implements TTSProvider {
     const fromCache = this.profiles?.find(
       (p) => p.id.toLowerCase() === wanted || p.name.toLowerCase() === wanted,
     );
-    const profile = fromCache ?? (await this.fetchProfiles()).find(
-      (p) => p.id.toLowerCase() === wanted || p.name.toLowerCase() === wanted,
-    );
+    const profile =
+      fromCache ??
+      (await this.fetchProfiles()).find(
+        (p) => p.id.toLowerCase() === wanted || p.name.toLowerCase() === wanted,
+      );
     if (profile === undefined) {
       throw new TTSError(
         `Voicebox profile not found: ${JSON.stringify(voice)} (known: ${
@@ -414,7 +440,10 @@ export class VoiceboxTTSProvider implements TTSProvider {
         // Conditional spread keeps `body`/`headers` absent (not `undefined`)
         // under exactOptionalPropertyTypes.
         ...(body !== undefined && {
-          headers: { "Content-Type": "application/json" } as Record<string, string>,
+          headers: { "Content-Type": "application/json" } as Record<
+            string,
+            string
+          >,
           body: JSON.stringify(body),
         }),
       };
@@ -427,7 +456,6 @@ export class VoiceboxTTSProvider implements TTSProvider {
     }
   }
 }
-
 
 /** Split narration on sentence-ending punctuation (keeping the punctuation
  *  on each sentence). Returns a non-empty array of trimmed sentence strings
@@ -516,7 +544,8 @@ async function stitchWithPauses(
         ...inputs,
         "-filter_complex",
         `${filterParts.join(";")};${labels.join("")}concat=n=${pieces.length}:v=0:a=1[out]`,
-        "-map", "[out]",
+        "-map",
+        "[out]",
         join(dir, "out.wav"),
       ],
       { timeout: timeoutMs },

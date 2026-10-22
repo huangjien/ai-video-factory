@@ -1,10 +1,6 @@
 import type { ChatRequest, ChatResponse, Provider } from "@video/llm";
 import { describe, expect, it } from "vitest";
-import {
-  MotionAgentError,
-  callMotionAgent,
-  parseMotionSpec,
-} from "./agent.js";
+import { MotionAgentError, callMotionAgent, parseMotionSpec } from "./agent.js";
 import { validateMotionSpec } from "./plan.js";
 
 class FakeProvider implements Provider {
@@ -44,11 +40,14 @@ const INPUT = {
   guidance: "Enter -> ease-out, 300-500ms.",
 };
 
-const GOOD_YAML = "```yaml\nanimations:\n  - id: s3-arrows\n    target: arrows\n    type: wipe\n    start: 0.5\n    duration: 1.2\n    easing: easeInOut\n  - id: s3-focus\n    target: server-node\n    type: highlight\n    start: 4\n    duration: 0.6\n    easing: easeInOut\ntransition:\n  in: fade\n  out: cut\n```";
+const GOOD_YAML =
+  "```yaml\nanimations:\n  - id: s3-arrows\n    target: arrows\n    type: wipe\n    start: 0.5\n    duration: 1.2\n    easing: easeInOut\n  - id: s3-focus\n    target: server-node\n    type: highlight\n    start: 4\n    duration: 0.6\n    easing: easeInOut\ntransition:\n  in: fade\n  out: cut\n```";
 
-const OVERFLOW_YAML = "```yaml\nanimations:\n  - id: too-long\n    target: x\n    type: fade\n    start: 7\n    duration: 3\n    easing: easeOut\n```";
+const OVERFLOW_YAML =
+  "```yaml\nanimations:\n  - id: too-long\n    target: x\n    type: fade\n    start: 7\n    duration: 3\n    easing: easeOut\n```";
 
-const SNEAKY_YAML = "```yaml\nanimations:\n  - id: sneaky\n    target: x\n    type: fade\n    start: 0.1\n    duration: 0.5\n    easing: easeOut\n    springStiffness: 300\n```";
+const SNEAKY_YAML =
+  "```yaml\nanimations:\n  - id: sneaky\n    target: x\n    type: fade\n    start: 0.1\n    duration: 0.5\n    easing: easeOut\n    springStiffness: 300\n```";
 
 describe("callMotionAgent (T4.2)", () => {
   it("parses a good plan, canonicalizes synonyms, validates the timeline", async () => {

@@ -23,7 +23,10 @@ export interface BackgroundProps {
  * top via normal z-order, and the Background component's elements all
  * sit at low opacity (≤ 0.2) so they read as ambient, never foreground.
  */
-export const Background: FC<BackgroundProps> = ({ frame, theme = paperLightTheme }) => {
+export const Background: FC<BackgroundProps> = ({
+  frame,
+  theme = paperLightTheme,
+}) => {
   const seconds = frame / 30;
   const rotation = (seconds * (Math.PI * 2)) / 18;
   const drift = (offset: number, period: number) =>
@@ -38,7 +41,9 @@ export const Background: FC<BackgroundProps> = ({ frame, theme = paperLightTheme
   ];
 
   return (
-    <AbsoluteFill style={{ overflow: "hidden", background: theme.colors.background }}>
+    <AbsoluteFill
+      style={{ overflow: "hidden", background: theme.colors.background }}
+    >
       <div
         style={{
           position: "absolute",

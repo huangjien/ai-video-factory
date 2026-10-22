@@ -128,7 +128,9 @@ export async function runBilibili(opts: BilibiliOptions): Promise<number> {
   console.log(brandBannerLine());
   console.log(channelHeader(opts.project, "bilibili · packaging only"));
   console.log("");
-  console.log(`${MARK_RUN} bilibili package (no upload — Bilibili has no public API)`);
+  console.log(
+    `${MARK_RUN} bilibili package (no upload — Bilibili has no public API)`,
+  );
 
   const result = await callBilibili(
     {
@@ -202,7 +204,9 @@ export async function runBilibili(opts: BilibiliOptions): Promise<number> {
   });
 
   console.log("");
-  console.log(`${MARK_OK} packaged ${path.relative(process.cwd(), bilibiliDir)}/`);
+  console.log(
+    `${MARK_OK} packaged ${path.relative(process.cwd(), bilibiliDir)}/`,
+  );
   console.log(`  title: ${result.bilibili.title}`);
   console.log(
     `  tags : ${result.bilibili.tags.length > 0 ? result.bilibili.tags.join("、") : "(none — pick manually)"}`,
@@ -212,7 +216,9 @@ export async function runBilibili(opts: BilibiliOptions): Promise<number> {
   );
   if (result.source === "fallback") {
     console.log("");
-    console.log(`  ⚠ degraded to the deterministic fallback: ${result.warning}`);
+    console.log(
+      `  ⚠ degraded to the deterministic fallback: ${result.warning}`,
+    );
     console.log(
       `    metadata was derived from article.md without an LLM — plain, but valid.`,
     );

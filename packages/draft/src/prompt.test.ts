@@ -40,7 +40,9 @@ describe("buildMessages", () => {
   });
 
   it("includes judge feedback as a revision instruction", () => {
-    const user = buildMessages({ ...base, feedback: "hook too weak; add numbers" })[1]?.content ?? "";
+    const user =
+      buildMessages({ ...base, feedback: "hook too weak; add numbers" })[1]
+        ?.content ?? "";
     expect(user).toContain("Revision feedback");
     expect(user).toContain("previous draft was rejected");
     expect(user).toContain("hook too weak; add numbers");
@@ -90,7 +92,8 @@ describe("buildMessages", () => {
 
 describe("buildMessages — edges", () => {
   it("passes en-US through as the language directive", () => {
-    const user = buildMessages({ ...base, language: "en-US" })[1]?.content ?? "";
+    const user =
+      buildMessages({ ...base, language: "en-US" })[1]?.content ?? "";
     expect(user).toContain("Language: en-US");
   });
 

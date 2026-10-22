@@ -392,7 +392,8 @@ export const THEME_META: Record<
     bg: "CRT phosphor",
     accent: "phosphor green",
     mood: "dev",
-    bestFor: "dev tutorials, retro/hacker nostalgia (JetBrains Mono throughout)",
+    bestFor:
+      "dev tutorials, retro/hacker nostalgia (JetBrains Mono throughout)",
   },
   "paper-cream": {
     bg: "beige",
@@ -404,7 +405,8 @@ export const THEME_META: Record<
     bg: "player dark",
     accent: "red `#FF0000`",
     mood: "creator",
-    bestFor: "creator/playback feel — pairs with the `channel-banner` intro gradient",
+    bestFor:
+      "creator/playback feel — pairs with the `channel-banner` intro gradient",
   },
 };
 

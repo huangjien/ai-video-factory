@@ -1,4 +1,10 @@
-import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  writeFileSync,
+} from "node:fs";
 import path from "node:path";
 import { parse as parseYaml, stringify as yamlStringify } from "yaml";
 import {
@@ -116,7 +122,8 @@ export function mergeSession(
       existing.seenCount += 1;
       existing.projects = [...new Set([...existing.projects, parsed.project])];
       existing.lastSeenAt = parsed.reviewedAt;
-      existing.highConfidence = existing.highConfidence || answer.highConfidence === true;
+      existing.highConfidence =
+        existing.highConfidence || answer.highConfidence === true;
     }
   }
 
@@ -148,7 +155,9 @@ export function listReviewSessions(projectRoot: string): ReviewSession[] {
     if (!name.endsWith(".yaml")) continue;
     try {
       out.push(
-        ReviewSessionSchema.parse(parseYaml(readFileSync(path.join(dir, name), "utf8"))),
+        ReviewSessionSchema.parse(
+          parseYaml(readFileSync(path.join(dir, name), "utf8")),
+        ),
       );
     } catch {
       // skip unreadable session files
@@ -158,7 +167,10 @@ export function listReviewSessions(projectRoot: string): ReviewSession[] {
 }
 
 /** Active lessons for one scope, most-repeated first. */
-export function activeLessons(store: LessonStore, scope: Lesson["scope"]): Lesson[] {
+export function activeLessons(
+  store: LessonStore,
+  scope: Lesson["scope"],
+): Lesson[] {
   return store.lessons
     .filter((l) => l.scope === scope && isActiveLesson(l))
     .sort((a, b) => b.seenCount - a.seenCount || a.id.localeCompare(b.id));

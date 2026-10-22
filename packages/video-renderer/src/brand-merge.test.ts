@@ -7,7 +7,13 @@ import type { RenderPlan } from "@video/vdsl";
 
 const minimalPlan = (): RenderPlan =>
   ({
-    project: { id: "demo", language: "zh-CN", fps: 30, width: 1920, height: 1080 },
+    project: {
+      id: "demo",
+      language: "zh-CN",
+      fps: 30,
+      width: 1920,
+      height: 1080,
+    },
     style: { theme: "dark-tech" },
     totalFrames: 240,
     scenes: [],
@@ -29,7 +35,8 @@ async function wsProject(wsBrand: string | null, projectBrand: string | null) {
   return { ws, project };
 }
 
-const ICON = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGNgYGBgAAAABQABh6FO1AAAAABJRU5ErkJggg==";
+const ICON =
+  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGNgYGBgAAAABQABh6FO1AAAAABJRU5ErkJggg==";
 
 describe("mergeBrandConfig — workspace inheritance", () => {
   it("project inherits the workspace brand.yaml (no project file)", async () => {
@@ -43,7 +50,10 @@ describe("mergeBrandConfig — workspace inheritance", () => {
       ].join("\n"),
       null,
     );
-    await writeFile(path.join(ws, "brand-icon.png"), Buffer.from(ICON, "base64"));
+    await writeFile(
+      path.join(ws, "brand-icon.png"),
+      Buffer.from(ICON, "base64"),
+    );
     const plan = minimalPlan();
     await mergeBrandConfig(plan, project);
     expect(plan.style.brand?.name).toBe("工作区品牌");
@@ -62,12 +72,9 @@ describe("mergeBrandConfig — workspace inheritance", () => {
         "    duration_sec: 12",
         "    background: ocean",
       ].join("\n"),
-      [
-        "brand:",
-        "  name: 项目品牌",
-        "  intro:",
-        "    duration_sec: 20",
-      ].join("\n"),
+      ["brand:", "  name: 项目品牌", "  intro:", "    duration_sec: 20"].join(
+        "\n",
+      ),
     );
     const plan = minimalPlan();
     await mergeBrandConfig(plan, project);
@@ -121,7 +128,10 @@ describe("mergeBrandConfig — the watermark switch (CS-08)", () => {
       ["brand:", "  name: 工作区品牌", "  icon: brand-icon.png"].join("\n"),
       null,
     );
-    await writeFile(path.join(ws, "brand-icon.png"), Buffer.from(ICON, "base64"));
+    await writeFile(
+      path.join(ws, "brand-icon.png"),
+      Buffer.from(ICON, "base64"),
+    );
     const plan = minimalPlan();
     await mergeBrandConfig(plan, project);
     expect(plan.style.brand?.watermark).toBe(true);
@@ -134,7 +144,10 @@ describe("mergeBrandConfig — the watermark switch (CS-08)", () => {
       ["brand:", "  name: 工作区品牌", "  icon: brand-icon.png"].join("\n"),
       ["brand:", "  watermark: false"].join("\n"),
     );
-    await writeFile(path.join(ws, "brand-icon.png"), Buffer.from(ICON, "base64"));
+    await writeFile(
+      path.join(ws, "brand-icon.png"),
+      Buffer.from(ICON, "base64"),
+    );
     const plan = minimalPlan();
     await mergeBrandConfig(plan, project);
     expect(plan.style.brand?.watermark).toBe(false);
@@ -145,8 +158,14 @@ describe("mergeBrandConfig — the watermark switch (CS-08)", () => {
     // The switch is per project: a sibling that opts out must not change
     // what every other project renders.
     const ws = await mkdtemp(path.join(tmpdir(), "brand-ws-"));
-    await writeBrand(ws, ["brand:", "  name: 工作区品牌", "  icon: brand-icon.png"].join("\n"));
-    await writeFile(path.join(ws, "brand-icon.png"), Buffer.from(ICON, "base64"));
+    await writeBrand(
+      ws,
+      ["brand:", "  name: 工作区品牌", "  icon: brand-icon.png"].join("\n"),
+    );
+    await writeFile(
+      path.join(ws, "brand-icon.png"),
+      Buffer.from(ICON, "base64"),
+    );
     const optedOut = path.join(ws, "projects", "no-mark");
     const other = path.join(ws, "projects", "other");
     await mkdir(optedOut, { recursive: true });

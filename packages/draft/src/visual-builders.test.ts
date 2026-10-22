@@ -41,7 +41,12 @@ describe("buildTitle", () => {
 
   it("omits the subtitle when the article has no title", () => {
     const props = VISUAL_BUILDERS.Title!(
-      scene({ id: "scene_1", duration: 5, caption: "c", visual: "a direction" }),
+      scene({
+        id: "scene_1",
+        duration: 5,
+        caption: "c",
+        visual: "a direction",
+      }),
       { section: null },
     );
     expect(props.subtext).toBeUndefined();
@@ -342,7 +347,11 @@ describe("buildBarChart (v0.4.2)", () => {
       }),
       { section: null },
     );
-    const bars = props.bars as { label: string; value: number; display: string }[];
+    const bars = props.bars as {
+      label: string;
+      value: number;
+      display: string;
+    }[];
     expect(bars.length).toBeGreaterThanOrEqual(2);
     expect(bars[0]!.display).toMatch(/%$/);
   });
@@ -413,7 +422,11 @@ describe("buildChecklist (v0.4.2)", () => {
       },
     );
     const items = props.items as { text: string }[];
-    expect(items.map((i) => i.text)).toEqual(["先写测试", "小步提交", "及时重构"]);
+    expect(items.map((i) => i.text)).toEqual([
+      "先写测试",
+      "小步提交",
+      "及时重构",
+    ]);
   });
 });
 
@@ -456,7 +469,12 @@ describe("buildPyramidDiagram (v0.4.2)", () => {
 
   it("falls back to 3 generic layers", () => {
     const props = VISUAL_BUILDERS.PyramidDiagram!(
-      scene({ id: "scene_p2", duration: 6, caption: "层级图", visual: "金字塔" }),
+      scene({
+        id: "scene_p2",
+        duration: 6,
+        caption: "层级图",
+        visual: "金字塔",
+      }),
       { section: null },
     );
     expect(props.levels).toHaveLength(3);
@@ -504,7 +522,12 @@ describe("buildCycleDiagram (v0.4.2)", () => {
         },
       },
     );
-    expect(props.stages).toEqual(["计划目标", "执行落地", "检查结果", "改进迭代"]);
+    expect(props.stages).toEqual([
+      "计划目标",
+      "执行落地",
+      "检查结果",
+      "改进迭代",
+    ]);
   });
 
   it("falls back to a PDCA-like cycle", () => {
@@ -520,7 +543,12 @@ describe("buildCycleDiagram (v0.4.2)", () => {
 describe("fallback labels follow the article language", () => {
   // An en-US video whose components had no explicit stage names used to get
   // Chinese ones ("中间处理", "左"/"右") burned onto the screen.
-  const empty = scene({ id: "scene_1", duration: 8, caption: "Runs", visual: "" });
+  const empty = scene({
+    id: "scene_1",
+    duration: 8,
+    caption: "Runs",
+    visual: "",
+  });
 
   it("emits English FlowChart nodes for en-US", () => {
     const props = VISUAL_BUILDERS.FlowChart!(empty, {
@@ -529,7 +557,6 @@ describe("fallback labels follow the article language", () => {
     });
     expect(props.nodes).not.toContain("中间处理");
   });
-
 
   it("keeps the Chinese defaults for zh-CN", () => {
     const props = VISUAL_BUILDERS.FlowChart!(
@@ -547,4 +574,3 @@ describe("fallback labels follow the article language", () => {
     expect(JSON.stringify(props)).toMatch(/[一-鿿]/);
   });
 });
-

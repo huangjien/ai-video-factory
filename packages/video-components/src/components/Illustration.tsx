@@ -138,20 +138,48 @@ const bg = "#0f172a";
 function Databases({ ambient, enterT }: ShapeProps) {
   return (
     <g>
-      <rect x={80} y={80} width={140} height={200} rx={12}
-        fill={bg} stroke={accent} strokeWidth={3}
-        transform={`translate(${(1 - enterT) * -40}, 0)`} />
-      <rect x={380} y={80} width={140} height={200} rx={12}
-        fill={bg} stroke={accent} strokeWidth={3}
-        transform={`translate(${(1 - enterT) * 40}, 0)`} />
-      <line x1={220} y1={180} x2={380} y2={180}
-        stroke={accent} strokeWidth={2}
+      <rect
+        x={80}
+        y={80}
+        width={140}
+        height={200}
+        rx={12}
+        fill={bg}
+        stroke={accent}
+        strokeWidth={3}
+        transform={`translate(${(1 - enterT) * -40}, 0)`}
+      />
+      <rect
+        x={380}
+        y={80}
+        width={140}
+        height={200}
+        rx={12}
+        fill={bg}
+        stroke={accent}
+        strokeWidth={3}
+        transform={`translate(${(1 - enterT) * 40}, 0)`}
+      />
+      <line
+        x1={220}
+        y1={180}
+        x2={380}
+        y2={180}
+        stroke={accent}
+        strokeWidth={2}
         strokeDasharray={`${4 + ambient * 8} 4`}
-        opacity={enterT} />
-      <line x1={220} y1={200} x2={380} y2={200}
-        stroke={accent} strokeWidth={2}
+        opacity={enterT}
+      />
+      <line
+        x1={220}
+        y1={200}
+        x2={380}
+        y2={200}
+        stroke={accent}
+        strokeWidth={2}
         strokeDasharray={`${4 + (1 - ambient) * 8} 4`}
-        opacity={enterT} />
+        opacity={enterT}
+      />
       <circle cx={300} cy={190} r={4} fill={accent} opacity={enterT} />
     </g>
   );
@@ -159,8 +187,12 @@ function Databases({ ambient, enterT }: ShapeProps) {
 
 function Network({ ambient, enterT }: ShapeProps) {
   const nodes = [
-    [120, 100], [300, 80], [480, 120],
-    [150, 260], [320, 280], [490, 250],
+    [120, 100],
+    [300, 80],
+    [480, 120],
+    [150, 260],
+    [320, 280],
+    [490, 250],
   ];
   return (
     <g>
@@ -168,16 +200,31 @@ function Network({ ambient, enterT }: ShapeProps) {
         const phase = (ambient + i / nodes.length) % 1;
         const r = 8 + Math.sin(phase * Math.PI * 2) * 2;
         return (
-          <circle key={i} cx={x} cy={y} r={r}
-            fill={accent} opacity={enterT * (0.6 + 0.4 * Math.sin(phase * Math.PI * 2))} />
+          <circle
+            key={i}
+            cx={x}
+            cy={y}
+            r={r}
+            fill={accent}
+            opacity={enterT * (0.6 + 0.4 * Math.sin(phase * Math.PI * 2))}
+          />
         );
       })}
       {nodes.map(([x1, y1], i) =>
-        nodes.slice(i + 1).map(([x2, y2], j) => (
-          <line key={`${i}-${j}`} x1={x1} y1={y1} x2={x2} y2={y2}
-            stroke={dim} strokeWidth={1}
-            opacity={enterT * 0.4} />
-        )),
+        nodes
+          .slice(i + 1)
+          .map(([x2, y2], j) => (
+            <line
+              key={`${i}-${j}`}
+              x1={x1}
+              y1={y1}
+              x2={x2}
+              y2={y2}
+              stroke={dim}
+              strokeWidth={1}
+              opacity={enterT * 0.4}
+            />
+          )),
       )}
     </g>
   );
@@ -193,23 +240,48 @@ function Flow({ ambient, enterT }: ShapeProps) {
     <g>
       {boxes.map(([x, y, label], i) => (
         <g key={i} transform={`translate(${x}, ${y})`}>
-          <rect width={120} height={80} rx={8}
-            fill={bg} stroke={accent} strokeWidth={2}
-            transform={`scale(${enterT})`} />
-          <text x={60} y={50}
-            fill={accent} fontFamily="sans-serif" fontSize={24}
+          <rect
+            width={120}
+            height={80}
+            rx={8}
+            fill={bg}
+            stroke={accent}
+            strokeWidth={2}
+            transform={`scale(${enterT})`}
+          />
+          <text
+            x={60}
+            y={50}
+            fill={accent}
+            fontFamily="sans-serif"
+            fontSize={24}
             textAnchor="middle"
-            opacity={enterT}>
+            opacity={enterT}
+          >
             {label}
           </text>
         </g>
       ))}
-      <line x1={180} y1={180} x2={280} y2={180}
-        stroke={accent} strokeWidth={2}
-        strokeDasharray={`${4 + ambient * 6} 4`} opacity={enterT} />
-      <line x1={400} y1={180} x2={500} y2={180}
-        stroke={accent} strokeWidth={2}
-        strokeDasharray={`${4 + (1 - ambient) * 6} 4`} opacity={enterT} />
+      <line
+        x1={180}
+        y1={180}
+        x2={280}
+        y2={180}
+        stroke={accent}
+        strokeWidth={2}
+        strokeDasharray={`${4 + ambient * 6} 4`}
+        opacity={enterT}
+      />
+      <line
+        x1={400}
+        y1={180}
+        x2={500}
+        y2={180}
+        stroke={accent}
+        strokeWidth={2}
+        strokeDasharray={`${4 + (1 - ambient) * 6} 4`}
+        opacity={enterT}
+      />
     </g>
   );
 }
@@ -217,21 +289,79 @@ function Flow({ ambient, enterT }: ShapeProps) {
 function Compare({ ambient, enterT }: ShapeProps) {
   return (
     <g>
-      <rect x={80} y={80} width={180} height={200} rx={12}
-        fill={bg} stroke={dim} strokeWidth={2}
-        transform={`scale(${enterT})`} />
-      <rect x={340} y={80} width={180} height={200} rx={12}
-        fill={bg} stroke={accent} strokeWidth={2}
-        transform={`scale(${enterT})`} />
-      <line x1={260} y1={180} x2={340} y2={180}
-        stroke={accent} strokeWidth={3}
-        opacity={enterT} />
-      <circle cx={170} cy={140} r={6 + ambient * 4} fill={dim} opacity={enterT} />
-      <circle cx={170} cy={180} r={6 + ambient * 4} fill={dim} opacity={enterT} />
-      <circle cx={170} cy={220} r={6 + ambient * 4} fill={dim} opacity={enterT} />
-      <circle cx={430} cy={140} r={6 + ambient * 4} fill={accent} opacity={enterT} />
-      <circle cx={430} cy={180} r={6 + ambient * 4} fill={accent} opacity={enterT} />
-      <circle cx={430} cy={220} r={6 + ambient * 4} fill={accent} opacity={enterT} />
+      <rect
+        x={80}
+        y={80}
+        width={180}
+        height={200}
+        rx={12}
+        fill={bg}
+        stroke={dim}
+        strokeWidth={2}
+        transform={`scale(${enterT})`}
+      />
+      <rect
+        x={340}
+        y={80}
+        width={180}
+        height={200}
+        rx={12}
+        fill={bg}
+        stroke={accent}
+        strokeWidth={2}
+        transform={`scale(${enterT})`}
+      />
+      <line
+        x1={260}
+        y1={180}
+        x2={340}
+        y2={180}
+        stroke={accent}
+        strokeWidth={3}
+        opacity={enterT}
+      />
+      <circle
+        cx={170}
+        cy={140}
+        r={6 + ambient * 4}
+        fill={dim}
+        opacity={enterT}
+      />
+      <circle
+        cx={170}
+        cy={180}
+        r={6 + ambient * 4}
+        fill={dim}
+        opacity={enterT}
+      />
+      <circle
+        cx={170}
+        cy={220}
+        r={6 + ambient * 4}
+        fill={dim}
+        opacity={enterT}
+      />
+      <circle
+        cx={430}
+        cy={140}
+        r={6 + ambient * 4}
+        fill={accent}
+        opacity={enterT}
+      />
+      <circle
+        cx={430}
+        cy={180}
+        r={6 + ambient * 4}
+        fill={accent}
+        opacity={enterT}
+      />
+      <circle
+        cx={430}
+        cy={220}
+        r={6 + ambient * 4}
+        fill={accent}
+        opacity={enterT}
+      />
     </g>
   );
 }
@@ -240,20 +370,44 @@ function Code({ ambient, enterT }: ShapeProps) {
   const lines = ["$ init app.ts", "> starting server", "> ready"];
   return (
     <g>
-      <rect x={60} y={60} width={480} height={240} rx={10}
-        fill="#0b1220" stroke={dim} strokeWidth={2}
-        opacity={enterT} />
+      <rect
+        x={60}
+        y={60}
+        width={480}
+        height={240}
+        rx={10}
+        fill="#0b1220"
+        stroke={dim}
+        strokeWidth={2}
+        opacity={enterT}
+      />
       {lines.map((text, i) => (
-        <text key={i} x={80} y={110 + i * 60}
-          fill={accent} fontFamily="monospace" fontSize={26}
-          opacity={enterT * (0.5 + 0.5 * Math.min(1, ambient * 2))}>
+        <text
+          key={i}
+          x={80}
+          y={110 + i * 60}
+          fill={accent}
+          fontFamily="monospace"
+          fontSize={26}
+          opacity={enterT * (0.5 + 0.5 * Math.min(1, ambient * 2))}
+        >
           {text}
         </text>
       ))}
-      <rect x={74} y={86 + ambient * 200} width={20} height={26}
-        fill={accent} opacity={enterT}>
-        <animate attributeName="opacity" values="1;0;1"
-          dur="1s" repeatCount="indefinite" />
+      <rect
+        x={74}
+        y={86 + ambient * 200}
+        width={20}
+        height={26}
+        fill={accent}
+        opacity={enterT}
+      >
+        <animate
+          attributeName="opacity"
+          values="1;0;1"
+          dur="1s"
+          repeatCount="indefinite"
+        />
       </rect>
     </g>
   );
@@ -263,14 +417,27 @@ function Timeline({ ambient, enterT }: ShapeProps) {
   const milestones = [120, 250, 380, 510];
   return (
     <g>
-      <line x1={80} y1={180} x2={520} y2={180}
-        stroke={dim} strokeWidth={3} opacity={enterT} />
+      <line
+        x1={80}
+        y1={180}
+        x2={520}
+        y2={180}
+        stroke={dim}
+        strokeWidth={3}
+        opacity={enterT}
+      />
       {milestones.map((x, i) => {
         const phase = (ambient + i / milestones.length) % 1;
         const r = 8 + Math.sin(phase * Math.PI * 2) * 4;
         return (
-          <circle key={i} cx={x} cy={180} r={r}
-            fill={accent} opacity={enterT} />
+          <circle
+            key={i}
+            cx={x}
+            cy={180}
+            r={r}
+            fill={accent}
+            opacity={enterT}
+          />
         );
       })}
     </g>
@@ -280,12 +447,26 @@ function Timeline({ ambient, enterT }: ShapeProps) {
 function Formula({ ambient, enterT }: ShapeProps) {
   return (
     <g>
-      <rect x={150} y={120} width={300} height={120} rx={12}
-        fill={bg} stroke={accent} strokeWidth={2}
-        transform={`scale(${0.9 + enterT * 0.1})`} />
-      <text x={300} y={195} textAnchor="middle"
-        fill={accent} fontFamily="serif" fontSize={56}
-        opacity={enterT}>
+      <rect
+        x={150}
+        y={120}
+        width={300}
+        height={120}
+        rx={12}
+        fill={bg}
+        stroke={accent}
+        strokeWidth={2}
+        transform={`scale(${0.9 + enterT * 0.1})`}
+      />
+      <text
+        x={300}
+        y={195}
+        textAnchor="middle"
+        fill={accent}
+        fontFamily="serif"
+        fontSize={56}
+        opacity={enterT}
+      >
         ∑ π(xᵢ)
       </text>
     </g>
@@ -306,23 +487,38 @@ function Abstract({ ambient, enterT }: ShapeProps) {
         const phase = (ambient + s.phase) % 1;
         const offset = Math.sin(phase * Math.PI * 2) * 12;
         return (
-          <circle key={i}
-            cx={s.cx + offset} cy={s.cy + offset / 2}
+          <circle
+            key={i}
+            cx={s.cx + offset}
+            cy={s.cy + offset / 2}
             r={s.r}
             fill="none"
             stroke={accent}
             strokeWidth={2}
-            opacity={enterT * (0.4 + 0.3 * Math.sin(phase * Math.PI * 2))} />
+            opacity={enterT * (0.4 + 0.3 * Math.sin(phase * Math.PI * 2))}
+          />
         );
       })}
-      <line x1={150} y1={120} x2={450} y2={250}
-        stroke={dim} strokeWidth={1}
+      <line
+        x1={150}
+        y1={120}
+        x2={450}
+        y2={250}
+        stroke={dim}
+        strokeWidth={1}
         strokeDasharray={`${4 + ambient * 8} 4`}
-        opacity={enterT * 0.5} />
-      <line x1={480} y1={100} x2={120} y2={280}
-        stroke={dim} strokeWidth={1}
+        opacity={enterT * 0.5}
+      />
+      <line
+        x1={480}
+        y1={100}
+        x2={120}
+        y2={280}
+        stroke={dim}
+        strokeWidth={1}
         strokeDasharray={`${4 + (1 - ambient) * 8} 4`}
-        opacity={enterT * 0.5} />
+        opacity={enterT * 0.5}
+      />
     </g>
   );
 }

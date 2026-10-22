@@ -85,8 +85,13 @@ describe("v0.4.2 component schemas", () => {
   });
 
   it("StatGrid requires stats but tolerates extra props", () => {
-    expect(validate("StatGrid", { stats: [{ value: "5x", label: "faster" }] }).success).toBe(true);
-    expect(validate("StatGrid", { stats: [{ value: "5x" }], note: "hi" }).success).toBe(true);
+    expect(
+      validate("StatGrid", { stats: [{ value: "5x", label: "faster" }] })
+        .success,
+    ).toBe(true);
+    expect(
+      validate("StatGrid", { stats: [{ value: "5x" }], note: "hi" }).success,
+    ).toBe(true);
     expect(validate("StatGrid", {}).success).toBe(false);
   });
 
@@ -99,12 +104,18 @@ describe("v0.4.2 component schemas", () => {
   });
 
   it("Leaderboard / Checklist / BigIdea / Pyramid / Venn / Cycle parse", () => {
-    expect(validate("Leaderboard", { entries: [{ name: "A" }] }).success).toBe(true);
-    expect(validate("Checklist", { items: [{ text: "a" }] }).success).toBe(true);
+    expect(validate("Leaderboard", { entries: [{ name: "A" }] }).success).toBe(
+      true,
+    );
+    expect(validate("Checklist", { items: [{ text: "a" }] }).success).toBe(
+      true,
+    );
     expect(validate("BigIdea", { text: "less is more" }).success).toBe(true);
     expect(validate("PyramidDiagram", { levels: ["a"] }).success).toBe(true);
     expect(validate("VennDiagram", { sets: ["a", "b"] }).success).toBe(true);
-    expect(validate("CycleDiagram", { stages: ["a", "b", "c"] }).success).toBe(true);
+    expect(validate("CycleDiagram", { stages: ["a", "b", "c"] }).success).toBe(
+      true,
+    );
   });
 });
 
@@ -135,8 +146,12 @@ describe("MapInsert props (CS-14 — the one component that is strict)", () => {
     // because a `label` would put text on a map that is supposed to be
     // geometry the renderer draws and the narrator names out loud.
     expect(validate({ label: "changan" }).success).toBe(false);
-    expect(validate({ routes: [{ d: "M0 0", name: "x" }] }).success).toBe(false);
-    expect(validate({ markers: [{ x: 1, y: 2, text: "x" }] }).success).toBe(false);
+    expect(validate({ routes: [{ d: "M0 0", name: "x" }] }).success).toBe(
+      false,
+    );
+    expect(validate({ markers: [{ x: 1, y: 2, text: "x" }] }).success).toBe(
+      false,
+    );
   });
 
   it("rejects malformed coordinates rather than rendering them", () => {

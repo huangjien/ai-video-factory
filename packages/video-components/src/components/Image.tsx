@@ -15,7 +15,12 @@ export interface ImageProps {
 /** Plain <img> for v0.1 (Remotion's <Img> uses hooks that require a
  * Composition context — unsuitable for SSR / static rendering tests).
  * Replace with <Img> + delayRender once we have network images in v0.2. */
-export const Image: FC<ImageProps> = ({ src, fit = "contain", frame, theme = darkTechTheme }) => (
+export const Image: FC<ImageProps> = ({
+  src,
+  fit = "contain",
+  frame,
+  theme = darkTechTheme,
+}) => (
   <AbsoluteFill
     style={{
       backgroundColor: theme.colors.background,

@@ -45,7 +45,6 @@ describe("runs + retry + resume (todo 12) — §62.1 / §62.2", () => {
     expect(list[0]?.tool_version).toBe("5.7.0");
   });
 
-
   it("lastSuccessfulStage returns the most recent succeeded stage", async () => {
     const root = tmpRoot();
     await writeRun(root, baseRecord({ stage: "compile", status: "succeeded" }));

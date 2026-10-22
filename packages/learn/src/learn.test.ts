@@ -81,9 +81,9 @@ describe("toLessonStatement", () => {
   });
 
   it("accepts a concrete statement and normalizes whitespace", () => {
-    expect(toLessonStatement("  scenes   4 and 9\ncame back   full of signage  ")).toBe(
-      "scenes 4 and 9 came back full of signage",
-    );
+    expect(
+      toLessonStatement("  scenes   4 and 9\ncame back   full of signage  "),
+    ).toBe("scenes 4 and 9 came back full of signage");
   });
 });
 
@@ -116,15 +116,23 @@ describe("mergeSession — the corroboration gate", () => {
   });
 
   it("a second sighting in another project activates it", () => {
-    const answer = { id: "image_text" as const, answer: "scene 4 carried fake signage" };
+    const answer = {
+      id: "image_text" as const,
+      answer: "scene 4 carried fake signage",
+    };
     const first = mergeSession(emptyLessonStore(), session([answer])).store;
     const second = mergeSession(
       first,
-      session([answer], { project: "p2", reviewedAt: "2026-10-18T10:00:00.000Z" }),
+      session([answer], {
+        project: "p2",
+        reviewedAt: "2026-10-18T10:00:00.000Z",
+      }),
     ).store;
     expect(second.lessons[0]?.seenCount).toBe(2);
     expect(isActiveLesson(second.lessons[0]!)).toBe(true);
-    expect(promptRules(second, "image-prompt")).toContain("scene 4 carried fake signage");
+    expect(promptRules(second, "image-prompt")).toContain(
+      "scene 4 carried fake signage",
+    );
     expect(promptRules(second, "image-prompt")).toContain("raised 2×");
   });
 
@@ -143,12 +151,12 @@ describe("mergeSession — the corroboration gate", () => {
   });
 
   it("tracks every project a lesson was seen in", () => {
-    const answer = { id: "topic_payoff" as const, answer: "lost the thread after scene six" };
+    const answer = {
+      id: "topic_payoff" as const,
+      answer: "lost the thread after scene six",
+    };
     let store = mergeSession(emptyLessonStore(), session([answer])).store;
-    store = mergeSession(
-      store,
-      session([answer], { project: "p2" }),
-    ).store;
+    store = mergeSession(store, session([answer], { project: "p2" })).store;
     expect(store.lessons[0]?.projects.sort()).toEqual(["p1", "p2"]);
   });
 
@@ -165,7 +173,9 @@ describe("mergeSession — the corroboration gate", () => {
   it("drops answers to questions this build does not know", () => {
     const { store, rejected } = mergeSession(
       emptyLessonStore(),
-      session([{ id: "colour_grading", answer: "everything looked washed out to me" }]),
+      session([
+        { id: "colour_grading", answer: "everything looked washed out to me" },
+      ]),
     );
     expect(store.lessons).toHaveLength(0);
     expect(rejected[0]?.id).toBe("colour_grading");
@@ -181,7 +191,10 @@ describe("persistence", () => {
     const { store } = mergeSession(
       emptyLessonStore(),
       session([
-        { id: "image_text", answer: "every editorial scene came back as a book page" },
+        {
+          id: "image_text",
+          answer: "every editorial scene came back as a book page",
+        },
       ]),
     );
     const file = saveLessonStore(root, store);
@@ -194,7 +207,10 @@ describe("persistence", () => {
     const sessionFile = writeReviewSession(
       projectRoot,
       session([
-        { id: "image_text", answer: "every editorial scene came back as a book page" },
+        {
+          id: "image_text",
+          answer: "every editorial scene came back as a book page",
+        },
       ]),
     );
     expect(readFileSync(sessionFile, "utf8")).toContain("learn-review/1");
@@ -204,7 +220,11 @@ describe("persistence", () => {
   it("degrades to no lessons when the hand-edited store is corrupt", () => {
     const root = mkdtempSync(path.join(tmpdir(), "learn-bad-"));
     mkdirSync(path.join(root, "learnings"), { recursive: true });
-    writeFileSync(path.join(root, "learnings", "lessons.yaml"), "{{{ not yaml", "utf8");
+    writeFileSync(
+      path.join(root, "learnings", "lessons.yaml"),
+      "{{{ not yaml",
+      "utf8",
+    );
     expect(loadLessonStore(root).lessons).toEqual([]);
   });
 
@@ -234,7 +254,9 @@ describe("proposal + status", () => {
   it("status explains the corroboration threshold", () => {
     const { store } = mergeSession(
       emptyLessonStore(),
-      session([{ id: "audio_balance", answer: "narration was too quiet throughout" }]),
+      session([
+        { id: "audio_balance", answer: "narration was too quiet throughout" },
+      ]),
     );
     const status = summarizeStore(store);
     expect(status.join("\n")).toContain("after 2 reviews");

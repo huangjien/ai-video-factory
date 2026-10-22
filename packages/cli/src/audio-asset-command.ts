@@ -144,39 +144,42 @@ export async function runAudioAsset(opts: AudioAssetOptions): Promise<number> {
 }
 
 export function registerAudioAsset(program: Command): void {
-program
-  .command("audio-asset")
-  .argument("<project>", "project: topic, folder name, path, or unique prefix")
-  .option("--cwd <dir>", "base directory for the project")
-  .option("--bgm <tag>", "BGM tag (mock provider) or filename (file-based)")
-  .option("--sfx <tag>", "SFX tag (mock provider) or filename (file-based)")
-  .option(
-    "--bgm-dir <dir>",
-    "BGM directory for the file-based provider (enables real-file lookup)",
-  )
-  .option(
-    "--sfx-dir <dir>",
-    "SFX directory for the file-based provider (enables real-file lookup)",
-  )
-  .action(
-    async (
-      project: string,
-      opts: {
-        cwd?: string;
-        bgm?: string;
-        sfx?: string;
-        bgmDir?: string;
-        sfxDir?: string;
+  program
+    .command("audio-asset")
+    .argument(
+      "<project>",
+      "project: topic, folder name, path, or unique prefix",
+    )
+    .option("--cwd <dir>", "base directory for the project")
+    .option("--bgm <tag>", "BGM tag (mock provider) or filename (file-based)")
+    .option("--sfx <tag>", "SFX tag (mock provider) or filename (file-based)")
+    .option(
+      "--bgm-dir <dir>",
+      "BGM directory for the file-based provider (enables real-file lookup)",
+    )
+    .option(
+      "--sfx-dir <dir>",
+      "SFX directory for the file-based provider (enables real-file lookup)",
+    )
+    .action(
+      async (
+        project: string,
+        opts: {
+          cwd?: string;
+          bgm?: string;
+          sfx?: string;
+          bgmDir?: string;
+          sfxDir?: string;
+        },
+      ) => {
+        process.exitCode = await runAudioAsset({
+          project,
+          ...(opts.cwd !== undefined ? { cwd: opts.cwd } : {}),
+          ...(opts.bgm !== undefined ? { bgmTag: opts.bgm } : {}),
+          ...(opts.sfx !== undefined ? { sfxTag: opts.sfx } : {}),
+          ...(opts.bgmDir !== undefined ? { bgmDir: opts.bgmDir } : {}),
+          ...(opts.sfxDir !== undefined ? { sfxDir: opts.sfxDir } : {}),
+        });
       },
-    ) => {
-      process.exitCode = await runAudioAsset({
-        project,
-        ...(opts.cwd !== undefined ? { cwd: opts.cwd } : {}),
-        ...(opts.bgm !== undefined ? { bgmTag: opts.bgm } : {}),
-        ...(opts.sfx !== undefined ? { sfxTag: opts.sfx } : {}),
-        ...(opts.bgmDir !== undefined ? { bgmDir: opts.bgmDir } : {}),
-        ...(opts.sfxDir !== undefined ? { sfxDir: opts.sfxDir } : {}),
-      });
-    },
-  );
+    );
 }

@@ -84,7 +84,11 @@ describe("BrandWatermark — the per-scene corner mark can be switched off (CS-0
 
   it("draws nothing when the watermark is off, even with an icon set", () => {
     const html = renderToStaticMarkup(
-      <BrandWatermark brand={brand({ watermark: false })} width={1920} height={1080} />,
+      <BrandWatermark
+        brand={brand({ watermark: false })}
+        width={1920}
+        height={1080}
+      />,
     );
     expect(html).toBe("");
   });

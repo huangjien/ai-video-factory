@@ -135,7 +135,9 @@ export function buildBgmTimelineArgs(
     let label = "[as0]";
     for (let i = 1; i < windows.length; i++) {
       const out = i === windows.length - 1 ? "[out]" : `[xf${i}]`;
-      chains.push(`${label}[as${i}]acrossfade=d=${xfd.toFixed(3)}:c1=tri:c2=tri${out}`);
+      chains.push(
+        `${label}[as${i}]acrossfade=d=${xfd.toFixed(3)}:c1=tri:c2=tri${out}`,
+      );
       label = out;
     }
   }

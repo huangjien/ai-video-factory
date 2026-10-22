@@ -19,6 +19,5 @@
   "scripts": {
     "build": "tsc -p tsconfig.json"
   },
-  "dependencies": {
-  }
+  "dependencies": {}
 }

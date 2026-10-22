@@ -38,8 +38,7 @@ function parseValue(raw: string): {
   };
 }
 
-const colsFor = (n: number): number =>
-  n <= 1 ? 1 : n === 3 || n > 4 ? 3 : 2;
+const colsFor = (n: number): number => (n <= 1 ? 1 : n === 3 || n > 4 ? 3 : 2);
 
 /** Big-number cards with a count-up entrance. The number interpolates
  *  from 0 to its final value as the card's progress completes, so the

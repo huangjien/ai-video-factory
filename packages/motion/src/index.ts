@@ -1,7 +1,4 @@
-export {
-  IartSkillAdapter,
-  type SkillGuidance,
-} from "./adapter.js";
+export { IartSkillAdapter, type SkillGuidance } from "./adapter.js";
 export {
   MOTION_SKILLS,
   buildMotionMessages,

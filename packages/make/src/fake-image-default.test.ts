@@ -79,7 +79,13 @@ describe("resolveImageProvider", () => {
   });
 
   it("honors an explicit provider, including under --fake", () => {
-    for (const explicit of ["minimax", "openai", "gemini", "mock", "none"] as const) {
+    for (const explicit of [
+      "minimax",
+      "openai",
+      "gemini",
+      "mock",
+      "none",
+    ] as const) {
       expect(resolveImageProvider(undefined, explicit)).toBe(explicit);
       expect(resolveImageProvider(true, explicit)).toBe(explicit);
     }
@@ -110,8 +116,10 @@ interface SceneYaml {
 }
 
 function readStoryboard(sbPath: string): SceneYaml[] {
-  return (parseYaml(readFileSync(sbPath, "utf8")) as { scenes?: SceneYaml[] })
-    .scenes ?? [];
+  return (
+    (parseYaml(readFileSync(sbPath, "utf8")) as { scenes?: SceneYaml[] })
+      .scenes ?? []
+  );
 }
 
 describe("generateSceneVisuals — provider none leaves scenes self-rendered", () => {
@@ -211,17 +219,14 @@ describe("generateSceneVisuals — provider none leaves scenes self-rendered", (
 
     await generateSceneVisuals(projectRoot, article, { provider: "mock" });
 
-    expect(
-      readStoryboard(sbPath)[2]?.visual?.props?.["kenBurnsScale"],
-    ).toBe(0);
+    expect(readStoryboard(sbPath)[2]?.visual?.props?.["kenBurnsScale"]).toBe(0);
   });
 
   it("leaves the key absent when no motion prop was ever set", async () => {
     await generateSceneVisuals(projectRoot, article, { provider: "mock" });
 
-    expect(
-      readStoryboard(sbPath)[2]?.visual?.props,
-    ).not.toHaveProperty("kenBurnsScale");
+    expect(readStoryboard(sbPath)[2]?.visual?.props).not.toHaveProperty(
+      "kenBurnsScale",
+    );
   });
-
 });

@@ -100,7 +100,12 @@ describe("planSceneMotion — deterministic motion planning (T4.1)", () => {
 
   it("throws on non-positive duration", () => {
     expect(() =>
-      planSceneMotion({ sceneId: "s", durationSec: 0, index: 0, component: "Title" }),
+      planSceneMotion({
+        sceneId: "s",
+        durationSec: 0,
+        index: 0,
+        component: "Title",
+      }),
     ).toThrow(/non-positive/);
   });
 });
@@ -220,7 +225,9 @@ describe("planSceneMotion — still-first channel (CS-09)", () => {
     expect(plain.animations.length).toBeGreaterThan(0);
     // Absent, not zero: absence preserves each component's own default.
     expect(plain.kenBurnsScale).toBeUndefined();
-    expect(planSceneMotion({ ...base, channelProfile: "some-other-channel" }).kenBurnsScale)
-      .toBeUndefined();
+    expect(
+      planSceneMotion({ ...base, channelProfile: "some-other-channel" })
+        .kenBurnsScale,
+    ).toBeUndefined();
   });
 });

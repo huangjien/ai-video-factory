@@ -23,16 +23,17 @@ if (!projectArg) {
   process.exit(1);
 }
 const privacyStatus = (privacyArg ?? "private") as
-  | "private"
-  | "unlisted"
-  | "public";
+  "private" | "unlisted" | "public";
 
 const repoRoot = path.resolve(import.meta.dirname, "..");
 const projectRoot = path.join(repoRoot, "projects", projectArg);
 
 const secretPath =
   process.env["YOUTUBE_CLIENT_SECRET_FILE"] ??
-  path.join(process.env["HOME"] ?? "", ".config/secrets/client_secret_youtube.json");
+  path.join(
+    process.env["HOME"] ?? "",
+    ".config/secrets/client_secret_youtube.json",
+  );
 const { clientId, clientSecret } = parseClientSecret(
   await readFile(secretPath, "utf8"),
 );

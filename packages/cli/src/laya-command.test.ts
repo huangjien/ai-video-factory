@@ -101,8 +101,8 @@ describe("runLayaEval", () => {
       });
     }
     const rows = [
-      rec({}),                                       // motion agree
-      rec({ surface: "visual", agreed: true }),      // visual agree
+      rec({}), // motion agree
+      rec({ surface: "visual", agreed: true }), // visual agree
       rec({ ts: "2026-10-17T10:02:00.000Z", surface: "visual", agreed: false }),
       rec({ ts: "2026-10-17T10:03:00.000Z", surface: "visual", agreed: false }),
       rec({ ts: "2026-10-17T10:04:00.000Z", surface: "visual", agreed: false }),

@@ -128,10 +128,7 @@ export const DEFAULT_MIN_SCORE = 90;
 
 /** Total possible — sum of dimension weights, used by the engine only
  *  for the percentage form. */
-export const MAX_POSSIBLE_SCORE = PROFILE.reduce(
-  (sum, d) => sum + d.weight,
-  0,
-); // 100
+export const MAX_POSSIBLE_SCORE = PROFILE.reduce((sum, d) => sum + d.weight, 0); // 100
 
 // ---------------------------------------------------------------------------
 // 2. Severity / grading helpers — pure functions, no LLM.
@@ -192,9 +189,9 @@ export function gradeFor(score: number): "A" | "B" | "C" | "D" | "F" {
 const zIndicator = z.object({
   id: z.string(),
   /** 0-5 integer. The model may emit floats; we round. Clamp on out-of-range. */
-  score: z.coerce.number().transform((n) =>
-    Math.min(5, Math.max(0, Math.round(n))),
-  ),
+  score: z.coerce
+    .number()
+    .transform((n) => Math.min(5, Math.max(0, Math.round(n)))),
   reason: z.string().default(""),
 });
 
@@ -354,8 +351,7 @@ export function computeScore(raw: ArticleScoreRaw): ComputedScore {
   // (a dropped dimension drops its slice from the numerator AND the
   // denominator — but here we always run all 8 dims, so the rare case
   // where the LLM skips one still reads as a coverage gap).
-  const normDenom =
-    assessed_weight > 0 ? assessed_weight : applicable_weight;
+  const normDenom = assessed_weight > 0 ? assessed_weight : applicable_weight;
   const overall = normDenom > 0 ? (weighted_total * 100) / normDenom : 0;
 
   return {
@@ -509,12 +505,14 @@ export function buildArticleReviewMessages(
         task.durationSec
           ? `- target duration: ${task.durationSec} seconds`
           : null,
-        task.constraints ? `- additional constraints: ${task.constraints}` : null,
+        task.constraints
+          ? `- additional constraints: ${task.constraints}`
+          : null,
         "",
         "Score dimension H against THIS task. If a field is absent, judge only what is present and mark the rest `not_assessed`.",
       ]
-          .filter((l) => l !== null)
-          .join("\n")
+        .filter((l) => l !== null)
+        .join("\n")
     : "## Commissioned task\n\n(unknown — the judge was not given the task. Mark H1-H3 `not_assessed`; do not assume a requirement you cannot see.)";
 
   return [
@@ -591,10 +589,7 @@ export async function scoreArticle(
 
   // Evidence review (pass 4 in the prompt's procedure) — drop
   // findings whose quote doesn't actually appear in the article.
-  const { kept, dropped } = dropHallucinatedQuotes(
-    rawScore.findings,
-    markdown,
-  );
+  const { kept, dropped } = dropHallucinatedQuotes(rawScore.findings, markdown);
   const findings = kept;
   const riskFlags = rawScore.risk_flags.filter(
     (rf) =>
@@ -686,7 +681,9 @@ function feedbackBlock(prev: ScoredAttempt, minScore: number): string {
       for (const f of majors.slice(0, 5)) {
         lines.push(
           `- [${f.severity}] ${f.code} — ${f.description}${
-            f.location.quote ? ` (evidence: "${f.location.quote.slice(0, 80)}…")` : ""
+            f.location.quote
+              ? ` (evidence: "${f.location.quote.slice(0, 80)}…")`
+              : ""
           }`,
         );
       }
@@ -825,7 +822,11 @@ export function renderArticleReviewYaml(
       `final_coverage: ${result.score.computed.coverage}`,
     );
   } else {
-    lines.push(`final_overall: null`, `final_grade: null`, `final_coverage: null`);
+    lines.push(
+      `final_overall: null`,
+      `final_grade: null`,
+      `final_coverage: null`,
+    );
   }
   lines.push(`attempts:`);
   for (const a of result.attempts) {
@@ -885,9 +886,7 @@ export function renderArticleReviewYaml(
           );
         }
       }
-      lines.push(
-        `    comment: ${esc(a.score.comment)}`,
-      );
+      lines.push(`    comment: ${esc(a.score.comment)}`);
       if (a.score.suggestions.length > 0) {
         lines.push(`    suggestions:`);
         for (const s of a.score.suggestions) lines.push(`      - ${esc(s)}`);

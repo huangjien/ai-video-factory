@@ -184,7 +184,11 @@ export async function checkCaptions(
       fix: "Run `video make` or `video audio` to write captions from the synced storyboard.",
     });
     return {
-      checks: { file: null, cues: 0, ok: !findings.some((f) => f.level === "error") },
+      checks: {
+        file: null,
+        cues: 0,
+        ok: !findings.some((f) => f.level === "error"),
+      },
       findings,
     };
   }
@@ -227,7 +231,11 @@ export async function checkCaptions(
   }
 
   return {
-    checks: { file, cues: cues.length, ok: !findings.some((f) => f.level === "error") },
+    checks: {
+      file,
+      cues: cues.length,
+      ok: !findings.some((f) => f.level === "error"),
+    },
     findings,
   };
 }
@@ -262,8 +270,8 @@ export async function checkSceneBoundaries(
       "null",
       "-",
     ]);
-    detected = [...res.stderr.matchAll(/pts_time:([\d.]+)/g)].map((m) =>
-      Math.round(Number.parseFloat(m[1]!) * 100) / 100,
+    detected = [...res.stderr.matchAll(/pts_time:([\d.]+)/g)].map(
+      (m) => Math.round(Number.parseFloat(m[1]!) * 100) / 100,
     );
   } catch (err) {
     return {

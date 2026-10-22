@@ -47,16 +47,11 @@ scenes:
 
   const writeInputs = async (n2: string) => {
     await writeFile(path.join(dir, "article.md"), articleOf(n2), "utf8");
-    await writeFile(
-      path.join(dir, "audio-config.yaml"),
-      audioConfig,
-      "utf8",
-    );
+    await writeFile(path.join(dir, "audio-config.yaml"), audioConfig, "utf8");
   };
 
   const wavs = async () =>
-    (await readFile(path.join(dir, "assets", "audio", "scene_2.wav")))
-      .length;
+    (await readFile(path.join(dir, "assets", "audio", "scene_2.wav"))).length;
 
   beforeAll(async () => {
     dir = await mkdtemp(path.join(tmpdir(), "vf-tts-cache-"));
@@ -79,7 +74,11 @@ scenes:
 
   it("skips unchanged narration (no re-synthesis despite step rerun)", async () => {
     await writeInputs("第二场最初的话。");
-    const report = await runMake({ projectRoot: dir, fake: true, dryRun: false });
+    const report = await runMake({
+      projectRoot: dir,
+      fake: true,
+      dryRun: false,
+    });
     const tts = report.steps.find((s) => s.name === "tts");
     // Rewriting article.md bumps its mtime, so the STEP may re-run — but
     // the per-scene cache must hold: zero WAVs re-synthesized.
@@ -88,7 +87,11 @@ scenes:
 
   it("re-synthesizes ONLY the scene whose narration changed", async () => {
     await writeInputs("第二场全新的话，和以前完全不同。");
-    const report = await runMake({ projectRoot: dir, fake: true, dryRun: false });
+    const report = await runMake({
+      projectRoot: dir,
+      fake: true,
+      dryRun: false,
+    });
     const tts = report.steps.find((s) => s.name === "tts");
     expect(tts?.status).toBe("ran");
     expect(tts?.outputs).toEqual(["assets/audio/scene_2.wav"]);
@@ -97,7 +100,11 @@ scenes:
 
   it("re-synthesizes a legacy WAV that has no sidecar", async () => {
     await rm(path.join(dir, "assets", "audio", "scene_2.wav.json"));
-    const report = await runMake({ projectRoot: dir, fake: true, dryRun: false });
+    const report = await runMake({
+      projectRoot: dir,
+      fake: true,
+      dryRun: false,
+    });
     const tts = report.steps.find((s) => s.name === "tts");
     expect(tts?.outputs).toContain("assets/audio/scene_2.wav");
   });
@@ -115,7 +122,13 @@ describe("ttsCacheKey — provider + language namespacing", () => {
     // output for identical inputs, and the key could not otherwise see
     // that. The pin moves with it.
     expect(
-      ttsCacheKey("第一场的话。", "zh-CN-YunjianNeural", undefined, "edge", "zh-CN"),
+      ttsCacheKey(
+        "第一场的话。",
+        "zh-CN-YunjianNeural",
+        undefined,
+        "edge",
+        "zh-CN",
+      ),
     ).toBe(
       "sha256:f777874af3eceaf8fbe37d91623e95807fee37109ea04f2a3bf06a309e3b9770",
     );

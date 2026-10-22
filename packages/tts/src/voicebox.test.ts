@@ -16,7 +16,10 @@ function makeFetch(
     path: string;
     reply: () => Response;
   }>,
-): { fetch: typeof globalThis.fetch; requests: Array<{ method: string; path: string; body?: unknown }> } {
+): {
+  fetch: typeof globalThis.fetch;
+  requests: Array<{ method: string; path: string; body?: unknown }>;
+} {
   const requests: Array<{ method: string; path: string; body?: unknown }> = [];
   const handle = async (
     input: string | URL,
@@ -46,7 +49,9 @@ const PROFILES = [
   { id: "b1230000-0000-0000-0000-000000000000", name: "narrator-en" },
 ];
 
-const WAV_MAGIC = new Uint8Array([0x52, 0x49, 0x46, 0x46, 1, 2, 3, 4, 5, 6, 7, 8]);
+const WAV_MAGIC = new Uint8Array([
+  0x52, 0x49, 0x46, 0x46, 1, 2, 3, 4, 5, 6, 7, 8,
+]);
 
 describe("VoiceboxTTSProvider", () => {
   it("resolves the profile by name, maps zh-CN→zh, polls history, returns WAV + duration", async () => {
@@ -83,7 +88,10 @@ describe("VoiceboxTTSProvider", () => {
       },
     ]);
 
-    const provider = new VoiceboxTTSProvider({ fetchImpl: fetch, pollIntervalMs: 1 });
+    const provider = new VoiceboxTTSProvider({
+      fetchImpl: fetch,
+      pollIntervalMs: 1,
+    });
     const result = await provider.synthesize({
       text: "第一场的话。",
       voice: "Narrator-ZH", // case-insensitive name resolution
@@ -94,7 +102,9 @@ describe("VoiceboxTTSProvider", () => {
     expect(result.durationMs).toBe(7657);
     expect(result.words).toEqual([]);
     expect(polls).toBe(2);
-    const generate = requests.find((r) => r.method === "POST" && r.path === "/generate");
+    const generate = requests.find(
+      (r) => r.method === "POST" && r.path === "/generate",
+    );
     expect(generate?.body).toMatchObject({
       profile_id: "a9913505-c711-4d68-95ec-ac6c0cc4f371",
       text: "第一场的话。",
@@ -104,7 +114,11 @@ describe("VoiceboxTTSProvider", () => {
 
   it("passes engine/model_size when configured", async () => {
     const { fetch, requests } = makeFetch([
-      { method: "GET", path: "/profiles", reply: () => new Response(JSON.stringify(PROFILES)) },
+      {
+        method: "GET",
+        path: "/profiles",
+        reply: () => new Response(JSON.stringify(PROFILES)),
+      },
       {
         method: "POST",
         path: "/generate",
@@ -113,9 +127,16 @@ describe("VoiceboxTTSProvider", () => {
       {
         method: "GET",
         path: "/history/gen-2",
-        reply: () => new Response(JSON.stringify({ id: "gen-2", status: "completed", duration: 1 })),
+        reply: () =>
+          new Response(
+            JSON.stringify({ id: "gen-2", status: "completed", duration: 1 }),
+          ),
       },
-      { method: "GET", path: "/audio/gen-2", reply: () => new Response(WAV_MAGIC) },
+      {
+        method: "GET",
+        path: "/audio/gen-2",
+        reply: () => new Response(WAV_MAGIC),
+      },
     ]);
     const provider = new VoiceboxTTSProvider({
       fetchImpl: fetch,
@@ -123,63 +144,121 @@ describe("VoiceboxTTSProvider", () => {
       modelSize: "0.6B",
       pollIntervalMs: 1,
     });
-    await provider.synthesize({ text: "x", voice: "narrator-en", language: "en-US" });
+    await provider.synthesize({
+      text: "x",
+      voice: "narrator-en",
+      language: "en-US",
+    });
     const generate = requests.find((r) => r.path === "/generate");
-    expect(generate?.body).toMatchObject({ engine: "qwen", model_size: "0.6B", language: "en" });
+    expect(generate?.body).toMatchObject({
+      engine: "qwen",
+      model_size: "0.6B",
+      language: "en",
+    });
   });
 
   it("throws TTSError carrying the server's error when the generation fails", async () => {
     const { fetch } = makeFetch([
-      { method: "GET", path: "/profiles", reply: () => new Response(JSON.stringify(PROFILES)) },
-      { method: "POST", path: "/generate", reply: () => new Response(JSON.stringify({ id: "gen-3" })) },
+      {
+        method: "GET",
+        path: "/profiles",
+        reply: () => new Response(JSON.stringify(PROFILES)),
+      },
+      {
+        method: "POST",
+        path: "/generate",
+        reply: () => new Response(JSON.stringify({ id: "gen-3" })),
+      },
       {
         method: "GET",
         path: "/history/gen-3",
         reply: () =>
           new Response(
-            JSON.stringify({ id: "gen-3", status: "failed", error: "model OOM" }),
+            JSON.stringify({
+              id: "gen-3",
+              status: "failed",
+              error: "model OOM",
+            }),
           ),
       },
     ]);
-    const provider = new VoiceboxTTSProvider({ fetchImpl: fetch, pollIntervalMs: 1 });
-    const promise = provider.synthesize({ text: "x", voice: "narrator-zh", language: "zh-CN" });
+    const provider = new VoiceboxTTSProvider({
+      fetchImpl: fetch,
+      pollIntervalMs: 1,
+    });
+    const promise = provider.synthesize({
+      text: "x",
+      voice: "narrator-zh",
+      language: "zh-CN",
+    });
     await expect(promise).rejects.toThrow(/model OOM/);
     await expect(promise).rejects.toBeInstanceOf(TTSError);
   });
 
   it("lists known profile names when the requested voice is unknown", async () => {
     const { fetch } = makeFetch([
-      { method: "GET", path: "/profiles", reply: () => new Response(JSON.stringify(PROFILES)) },
+      {
+        method: "GET",
+        path: "/profiles",
+        reply: () => new Response(JSON.stringify(PROFILES)),
+      },
     ]);
     const provider = new VoiceboxTTSProvider({ fetchImpl: fetch });
     await expect(
-      provider.synthesize({ text: "x", voice: "no-such-voice", language: "zh-CN" }),
+      provider.synthesize({
+        text: "x",
+        voice: "no-such-voice",
+        language: "zh-CN",
+      }),
     ).rejects.toThrow(/no-such-voice.*narrator-zh, narrator-en/s);
   });
 
   it("surfaces HTTP failures from /generate as TTSError with status", async () => {
     const { fetch } = makeFetch([
-      { method: "GET", path: "/profiles", reply: () => new Response(JSON.stringify(PROFILES)) },
+      {
+        method: "GET",
+        path: "/profiles",
+        reply: () => new Response(JSON.stringify(PROFILES)),
+      },
       {
         method: "POST",
         path: "/generate",
-        reply: () => new Response(JSON.stringify({ detail: "bad request" }), { status: 422 }),
+        reply: () =>
+          new Response(JSON.stringify({ detail: "bad request" }), {
+            status: 422,
+          }),
       },
     ]);
     const provider = new VoiceboxTTSProvider({ fetchImpl: fetch });
-    const promise = provider.synthesize({ text: "x", voice: "narrator-zh", language: "zh-CN" });
+    const promise = provider.synthesize({
+      text: "x",
+      voice: "narrator-zh",
+      language: "zh-CN",
+    });
     await expect(promise).rejects.toBeInstanceOf(TTSError);
-    await expect(promise).rejects.toMatchObject({ providerName: "voicebox", status: 422 });
+    await expect(promise).rejects.toMatchObject({
+      providerName: "voicebox",
+      status: 422,
+    });
   });
 
   it("times out when the job never completes", async () => {
     const { fetch } = makeFetch([
-      { method: "GET", path: "/profiles", reply: () => new Response(JSON.stringify(PROFILES)) },
-      { method: "POST", path: "/generate", reply: () => new Response(JSON.stringify({ id: "gen-4" })) },
+      {
+        method: "GET",
+        path: "/profiles",
+        reply: () => new Response(JSON.stringify(PROFILES)),
+      },
+      {
+        method: "POST",
+        path: "/generate",
+        reply: () => new Response(JSON.stringify({ id: "gen-4" })),
+      },
       {
         method: "GET",
         path: "/history/gen-4",
-        reply: () => new Response(JSON.stringify({ id: "gen-4", status: "generating" })),
+        reply: () =>
+          new Response(JSON.stringify({ id: "gen-4", status: "generating" })),
       },
     ]);
     const provider = new VoiceboxTTSProvider({
@@ -188,7 +267,11 @@ describe("VoiceboxTTSProvider", () => {
       timeoutMs: 50,
     });
     await expect(
-      provider.synthesize({ text: "x", voice: "narrator-zh", language: "zh-CN" }),
+      provider.synthesize({
+        text: "x",
+        voice: "narrator-zh",
+        language: "zh-CN",
+      }),
     ).rejects.toThrow(/did not finish within 50 ms|timed out before request/);
   });
 });
@@ -205,19 +288,32 @@ function makeSilentWav(seconds = 0.1, sampleRate = 8000): Uint8Array {
   const dataSize = numSamples * 2; // 16-bit mono
   const buf = Buffer.alloc(44 + dataSize);
   let o = 0;
-  buf.write("RIFF", o); o += 4;
-  buf.writeUInt32LE(36 + dataSize, o); o += 4;
-  buf.write("WAVE", o); o += 4;
-  buf.write("fmt ", o); o += 4;
-  buf.writeUInt32LE(16, o); o += 4;
-  buf.writeUInt16LE(1, o); o += 2; // PCM
-  buf.writeUInt16LE(1, o); o += 2; // mono
-  buf.writeUInt32LE(sampleRate, o); o += 4;
-  buf.writeUInt32LE(sampleRate * 2, o); o += 4; // byteRate
-  buf.writeUInt16LE(2, o); o += 2; // blockAlign
-  buf.writeUInt16LE(16, o); o += 2; // bitsPerSample
-  buf.write("data", o); o += 4;
-  buf.writeUInt32LE(dataSize, o); o += 4;
+  buf.write("RIFF", o);
+  o += 4;
+  buf.writeUInt32LE(36 + dataSize, o);
+  o += 4;
+  buf.write("WAVE", o);
+  o += 4;
+  buf.write("fmt ", o);
+  o += 4;
+  buf.writeUInt32LE(16, o);
+  o += 4;
+  buf.writeUInt16LE(1, o);
+  o += 2; // PCM
+  buf.writeUInt16LE(1, o);
+  o += 2; // mono
+  buf.writeUInt32LE(sampleRate, o);
+  o += 4;
+  buf.writeUInt32LE(sampleRate * 2, o);
+  o += 4; // byteRate
+  buf.writeUInt16LE(2, o);
+  o += 2; // blockAlign
+  buf.writeUInt16LE(16, o);
+  o += 2; // bitsPerSample
+  buf.write("data", o);
+  o += 4;
+  buf.writeUInt32LE(dataSize, o);
+  o += 4;
   // data is already zero (silent)
   return new Uint8Array(buf);
 }
@@ -392,9 +488,7 @@ describe("MINIMAX_SYSTEM_VOICE table", () => {
     expect(MINIMAX_SYSTEM_VOICE["zh-CN"]).toBe(
       "Chinese (Mandarin)_Male_Announcer",
     );
-    expect(MINIMAX_SYSTEM_VOICE["en-US"]).toBe(
-      "English_expressive_narrator",
-    );
+    expect(MINIMAX_SYSTEM_VOICE["en-US"]).toBe("English_expressive_narrator");
   });
 
   it("carries exactly the two shipped languages", () => {
@@ -453,12 +547,30 @@ describe("splitSentences (voicebox variant)", () => {
 describe("VoiceboxTTSProvider — additional surface", () => {
   it("resolves the profile by id (UUID) as well as by name", async () => {
     const { fetch } = makeFetch([
-      { method: "GET", path: "/profiles", reply: () => new Response(JSON.stringify(PROFILES)) },
-      { method: "POST", path: "/generate", reply: () => new Response(JSON.stringify({ id: "g" })) },
-      { method: "GET", path: "/history/g", reply: () => new Response(JSON.stringify({ id: "g", status: "completed", duration: 1 })) },
+      {
+        method: "GET",
+        path: "/profiles",
+        reply: () => new Response(JSON.stringify(PROFILES)),
+      },
+      {
+        method: "POST",
+        path: "/generate",
+        reply: () => new Response(JSON.stringify({ id: "g" })),
+      },
+      {
+        method: "GET",
+        path: "/history/g",
+        reply: () =>
+          new Response(
+            JSON.stringify({ id: "g", status: "completed", duration: 1 }),
+          ),
+      },
       { method: "GET", path: "/audio/g", reply: () => new Response(WAV_MAGIC) },
     ]);
-    const provider = new VoiceboxTTSProvider({ fetchImpl: fetch, pollIntervalMs: 1 });
+    const provider = new VoiceboxTTSProvider({
+      fetchImpl: fetch,
+      pollIntervalMs: 1,
+    });
     await provider.synthesize({
       text: "x",
       voice: "a9913505-c711-4d68-95ec-ac6c0cc4f371",
@@ -504,20 +616,47 @@ describe("VoiceboxTTSProvider — additional surface", () => {
 
   it("throws TTSError when /generate returns a non-JSON body", async () => {
     const { fetch } = makeFetch([
-      { method: "GET", path: "/profiles", reply: () => new Response(JSON.stringify(PROFILES)) },
-      { method: "POST", path: "/generate", reply: () => new Response("not json at all") },
+      {
+        method: "GET",
+        path: "/profiles",
+        reply: () => new Response(JSON.stringify(PROFILES)),
+      },
+      {
+        method: "POST",
+        path: "/generate",
+        reply: () => new Response("not json at all"),
+      },
     ]);
     const provider = new VoiceboxTTSProvider({ fetchImpl: fetch });
     await expect(
-      provider.synthesize({ text: "x", voice: "narrator-zh", language: "zh-CN" }),
+      provider.synthesize({
+        text: "x",
+        voice: "narrator-zh",
+        language: "zh-CN",
+      }),
     ).rejects.toBeInstanceOf(TTSError);
   });
 
   it("speed = 1 is a no-op (the returned audio is the unchanged synthesize result)", async () => {
     const { fetch } = makeFetch([
-      { method: "GET", path: "/profiles", reply: () => new Response(JSON.stringify(PROFILES)) },
-      { method: "POST", path: "/generate", reply: () => new Response(JSON.stringify({ id: "g" })) },
-      { method: "GET", path: "/history/g", reply: () => new Response(JSON.stringify({ id: "g", status: "completed", duration: 1 })) },
+      {
+        method: "GET",
+        path: "/profiles",
+        reply: () => new Response(JSON.stringify(PROFILES)),
+      },
+      {
+        method: "POST",
+        path: "/generate",
+        reply: () => new Response(JSON.stringify({ id: "g" })),
+      },
+      {
+        method: "GET",
+        path: "/history/g",
+        reply: () =>
+          new Response(
+            JSON.stringify({ id: "g", status: "completed", duration: 1 }),
+          ),
+      },
       { method: "GET", path: "/audio/g", reply: () => new Response(WAV_MAGIC) },
     ]);
     const provider = new VoiceboxTTSProvider({
@@ -537,19 +676,26 @@ describe("VoiceboxTTSProvider — additional surface", () => {
     const wav = makeSilentWav(0.1);
     let counter = 0;
     const { fetch, requests } = makeFetch([
-      { method: "GET", path: "/profiles", reply: () => new Response(JSON.stringify(PROFILES)) },
+      {
+        method: "GET",
+        path: "/profiles",
+        reply: () => new Response(JSON.stringify(PROFILES)),
+      },
       {
         method: "POST",
         path: "/generate",
-        reply: () =>
-          new Response(JSON.stringify({ id: `gen-${++counter}` })),
+        reply: () => new Response(JSON.stringify({ id: `gen-${++counter}` })),
       },
       ...[1, 2, 3].map((i) => ({
         method: "GET",
         path: `/history/gen-${i}`,
         reply: () =>
           new Response(
-            JSON.stringify({ id: `gen-${i}`, status: "completed", duration: 0.1 }),
+            JSON.stringify({
+              id: `gen-${i}`,
+              status: "completed",
+              duration: 0.1,
+            }),
           ),
       })),
       ...[1, 2, 3].map((i) => ({

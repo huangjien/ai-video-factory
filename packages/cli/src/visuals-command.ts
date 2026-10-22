@@ -105,7 +105,9 @@ export async function runVisualsCli(opts: VisualsOptions): Promise<number> {
     ...(opts.pythonBin !== undefined ? { pythonBin: opts.pythonBin } : {}),
   });
   if (sheet.ok) {
-    console.log(`✓ contact sheet: ${path.relative(projectRoot, sheet.outPath)}`);
+    console.log(
+      `✓ contact sheet: ${path.relative(projectRoot, sheet.outPath)}`,
+    );
   } else {
     console.error(`! contact sheet failed: ${sheet.error}`);
   }
@@ -176,7 +178,9 @@ export function registerVisuals(program: Command): void {
       (v) => {
         const n = parseInt(v, 10);
         if (!Number.isInteger(n) || n < 1) {
-          throw new Error(`--reject must be a positive scene number, got: ${v}`);
+          throw new Error(
+            `--reject must be a positive scene number, got: ${v}`,
+          );
         }
         return n;
       },
@@ -185,24 +189,29 @@ export function registerVisuals(program: Command): void {
     .option("--cols <n>", "contact sheet columns (default 4)", (v) =>
       parseInt(v, 10),
     )
-    .action(async (project: string, opts: {
-      cwd?: string;
-      imageProvider?: "minimax" | "openai" | "gemini" | "mock" | "none";
-      fake?: boolean;
-      reject?: number;
-      reason?: string;
-      cols?: number;
-    }) => {
-      process.exitCode = await runVisualsCli({
-        project,
-        ...(opts.cwd !== undefined ? { cwd: opts.cwd } : {}),
-        ...(opts.imageProvider !== undefined
-          ? { imageProvider: opts.imageProvider }
-          : {}),
-        ...(opts.fake !== undefined ? { fake: opts.fake } : {}),
-        ...(opts.reject !== undefined ? { rejectScene: opts.reject } : {}),
-        ...(opts.reason !== undefined ? { reason: opts.reason } : {}),
-        ...(opts.cols !== undefined ? { cols: opts.cols } : {}),
-      });
-    });
+    .action(
+      async (
+        project: string,
+        opts: {
+          cwd?: string;
+          imageProvider?: "minimax" | "openai" | "gemini" | "mock" | "none";
+          fake?: boolean;
+          reject?: number;
+          reason?: string;
+          cols?: number;
+        },
+      ) => {
+        process.exitCode = await runVisualsCli({
+          project,
+          ...(opts.cwd !== undefined ? { cwd: opts.cwd } : {}),
+          ...(opts.imageProvider !== undefined
+            ? { imageProvider: opts.imageProvider }
+            : {}),
+          ...(opts.fake !== undefined ? { fake: opts.fake } : {}),
+          ...(opts.reject !== undefined ? { rejectScene: opts.reject } : {}),
+          ...(opts.reason !== undefined ? { reason: opts.reason } : {}),
+          ...(opts.cols !== undefined ? { cols: opts.cols } : {}),
+        });
+      },
+    );
 }

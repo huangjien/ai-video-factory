@@ -47,12 +47,18 @@ describe("prepareStudioWorkspace (T0.3)", () => {
     workspaceParent = mkdtempSync(path.join(tmpdir(), "video-studio-"));
     const workspaceDir = path.join(workspaceParent, "studio", "fixture");
     const projectRoot = path.join(workspaceParent, "projects", "fixture");
-    const ws = await prepareStudioWorkspace(projectRoot, samplePlan, workspaceDir);
+    const ws = await prepareStudioWorkspace(
+      projectRoot,
+      samplePlan,
+      workspaceDir,
+    );
 
     // All four files a Remotion project needs.
     const entry = path.join(workspaceDir, "src", "index.tsx");
     expect(existsSync(entry)).toBe(true);
-    expect(existsSync(path.join(workspaceDir, "remotion.config.ts"))).toBe(true);
+    expect(existsSync(path.join(workspaceDir, "remotion.config.ts"))).toBe(
+      true,
+    );
     expect(existsSync(path.join(workspaceDir, "package.json"))).toBe(true);
     expect(existsSync(path.join(workspaceDir, "tsconfig.json"))).toBe(true);
 

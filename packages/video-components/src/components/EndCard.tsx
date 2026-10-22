@@ -13,7 +13,13 @@ export interface EndCardProps {
   frame: number;
 }
 
-export const EndCard: FC<EndCardProps> = ({ title, subtitle, cta, frame, theme = darkTechTheme }) => {
+export const EndCard: FC<EndCardProps> = ({
+  title,
+  subtitle,
+  cta,
+  frame,
+  theme = darkTechTheme,
+}) => {
   const opacity = fade(frame);
   const s = scale(frame, 0.92);
   return (

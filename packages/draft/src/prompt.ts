@@ -70,11 +70,7 @@ export function buildMessages(input: DraftInput): ChatMessage[] {
   return [
     {
       role: "system",
-      content: withChannelBlock(
-        SYSTEM_PROMPT,
-        input.channelProfile,
-        "draft",
-      ),
+      content: withChannelBlock(SYSTEM_PROMPT, input.channelProfile, "draft"),
     },
     { role: "user", content: userParts.join("\n") },
   ];

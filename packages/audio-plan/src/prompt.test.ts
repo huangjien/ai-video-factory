@@ -56,11 +56,12 @@ describe("audio-plan prompt", () => {
   });
 
   it("appends the revision block only when fromContent is given", () => {
-    const revise = buildMessages({
-      article: parseArticle(ARTICLE_MD),
-      language: "zh-CN",
-      fromContent: "voice: old\n",
-    })[1]?.content ?? "";
+    const revise =
+      buildMessages({
+        article: parseArticle(ARTICLE_MD),
+        language: "zh-CN",
+        fromContent: "voice: old\n",
+      })[1]?.content ?? "";
     expect(revise).toContain("Existing audio-config.yaml to revise");
     expect(revise).toContain("voice: old");
 

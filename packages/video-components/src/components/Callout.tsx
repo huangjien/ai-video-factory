@@ -13,58 +13,62 @@ export interface CalloutProps {
   frame: number;
 }
 
-const tintOf = (
-  theme: Theme,
-): Record<CalloutProps["kind"], string> => ({
+const tintOf = (theme: Theme): Record<CalloutProps["kind"], string> => ({
   info: theme.colors.accent,
   warning: theme.colors.warning,
   success: theme.colors.success,
 });
 
-export const Callout: FC<CalloutProps> = ({ kind, title, text, frame, theme = darkTechTheme }) => {
+export const Callout: FC<CalloutProps> = ({
+  kind,
+  title,
+  text,
+  frame,
+  theme = darkTechTheme,
+}) => {
   const TINT = tintOf(theme);
   return (
-  <AbsoluteFill
-    style={{
-      backgroundColor: theme.colors.background,
-      justifyContent: "center",
-      alignItems: "center",
-      opacity: fade(frame),
-    }}
-  >
-    <div
+    <AbsoluteFill
       style={{
-        width: 1500,
-        border: `2px solid ${TINT[kind]}`,
-        borderLeft: `12px solid ${TINT[kind]}`,
-        backgroundColor: theme.colors.surface,
-        borderRadius: 12,
-        padding: 32,
+        backgroundColor: theme.colors.background,
+        justifyContent: "center",
+        alignItems: "center",
+        opacity: fade(frame),
       }}
     >
-      {title !== undefined ? (
-        <h3
-          style={{
-            color: TINT[kind],
-            fontFamily: theme.typography.subtitle.fontFamily,
-            fontSize: 36,
-            margin: 0,
-          }}
-        >
-          {title}
-        </h3>
-      ) : null}
-      <p
+      <div
         style={{
-          color: theme.colors.primary,
-          fontSize: theme.typography.body.fontSize,
-          margin: 0,
-          lineHeight: 1.6,
+          width: 1500,
+          border: `2px solid ${TINT[kind]}`,
+          borderLeft: `12px solid ${TINT[kind]}`,
+          backgroundColor: theme.colors.surface,
+          borderRadius: 12,
+          padding: 32,
         }}
       >
-        {text}
-      </p>
-    </div>
-  </AbsoluteFill>
+        {title !== undefined ? (
+          <h3
+            style={{
+              color: TINT[kind],
+              fontFamily: theme.typography.subtitle.fontFamily,
+              fontSize: 36,
+              margin: 0,
+            }}
+          >
+            {title}
+          </h3>
+        ) : null}
+        <p
+          style={{
+            color: theme.colors.primary,
+            fontSize: theme.typography.body.fontSize,
+            margin: 0,
+            lineHeight: 1.6,
+          }}
+        >
+          {text}
+        </p>
+      </div>
+    </AbsoluteFill>
   );
 };

@@ -54,8 +54,7 @@ export class EdgeTTSProvider implements TTSProvider {
   async synthesize(req: TTSRequest): Promise<TTSResult> {
     const pauseSec = req.pauseBetweenSentencesSec ?? 0;
     // Fast path: no inter-sentence pause, or only one sentence.
-    const sentences =
-      pauseSec > 0 ? splitSentences(req.text) : [];
+    const sentences = pauseSec > 0 ? splitSentences(req.text) : [];
     if (pauseSec <= 0 || sentences.length <= 1) {
       return this.synthesizeOne(req.text, req.voice);
     }
@@ -67,10 +66,7 @@ export class EdgeTTSProvider implements TTSProvider {
     return await concatenateWithSilence(parts, pauseSec);
   }
 
-  private async synthesizeOne(
-    text: string,
-    voice: string,
-  ): Promise<TTSResult> {
+  private async synthesizeOne(text: string, voice: string): Promise<TTSResult> {
     const pythonDir = resolvePythonDir();
     if (!existsSync(path.join(pythonDir, "tts_worker.py"))) {
       throw new TTSError(
@@ -131,9 +127,9 @@ export class EdgeTTSProvider implements TTSProvider {
       const durationMs =
         words.length > 0
           ? (words[words.length - 1]?.endMs ?? 0)
-          : (parsed.durationMs && parsed.durationMs > 0
+          : parsed.durationMs && parsed.durationMs > 0
             ? parsed.durationMs
-            : estimateDurationMs(text, this.opts.charsPerSecond));
+            : estimateDurationMs(text, this.opts.charsPerSecond);
       return { audio, durationMs, words };
     } finally {
       await rm(tmp, { recursive: true, force: true }).catch(() => {});

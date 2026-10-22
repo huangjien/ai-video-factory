@@ -92,7 +92,10 @@ describe("FileBasedAudioAssetProvider (todo 2)", () => {
   // the audio/mpeg MIME type so the new library can flow through the
   // existing pipeline without a conversion step.
   it("picks mp3 BGM by exact tag match", async () => {
-    writeFileSync(path.join(bgmDir, "cheerful-moments-nekzlo.mp3"), Buffer.from([0xff, 0xfb]));
+    writeFileSync(
+      path.join(bgmDir, "cheerful-moments-nekzlo.mp3"),
+      Buffer.from([0xff, 0xfb]),
+    );
     const p = new FileBasedAudioAssetProvider({
       bgmDirectory: bgmDir,
       sfxDirectory: sfxDir,
@@ -103,7 +106,10 @@ describe("FileBasedAudioAssetProvider (todo 2)", () => {
   });
 
   it("picks m4a BGM when no .wav/.mp3 exists", async () => {
-    writeFileSync(path.join(bgmDir, "ambient-take-your-pick.m4a"), Buffer.from([0, 0, 0, 0]));
+    writeFileSync(
+      path.join(bgmDir, "ambient-take-your-pick.m4a"),
+      Buffer.from([0, 0, 0, 0]),
+    );
     const p = new FileBasedAudioAssetProvider({
       bgmDirectory: bgmDir,
       sfxDirectory: sfxDir,

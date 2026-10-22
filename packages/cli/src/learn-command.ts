@@ -106,7 +106,9 @@ export async function runLearn(opts: LearnOptions): Promise<number> {
     mkdirSync(path.dirname(out), { recursive: true });
     writeFileSync(out, skillUpdateProposal(store), "utf8");
     console.log(`✓ wrote ${path.relative(repoRoot, out)}`);
-    console.log("  NOT applied — read it, then fold what you agree with into a SKILL.md");
+    console.log(
+      "  NOT applied — read it, then fold what you agree with into a SKILL.md",
+    );
     return 0;
   }
 
@@ -157,7 +159,9 @@ export async function runLearn(opts: LearnOptions): Promise<number> {
         ? JSON.parse(text)
         : parseYaml(text);
     } catch (err) {
-      console.error(`could not read ${opts.answerFile}: ${(err as Error).message}`);
+      console.error(
+        `could not read ${opts.answerFile}: ${(err as Error).message}`,
+      );
       return 1;
     }
     // Fill the project/artifact from the CLI when the file omits them —
@@ -180,17 +184,26 @@ export async function runLearn(opts: LearnOptions): Promise<number> {
     }
     const session = result.data;
     const sessionFile = writeReviewSession(projectRoot, session);
-    const { store, rejected } = mergeSession(loadLessonStore(repoRoot), session);
+    const { store, rejected } = mergeSession(
+      loadLessonStore(repoRoot),
+      session,
+    );
     const storeFile = saveLessonStore(repoRoot, store);
-    console.log(`✓ recorded ${session.answers.length} answer(s) → ${sessionFile}`);
+    console.log(
+      `✓ recorded ${session.answers.length} answer(s) → ${sessionFile}`,
+    );
     console.log(`✓ merged into ${storeFile}`);
     console.log(`  ${store.lessons.length} lesson(s) in the store`);
     if (rejected.length > 0) {
-      console.log(`  ! ${rejected.length} answer(s) too vague to become lessons:`);
+      console.log(
+        `  ! ${rejected.length} answer(s) too vague to become lessons:`,
+      );
       for (const r of rejected) {
         console.log(`    ${r.id}: "${r.answer}"`);
       }
-      console.log("    rewrite them as an instruction, e.g. \"scenes 4 and 9 came back covered in fake signage\"");
+      console.log(
+        '    rewrite them as an instruction, e.g. "scenes 4 and 9 came back covered in fake signage"',
+      );
     }
     const active = store.lessons.filter(
       (l) => l.highConfidence || l.seenCount >= 2,
@@ -240,14 +253,23 @@ export function registerLearn(program: Command): void {
       "--ask",
       "emit the video-learn/1 question envelope as JSON and exit 2 (agent harness)",
     )
-    .option("--answer <file>", "record answers from a learn-review/1 file (yaml or json)")
-    .option("--artifact <path>", "reviewed artifact (default: output/final-mixed.mp4)")
+    .option(
+      "--answer <file>",
+      "record answers from a learn-review/1 file (yaml or json)",
+    )
+    .option(
+      "--artifact <path>",
+      "reviewed artifact (default: output/final-mixed.mp4)",
+    )
     .option("--status", "show what has been learned so far (no project needed)")
     .option(
       "--propose",
       "write learnings/skill-update-proposal.md — NOT applied, for a human to edit",
     )
-    .option("--out <file>", "where --propose writes (default: learnings/skill-update-proposal.md)")
+    .option(
+      "--out <file>",
+      "where --propose writes (default: learnings/skill-update-proposal.md)",
+    )
     .action(
       async (
         project: string | undefined,

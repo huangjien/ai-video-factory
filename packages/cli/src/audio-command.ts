@@ -216,26 +216,29 @@ function parseScriptSections(scriptText: string): string[] {
 }
 
 export function registerAudio(program: Command): void {
-program
-  .command("audio")
-  .argument("<project>", "project: topic, folder name, path, or unique prefix")
-  .option("--cwd <dir>", "base directory for the project")
-  .option("--fake", "use FakeTTSProvider (no network) for tests")
-  .option(
-    "--force",
-    "regenerate even when the project is FINAL_APPROVED (prints a warning)",
-  )
-  .action(
-    async (
-      project: string,
-      opts: { cwd?: string; fake?: boolean; force?: boolean },
-    ) => {
-      process.exitCode = await runAudio({
-        project,
-        ...(opts.cwd !== undefined ? { cwd: opts.cwd } : {}),
-        ...(opts.fake !== undefined ? { fake: opts.fake } : {}),
-        ...(opts.force !== undefined ? { force: opts.force } : {}),
-      });
-    },
-  );
+  program
+    .command("audio")
+    .argument(
+      "<project>",
+      "project: topic, folder name, path, or unique prefix",
+    )
+    .option("--cwd <dir>", "base directory for the project")
+    .option("--fake", "use FakeTTSProvider (no network) for tests")
+    .option(
+      "--force",
+      "regenerate even when the project is FINAL_APPROVED (prints a warning)",
+    )
+    .action(
+      async (
+        project: string,
+        opts: { cwd?: string; fake?: boolean; force?: boolean },
+      ) => {
+        process.exitCode = await runAudio({
+          project,
+          ...(opts.cwd !== undefined ? { cwd: opts.cwd } : {}),
+          ...(opts.fake !== undefined ? { fake: opts.fake } : {}),
+          ...(opts.force !== undefined ? { force: opts.force } : {}),
+        });
+      },
+    );
 }

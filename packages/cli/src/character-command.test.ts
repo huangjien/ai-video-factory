@@ -53,10 +53,10 @@ describe("video character — the review workflow (CS-13)", () => {
     const root = bibleWith(
       "  - style: gongbi\n    version: v1\n    status: candidate\n    file: refs/gongbi/v1.jpg\n",
     );
-    const code = await runCharacter(
-      ["approve", "testchar", "gongbi", "v1"],
-      { root, by: "huangjien" },
-    );
+    const code = await runCharacter(["approve", "testchar", "gongbi", "v1"], {
+      root,
+      by: "huangjien",
+    });
     expect(code).toBe(0);
     const profile = parseYaml(
       readFileSync(path.join(root, "testchar", "character.yaml"), "utf8"),
@@ -179,9 +179,7 @@ describe("video character — generating a reference sheet (CS-13)", () => {
     expect(profile.references[0]?.status).toBe("candidate");
     expect(profile.references[0]?.version).toBe("v1");
     expect(
-      existsSync(
-        path.join(root, "testchar", "refs", "gongbi", "v1.jpg"),
-      ),
+      existsSync(path.join(root, "testchar", "refs", "gongbi", "v1.jpg")),
     ).toBe(true);
   });
 
@@ -197,7 +195,10 @@ describe("video character — generating a reference sheet (CS-13)", () => {
     const profile = parseYaml(
       readFileSync(path.join(root, "testchar", "character.yaml"), "utf8"),
     ) as { references: { version: string }[] };
-    expect(profile.references.map((r) => r.version).sort()).toEqual(["v1", "v2"]);
+    expect(profile.references.map((r) => r.version).sort()).toEqual([
+      "v1",
+      "v2",
+    ]);
   });
 
   it("refuses an unknown art style", async () => {

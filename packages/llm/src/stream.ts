@@ -50,7 +50,8 @@ function usageFromChunk(payload: unknown): Usage | null {
   if (typeof usage !== "object" || usage === null) return null;
   const u = usage as { prompt_tokens?: unknown; completion_tokens?: unknown };
   const input = typeof u.prompt_tokens === "number" ? u.prompt_tokens : 0;
-  const output = typeof u.completion_tokens === "number" ? u.completion_tokens : 0;
+  const output =
+    typeof u.completion_tokens === "number" ? u.completion_tokens : 0;
   return { input, output };
 }
 

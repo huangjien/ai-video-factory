@@ -1,5 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 
@@ -23,7 +30,9 @@ beforeEach(() => {
   consoleErrors = [];
   callBilibili.mockReset();
   renderChecklist.mockReset();
-  renderChecklist.mockImplementation(() => "## manual upload\n1. open bilibili.com\n");
+  renderChecklist.mockImplementation(
+    () => "## manual upload\n1. open bilibili.com\n",
+  );
 });
 afterEach(() => {
   console.log = origLog;
@@ -46,8 +55,10 @@ function mkFixture() {
   fixtureRoot = mkdtempSync(path.join(tmpdir(), "video-bilibili-"));
   const proj = path.join(fixtureRoot, "projects", "demo");
   mkdirSync(proj, { recursive: true });
-  writeFileSync(path.join(proj, "article.md"),
-    "---\nproject: demo\nlanguage: zh-CN\nduration_target_sec: 60\nvoice: zh-CN-YunjianNeural\n---\n\n# From Prompt Engineer to Agent Engineer\n\n> **Hook** (≤20s): A Jenkins pipeline is red, and an agent now has to find the bug.\n\n## 1. The End of the Prompt Era\n\nText of section 1.\n\n## Scenes\n\n```yaml\nscenes:\n  - id: scene_1\n    duration: 30\n    caption: 段落 1\n    visual: 清单 (要点)\n    narration: |\n      这是第一段叙事。\n  - id: scene_2\n    duration: 30\n    caption: 段落 2\n    visual: 清单 (要点)\n    narration: |\n      这是第二段叙事。\n```\n");
+  writeFileSync(
+    path.join(proj, "article.md"),
+    "---\nproject: demo\nlanguage: zh-CN\nduration_target_sec: 60\nvoice: zh-CN-YunjianNeural\n---\n\n# From Prompt Engineer to Agent Engineer\n\n> **Hook** (≤20s): A Jenkins pipeline is red, and an agent now has to find the bug.\n\n## 1. The End of the Prompt Era\n\nText of section 1.\n\n## Scenes\n\n```yaml\nscenes:\n  - id: scene_1\n    duration: 30\n    caption: 段落 1\n    visual: 清单 (要点)\n    narration: |\n      这是第一段叙事。\n  - id: scene_2\n    duration: 30\n    caption: 段落 2\n    visual: 清单 (要点)\n    narration: |\n      这是第二段叙事。\n```\n",
+  );
   writeFileSync(path.join(proj, "state.yaml"), "status: DRAFT\n");
   return { root: fixtureRoot, proj };
 }
@@ -70,7 +81,9 @@ describe("runBilibili — argument validation", () => {
     captureConsole();
     const code = await runBilibili({ project: "no-such", cwd: root });
     expect(code).toBe(1);
-    expect(consoleErrors.join("\n")).toMatch(/no such project|not found|no project matching|video new/);
+    expect(consoleErrors.join("\n")).toMatch(
+      /no such project|not found|no project matching|video new/,
+    );
   });
 
   it("returns 1 when the project has no article.md", async () => {
@@ -95,7 +108,10 @@ describe("runBilibili — happy path", () => {
     expect(existsSync(path.join(bilibiliDir, "package.yaml"))).toBe(true);
     expect(existsSync(path.join(bilibiliDir, "cover-prompt.txt"))).toBe(true);
     expect(existsSync(path.join(bilibiliDir, "CHECKLIST.md"))).toBe(true);
-    const cover = readFileSync(path.join(bilibiliDir, "cover-prompt.txt"), "utf8");
+    const cover = readFileSync(
+      path.join(bilibiliDir, "cover-prompt.txt"),
+      "utf8",
+    );
     expect(cover).toBe(FAKE_RESULT.bilibili.cover_prompt + "\n");
   });
 
@@ -114,7 +130,8 @@ describe("runBilibili — happy path", () => {
     const { root, proj } = mkFixture();
     const ytDir = path.join(proj, "youtube");
     mkdirSync(ytDir, { recursive: true });
-    writeFileSync(path.join(ytDir, "package.yaml"),
+    writeFileSync(
+      path.join(ytDir, "package.yaml"),
       "title: x\ndescription: y\nthumbnail_prompt: a hero shot of a robot in a clean room\n",
     );
     callBilibili.mockImplementation(
@@ -136,8 +153,7 @@ describe("runBilibili — happy path", () => {
     captureConsole();
     await runBilibili({ project: "demo", cwd: root });
     const callArgs = callBilibili.mock.calls[0]?.[3] as
-      | { youtubeCoverPrompt?: string }
-      | undefined;
+      { youtubeCoverPrompt?: string } | undefined;
     expect(callArgs?.youtubeCoverPrompt).toMatch(/hero shot/);
   });
 

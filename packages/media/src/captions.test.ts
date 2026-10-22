@@ -80,7 +80,10 @@ describe("buildCaptionCues (CS-07)", () => {
   });
 
   it("gives longer cues proportionally more time", () => {
-    const cues = buildCaptionCues("短。".repeat(2) + "长".repeat(60) + "。", 30);
+    const cues = buildCaptionCues(
+      "短。".repeat(2) + "长".repeat(60) + "。",
+      30,
+    );
     const spans = cues.map((c) => c.endSec - c.startSec);
     expect(spans[spans.length - 1]!).toBeGreaterThan(spans[0]!);
   });

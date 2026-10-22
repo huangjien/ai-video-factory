@@ -21,7 +21,9 @@ const base = {
 
 describe("resolveChannelProfile", () => {
   it("resolves the registered profile", () => {
-    expect(resolveChannelProfile("chinese-storybook")).toBe("chinese-storybook");
+    expect(resolveChannelProfile("chinese-storybook")).toBe(
+      "chinese-storybook",
+    );
   });
 
   it("returns undefined for a typo, an unknown name, or nothing", () => {
@@ -107,8 +109,10 @@ describe("buildMessages (CS-03)", () => {
 
   it("leaves the user message untouched", () => {
     const off = buildMessages(base)[1]?.content;
-    const on = buildMessages({ ...base, channelProfile: "chinese-storybook" })[1]
-      ?.content;
+    const on = buildMessages({
+      ...base,
+      channelProfile: "chinese-storybook",
+    })[1]?.content;
     expect(on).toBe(off);
   });
 });
@@ -121,10 +125,8 @@ describe("buildArticleReviewMessages (CS-03)", () => {
   });
 
   it("adds the review criteria only when the profile is set", () => {
-    const on = buildArticleReviewMessages(
-      "# a",
-      "chinese-storybook",
-    )[0]?.content;
+    const on = buildArticleReviewMessages("# a", "chinese-storybook")[0]
+      ?.content;
     expect(on?.startsWith(ARTICLE_REVIEW_SYSTEM_PROMPT)).toBe(true);
     expect(on).toContain("channel profile");
   });

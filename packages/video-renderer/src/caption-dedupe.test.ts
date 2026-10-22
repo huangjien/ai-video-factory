@@ -20,9 +20,7 @@ import { captionWiring, sceneCaptionOwner } from "./Root.js";
 const IMAGE = "ImageBackground";
 const OTHER = "Callout";
 const CAPTIONS = {
-  cues: [
-    { lines: ["一段很长的旁白字幕"], startSec: 0, endSec: 1 },
-  ],
+  cues: [{ lines: ["一段很长的旁白字幕"], startSec: 0, endSec: 1 }],
 } as RenderPlanScene["captions"];
 
 describe("sceneCaptionOwner — the component's label beats the narration track", () => {

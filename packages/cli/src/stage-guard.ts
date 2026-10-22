@@ -1,8 +1,4 @@
-import {
-  loadCheckpoint,
-  readProjectState,
-  V01_STAGES,
-} from "@video/workflow";
+import { loadCheckpoint, readProjectState, V01_STAGES } from "@video/workflow";
 
 /** Human-approval guard for the content-generating verbs (doc §58: agents
  * draft, humans decide). A generator refuses to run when doing so would

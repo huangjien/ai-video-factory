@@ -151,7 +151,9 @@ export async function runFinal(
       return 1;
     }
     if (errors.length > 0 && force) {
-      console.warn(`[FORCE] rendering final despite ${errors.length} QA error(s)`);
+      console.warn(
+        `[FORCE] rendering final despite ${errors.length} QA error(s)`,
+      );
     }
   }
 
@@ -166,7 +168,9 @@ export async function runFinal(
     const { writeQaArtifacts: writeFinalQa } = await import("@video/qa");
     await writeFinalQa(root, renderPlan, out);
   } catch (err) {
-    console.error(`  QA refresh failed (final is still valid): ${(err as Error).message}`);
+    console.error(
+      `  QA refresh failed (final is still valid): ${(err as Error).message}`,
+    );
   }
 
   const runId = formatRunId("final");

@@ -140,4 +140,3 @@ function actionReason(action: Action): string {
   if (action.kind === "reset" && action.force) return "reset [forced]";
   return action.kind;
 }
-

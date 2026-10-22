@@ -30,7 +30,14 @@ const doodlePlan: RenderPlan = {
         background: "paper",
         seed: 7,
         strokes: [
-          { id: "sun", shape: "circle", x: 420, y: 200, size: 90, color: "#B8860B" },
+          {
+            id: "sun",
+            shape: "circle",
+            x: 420,
+            y: 200,
+            size: 90,
+            color: "#B8860B",
+          },
           { id: "ground", shape: "zigzag", x: 320, y: 280, size: 60 },
           { id: "spark", shape: "star", x: 200, y: 140, size: 70 },
         ],
@@ -52,9 +59,15 @@ describe("canvas renderer family (T4.4)", () => {
     const out = execFileSync(
       "ffprobe",
       [
-        "-v", "error", "-select_streams", "v:0",
-        "-show_entries", "stream=width,height,r_frame_rate,duration",
-        "-of", "json", mp4Path,
+        "-v",
+        "error",
+        "-select_streams",
+        "v:0",
+        "-show_entries",
+        "stream=width,height,r_frame_rate,duration",
+        "-of",
+        "json",
+        mp4Path,
       ],
       { encoding: "utf8" },
     );

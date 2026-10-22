@@ -25,7 +25,7 @@ export const Timeline: FC<TimelineProps> = ({
   const hasAnimations = Array.isArray(animations) && animations.length > 0;
   const sceneSec =
     durationInFrames > 0
-      ? frame * ((durationInFrames / 30) / durationInFrames)
+      ? frame * (durationInFrames / 30 / durationInFrames)
       : frame / 30;
   const maxRight = 1800;
   const margin = 60;
@@ -55,12 +55,7 @@ export const Timeline: FC<TimelineProps> = ({
             : scale(frame + i * 5, 0.5);
           return (
             <g key={i} opacity={eventProgress}>
-              <circle
-                cx={cx}
-                cy={540}
-                r={16 * s}
-                fill={theme.colors.accent}
-              />
+              <circle cx={cx} cy={540} r={16 * s} fill={theme.colors.accent} />
               <text
                 x={cx}
                 y={540 + 60}

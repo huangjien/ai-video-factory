@@ -38,11 +38,18 @@ describe("Todo 8 — components batch A (render at frame 0 and mid)", () => {
     // Each glyph is its own flex item, so a bare space collapsed to zero
     // width and every headline rendered as one run-on word.
     const html = renderToStaticMarkup(
-      <Title text="Seven Wrong Calls" startFrame={0} durationInFrames={60} frame={15} />,
+      <Title
+        text="Seven Wrong Calls"
+        startFrame={0}
+        durationInFrames={60}
+        frame={15}
+      />,
     );
     // The space glyph must be rendered with `white-space: pre` so it is not
     // collapsed away by the browser.
-    const spaceSpan = /<span style="[^"]*white-space:pre[^"]*"> <\/span>/.test(html);
+    const spaceSpan = /<span style="[^"]*white-space:pre[^"]*"> <\/span>/.test(
+      html,
+    );
     expect(spaceSpan).toBe(true);
   });
 

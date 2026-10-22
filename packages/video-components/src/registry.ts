@@ -8,7 +8,10 @@ import { Character } from "./components/Character.js";
 import { Checklist } from "./components/Checklist.js";
 import { CodeBlock } from "./components/CodeBlock.js";
 import { CycleDiagram } from "./components/CycleDiagram.js";
-import { DoodleScene, DoodleScenePropsSchema } from "./components/DoodleScene.js";
+import {
+  DoodleScene,
+  DoodleScenePropsSchema,
+} from "./components/DoodleScene.js";
 import { EndCard } from "./components/EndCard.js";
 import { FlowChart } from "./components/FlowChart.js";
 import { Image } from "./components/Image.js";
@@ -230,9 +233,7 @@ const leaderboardProps = z
 
 const checklistProps = z
   .object({
-    items: z
-      .array(z.object({ text: z.string().min(1) }).passthrough())
-      .min(1),
+    items: z.array(z.object({ text: z.string().min(1) }).passthrough()).min(1),
     title: z.string().optional(),
   })
   .passthrough();

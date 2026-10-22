@@ -71,9 +71,9 @@ describe("runMakeCli", () => {
     });
     expect(code).toBe(0);
     // Dry-run must not materialize any pipeline outputs.
-    expect(existsSync(path.join(projectsRoot, "projects", "mk-demo", "assets"))).toBe(
-      false,
-    );
+    expect(
+      existsSync(path.join(projectsRoot, "projects", "mk-demo", "assets")),
+    ).toBe(false);
     expect(
       existsSync(path.join(projectsRoot, "projects", "mk-demo", "captions")),
     ).toBe(false);

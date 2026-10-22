@@ -42,6 +42,7 @@ const AUDIO_CONFIG = "voice: zh-CN-YunjianNeural\nbgm: calm\n";
 const STEP_ORDER = [
   "sync-storyboard",
   "generate-visuals",
+  "text-overlay",
   "tts",
   "sync-durations",
   "captions",
@@ -81,10 +82,7 @@ describe("runMake — orchestration through injected process seams", () => {
   });
 
   it("runs all eight steps in pipeline order without spawning the CLI", async () => {
-    const report = await runMake(
-      { projectRoot: dir, fake: true },
-      fakeDeps,
-    );
+    const report = await runMake({ projectRoot: dir, fake: true }, fakeDeps);
     expect(report.steps.map((s) => s.name)).toEqual([...STEP_ORDER]);
     expect(report.steps.every((s) => s.status === "ran")).toBe(true);
     expect(calls).toEqual(["render", "mix"]);
@@ -106,10 +104,7 @@ describe("runMake — orchestration through injected process seams", () => {
         return [];
       },
     };
-    const report = await runMake(
-      { projectRoot: dir, fake: true },
-      boom,
-    );
+    const report = await runMake({ projectRoot: dir, fake: true }, boom);
     const render = report.steps.find((s) => s.name === "render-preview");
     expect(render?.status).toBe("fail");
     expect(render?.message).toContain("remotion exploded");

@@ -9,7 +9,16 @@ describe("timelineTiming (T19)", () => {
   it("lookupTiming returns null when target is absent", () => {
     expect(
       lookupTiming(
-        [{ id: "a", target: "y", type: "highlight", start: 0, duration: 1, easing: "easeOut" }],
+        [
+          {
+            id: "a",
+            target: "y",
+            type: "highlight",
+            start: 0,
+            duration: 1,
+            easing: "easeOut",
+          },
+        ],
         "x",
       ),
     ).toBeNull();
@@ -17,8 +26,22 @@ describe("timelineTiming (T19)", () => {
 
   it("lookupTiming returns the first matching animation for the target", () => {
     const a = [
-      { id: "a1", target: "x", type: "highlight", start: 0.5, duration: 1, easing: "easeOut" },
-      { id: "a2", target: "x", type: "draw", start: 0.5, duration: 2, easing: "easeOut" },
+      {
+        id: "a1",
+        target: "x",
+        type: "highlight",
+        start: 0.5,
+        duration: 1,
+        easing: "easeOut",
+      },
+      {
+        id: "a2",
+        target: "x",
+        type: "draw",
+        start: 0.5,
+        duration: 2,
+        easing: "easeOut",
+      },
     ];
     const t = lookupTiming(a, "x");
     expect(t).not.toBeNull();
@@ -30,7 +53,16 @@ describe("timelineTiming (T19)", () => {
   it("progressFor returns 0 before the animation start", () => {
     expect(
       progressFor(
-        [{ id: "a", target: "x", type: "highlight", start: 2, duration: 1, easing: "easeOut" }],
+        [
+          {
+            id: "a",
+            target: "x",
+            type: "highlight",
+            start: 2,
+            duration: 1,
+            easing: "easeOut",
+          },
+        ],
         "x",
         1,
       ),
@@ -40,7 +72,16 @@ describe("timelineTiming (T19)", () => {
   it("progressFor returns 1 at or past end of animation", () => {
     expect(
       progressFor(
-        [{ id: "a", target: "x", type: "highlight", start: 1, duration: 2, easing: "easeOut" }],
+        [
+          {
+            id: "a",
+            target: "x",
+            type: "highlight",
+            start: 1,
+            duration: 2,
+            easing: "easeOut",
+          },
+        ],
         "x",
         10,
       ),
@@ -49,7 +90,16 @@ describe("timelineTiming (T19)", () => {
 
   it("progressFor returns eased value during the animation", () => {
     const p = progressFor(
-      [{ id: "a", target: "x", type: "highlight", start: 0, duration: 1, easing: "easeOut" }],
+      [
+        {
+          id: "a",
+          target: "x",
+          type: "highlight",
+          start: 0,
+          duration: 1,
+          easing: "easeOut",
+        },
+      ],
       "x",
       0.5,
     );

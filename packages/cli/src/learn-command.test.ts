@@ -1,5 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { findRepoRoot, runLearn } from "./learn-command.js";
@@ -108,9 +115,15 @@ describe("runLearn — --answer", () => {
     const broken = path.join(proj, "review-broken.yaml");
     writeFileSync(broken, "this is: not: yaml: at: all: :: :");
     captureConsole();
-    const code = await runLearn({ project: "demo", cwd: root, answerFile: broken });
+    const code = await runLearn({
+      project: "demo",
+      cwd: root,
+      answerFile: broken,
+    });
     expect(code).toBe(1);
-    expect(consoleErrors.join("\n")).toMatch(/could not read|not a valid learn-review/);
+    expect(consoleErrors.join("\n")).toMatch(
+      /could not read|not a valid learn-review/,
+    );
   });
 
   it("rejects a file that is valid YAML but not a learn-review/1 session", async () => {
@@ -127,7 +140,11 @@ describe("runLearn — --answer", () => {
       ].join("\n") + "\n",
     );
     captureConsole();
-    const code = await runLearn({ project: "demo", cwd: root, answerFile: offShape });
+    const code = await runLearn({
+      project: "demo",
+      cwd: root,
+      answerFile: offShape,
+    });
     expect(code).toBe(1);
     expect(consoleErrors.join("\n")).toMatch(/not a valid learn-review/);
   });
@@ -149,14 +166,20 @@ describe("runLearn — --answer", () => {
       ].join("\n") + "\n",
     );
     captureConsole();
-    const code = await runLearn({ project: "demo", cwd: root, answerFile: valid });
+    const code = await runLearn({
+      project: "demo",
+      cwd: root,
+      answerFile: valid,
+    });
     expect(code).toBe(0);
     expect(consoleOutput.join("\n")).toMatch(/recorded 1 answer/);
     expect(consoleOutput.join("\n")).toMatch(/merged into/);
     // writeReviewSession drops a timestamped file under <projectRoot>/learnings/
     const learnings = path.join(proj, "learnings");
     const files = readdirSync(learnings);
-    expect(files.some((f) => f.startsWith("review-") && f.endsWith(".yaml"))).toBe(true);
+    expect(
+      files.some((f) => f.startsWith("review-") && f.endsWith(".yaml")),
+    ).toBe(true);
   });
 });
 

@@ -26,8 +26,12 @@ import { listPromptFiles, loadedPromptNames } from "@video/prompts";
 
 describe("prompt registry coverage", () => {
   it("every .md prompt file on disk is loaded by an import-time loader", () => {
-    const disk = listPromptFiles().filter((f) => f.endsWith(".md")).sort();
-    const loaded = loadedPromptNames().map((name) => `${name}.md`).sort();
+    const disk = listPromptFiles()
+      .filter((f) => f.endsWith(".md"))
+      .sort();
+    const loaded = loadedPromptNames()
+      .map((name) => `${name}.md`)
+      .sort();
     expect(loaded).toEqual(disk);
   });
 

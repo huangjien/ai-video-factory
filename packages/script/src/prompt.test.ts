@@ -19,8 +19,10 @@ describe("script prompt", () => {
 
   it("includes the human story direction when provided", () => {
     const user =
-      buildScriptMessages({ ...BASE, direction: "start with the failure story" })[1]
-        ?.content ?? "";
+      buildScriptMessages({
+        ...BASE,
+        direction: "start with the failure story",
+      })[1]?.content ?? "";
     expect(user).toContain("## Story direction");
     expect(user).toContain("start with the failure story");
   });

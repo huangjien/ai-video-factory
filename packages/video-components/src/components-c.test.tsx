@@ -30,11 +30,7 @@ const anims = (targets: string[]): TimelineAnim[] =>
 describe("v0.4.2 visual components (renders without throwing)", () => {
   it("QuoteBlock renders quote and attribution", () => {
     const html = renderToStaticMarkup(
-      <QuoteBlock
-        quote="知之为知之"
-        author="孔子"
-        {...baseScene(30)}
-      />,
+      <QuoteBlock quote="知之为知之" author="孔子" {...baseScene(30)} />,
     );
     expect(html).toContain("知之为知之");
     expect(html).toContain("孔子");
@@ -143,7 +139,11 @@ describe("v0.4.2 visual components (renders without throwing)", () => {
 
   it("VennDiagram renders 3 overlapping circles + center label", () => {
     const html = renderToStaticMarkup(
-      <VennDiagram sets={["AI", "教育", "数据"]} center="个性化" {...baseScene(50)} />,
+      <VennDiagram
+        sets={["AI", "教育", "数据"]}
+        center="个性化"
+        {...baseScene(50)}
+      />,
     );
     expect(html).toContain("AI");
     expect(html).toContain("教育");
@@ -183,37 +183,65 @@ describe("v0.4.2 visual components (renders without throwing)", () => {
     ).not.toThrow();
     expect(() =>
       renderToStaticMarkup(
-        <BarChart bars={[{ label: "l", value: 1 }]} animations={anims(["bar-0"])} {...baseScene(0)} />,
+        <BarChart
+          bars={[{ label: "l", value: 1 }]}
+          animations={anims(["bar-0"])}
+          {...baseScene(0)}
+        />,
       ),
     ).not.toThrow();
     expect(() =>
       renderToStaticMarkup(
-        <Leaderboard entries={[{ name: "n" }]} animations={anims(["rank-0"])} {...baseScene(0)} />,
+        <Leaderboard
+          entries={[{ name: "n" }]}
+          animations={anims(["rank-0"])}
+          {...baseScene(0)}
+        />,
       ),
     ).not.toThrow();
     expect(() =>
       renderToStaticMarkup(
-        <Checklist items={[{ text: "t" }]} animations={anims(["item-0"])} {...baseScene(0)} />,
+        <Checklist
+          items={[{ text: "t" }]}
+          animations={anims(["item-0"])}
+          {...baseScene(0)}
+        />,
       ),
     ).not.toThrow();
     expect(() =>
       renderToStaticMarkup(
-        <BigIdea text="idea" animations={anims(["__reveal__"])} {...baseScene(0)} />,
+        <BigIdea
+          text="idea"
+          animations={anims(["__reveal__"])}
+          {...baseScene(0)}
+        />,
       ),
     ).not.toThrow();
     expect(() =>
       renderToStaticMarkup(
-        <PyramidDiagram levels={["a", "b"]} animations={anims(["level-0", "level-1"])} {...baseScene(0)} />,
+        <PyramidDiagram
+          levels={["a", "b"]}
+          animations={anims(["level-0", "level-1"])}
+          {...baseScene(0)}
+        />,
       ),
     ).not.toThrow();
     expect(() =>
       renderToStaticMarkup(
-        <VennDiagram sets={["a", "b"]} animations={anims(["set-0", "set-1"])} {...baseScene(0)} />,
+        <VennDiagram
+          sets={["a", "b"]}
+          animations={anims(["set-0", "set-1"])}
+          {...baseScene(0)}
+        />,
       ),
     ).not.toThrow();
     expect(() =>
       renderToStaticMarkup(
-        <CycleDiagram stages={["a", "b", "c"]} animations={anims(["__ring__", "stage-0"])} {...baseScene(0)} />,
+        <CycleDiagram
+          stages={["a", "b", "c"]}
+          animations={anims(["__ring__", "stage-0"])}
+          {...baseScene(0)}
+        />,
       ),
     ).not.toThrow();
   });

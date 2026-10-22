@@ -7,8 +7,8 @@
 # Paths resolve relative to THIS file's directory (workspace root).
 brand:
   name: "AI 视频工厂"
-  icon: assets/brand/icon.png    # corner watermark on every scene
-  corner: bottom-right           # top-left | top-right | bottom-left | bottom-right
+  icon: assets/brand/icon.png # corner watermark on every scene
+  corner: bottom-right # top-left | top-right | bottom-left | bottom-right
   size_px: 72
   opacity: 0.85
   # intro: removed 2026-10-16 — the top brand band showed in (nearly) every

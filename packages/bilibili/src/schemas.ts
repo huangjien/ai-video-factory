@@ -28,10 +28,7 @@ export const BilibiliPackageSchema = z
   .object({
     title: z.string().min(1).max(BILIBILI_TITLE_MAX),
     /** 简介 — the long-form blurb under the video. */
-    description: z
-      .string()
-      .min(1)
-      .max(BILIBILI_DESCRIPTION_MAX),
+    description: z.string().min(1).max(BILIBILI_DESCRIPTION_MAX),
     /** 标签 — Bilibili allows at most 10, and they are how a video gets
      * surfaced outside the subscriber feed. */
     tags: z

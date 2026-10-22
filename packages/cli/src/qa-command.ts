@@ -4,12 +4,7 @@ import path from "node:path";
 import { writeQaArtifacts } from "@video/qa";
 import { resolveProjectDir, resolveProjectRoot } from "./project-path.js";
 import { loadOrCompileStoryboard } from "@video/video-renderer";
-import {
-  MARK_FAIL,
-  MARK_OK,
-  brandBannerLine,
-  channelHeader,
-} from "./ui.js";
+import { MARK_FAIL, MARK_OK, brandBannerLine, channelHeader } from "./ui.js";
 
 export interface QaOptions {
   project?: string | undefined;
@@ -54,12 +49,15 @@ export async function runQa(opts: QaOptions): Promise<number> {
 
   console.log(brandBannerLine());
   console.log(
-    channelHeader(path.basename(root), report.ok ? `qa · ok · ${errors.length} err / ${warns.length} warn` : `qa · failed · ${errors.length} err / ${warns.length} warn`),
+    channelHeader(
+      path.basename(root),
+      report.ok
+        ? `qa · ok · ${errors.length} err / ${warns.length} warn`
+        : `qa · failed · ${errors.length} err / ${warns.length} warn`,
+    ),
   );
   console.log("");
-  console.log(
-    `Preview: ${path.basename(video)}`,
-  );
+  console.log(`Preview: ${path.basename(video)}`);
   console.log("");
   if (report.findings.length === 0) {
     console.log(`  ${MARK_OK} no findings`);
@@ -71,9 +69,7 @@ export async function runQa(opts: QaOptions): Promise<number> {
     }
   }
   console.log("");
-  console.log(
-    `  details: qa/render-report.json + qa/contact-sheet.png`,
-  );
+  console.log(`  details: qa/render-report.json + qa/contact-sheet.png`);
 
   const strict = opts.strict !== false;
   if (strict && !report.ok) {
@@ -84,21 +80,27 @@ export async function runQa(opts: QaOptions): Promise<number> {
 }
 
 export function registerQa(program: Command): void {
-program
-  .command("qa")
-  .description(
-    "QA Agent: rebuild the render report for the current preview (plan §28/T6.1); exits 1 on error-level findings",
-  )
-  .argument("[project]", "project name (slug) — optional if exactly one project exists")
-  .option("--cwd <dir>", "project root base directory")
-  .option("--no-strict", "report findings without failing the command")
-  .action(
-    async (project: string | undefined, opts: { cwd?: string; strict?: boolean }) => {
-      process.exitCode = await runQa({
-        ...(project !== undefined ? { project } : {}),
-        ...(opts.cwd !== undefined ? { cwd: opts.cwd } : {}),
-        strict: opts.strict !== false,
-      });
-    },
-  );
+  program
+    .command("qa")
+    .description(
+      "QA Agent: rebuild the render report for the current preview (plan §28/T6.1); exits 1 on error-level findings",
+    )
+    .argument(
+      "[project]",
+      "project name (slug) — optional if exactly one project exists",
+    )
+    .option("--cwd <dir>", "project root base directory")
+    .option("--no-strict", "report findings without failing the command")
+    .action(
+      async (
+        project: string | undefined,
+        opts: { cwd?: string; strict?: boolean },
+      ) => {
+        process.exitCode = await runQa({
+          ...(project !== undefined ? { project } : {}),
+          ...(opts.cwd !== undefined ? { cwd: opts.cwd } : {}),
+          strict: opts.strict !== false,
+        });
+      },
+    );
 }

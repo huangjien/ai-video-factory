@@ -75,9 +75,7 @@ function pickBgm(projectRoot: string, explicit?: string): string {
   if (existsSync(curatedDir)) {
     const curated = readdirSync(curatedDir)
       .filter((f) =>
-        SUPPORTED_AUDIO_EXTENSIONS.some((ext) =>
-          f.toLowerCase().endsWith(ext),
-        ),
+        SUPPORTED_AUDIO_EXTENSIONS.some((ext) => f.toLowerCase().endsWith(ext)),
       )
       .map((f) => path.join(curatedDir, f))
       .sort();
@@ -106,10 +104,7 @@ function repoRootOf(projectRoot: string): string {
  *  file path. Used by the BGM-by-tag resolution path: `audio-config.yaml`
  *  `bgm:` and the first entry of `bgm_tracks[*].track` may carry either a
  *  bare tag or a path; this helper handles the tag case. */
-export function resolveBgmByTag(
-  projectRoot: string,
-  tag: string,
-): ResolvedBgm {
+export function resolveBgmByTag(projectRoot: string, tag: string): ResolvedBgm {
   const repoRoot = repoRootOf(projectRoot);
   return resolveBgmTag({
     tag,
@@ -156,11 +151,7 @@ function loadLibraryAllowingMissing(directory: string): LocalBgmEntry[] {
   const out: LocalBgmEntry[] = [];
   for (const file of readdirSync(directory).sort()) {
     const ext = file.slice(file.lastIndexOf(".")).toLowerCase();
-    if (
-      ext !== ".wav" &&
-      ext !== ".mp3" &&
-      ext !== ".m4a"
-    ) {
+    if (ext !== ".wav" && ext !== ".mp3" && ext !== ".m4a") {
       continue;
     }
     const tag = file.slice(0, -ext.length);
@@ -212,7 +203,9 @@ export function pickNarrations(projectRoot: string): string[] {
  * mis-keyed cue fails loudly here instead of being dropped in silence —
  * `scene-02` (hyphen) is the easy mistake, and it used to cost every
  * cue in the file. */
-export function parseSfxFlags(flags: string[] | undefined): Record<string, string> {
+export function parseSfxFlags(
+  flags: string[] | undefined,
+): Record<string, string> {
   const out: Record<string, string> = {};
   for (const flag of flags ?? []) {
     const eq = flag.indexOf("=");
@@ -269,25 +262,20 @@ function resolveSfxCues(
 /** Probe per-narration durations so SFX cues land at concrete timestamps.
  * Throws when ffprobe fails or returns garbage — returning 0 here would
  * silently collapse every cue onto t=0. */
-async function probeTotalDuration(
-  narrationPaths: string[],
-): Promise<number[]> {
+async function probeTotalDuration(narrationPaths: string[]): Promise<number[]> {
   return Promise.all(
     narrationPaths.map(async (p) => {
-      const { stdout } = await execFileAsync(
-        "ffprobe",
-        [
-          "-v",
-          "error",
-          "-select_streams",
-          "a:0",
-          "-show_entries",
-          "stream=duration",
-          "-of",
-          "csv=p=0",
-          p,
-        ],
-      );
+      const { stdout } = await execFileAsync("ffprobe", [
+        "-v",
+        "error",
+        "-select_streams",
+        "a:0",
+        "-show_entries",
+        "stream=duration",
+        "-of",
+        "csv=p=0",
+        p,
+      ]);
       const seconds = parseFloat(stdout.trim());
       if (!Number.isFinite(seconds)) {
         throw new Error(`ffprobe could not parse a duration for ${p}`);
@@ -456,74 +444,75 @@ export async function runMix(opts: MixOptions): Promise<number> {
   console.log(
     `  narration=${narrationPaths.length} files  bgm=${path.basename(bgmPath)}  sfx=${sfxCues.length} cues  fade=${fadeIn}s/${fadeOut}s`,
   );
-console.log(
-     `  next: this is the audio you ship`,
-   );
+  console.log(`  next: this is the audio you ship`);
   return 0;
 }
 
 export function registerMix(program: Command): void {
-program
-  .command("mix")
-  .argument("<project>", "project: topic, folder name, path, or unique prefix")
-  .option("--cwd <dir>", "base directory for the project")
-  .option(
-    "--bgm <path>",
-    "explicit BGM file (default: first .wav in assets/audio-assets/bgm/ or bgm tag from audio-assets/mix.yaml)",
-  )
-  .option(
-    "--bgm-attenuation <db>",
-    "BGM attenuation in dB while narration is silent (default -18)",
-    (v) => Number.parseFloat(v),
-  )
-  .option(
-    "--bgm-fade-in <sec>",
-    "fade BGM in over N seconds (overrides mix.yaml)",
-    (v) => Number.parseFloat(v),
-  )
-  .option(
-    "--bgm-fade-out <sec>",
-    "fade BGM out over last N seconds (overrides mix.yaml)",
-    (v) => Number.parseFloat(v),
-  )
-  .option(
-    "--mix-yaml <path>",
-    "explicit mix.yaml path (default: audio-assets/mix.yaml)",
-  )
-  .option(
-    "--sfx <scene_N=tag>",
-    "SFX cue, repeatable (e.g. --sfx scene_2=whoosh). Merged with mix.yaml cues; the flag wins on the same scene.",
-    (v: string, prev: string[] = []) => [...prev, v],
-  )
-  .action(
-    async (
-      project: string,
-      opts: {
-        cwd?: string;
-        bgm?: string;
-        bgmAttenuation?: number;
-        bgmFadeIn?: number;
-        bgmFadeOut?: number;
-        mixYaml?: string;
-        sfx?: string[];
+  program
+    .command("mix")
+    .argument(
+      "<project>",
+      "project: topic, folder name, path, or unique prefix",
+    )
+    .option("--cwd <dir>", "base directory for the project")
+    .option(
+      "--bgm <path>",
+      "explicit BGM file (default: first .wav in assets/audio-assets/bgm/ or bgm tag from audio-assets/mix.yaml)",
+    )
+    .option(
+      "--bgm-attenuation <db>",
+      "BGM attenuation in dB while narration is silent (default -18)",
+      (v) => Number.parseFloat(v),
+    )
+    .option(
+      "--bgm-fade-in <sec>",
+      "fade BGM in over N seconds (overrides mix.yaml)",
+      (v) => Number.parseFloat(v),
+    )
+    .option(
+      "--bgm-fade-out <sec>",
+      "fade BGM out over last N seconds (overrides mix.yaml)",
+      (v) => Number.parseFloat(v),
+    )
+    .option(
+      "--mix-yaml <path>",
+      "explicit mix.yaml path (default: audio-assets/mix.yaml)",
+    )
+    .option(
+      "--sfx <scene_N=tag>",
+      "SFX cue, repeatable (e.g. --sfx scene_2=whoosh). Merged with mix.yaml cues; the flag wins on the same scene.",
+      (v: string, prev: string[] = []) => [...prev, v],
+    )
+    .action(
+      async (
+        project: string,
+        opts: {
+          cwd?: string;
+          bgm?: string;
+          bgmAttenuation?: number;
+          bgmFadeIn?: number;
+          bgmFadeOut?: number;
+          mixYaml?: string;
+          sfx?: string[];
+        },
+      ) => {
+        process.exitCode = await runMix({
+          project,
+          ...(opts.cwd !== undefined ? { cwd: opts.cwd } : {}),
+          ...(opts.bgm !== undefined ? { bgmPath: opts.bgm } : {}),
+          ...(opts.bgmAttenuation !== undefined
+            ? { bgmAttenuationDb: opts.bgmAttenuation }
+            : {}),
+          ...(opts.bgmFadeIn !== undefined
+            ? { bgmFadeInSec: opts.bgmFadeIn }
+            : {}),
+          ...(opts.bgmFadeOut !== undefined
+            ? { bgmFadeOutSec: opts.bgmFadeOut }
+            : {}),
+          ...(opts.mixYaml !== undefined ? { mixYamlPath: opts.mixYaml } : {}),
+          ...(opts.sfx !== undefined ? { sfx: opts.sfx } : {}),
+        });
       },
-    ) => {
-      process.exitCode = await runMix({
-        project,
-        ...(opts.cwd !== undefined ? { cwd: opts.cwd } : {}),
-        ...(opts.bgm !== undefined ? { bgmPath: opts.bgm } : {}),
-        ...(opts.bgmAttenuation !== undefined
-          ? { bgmAttenuationDb: opts.bgmAttenuation }
-          : {}),
-        ...(opts.bgmFadeIn !== undefined
-          ? { bgmFadeInSec: opts.bgmFadeIn }
-          : {}),
-        ...(opts.bgmFadeOut !== undefined
-          ? { bgmFadeOutSec: opts.bgmFadeOut }
-          : {}),
-        ...(opts.mixYaml !== undefined ? { mixYamlPath: opts.mixYaml } : {}),
-        ...(opts.sfx !== undefined ? { sfx: opts.sfx } : {}),
-      });
-    },
-  );
+    );
 }

@@ -112,13 +112,20 @@ describe("computeMakeImpact", () => {
       );
 
       // No checkpoint yet → gate blocks with the fix hint.
-      expect(computeMakeImpact(dir, { imageProvider: "mock" }).visualsGate)
-        .toEqual({ required: true, state: "missing-checkpoint", staleScenes: [] });
+      expect(
+        computeMakeImpact(dir, { imageProvider: "mock" }).visualsGate,
+      ).toEqual({
+        required: true,
+        state: "missing-checkpoint",
+        staleScenes: [],
+      });
 
       // Approve the current set (write the checkpoint the way G4 will).
       const scenes: Record<string, { hash: string }> = {};
       for (const n of [1, 2]) {
-        const sha = fileSha256(path.join(dir, "assets", "images", `scene_${n}.jpg`));
+        const sha = fileSha256(
+          path.join(dir, "assets", "images", `scene_${n}.jpg`),
+        );
         if (sha) scenes[`scene_${n}`] = { hash: sha };
       }
       await mkdir(path.join(dir, "checkpoints"), { recursive: true });
@@ -131,16 +138,18 @@ describe("computeMakeImpact", () => {
           "\n",
         "utf8",
       );
-      expect(computeMakeImpact(dir, { imageProvider: "mock" }).visualsGate)
-        .toEqual({ required: true, state: "ok", staleScenes: [] });
+      expect(
+        computeMakeImpact(dir, { imageProvider: "mock" }).visualsGate,
+      ).toEqual({ required: true, state: "ok", staleScenes: [] });
 
       // Tamper with one image (e.g. manual edit) → gate reports it stale.
       await writeFile(
         path.join(dir, "assets", "images", "scene_2.jpg"),
         Buffer.from("tampered"),
       );
-      expect(computeMakeImpact(dir, { imageProvider: "mock" }).visualsGate)
-        .toEqual({ required: true, state: "stale", staleScenes: [2] });
+      expect(
+        computeMakeImpact(dir, { imageProvider: "mock" }).visualsGate,
+      ).toEqual({ required: true, state: "stale", staleScenes: [2] });
     } finally {
       await rm(dir, { recursive: true, force: true });
     }
@@ -198,7 +207,9 @@ describe("computeMakeImpact", () => {
       );
       const impact = computeMakeImpact(dir, { imageProvider: "mock" });
       expect(impact.storyboardDrift).toEqual(["scene_1"]);
-      expect(formatImpact(impact).join("\n")).toContain("storyboard drift: scene_1");
+      expect(formatImpact(impact).join("\n")).toContain(
+        "storyboard drift: scene_1",
+      );
     } finally {
       await rm(dir, { recursive: true, force: true });
     }

@@ -81,7 +81,13 @@ describe("doodleLogic — deterministic hand-drawn strokes (T4.4)", () => {
       { id: "c", shape: "zigzag" as const, x: 1400, y: 300, size: 100 },
       { id: "d", shape: "spiral" as const, x: 1600, y: 400, size: 90 },
     ];
-    const plan = buildStrokePlan(strokes, 10, 5, { background: "#fff", ink: "#000", wobble: 2 }, { bpm: 100 });
+    const plan = buildStrokePlan(
+      strokes,
+      10,
+      5,
+      { background: "#fff", ink: "#000", wobble: 2 },
+      { bpm: 100 },
+    );
     const beat = 60 / 100; // 0.6s
     for (const entry of plan) {
       const remainder = entry.startSec % beat;
@@ -89,7 +95,11 @@ describe("doodleLogic — deterministic hand-drawn strokes (T4.4)", () => {
       expect(entry.startSec + entry.durationSec).toBeLessThanOrEqual(10);
     }
     // without bpm the raw sequential starts are NOT on the grid
-    const raw = buildStrokePlan(strokes, 10, 5, { background: "#fff", ink: "#000", wobble: 2 });
+    const raw = buildStrokePlan(strokes, 10, 5, {
+      background: "#fff",
+      ink: "#000",
+      wobble: 2,
+    });
     const offGrid = raw.some((e) => e.startSec % beat > 1e-9);
     expect(offGrid).toBe(true);
   });
@@ -124,7 +134,15 @@ describe("doodleLogic — deterministic hand-drawn strokes (T4.4)", () => {
         set globalAlpha(_v: number) {},
         set font(_v: string) {},
       };
-      drawDoodleFrame(ctx, plan, frame, 30, { background: "#F5F1E8", ink: "#1F1D1A", wobble: 2 }, 1920, 1080);
+      drawDoodleFrame(
+        ctx,
+        plan,
+        frame,
+        30,
+        { background: "#F5F1E8", ink: "#1F1D1A", wobble: 2 },
+        1920,
+        1080,
+      );
       return segments;
     };
     const early = record(0);

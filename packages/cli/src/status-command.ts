@@ -92,7 +92,9 @@ export async function runStatus(
         `QA: ${errMark} ${errors} error${errors === 1 ? "" : "s"}, ${warnMark} ${warnings} warning${warnings === 1 ? "" : "s"}`,
       );
       if (errors > 0) {
-        console.log(`  run \`video qa <project>\` to inspect, or \`video final --force\` to override`);
+        console.log(
+          `  run \`video qa <project>\` to inspect, or \`video final --force\` to override`,
+        );
       }
     } catch (err) {
       // A corrupt report used to print NOTHING — while `video final` still
@@ -106,11 +108,11 @@ export async function runStatus(
 }
 
 export function registerStatus(program: Command): void {
-program
-  .command("status")
-  .argument("[project]", "project name (slug) — optional")
-  .option("--cwd <dir>", "project root")
-  .action(async (project: string | undefined, opts: { cwd?: string }) => {
-    process.exitCode = await runStatus(project, opts.cwd);
-  });
+  program
+    .command("status")
+    .argument("[project]", "project name (slug) — optional")
+    .option("--cwd <dir>", "project root")
+    .action(async (project: string | undefined, opts: { cwd?: string }) => {
+      process.exitCode = await runStatus(project, opts.cwd);
+    });
 }

@@ -2,10 +2,7 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import {
-  appendCheckpoint,
-  writeProjectState,
-} from "@video/workflow";
+import { appendCheckpoint, writeProjectState } from "@video/workflow";
 import { runNew } from "./new-command.js";
 import { assertStageWritable } from "./stage-guard.js";
 
@@ -26,9 +23,9 @@ describe("assertStageWritable — human-approval guard (doc §58)", () => {
   });
 
   it("allows regeneration while the stage is unapproved", async () => {
-    await expect(assertStageWritable(projectDir, "storyboard", false)).resolves.toBe(
-      true,
-    );
+    await expect(
+      assertStageWritable(projectDir, "storyboard", false),
+    ).resolves.toBe(true);
   });
 
   it("refuses when the stage checkpoint is approved", async () => {

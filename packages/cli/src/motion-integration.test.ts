@@ -1,4 +1,11 @@
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
@@ -52,7 +59,10 @@ describe("video motion (T4.2)", () => {
     await runNew({ projectId: slug, cwd });
     projectDir = path.join(cwd, "projects", slug);
     projectName = slug;
-    writeFileSync(path.join(projectDir, "storyboard", "storyboard.yaml"), STORYBOARD);
+    writeFileSync(
+      path.join(projectDir, "storyboard", "storyboard.yaml"),
+      STORYBOARD,
+    );
   });
 
   afterEach(() => {
@@ -103,7 +113,11 @@ describe("video motion (T4.2)", () => {
     await runMotion({ project: projectName, cwd, baseline: true });
     const approved = await runApprove(projectName, "storyboard", cwd);
     expect(approved).toBe(0);
-    const refused = await runMotion({ project: projectName, cwd, baseline: true });
+    const refused = await runMotion({
+      project: projectName,
+      cwd,
+      baseline: true,
+    });
     expect(refused).toBe(1);
     const forced = await runMotion({
       project: projectName,

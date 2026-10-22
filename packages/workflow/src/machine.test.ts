@@ -54,9 +54,9 @@ describe("transition (todo 11) — §18.1", () => {
 
   it("rejects illegal transitions", () => {
     const cur: MachineState = { status: "DRAFT", stage: "init" };
-    expect(() =>
-      transition(cur, { kind: "final_approve" }, makeCtx()),
-    ).toThrow(/illegal transition/);
+    expect(() => transition(cur, { kind: "final_approve" }, makeCtx())).toThrow(
+      /illegal transition/,
+    );
     const reviewing: MachineState = {
       status: "WAITING_REVIEW",
       stage: "storyboard",
@@ -102,7 +102,11 @@ describe("transition (todo 11) — §18.1", () => {
 
   it("force-preview bypasses the gate but not FINAL_APPROVED", () => {
     const draft: MachineState = { status: "DRAFT", stage: "storyboard" };
-    const forced = transition(draft, { kind: "preview", force: true }, makeCtx());
+    const forced = transition(
+      draft,
+      { kind: "preview", force: true },
+      makeCtx(),
+    );
     expect(forced.state.status).toBe("WAITING_REVIEW");
     expect(forced.record.reason).toBe("preview [forced]");
     const final: MachineState = { status: "FINAL_APPROVED", stage: "final" };

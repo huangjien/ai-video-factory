@@ -63,7 +63,12 @@ function buildPassingRaw(score = 4): string {
     findings: [],
     risk_flags: [],
     limitations: [],
-    summary: { strengths: [], main_weaknesses: [], conclusion: "", confidence: 0.5 },
+    summary: {
+      strengths: [],
+      main_weaknesses: [],
+      conclusion: "",
+      confidence: 0.5,
+    },
     comment: "looks good",
     suggestions: [],
   });
@@ -114,7 +119,12 @@ function buildRawWithFinding(
           ]
         : [],
     limitations: [],
-    summary: { strengths: [], main_weaknesses: ["logic gap"], conclusion: "revise", confidence: 0.8 },
+    summary: {
+      strengths: [],
+      main_weaknesses: ["logic gap"],
+      conclusion: "revise",
+      confidence: 0.8,
+    },
     comment: "the single biggest weakness",
     suggestions: [
       "scene_1 — add a concrete number",
@@ -151,9 +161,7 @@ describe("PROFILE", () => {
 
 describe("ArticleScoreRawSchema", () => {
   it("accepts a minimal valid payload", () => {
-    const r = ArticleScoreRawSchema.safeParse(
-      JSON.parse(buildPassingRaw()),
-    );
+    const r = ArticleScoreRawSchema.safeParse(JSON.parse(buildPassingRaw()));
     expect(r.success).toBe(true);
   });
 
@@ -163,9 +171,7 @@ describe("ArticleScoreRawSchema", () => {
   });
 
   it("coerces / clamps indicator scores into 0-5 integers", () => {
-    const r = ArticleScoreRawSchema.safeParse(
-      JSON.parse(buildPassingRaw(7)),
-    );
+    const r = ArticleScoreRawSchema.safeParse(JSON.parse(buildPassingRaw(7)));
     expect(r.success).toBe(true);
     if (!r.success) return;
     const a3 = r.data.dimension_scores
@@ -381,9 +387,9 @@ describe("runScoredDraft", () => {
     expect(r.passing).toBe(true);
     expect(r.attempts).toHaveLength(2);
     expect(p.requests).toHaveLength(4);
-    const secondDraftPrompt = p.requests[2]!.messages
-      .map((m) => m.content)
-      .join("\n");
+    const secondDraftPrompt = p.requests[2]!.messages.map(
+      (m) => m.content,
+    ).join("\n");
     expect(secondDraftPrompt).toContain("quality judge");
     expect(secondDraftPrompt).toMatch(/60\/100/);
     expect(secondDraftPrompt).toContain("acceptance bar of 70/100");
@@ -410,7 +416,10 @@ describe("runScoredDraft", () => {
       GOOD_ARTICLE,
       buildPassingRaw(2), // 40
     ]);
-    const r = await runScoredDraft(INPUT, p, null, { minScore: 100, maxAttempts: 3 });
+    const r = await runScoredDraft(INPUT, p, null, {
+      minScore: 100,
+      maxAttempts: 3,
+    });
     expect(r.passing).toBe(false);
     expect(r.attempts).toHaveLength(3);
     expect(r.score?.computed.overall_score).toBe(80);
@@ -515,7 +524,9 @@ describe("buildArticleReviewMessages — dimension H needs the task", () => {
     const p = new FakeProvider([GOOD_ARTICLE, GOOD_ARTICLE]);
     await runScoredDraft(INPUT, p, null, { maxAttempts: 2 });
     const judges = p.requests.filter((r) =>
-      r.messages.some((m) => m.role === "user" && m.content.includes("Article to judge")),
+      r.messages.some(
+        (m) => m.role === "user" && m.content.includes("Article to judge"),
+      ),
     );
     expect(judges.length).toBeGreaterThan(0);
     for (const j of judges) {
@@ -525,7 +536,10 @@ describe("buildArticleReviewMessages — dimension H needs the task", () => {
 });
 
 describe("the judge must see the WHOLE article", () => {
-  const user = (md: string, task?: Parameters<typeof buildArticleReviewMessages>[2]) =>
+  const user = (
+    md: string,
+    task?: Parameters<typeof buildArticleReviewMessages>[2],
+  ) =>
     buildArticleReviewMessages(md, undefined, task).find(
       (m) => m.role === "user",
     )!.content;

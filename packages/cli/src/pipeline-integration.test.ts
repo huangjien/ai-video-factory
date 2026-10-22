@@ -177,160 +177,188 @@ describe("CLI pipeline integration — runPreview / runFinal / runStatus / workf
 
   // ----- runPreview -----
 
-  it("runPreview renders preview.mp4 from a seed project", async () => {
-    const code = await runPreview(projectName, projectCwd);
-    expect(code).toBe(0);
-    expect(
-      existsSync(path.join(projectDir, "output", "preview-faststart.mp4")),
-    ).toBe(true);
-    // QA groundwork (plan §28/T3.3): report + contact sheet after render.
-    const qaDir = path.join(projectDir, "qa");
-    expect(existsSync(path.join(qaDir, "render-report.json"))).toBe(true);
-    expect(existsSync(path.join(qaDir, "contact-sheet.png"))).toBe(true);
-    const report = JSON.parse(
-      readFileSync(path.join(qaDir, "render-report.json"), "utf8"),
-    ) as { ok: boolean; checks: { duration: { actualSec: number } } };
-    expect(report.checks.duration.actualSec).toBeGreaterThan(9);
-    const state = readState(projectDir);
-    expect(state.status).toBe("WAITING_REVIEW");
-    expect(state.current_stage).toBe("review");
-  }, RENDER_TIMEOUT);
+  it(
+    "runPreview renders preview.mp4 from a seed project",
+    async () => {
+      const code = await runPreview(projectName, projectCwd);
+      expect(code).toBe(0);
+      expect(
+        existsSync(path.join(projectDir, "output", "preview-faststart.mp4")),
+      ).toBe(true);
+      // QA groundwork (plan §28/T3.3): report + contact sheet after render.
+      const qaDir = path.join(projectDir, "qa");
+      expect(existsSync(path.join(qaDir, "render-report.json"))).toBe(true);
+      expect(existsSync(path.join(qaDir, "contact-sheet.png"))).toBe(true);
+      const report = JSON.parse(
+        readFileSync(path.join(qaDir, "render-report.json"), "utf8"),
+      ) as { ok: boolean; checks: { duration: { actualSec: number } } };
+      expect(report.checks.duration.actualSec).toBeGreaterThan(9);
+      const state = readState(projectDir);
+      expect(state.status).toBe("WAITING_REVIEW");
+      expect(state.current_stage).toBe("review");
+    },
+    RENDER_TIMEOUT,
+  );
 
-  it("writes vdsl.yaml, caches per-scene renders, versions scenes, restores (§6/§26/Principle 1)", async () => {
-    const code = await runPreview(projectName, projectCwd);
-    expect(code).toBe(0);
+  it(
+    "writes vdsl.yaml, caches per-scene renders, versions scenes, restores (§6/§26/Principle 1)",
+    async () => {
+      const code = await runPreview(projectName, projectCwd);
+      expect(code).toBe(0);
 
-    // vdsl.yaml is a real artifact now, compiled from the storyboard.
-    const vdslPath = path.join(projectDir, "vdsl", "vdsl.yaml");
-    expect(existsSync(vdslPath)).toBe(true);
-    const vdsl = readFileSync(vdslPath, "utf8");
-    expect(vdsl).toContain("scene-01");
-    expect(vdsl).toContain("scene-02");
+      // vdsl.yaml is a real artifact now, compiled from the storyboard.
+      const vdslPath = path.join(projectDir, "vdsl", "vdsl.yaml");
+      expect(existsSync(vdslPath)).toBe(true);
+      const vdsl = readFileSync(vdslPath, "utf8");
+      expect(vdsl).toContain("scene-01");
+      expect(vdsl).toContain("scene-02");
 
-    // First preview records v1 for every scene (plan §26).
-    const { listSceneVersions } = await import("@video/workflow");
-    expect(
-      (await listSceneVersions(projectDir, "scene-01")).map((v) => v.version),
-    ).toEqual([1]);
+      // First preview records v1 for every scene (plan §26).
+      const { listSceneVersions } = await import("@video/workflow");
+      expect(
+        (await listSceneVersions(projectDir, "scene-01")).map((v) => v.version),
+      ).toEqual([1]);
 
-    // Per-scene cache files exist; an unchanged re-render reuses them.
-    const scenesDir = path.join(projectDir, "scenes");
-    const f1 = path.join(scenesDir, "00-scene-01.mp4");
-    const f2 = path.join(scenesDir, "01-scene-02.mp4");
-    expect(existsSync(f1)).toBe(true);
-    expect(existsSync(f2)).toBe(true);
-    const m1 = statSync(f1).mtimeMs;
-    const m2 = statSync(f2).mtimeMs;
-    rmSync(path.join(projectDir, "output", "preview.mp4"), { force: true });
-    expect(await runPreview(projectName, projectCwd)).toBe(0);
-    expect(statSync(f1).mtimeMs).toBe(m1);
-    expect(statSync(f2).mtimeMs).toBe(m2);
-    expect(existsSync(path.join(projectDir, "output", "preview.mp4"))).toBe(
-      true,
-    );
+      // Per-scene cache files exist; an unchanged re-render reuses them.
+      const scenesDir = path.join(projectDir, "scenes");
+      const f1 = path.join(scenesDir, "00-scene-01.mp4");
+      const f2 = path.join(scenesDir, "01-scene-02.mp4");
+      expect(existsSync(f1)).toBe(true);
+      expect(existsSync(f2)).toBe(true);
+      const m1 = statSync(f1).mtimeMs;
+      const m2 = statSync(f2).mtimeMs;
+      rmSync(path.join(projectDir, "output", "preview.mp4"), { force: true });
+      expect(await runPreview(projectName, projectCwd)).toBe(0);
+      expect(statSync(f1).mtimeMs).toBe(m1);
+      expect(statSync(f2).mtimeMs).toBe(m2);
+      expect(existsSync(path.join(projectDir, "output", "preview.mp4"))).toBe(
+        true,
+      );
 
-    // A pure mtime touch must NOT invalidate — content is what matters.
-    const sbPath = path.join(projectDir, "storyboard", "storyboard.yaml");
-    const future = new Date(Date.now() + 5000);
-    utimesSync(sbPath, future, future);
-    expect(await runPreview(projectName, projectCwd)).toBe(0);
-    expect(statSync(f1).mtimeMs).toBe(m1);
+      // A pure mtime touch must NOT invalidate — content is what matters.
+      const sbPath = path.join(projectDir, "storyboard", "storyboard.yaml");
+      const future = new Date(Date.now() + 5000);
+      utimesSync(sbPath, future, future);
+      expect(await runPreview(projectName, projectCwd)).toBe(0);
+      expect(statSync(f1).mtimeMs).toBe(m1);
 
-    // Editing ONE scene re-renders only that scene and records v2.
-    const edited = readFileSync(sbPath, "utf8").replace(
-      'text: "world"',
-      'text: "world v2"',
-    );
-    writeFileSync(sbPath, edited);
-    expect(await runPreview(projectName, projectCwd)).toBe(0);
-    expect(statSync(f1).mtimeMs).toBe(m1); // sibling cached
-    const m2b = statSync(f2).mtimeMs;
-    expect(m2b).not.toBe(m2); // edited scene re-rendered
-    expect(
-      (await listSceneVersions(projectDir, "scene-02")).map((v) => v.version),
-    ).toEqual([1, 2]);
+      // Editing ONE scene re-renders only that scene and records v2.
+      const edited = readFileSync(sbPath, "utf8").replace(
+        'text: "world"',
+        'text: "world v2"',
+      );
+      writeFileSync(sbPath, edited);
+      expect(await runPreview(projectName, projectCwd)).toBe(0);
+      expect(statSync(f1).mtimeMs).toBe(m1); // sibling cached
+      const m2b = statSync(f2).mtimeMs;
+      expect(m2b).not.toBe(m2); // edited scene re-rendered
+      expect(
+        (await listSceneVersions(projectDir, "scene-02")).map((v) => v.version),
+      ).toEqual([1, 2]);
 
-    // Restore v1: splices the old fragment back; only scene-02 re-renders.
-    const { runSceneRestore } = await import("./scene-command.js");
-    expect(await runSceneRestore(projectName, "scene-02", 1, projectCwd)).toBe(
-      0,
-    );
-    const m1c = statSync(f1).mtimeMs;
-    expect(await runPreview(projectName, projectCwd)).toBe(0);
-    expect(statSync(f1).mtimeMs).toBe(m1c);
-    expect(statSync(f2).mtimeMs).not.toBe(m2b);
-    const restored = readFileSync(sbPath, "utf8");
-    expect(restored).toContain('text: "world"');
-    expect(restored).not.toContain("world v2");
-  }, RENDER_TIMEOUT);
+      // Restore v1: splices the old fragment back; only scene-02 re-renders.
+      const { runSceneRestore } = await import("./scene-command.js");
+      expect(
+        await runSceneRestore(projectName, "scene-02", 1, projectCwd),
+      ).toBe(0);
+      const m1c = statSync(f1).mtimeMs;
+      expect(await runPreview(projectName, projectCwd)).toBe(0);
+      expect(statSync(f1).mtimeMs).toBe(m1c);
+      expect(statSync(f2).mtimeMs).not.toBe(m2b);
+      const restored = readFileSync(sbPath, "utf8");
+      expect(restored).toContain('text: "world"');
+      expect(restored).not.toContain("world v2");
+    },
+    RENDER_TIMEOUT,
+  );
 
-  it("runPreview --draft renders 960x540@15 (plan §27)", async () => {
-    const code = await runPreview(projectName, projectCwd, false, {
-      draft: true,
-    });
-    expect(code).toBe(0);
-    expect(existsSync(path.join(projectDir, "scenes-draft"))).toBe(true);
-    const out = execFileSync(
-      "ffprobe",
-      [
-        "-v",
-        "error",
-        "-select_streams",
-        "v:0",
-        "-show_entries",
-        "stream=width,height,r_frame_rate",
-        "-of",
-        "json",
-        path.join(projectDir, "output", "preview.mp4"),
-      ],
-      { encoding: "utf8" },
-    );
-    const s = JSON.parse(out).streams[0];
-    expect(s.width).toBe(960);
-    expect(s.height).toBe(540);
-    expect(s.r_frame_rate).toBe("15/1");
-  }, RENDER_TIMEOUT);
+  it(
+    "runPreview --draft renders 960x540@15 (plan §27)",
+    async () => {
+      const code = await runPreview(projectName, projectCwd, false, {
+        draft: true,
+      });
+      expect(code).toBe(0);
+      expect(existsSync(path.join(projectDir, "scenes-draft"))).toBe(true);
+      const out = execFileSync(
+        "ffprobe",
+        [
+          "-v",
+          "error",
+          "-select_streams",
+          "v:0",
+          "-show_entries",
+          "stream=width,height,r_frame_rate",
+          "-of",
+          "json",
+          path.join(projectDir, "output", "preview.mp4"),
+        ],
+        { encoding: "utf8" },
+      );
+      const s = JSON.parse(out).streams[0];
+      expect(s.width).toBe(960);
+      expect(s.height).toBe(540);
+      expect(s.r_frame_rate).toBe("15/1");
+    },
+    RENDER_TIMEOUT,
+  );
 
-  it("runPreview exits 1 when storyboard is missing", async () => {
-    rmSync(path.join(projectDir, "storyboard", "storyboard.yaml"));
-    const code = await runPreview(projectName, projectCwd);
-    expect(code).toBe(1);
-  }, RENDER_TIMEOUT);
+  it(
+    "runPreview exits 1 when storyboard is missing",
+    async () => {
+      rmSync(path.join(projectDir, "storyboard", "storyboard.yaml"));
+      const code = await runPreview(projectName, projectCwd);
+      expect(code).toBe(1);
+    },
+    RENDER_TIMEOUT,
+  );
 
-  it("runPreview refuses to render without an approved storyboard checkpoint", async () => {
-    rmSync(path.join(projectDir, "checkpoints"), {
-      recursive: true,
-      force: true,
-    });
-    const code = await runPreview(projectName, projectCwd);
-    expect(code).toBe(1);
-    expect(
-      existsSync(path.join(projectDir, "output", "preview-faststart.mp4")),
-    ).toBe(false);
-  }, RENDER_TIMEOUT);
+  it(
+    "runPreview refuses to render without an approved storyboard checkpoint",
+    async () => {
+      rmSync(path.join(projectDir, "checkpoints"), {
+        recursive: true,
+        force: true,
+      });
+      const code = await runPreview(projectName, projectCwd);
+      expect(code).toBe(1);
+      expect(
+        existsSync(path.join(projectDir, "output", "preview-faststart.mp4")),
+      ).toBe(false);
+    },
+    RENDER_TIMEOUT,
+  );
 
-  it("runPreview --force renders without approval and lands in WAITING_REVIEW", async () => {
-    rmSync(path.join(projectDir, "checkpoints"), {
-      recursive: true,
-      force: true,
-    });
-    const code = await runPreview(projectName, projectCwd, true);
-    expect(code).toBe(0);
-    const state = readState(projectDir);
-    expect(state.status).toBe("WAITING_REVIEW");
-  }, RENDER_TIMEOUT);
+  it(
+    "runPreview --force renders without approval and lands in WAITING_REVIEW",
+    async () => {
+      rmSync(path.join(projectDir, "checkpoints"), {
+        recursive: true,
+        force: true,
+      });
+      const code = await runPreview(projectName, projectCwd, true);
+      expect(code).toBe(0);
+      const state = readState(projectDir);
+      expect(state.status).toBe("WAITING_REVIEW");
+    },
+    RENDER_TIMEOUT,
+  );
 
-  it("runPreview refuses a FINAL_APPROVED project (terminal state)", async () => {
-    const { writeProjectState } = await import("@video/workflow");
-    await writeProjectState(projectDir, {
-      status: "FINAL_APPROVED",
-      current_stage: "final",
-      checkpoint: { id: "seed-final", status: "FINAL_APPROVED" },
-      history_tail: [],
-    });
-    const code = await runPreview(projectName, projectCwd);
-    expect(code).toBe(1);
-  }, RENDER_TIMEOUT);
+  it(
+    "runPreview refuses a FINAL_APPROVED project (terminal state)",
+    async () => {
+      const { writeProjectState } = await import("@video/workflow");
+      await writeProjectState(projectDir, {
+        status: "FINAL_APPROVED",
+        current_stage: "final",
+        checkpoint: { id: "seed-final", status: "FINAL_APPROVED" },
+        history_tail: [],
+      });
+      const code = await runPreview(projectName, projectCwd);
+      expect(code).toBe(1);
+    },
+    RENDER_TIMEOUT,
+  );
 
   // ----- runStatus -----
 
@@ -346,87 +374,107 @@ describe("CLI pipeline integration — runPreview / runFinal / runStatus / workf
 
   // ----- runApprove / runReject -----
 
-  it("runApprove advances review to APPROVED and writes checkpoint", async () => {
-    await runPreview(projectName, projectCwd); // produce the WAITING_REVIEW state
-    const code = await runApprove(projectName, "review", projectCwd);
-    expect(code).toBe(0);
-    const state = readState(projectDir);
-    expect(state.status).toBe("APPROVED");
-    expect(
-      existsSync(path.join(projectDir, "checkpoints", "review.yaml")),
-    ).toBe(true);
-  }, RENDER_TIMEOUT);
+  it(
+    "runApprove advances review to APPROVED and writes checkpoint",
+    async () => {
+      await runPreview(projectName, projectCwd); // produce the WAITING_REVIEW state
+      const code = await runApprove(projectName, "review", projectCwd);
+      expect(code).toBe(0);
+      const state = readState(projectDir);
+      expect(state.status).toBe("APPROVED");
+      expect(
+        existsSync(path.join(projectDir, "checkpoints", "review.yaml")),
+      ).toBe(true);
+    },
+    RENDER_TIMEOUT,
+  );
 
-  it("runReject writes feedback to the checkpoint + transitions to GENERATING", async () => {
-    await runPreview(projectName, projectCwd);
-    // runReject only appends feedback when the stage checkpoint file
-    // exists — preview writes state.yaml but not the checkpoint. Create it.
-    mkdirSync(path.join(projectDir, "checkpoints"), { recursive: true });
-    writeFileSync(
-      path.join(projectDir, "checkpoints", "review.yaml"),
-      "id: review-v1\nstage: review\nstatus: in_progress\ncreated_at: '2026-01-01'\nhuman_changes: []\nnotes: ''\n",
-    );
-    const code = await runReject(projectName, "wrong-pacing", projectCwd);
-    expect(code).toBe(0);
-    const cp = readFileSync(
-      path.join(projectDir, "checkpoints", "review.yaml"),
-      "utf8",
-    );
-    expect(cp).toContain("wrong-pacing");
-  }, RENDER_TIMEOUT);
+  it(
+    "runReject writes feedback to the checkpoint + transitions to GENERATING",
+    async () => {
+      await runPreview(projectName, projectCwd);
+      // runReject only appends feedback when the stage checkpoint file
+      // exists — preview writes state.yaml but not the checkpoint. Create it.
+      mkdirSync(path.join(projectDir, "checkpoints"), { recursive: true });
+      writeFileSync(
+        path.join(projectDir, "checkpoints", "review.yaml"),
+        "id: review-v1\nstage: review\nstatus: in_progress\ncreated_at: '2026-01-01'\nhuman_changes: []\nnotes: ''\n",
+      );
+      const code = await runReject(projectName, "wrong-pacing", projectCwd);
+      expect(code).toBe(0);
+      const cp = readFileSync(
+        path.join(projectDir, "checkpoints", "review.yaml"),
+        "utf8",
+      );
+      expect(cp).toContain("wrong-pacing");
+    },
+    RENDER_TIMEOUT,
+  );
 
   // ----- runFinal -----
 
-  it("runFinal exits 1 when review is not yet APPROVED", async () => {
-    await runPreview(projectName, projectCwd);
-    // review is WAITING_REVIEW — runFinal should refuse
-    const code = await runFinal({ projectName, cwd: projectCwd });
-    expect(code).toBe(1);
-  }, RENDER_TIMEOUT);
+  it(
+    "runFinal exits 1 when review is not yet APPROVED",
+    async () => {
+      await runPreview(projectName, projectCwd);
+      // review is WAITING_REVIEW — runFinal should refuse
+      const code = await runFinal({ projectName, cwd: projectCwd });
+      expect(code).toBe(1);
+    },
+    RENDER_TIMEOUT,
+  );
 
-  it("runFinal produces final-faststart.mp4 + FINAL_APPROVED state after approval", async () => {
-    await runPreview(projectName, projectCwd);
-    await runApprove(projectName, "review", projectCwd);
-    const code = await runFinal({ projectName, cwd: projectCwd });
-    expect(code).toBe(0);
-    expect(
-      existsSync(path.join(projectDir, "output", "final-faststart.mp4")),
-    ).toBe(true);
-    const state = readState(projectDir);
-    expect(state.status).toBe("FINAL_APPROVED");
-    expect(state.current_stage).toBe("final");
-  }, RENDER_TIMEOUT);
+  it(
+    "runFinal produces final-faststart.mp4 + FINAL_APPROVED state after approval",
+    async () => {
+      await runPreview(projectName, projectCwd);
+      await runApprove(projectName, "review", projectCwd);
+      const code = await runFinal({ projectName, cwd: projectCwd });
+      expect(code).toBe(0);
+      expect(
+        existsSync(path.join(projectDir, "output", "final-faststart.mp4")),
+      ).toBe(true);
+      const state = readState(projectDir);
+      expect(state.status).toBe("FINAL_APPROVED");
+      expect(state.current_stage).toBe("final");
+    },
+    RENDER_TIMEOUT,
+  );
 
-  it("T6.2 — the QA gate blocks final on error-level findings; --force overrides", async () => {
-    await runPreview(projectName, projectCwd);
-    await runApprove(projectName, "review", projectCwd);
-    // Inject a defect the QA checks catch: non-monotonic captions.
-    mkdirSync(path.join(projectDir, "captions"), { recursive: true });
-    writeFileSync(
-      path.join(projectDir, "captions", "zh-CN.srt"),
-      "1\n00:00:02,000 --> 00:00:02,500\nlater\n\n2\n00:00:00,500 --> 00:00:01,000\nearlier\n",
-    );
-    const blocked = await runFinal({ projectName, cwd: projectCwd });
-    expect(blocked).toBe(1);
-    expect(
-      existsSync(path.join(projectDir, "output", "final-faststart.mp4")),
-    ).toBe(false);
-    // The failed gate is in the audit trail.
-    const runs = readdirSync(path.join(projectDir, "runs")).join("\n");
-    expect(runs).toContain("final-");
+  it(
+    "T6.2 — the QA gate blocks final on error-level findings; --force overrides",
+    async () => {
+      await runPreview(projectName, projectCwd);
+      await runApprove(projectName, "review", projectCwd);
+      // Inject a defect the QA checks catch: non-monotonic captions.
+      mkdirSync(path.join(projectDir, "captions"), { recursive: true });
+      writeFileSync(
+        path.join(projectDir, "captions", "zh-CN.srt"),
+        "1\n00:00:02,000 --> 00:00:02,500\nlater\n\n2\n00:00:00,500 --> 00:00:01,000\nearlier\n",
+      );
+      const blocked = await runFinal({ projectName, cwd: projectCwd });
+      expect(blocked).toBe(1);
+      expect(
+        existsSync(path.join(projectDir, "output", "final-faststart.mp4")),
+      ).toBe(false);
+      // The failed gate is in the audit trail.
+      const runs = readdirSync(path.join(projectDir, "runs")).join("\n");
+      expect(runs).toContain("final-");
 
-    const forced = await runFinal({
-      projectName,
-      cwd: projectCwd,
-      force: true,
-    });
-    expect(forced).toBe(0);
-    expect(
-      existsSync(path.join(projectDir, "output", "final-faststart.mp4")),
-    ).toBe(true);
-    const state = readState(projectDir);
-    expect(state.status).toBe("FINAL_APPROVED");
-  }, RENDER_TIMEOUT);
+      const forced = await runFinal({
+        projectName,
+        cwd: projectCwd,
+        force: true,
+      });
+      expect(forced).toBe(0);
+      expect(
+        existsSync(path.join(projectDir, "output", "final-faststart.mp4")),
+      ).toBe(true);
+      const state = readState(projectDir);
+      expect(state.status).toBe("FINAL_APPROVED");
+    },
+    RENDER_TIMEOUT,
+  );
 
   // ----- runRollback -----
 
@@ -438,110 +486,130 @@ describe("CLI pipeline integration — runPreview / runFinal / runStatus / workf
     return text.match(/^id:\s*(\S+)/m)?.[1] ?? "";
   }
 
-  it("runRollback declines when the confirmation answer is not 'y'", async () => {
-    await runPreview(projectName, projectCwd);
-    const id = readCheckpointId("storyboard");
-    const { PassThrough } = await import("node:stream");
-    const fakeStdin = new PassThrough();
-    const realStdin = process.stdin;
-    Object.defineProperty(process, "stdin", {
-      value: fakeStdin,
-      configurable: true,
-    });
-    fakeStdin.write("n\n");
-    try {
-      const code = await runRollback(projectName, id, projectCwd);
-      expect(code).toBe(0);
-      const state = readState(projectDir);
-      expect(state.status).toBe("WAITING_REVIEW");
-    } finally {
+  it(
+    "runRollback declines when the confirmation answer is not 'y'",
+    async () => {
+      await runPreview(projectName, projectCwd);
+      const id = readCheckpointId("storyboard");
+      const { PassThrough } = await import("node:stream");
+      const fakeStdin = new PassThrough();
+      const realStdin = process.stdin;
       Object.defineProperty(process, "stdin", {
-        value: realStdin,
+        value: fakeStdin,
         configurable: true,
       });
-      fakeStdin.destroy();
-    }
-  }, RENDER_TIMEOUT);
+      fakeStdin.write("n\n");
+      try {
+        const code = await runRollback(projectName, id, projectCwd);
+        expect(code).toBe(0);
+        const state = readState(projectDir);
+        expect(state.status).toBe("WAITING_REVIEW");
+      } finally {
+        Object.defineProperty(process, "stdin", {
+          value: realStdin,
+          configurable: true,
+        });
+        fakeStdin.destroy();
+      }
+    },
+    RENDER_TIMEOUT,
+  );
 
-  it("runRollback rejects unknown checkpoint ids", async () => {
-    await runPreview(projectName, projectCwd);
-    const { PassThrough } = await import("node:stream");
-    const fakeStdin = new PassThrough();
-    const realStdin = process.stdin;
-    Object.defineProperty(process, "stdin", {
-      value: fakeStdin,
-      configurable: true,
-    });
-    fakeStdin.write("y\n");
-    try {
-      const code = await runRollback(projectName, "checkpoint-x", projectCwd);
-      expect(code).toBe(1);
-      const state = readState(projectDir);
-      expect(state.status).toBe("WAITING_REVIEW"); // untouched
-    } finally {
+  it(
+    "runRollback rejects unknown checkpoint ids",
+    async () => {
+      await runPreview(projectName, projectCwd);
+      const { PassThrough } = await import("node:stream");
+      const fakeStdin = new PassThrough();
+      const realStdin = process.stdin;
       Object.defineProperty(process, "stdin", {
-        value: realStdin,
+        value: fakeStdin,
         configurable: true,
       });
-      fakeStdin.destroy();
-    }
-  }, RENDER_TIMEOUT);
+      fakeStdin.write("y\n");
+      try {
+        const code = await runRollback(projectName, "checkpoint-x", projectCwd);
+        expect(code).toBe(1);
+        const state = readState(projectDir);
+        expect(state.status).toBe("WAITING_REVIEW"); // untouched
+      } finally {
+        Object.defineProperty(process, "stdin", {
+          value: realStdin,
+          configurable: true,
+        });
+        fakeStdin.destroy();
+      }
+    },
+    RENDER_TIMEOUT,
+  );
 
-  it("runRollback invalidates downstream checkpoints and lands at DRAFT/target", async () => {
-    await runPreview(projectName, projectCwd); // WAITING_REVIEW
-    // A downstream checkpoint to invalidate (as video approve review would write).
-    mkdirSync(path.join(projectDir, "checkpoints"), { recursive: true });
-    writeFileSync(
-      path.join(projectDir, "checkpoints", "review.yaml"),
-      "id: review-v1\nstage: review\nstatus: approved\ncreated_at: '2026-01-01'\nhuman_changes: []\nnotes: ''\n",
-    );
-    const id = readCheckpointId("storyboard");
-    const { PassThrough } = await import("node:stream");
-    const fakeStdin = new PassThrough();
-    const realStdin = process.stdin;
-    Object.defineProperty(process, "stdin", {
-      value: fakeStdin,
-      configurable: true,
-    });
-    fakeStdin.write("y\n");
-    try {
-      // One-argument form: checkpoint id only, project auto-discovered.
-      const code = await runRollback(undefined, id, projectCwd);
-      expect(code).toBe(0);
-      const state = readState(projectDir);
-      expect(state.status).toBe("DRAFT");
-      expect(state.current_stage).toBe("storyboard");
-      const review = readFileSync(
+  it(
+    "runRollback invalidates downstream checkpoints and lands at DRAFT/target",
+    async () => {
+      await runPreview(projectName, projectCwd); // WAITING_REVIEW
+      // A downstream checkpoint to invalidate (as video approve review would write).
+      mkdirSync(path.join(projectDir, "checkpoints"), { recursive: true });
+      writeFileSync(
         path.join(projectDir, "checkpoints", "review.yaml"),
-        "utf8",
+        "id: review-v1\nstage: review\nstatus: approved\ncreated_at: '2026-01-01'\nhuman_changes: []\nnotes: ''\n",
       );
-      expect(review).toContain("invalidated");
-      expect(review).toContain("id: review-v1"); // history preserved
-      // Audit trail: a rollback run record exists.
-      expect(existsSync(path.join(projectDir, "runs"))).toBe(true);
-    } finally {
+      const id = readCheckpointId("storyboard");
+      const { PassThrough } = await import("node:stream");
+      const fakeStdin = new PassThrough();
+      const realStdin = process.stdin;
       Object.defineProperty(process, "stdin", {
-        value: realStdin,
+        value: fakeStdin,
         configurable: true,
       });
-      fakeStdin.destroy();
-    }
-  }, RENDER_TIMEOUT);
+      fakeStdin.write("y\n");
+      try {
+        // One-argument form: checkpoint id only, project auto-discovered.
+        const code = await runRollback(undefined, id, projectCwd);
+        expect(code).toBe(0);
+        const state = readState(projectDir);
+        expect(state.status).toBe("DRAFT");
+        expect(state.current_stage).toBe("storyboard");
+        const review = readFileSync(
+          path.join(projectDir, "checkpoints", "review.yaml"),
+          "utf8",
+        );
+        expect(review).toContain("invalidated");
+        expect(review).toContain("id: review-v1"); // history preserved
+        // Audit trail: a rollback run record exists.
+        expect(existsSync(path.join(projectDir, "runs"))).toBe(true);
+      } finally {
+        Object.defineProperty(process, "stdin", {
+          value: realStdin,
+          configurable: true,
+        });
+        fakeStdin.destroy();
+      }
+    },
+    RENDER_TIMEOUT,
+  );
 
   // ----- runResume -----
 
-  it("runResume prints a resume summary", async () => {
-    await runPreview(projectName, projectCwd);
-    const code = await runResume(projectName, projectCwd);
-    expect(code).toBe(0);
-  }, RENDER_TIMEOUT);
+  it(
+    "runResume prints a resume summary",
+    async () => {
+      await runPreview(projectName, projectCwd);
+      const code = await runResume(projectName, projectCwd);
+      expect(code).toBe(0);
+    },
+    RENDER_TIMEOUT,
+  );
 
-  it("runQa passes on a healthy project and re-uses the rendered preview", async () => {
-    await runPreview(projectName, projectCwd);
-    const { runQa } = await import("./qa-command.js");
-    const code = await runQa({ project: projectName, cwd: projectCwd });
-    expect(code).toBe(0);
-  }, RENDER_TIMEOUT);
+  it(
+    "runQa passes on a healthy project and re-uses the rendered preview",
+    async () => {
+      await runPreview(projectName, projectCwd);
+      const { runQa } = await import("./qa-command.js");
+      const code = await runQa({ project: projectName, cwd: projectCwd });
+      expect(code).toBe(0);
+    },
+    RENDER_TIMEOUT,
+  );
 
   it("runResume no-ops on a FINAL_APPROVED project", async () => {
     const { writeProjectState } = await import("@video/workflow");

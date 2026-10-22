@@ -106,7 +106,8 @@ function extractNodes(scene: ArticleScene, input: BuildInput): string[] {
   if (seqHits && seqHits.length >= 2) {
     // Pair each marker with a following 2-10 word phrase.
     const out: string[] = [];
-    const re = /(步骤|阶段|step|stage|phase)\s*\d+\s*[:：\-—、]\s*([^\n。.!?！？]{2,30})/gi;
+    const re =
+      /(步骤|阶段|step|stage|phase)\s*\d+\s*[:：\-—、]\s*([^\n。.!?！？]{2,30})/gi;
     let m: RegExpExecArray | null;
     while ((m = re.exec(narration)) !== null && out.length < 8) {
       const label = `${m[1]!.toLowerCase()} ${out.length + 1}: ${m[2]!.trim()}`;
@@ -124,14 +125,26 @@ function extractNodes(scene: ArticleScene, input: BuildInput): string[] {
 
   // 4) Fallback: 3 generic step nodes from the caption.
   if (caption.length > 0) {
-    return [caption, loc(language, "中间处理", "Processing"), loc(language, "结果", "Result")];
+    return [
+      caption,
+      loc(language, "中间处理", "Processing"),
+      loc(language, "结果", "Result"),
+    ];
   }
   // 5) Last resort — empty caption: synthesise placeholder nodes from
   // the section heading so the FlowChart isn't empty.
   if (input.section?.heading) {
-    return [input.section.heading, loc(language, "细节展开", "Detail"), loc(language, "结果", "Result")];
+    return [
+      input.section.heading,
+      loc(language, "细节展开", "Detail"),
+      loc(language, "结果", "Result"),
+    ];
   }
-  return [loc(language, "开始", "Start"), loc(language, "过程", "In progress"), loc(language, "结果", "Result")];
+  return [
+    loc(language, "开始", "Start"),
+    loc(language, "过程", "In progress"),
+    loc(language, "结果", "Result"),
+  ];
 }
 
 // ---------------------------------------------------------------------------
@@ -364,7 +377,15 @@ const buildStatGrid: VisualPropsBuilder = (scene, input) => {
   }
   if (stats.length === 0) {
     return {
-      stats: [{ value: "100%", label: scene.caption || input.section?.heading || loc(language, "关键数据", "Key metric") }],
+      stats: [
+        {
+          value: "100%",
+          label:
+            scene.caption ||
+            input.section?.heading ||
+            loc(language, "关键数据", "Key metric"),
+        },
+      ],
     };
   }
   return { stats };
@@ -395,7 +416,14 @@ const buildBarChart: VisualPropsBuilder = (scene, input) => {
       .filter((s) => s.length >= 2)
       .slice(0, 4);
     const ramp = [90, 70, 50, 30];
-    const labels = parts.length >= 2 ? parts : [loc(language, "高", "High"), loc(language, "中", "Mid"), loc(language, "低", "Low")];
+    const labels =
+      parts.length >= 2
+        ? parts
+        : [
+            loc(language, "高", "High"),
+            loc(language, "中", "Mid"),
+            loc(language, "低", "Low"),
+          ];
     return {
       bars: labels.map((label, i) => ({
         label,
@@ -423,7 +451,11 @@ const buildLeaderboard: VisualPropsBuilder = (scene, input) => {
     entries.push({ name });
   }
   if (entries.length < 2) {
-    const medal = [loc(language, "冠军", "1st"), loc(language, "亚军", "2nd"), loc(language, "季军", "3rd")];
+    const medal = [
+      loc(language, "冠军", "1st"),
+      loc(language, "亚军", "2nd"),
+      loc(language, "季军", "3rd"),
+    ];
     return {
       entries: medal.slice(0, 3).map((name) => ({ name })),
     };
@@ -457,7 +489,9 @@ const buildChecklist: VisualPropsBuilder = (scene, input) => {
     }
   }
   if (items.length === 0) {
-    return { items: [{ text: scene.caption || loc(language, "确认要点", "Confirm") }] };
+    return {
+      items: [{ text: scene.caption || loc(language, "确认要点", "Confirm") }],
+    };
   }
   return { items };
 };
@@ -472,9 +506,14 @@ const buildBigIdea: VisualPropsBuilder = (scene, input) => {
   const text =
     caption.length >= 6
       ? caption
-      : narration.split(/[。.!?！？\n]/)[0]?.trim() || caption || loc(language, "核心观点", "KEY IDEA");
+      : narration.split(/[。.!?！？\n]/)[0]?.trim() ||
+        caption ||
+        loc(language, "核心观点", "KEY IDEA");
   const zh = /[\u4e00-\u9fa5]/.test(`${caption}${narration}`);
-  return { text, kicker: zh ? loc(language, "核心观点", "KEY IDEA") : "KEY IDEA" };
+  return {
+    text,
+    kicker: zh ? loc(language, "核心观点", "KEY IDEA") : "KEY IDEA",
+  };
 };
 
 // ---------------------------------------------------------------------------
@@ -484,9 +523,17 @@ const buildPyramidDiagram: VisualPropsBuilder = (scene, input) => {
   const language = input.language;
   const nodes = extractNodes(scene, input).slice(0, 5);
   if (nodes.length >= 2) {
-    return { levels: nodes.map((t) => t.replace(/[.。;；,，、]+$/, "").slice(0, 16)) };
+    return {
+      levels: nodes.map((t) => t.replace(/[.。;；,，、]+$/, "").slice(0, 16)),
+    };
   }
-  return { levels: [loc(language, "顶层结论", "Top line"), loc(language, "方法路径", "Method"), loc(language, "基础事实", "Grounds")] };
+  return {
+    levels: [
+      loc(language, "顶层结论", "Top line"),
+      loc(language, "方法路径", "Method"),
+      loc(language, "基础事实", "Grounds"),
+    ],
+  };
 };
 
 // ---------------------------------------------------------------------------
@@ -509,7 +556,12 @@ const buildVennDiagram: VisualPropsBuilder = (scene, input) => {
       .filter((s) => s.length >= 2 && s.length <= 12),
   ).slice(0, 3);
   if (nParts.length >= 2) return { sets: nParts };
-  return { sets: [loc(language, "概念A", "Concept A"), loc(language, "概念B", "Concept B")] };
+  return {
+    sets: [
+      loc(language, "概念A", "Concept A"),
+      loc(language, "概念B", "Concept B"),
+    ],
+  };
 };
 
 // ---------------------------------------------------------------------------
@@ -521,7 +573,12 @@ const buildCycleDiagram: VisualPropsBuilder = (scene, input) => {
   const stages =
     nodes.length >= 3
       ? nodes.map((t) => t.replace(/[.。;；,，、]+$/, "").slice(0, 8))
-      : [loc(language, "计划", "Plan"), loc(language, "执行", "Execute"), loc(language, "检查", "Check"), loc(language, "改进", "Improve")].slice(0, Math.max(3, nodes.length));
+      : [
+          loc(language, "计划", "Plan"),
+          loc(language, "执行", "Execute"),
+          loc(language, "检查", "Check"),
+          loc(language, "改进", "Improve"),
+        ].slice(0, Math.max(3, nodes.length));
   return { stages, title: (scene.caption ?? "").slice(0, 12) || undefined };
 };
 

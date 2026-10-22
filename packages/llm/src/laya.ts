@@ -88,7 +88,9 @@ const LAYA_HEALTH_BUDGET_MS = 20_000;
 
 /** `laya:` section from the llm.config.yaml file (same file
  * `loadProviderConfig` reads), then env overrides, then defaults. */
-export function resolveLayaConfig(opts: { configPath?: string } = {}): LayaConfig {
+export function resolveLayaConfig(
+  opts: { configPath?: string } = {},
+): LayaConfig {
   const cfg: LayaConfig = { ...LAYA_DEFAULTS, bearer: undefined };
   const path = opts.configPath ?? process.env["LL_CONFIG"];
   if (path && existsSync(path)) {

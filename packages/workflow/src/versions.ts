@@ -54,7 +54,10 @@ export function extractSceneFragment(
   for (let i = start + 1; i < lines.length; i++) {
     const line = lines[i]!;
     if (line.trim() === "") continue;
-    if (leadingSpace(line) < indent || (leadingSpace(line) === indent && line.trimStart().startsWith("- "))) {
+    if (
+      leadingSpace(line) < indent ||
+      (leadingSpace(line) === indent && line.trimStart().startsWith("- "))
+    ) {
       end = i;
       break;
     }
@@ -73,7 +76,9 @@ export function replaceSceneFragment(
 ): string {
   const before = extractSceneFragment(storyboardText, sceneId);
   if (before === null) {
-    throw new Error(`replaceSceneFragment: scene "${sceneId}" not in storyboard`);
+    throw new Error(
+      `replaceSceneFragment: scene "${sceneId}" not in storyboard`,
+    );
   }
   const lines = storyboardText.split("\n");
   const start = lines.findIndex((l) =>
@@ -84,12 +89,19 @@ export function replaceSceneFragment(
   for (let i = start + 1; i < lines.length; i++) {
     const line = lines[i]!;
     if (line.trim() === "") continue;
-    if (leadingSpace(line) < indent || (leadingSpace(line) === indent && line.trimStart().startsWith("- "))) {
+    if (
+      leadingSpace(line) < indent ||
+      (leadingSpace(line) === indent && line.trimStart().startsWith("- "))
+    ) {
       end = i;
       break;
     }
   }
-  return [...lines.slice(0, start), ...fragment.split("\n"), ...lines.slice(end)].join("\n");
+  return [
+    ...lines.slice(0, start),
+    ...fragment.split("\n"),
+    ...lines.slice(end),
+  ].join("\n");
 }
 
 /** Record the current fragment as a new version unless it hashes identical
@@ -135,7 +147,9 @@ export async function listSceneVersions(
   const out: SceneVersionMeta[] = [];
   for (const f of files) {
     try {
-      const doc = parseYaml(await readFile(path.join(dir, f), "utf8")) as StoredVersion;
+      const doc = parseYaml(
+        await readFile(path.join(dir, f), "utf8"),
+      ) as StoredVersion;
       if (typeof doc?.version === "number" && typeof doc?.hash === "string") {
         out.push({
           version: doc.version,
@@ -183,7 +197,12 @@ export async function approveSceneVersion(
   await mkdir(dir, { recursive: true });
   await writeFile(
     path.join(dir, "approved.yaml"),
-    stringifyYaml({ scene: sceneId, version, approver, approved_at: new Date().toISOString() }),
+    stringifyYaml({
+      scene: sceneId,
+      version,
+      approver,
+      approved_at: new Date().toISOString(),
+    }),
     "utf8",
   );
 }

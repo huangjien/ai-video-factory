@@ -286,17 +286,15 @@ describe("chatWithFallback (todo 5) — transient retry + fallback", () => {
 
   it("if both fail, surfaces the fallback's error", async () => {
     const p = new FakeProvider("glm", ok, quotaErr("glm"));
-    const f = new FakeProvider(
-      "minimax",
-      ok,
-      new Error("minimax also down"),
-    );
+    const f = new FakeProvider("minimax", ok, new Error("minimax also down"));
     await expect(chatWithFallback(p, f, req)).rejects.toThrow(/also down/);
   });
 
   it("if fallback is null and primary fails with quota error, surfaces the primary's quota error", async () => {
     const p = new FakeProvider("glm", ok, quotaErr("glm"));
-    await expect(chatWithFallback(p, null, req)).rejects.toThrow(/insufficient_balance/);
+    await expect(chatWithFallback(p, null, req)).rejects.toThrow(
+      /insufficient_balance/,
+    );
     expect(p.calls).toBe(1);
   });
 

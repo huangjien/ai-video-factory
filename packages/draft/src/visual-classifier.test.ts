@@ -8,30 +8,31 @@ describe("pickVisualComponent (T2 visual variety)", () => {
   });
 
   it("matches database / SQL keywords to Callout kind=data", () => {
-    expect(pickVisualComponent("a database table with rows", false).component).toBe(
-      "Callout",
-    );
+    expect(
+      pickVisualComponent("a database table with rows", false).component,
+    ).toBe("Callout");
     expect(pickVisualComponent("数据库表格 字段 列存", false).component).toBe(
       "Callout",
     );
   });
 
-    it("matches network/flow/pipeline to FlowChart", () => {
+  it("matches network/flow/pipeline to FlowChart", () => {
     expect(
-      pickVisualComponent("a network of nodes connected by edges", false).component,
+      pickVisualComponent("a network of nodes connected by edges", false)
+        .component,
     ).toBe("FlowChart");
     expect(pickVisualComponent("流水线 步骤 流程", false).component).toBe(
       "FlowChart",
     );
-    expect(pickVisualComponent("flow of data through a pipeline", false).component).toBe(
-      "FlowChart",
-    );
+    expect(
+      pickVisualComponent("flow of data through a pipeline", false).component,
+    ).toBe("FlowChart");
   });
 
   it("matches code/terminal/console to Terminal", () => {
-    expect(pickVisualComponent("a terminal command line", false).component).toBe(
-      "Terminal",
-    );
+    expect(
+      pickVisualComponent("a terminal command line", false).component,
+    ).toBe("Terminal");
     expect(pickVisualComponent("代码片段 控制台", false).component).toBe(
       "Terminal",
     );
@@ -39,7 +40,8 @@ describe("pickVisualComponent (T2 visual variety)", () => {
 
   it("matches history/timeline to Timeline", () => {
     expect(
-      pickVisualComponent("a timeline showing decades of progress", false).component,
+      pickVisualComponent("a timeline showing decades of progress", false)
+        .component,
     ).toBe("Timeline");
     expect(pickVisualComponent("历史 年表 沿革", false).component).toBe(
       "Timeline",
@@ -65,9 +67,9 @@ describe("pickVisualComponent (T2 visual variety)", () => {
   });
 
   it("matches quote keywords to QuoteBlock (v0.4.2, was Callout)", () => {
-    expect(pickVisualComponent("a famous quote from Einstein", false).component).toBe(
-      "QuoteBlock",
-    );
+    expect(
+      pickVisualComponent("a famous quote from Einstein", false).component,
+    ).toBe("QuoteBlock");
     expect(pickVisualComponent("引用 说过 指出", false).component).toBe(
       "QuoteBlock",
     );
@@ -77,27 +79,27 @@ describe("pickVisualComponent (T2 visual variety)", () => {
   });
 
   it("matches cycle/loop keywords to CycleDiagram", () => {
-    expect(pickVisualComponent("the feedback loop iterates", false).component).toBe(
-      "CycleDiagram",
-    );
+    expect(
+      pickVisualComponent("the feedback loop iterates", false).component,
+    ).toBe("CycleDiagram");
     expect(pickVisualComponent("闭环 迭代 飞轮", false).component).toBe(
       "CycleDiagram",
     );
   });
 
   it("matches ranking keywords to Leaderboard", () => {
-    expect(pickVisualComponent("top 10 leaderboard ranking", false).component).toBe(
-      "Leaderboard",
-    );
+    expect(
+      pickVisualComponent("top 10 leaderboard ranking", false).component,
+    ).toBe("Leaderboard");
     expect(pickVisualComponent("排行榜 冠军 前十", false).component).toBe(
       "Leaderboard",
     );
   });
 
   it("matches chart/distribution keywords to BarChart", () => {
-    expect(pickVisualComponent("market share distribution chart", false).component).toBe(
-      "BarChart",
-    );
+    expect(
+      pickVisualComponent("market share distribution chart", false).component,
+    ).toBe("BarChart");
     expect(pickVisualComponent("柱状图 分布 构成", false).component).toBe(
       "BarChart",
     );
@@ -131,18 +133,18 @@ describe("pickVisualComponent (T2 visual variety)", () => {
   });
 
   it("matches venn/overlap keywords to VennDiagram", () => {
-    expect(pickVisualComponent("a venn diagram with overlap", false).component).toBe(
-      "VennDiagram",
-    );
+    expect(
+      pickVisualComponent("a venn diagram with overlap", false).component,
+    ).toBe("VennDiagram");
     expect(pickVisualComponent("交集 重叠 融合", false).component).toBe(
       "VennDiagram",
     );
   });
 
   it("matches key-insight keywords to BigIdea", () => {
-    expect(pickVisualComponent("the key takeaway of this video", false).component).toBe(
-      "BigIdea",
-    );
+    expect(
+      pickVisualComponent("the key takeaway of this video", false).component,
+    ).toBe("BigIdea");
     expect(pickVisualComponent("核心观点 一句话总结", false).component).toBe(
       "BigIdea",
     );
@@ -182,20 +184,28 @@ describe("pickVisualComponent (T2 visual variety)", () => {
       "VennDiagram",
       "CycleDiagram",
     ]);
-    expect(
-      pickVisualComponent("database table", false).component,
-    ).toBe("Callout");
-    expect(
-      pickVisualComponent("equation derivation", false).component,
-    ).toBe("Callout");
+    expect(pickVisualComponent("database table", false).component).toBe(
+      "Callout",
+    );
+    expect(pickVisualComponent("equation derivation", false).component).toBe(
+      "Callout",
+    );
     expect(pickVisualComponent("a quote", false).component).toBe("QuoteBlock");
     // Every rule's component must exist in the registered set above.
     for (const visual of [
-      "a quote", "cycle loop", "top 10 ranking", "chart distribution",
-      "95% stats", "checklist best practices", "pyramid hierarchy",
-      "venn overlap", "key takeaway",
+      "a quote",
+      "cycle loop",
+      "top 10 ranking",
+      "chart distribution",
+      "95% stats",
+      "checklist best practices",
+      "pyramid hierarchy",
+      "venn overlap",
+      "key takeaway",
     ]) {
-      expect(registered).toContain(pickVisualComponent(visual, false).component);
+      expect(registered).toContain(
+        pickVisualComponent(visual, false).component,
+      );
     }
     expect([...registered]).toContain(
       pickVisualComponent("a serene lake at sunset", false).component,
@@ -209,29 +219,31 @@ describe("pickVisualComponent (T2 visual variety)", () => {
 });
 describe("pickVisualComponent — map insert (CS-14)", () => {
   it("routes a map direction to MapInsert", () => {
-    expect(pickVisualComponent("map 上一连串被攻克的城池", false).component).toBe(
+    expect(
+      pickVisualComponent("map 上一连串被攻克的城池", false).component,
+    ).toBe("MapInsert");
+    expect(
+      pickVisualComponent("a hand-drawn campaign map", false).component,
+    ).toBe("MapInsert");
+    expect(pickVisualComponent("行军路线图", false).component).toBe(
       "MapInsert",
     );
-    expect(pickVisualComponent("a hand-drawn campaign map", false).component).toBe(
-      "MapInsert",
-    );
-    expect(pickVisualComponent("行军路线图", false).component).toBe("MapInsert");
   });
 
   it("yields to an earlier rule so existing scenes keep their component", () => {
     // RULES is first-match-wins and MapInsert is appended LAST, which is
     // what keeps every shipped project byte-identical.
-    expect(pickVisualComponent("timeline of the campaigns", false).component).toBe(
-      "Timeline",
-    );
-    expect(pickVisualComponent("a chart of troop numbers", false).component).toBe(
-      "BarChart",
-    );
+    expect(
+      pickVisualComponent("timeline of the campaigns", false).component,
+    ).toBe("Timeline");
+    expect(
+      pickVisualComponent("a chart of troop numbers", false).component,
+    ).toBe("BarChart");
   });
 
   it("still falls through to the image path for an ordinary narrative shot", () => {
-    expect(
-      pickVisualComponent("少年立在崖边望向远方", false).component,
-    ).toBe("AnimatedIllustration");
+    expect(pickVisualComponent("少年立在崖边望向远方", false).component).toBe(
+      "AnimatedIllustration",
+    );
   });
 });

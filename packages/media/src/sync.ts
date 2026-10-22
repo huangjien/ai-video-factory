@@ -85,7 +85,14 @@ export async function syncSceneDurations(
         lines[j] = `${durMatch[1]}duration: ${newSec}`;
         outputs.push(`storyboard.yaml: scene_${sceneKey} duration=${newSec}s`);
         clampAnimations(lines, i, measured, sceneKey, outputs, dropRanges);
-        collectSpeechWindow(lines, i, measured, sceneKey, outputs, speechWindows);
+        collectSpeechWindow(
+          lines,
+          i,
+          measured,
+          sceneKey,
+          outputs,
+          speechWindows,
+        );
         break;
       }
     }

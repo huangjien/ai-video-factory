@@ -117,6 +117,7 @@ describe("structured prompt files", () => {
       "medieval",
       "paper-cut",
       "photoreal",
+      "terminal",
       "watercolor",
       "whiteboard",
     ]);
@@ -170,7 +171,9 @@ describe("BGM library integrity", () => {
   });
 
   it("resolveBgmDirectory defaults to <repoRoot>/assets/bgm/", () => {
-    expect(resolveBgmDirectory("/x/y")).toBe(path.join("/x/y", "assets", "bgm"));
+    expect(resolveBgmDirectory("/x/y")).toBe(
+      path.join("/x/y", "assets", "bgm"),
+    );
   });
 
   it("every catalogue tag has a backing file in assets/bgm/ on disk", () => {

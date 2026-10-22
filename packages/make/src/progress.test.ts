@@ -54,6 +54,7 @@ const AUDIO_CONFIG = "voice: zh-CN-YunjianNeural\nbgm: calm\n";
 const STEP_ORDER = [
   "sync-storyboard",
   "generate-visuals",
+  "text-overlay",
   "tts",
   "sync-durations",
   "captions",
@@ -109,6 +110,7 @@ describe("runMake progress events (video-progress/1)", () => {
     expect(doneLabels).toEqual([
       "sync-storyboard",
       "generate-visuals",
+      "text-overlay",
       "tts scene_1",
       "tts scene_2",
       "tts",
@@ -172,10 +174,7 @@ describe("runMake progress events (video-progress/1)", () => {
 
   it("defaults to silence when no onEvent is passed (existing behavior)", async () => {
     const dir = await freshProject();
-    const report = await runMake(
-      { projectRoot: dir, fake: true },
-      fakeDeps,
-    );
+    const report = await runMake({ projectRoot: dir, fake: true }, fakeDeps);
     expect(report.steps.every((s) => s.status === "ran")).toBe(true);
   });
 

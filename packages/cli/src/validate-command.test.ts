@@ -82,10 +82,7 @@ describe("video validate (end command)", () => {
       exit: number;
     }> {
       const root = makeProject("scene-01.wav");
-      writeFileSync(
-        path.join(root, "storyboard", "storyboard.yaml"),
-        yamlText,
-      );
+      writeFileSync(path.join(root, "storyboard", "storyboard.yaml"), yamlText);
       const orig = { log: console.log, error: console.error };
       const stdoutChunks: string[] = [];
       const stderrChunks: string[] = [];

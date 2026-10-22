@@ -26,10 +26,7 @@ describe("emitSceneAnimations (T17)", () => {
     const out = emitSceneAnimations(
       "FlowChart",
       {
-        nodes: [
-          { id: "trigger" },
-          { id: "build" },
-        ],
+        nodes: [{ id: "trigger" }, { id: "build" }],
       },
       ctx,
     );
@@ -48,7 +45,6 @@ describe("emitSceneAnimations (T17)", () => {
     expect(out[0]?.type).toBe("write");
     expect(out.at(-1)?.target).toBe("line-2");
   });
-
 
   it("Timeline emits one highlight per event keyed by label", () => {
     const out = emitSceneAnimations(
@@ -71,10 +67,13 @@ describe("emitSceneAnimations (T17)", () => {
     expect(out[0]?.type).toBe("highlight");
   });
 
-
   it("returns empty list for components that don't have a known mapping", () => {
     expect(
-      emitSceneAnimations("AnimatedIllustration", { text: "x", visual: "y" }, ctx),
+      emitSceneAnimations(
+        "AnimatedIllustration",
+        { text: "x", visual: "y" },
+        ctx,
+      ),
     ).toEqual([]);
   });
 
@@ -116,7 +115,12 @@ describe("emitSceneAnimations — v0.4.2 components", () => {
   it("StatGrid emits one scale per stat", () => {
     const out = emitSceneAnimations(
       "StatGrid",
-      { stats: [{ value: "1", label: "a" }, { value: "2", label: "b" }] },
+      {
+        stats: [
+          { value: "1", label: "a" },
+          { value: "2", label: "b" },
+        ],
+      },
       ctx,
     );
     expect(out.map((a) => a.target)).toEqual(["stat-0", "stat-1"]);
@@ -126,7 +130,12 @@ describe("emitSceneAnimations — v0.4.2 components", () => {
   it("BarChart emits one draw per bar", () => {
     const out = emitSceneAnimations(
       "BarChart",
-      { bars: [{ label: "a", value: 1 }, { label: "b", value: 2 }] },
+      {
+        bars: [
+          { label: "a", value: 1 },
+          { label: "b", value: 2 },
+        ],
+      },
       ctx,
     );
     expect(out.map((a) => a.target)).toEqual(["bar-0", "bar-1"]);
@@ -205,7 +214,9 @@ describe("emitSceneAnimations — v0.4.2 components", () => {
       ["VennDiagram", { sets: ["a"] }],
       ["CycleDiagram", { stages: ["a"] }],
     ] as const) {
-      const out = emitSceneAnimations(component, props, { sceneDurationSec: 3 });
+      const out = emitSceneAnimations(component, props, {
+        sceneDurationSec: 3,
+      });
       for (const a of out) {
         expect(a.start + a.duration).toBeLessThanOrEqual(3.1);
       }

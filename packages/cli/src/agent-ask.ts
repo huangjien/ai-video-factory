@@ -144,7 +144,8 @@ const IMAGE_STYLE_NOTES: Record<string, string> = {
   isometric: "fixed axonometric view; systems and processes",
   "paper-cut": "layered tactile collage; narrative scenes",
   gongbi: "restrained ink linework, low-saturation washes; historical scenes",
-  terminal: "dark CRT console with phosphor-green and cyan glow; code/CLI environments",
+  terminal:
+    "dark CRT console with phosphor-green and cyan glow; code/CLI environments",
 };
 
 const IMAGE_STYLE_CHOICES: readonly { value: string; note: string }[] =
@@ -166,11 +167,12 @@ const IMAGE_PROVIDER_NOTES: Record<string, string> = {
   none: "skip image generation; scenes render as vector shapes",
 };
 
-const IMAGE_PROVIDER_CHOICES: readonly { value: string; note: string }[] =
-  (["minimax", "openai", "gemini", "mock", "none"] as const).map((value) => ({
-    value,
-    note: IMAGE_PROVIDER_NOTES[value] ?? value,
-  }));
+const IMAGE_PROVIDER_CHOICES: readonly { value: string; note: string }[] = (
+  ["minimax", "openai", "gemini", "mock", "none"] as const
+).map((value) => ({
+  value,
+  note: IMAGE_PROVIDER_NOTES[value] ?? value,
+}));
 
 /**
  * Shortlist of BGM tracks for the question, drawn from the curated library
@@ -311,7 +313,8 @@ export function ttsQuestion(profiles: readonly string[]): AskQuestion {
       },
     ],
     default: "minimax-system",
-    recommended: profiles.length > 0 ? `voicebox:${profiles[0] ?? ""}` : "minimax-system",
+    recommended:
+      profiles.length > 0 ? `voicebox:${profiles[0] ?? ""}` : "minimax-system",
     why: "your clone is free but slow; MiniMax is fast but a system timbre — switching later re-synthesizes every scene",
     specified: (opts) => opts.tts !== undefined,
     resolved: (opts) => opts.tts ?? "minimax-system",
@@ -321,14 +324,15 @@ export function ttsQuestion(profiles: readonly string[]): AskQuestion {
 /** Unspecified + not-dropped questions, stable order (§9: pure). The
  * conditional tts question (AskCtx) is appended after bgm when the probe
  * found a healthy voicebox with cloned profiles. */
-export function questionsFor(
-  opts: AskOpts,
-  ctx?: AskCtx,
-): AskQuestion[] {
+export function questionsFor(opts: AskOpts, ctx?: AskCtx): AskQuestion[] {
   const base = DRAFT_QUESTIONS.filter(
     (q) => !q.specified(opts) && !(q.dropped?.(opts) ?? false),
   );
-  if (ctx !== undefined && ctx.voiceboxProfiles.length > 0 && opts.tts === undefined) {
+  if (
+    ctx !== undefined &&
+    ctx.voiceboxProfiles.length > 0 &&
+    opts.tts === undefined
+  ) {
     base.push(ttsQuestion(ctx.voiceboxProfiles));
   }
   return base;

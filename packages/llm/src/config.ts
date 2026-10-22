@@ -7,12 +7,7 @@ import { parse as parseYaml } from "yaml";
  * or the `LL_CONFIG` env var pointing at one.
  */
 export type Role =
-  | "research"
-  | "script"
-  | "storyboard"
-  | "visual"
-  | "motion"
-  | "review";
+  "research" | "script" | "storyboard" | "visual" | "motion" | "review";
 
 export interface ProviderRef {
   primary: string;

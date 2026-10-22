@@ -42,12 +42,16 @@ export interface LayaOptions {
 
 export async function runLayaHealth(opts: LayaOptions): Promise<number> {
   const cfg = resolveLayaConfig();
-  console.log(`laya: ${cfg.url} (mode=${cfg.mode}, min_confidence=${cfg.minConfidence}, timeout=${cfg.timeoutMs}ms)`);
+  console.log(
+    `laya: ${cfg.url} (mode=${cfg.mode}, min_confidence=${cfg.minConfidence}, timeout=${cfg.timeoutMs}ms)`,
+  );
   const client = new LayaClient({ resolvedConfig: cfg });
   const health = await client.health(true);
   if (health === null) {
     console.error("✗ laya: service unreachable or unhealthy");
-    console.error("  start it: launchctl load ~/Library/LaunchAgents/com.local.laya.plist");
+    console.error(
+      "  start it: launchctl load ~/Library/LaunchAgents/com.local.laya.plist",
+    );
     return 1;
   }
   console.log(`✓ status=${health.status} device=${health.device}`);
@@ -63,16 +67,26 @@ export async function runLayaAsk(
   opts: LayaOptions,
 ): Promise<number> {
   void opts;
-  const raw = file ? (await import("node:fs/promises")).readFile(file, "utf8") : await readStdin();
+  const raw = file
+    ? (await import("node:fs/promises")).readFile(file, "utf8")
+    : await readStdin();
   let body: { state?: unknown; questions?: unknown };
   try {
     body = JSON.parse(await raw) as typeof body;
   } catch (err) {
-    console.error(`laya ask: input is not valid JSON: ${(err as Error).message}`);
+    console.error(
+      `laya ask: input is not valid JSON: ${(err as Error).message}`,
+    );
     return 1;
   }
-  if (typeof body.state !== "string" || typeof body.questions !== "object" || body.questions === null) {
-    console.error("laya ask: input must be {\"state\": string, \"questions\": {<id>: {type, instructions, criteria?}}}");
+  if (
+    typeof body.state !== "string" ||
+    typeof body.questions !== "object" ||
+    body.questions === null
+  ) {
+    console.error(
+      'laya ask: input must be {"state": string, "questions": {<id>: {type, instructions, criteria?}}}',
+    );
     return 1;
   }
   const cfg = resolveLayaConfig();
@@ -88,7 +102,9 @@ export async function runLayaAsk(
     body.questions as Record<string, LayaQuestion>,
   );
   if (decision === null) {
-    console.error("✗ laya ask: no usable decision (down / timeout / below min_confidence)");
+    console.error(
+      "✗ laya ask: no usable decision (down / timeout / below min_confidence)",
+    );
     return 1;
   }
   console.log(JSON.stringify(decision, null, 2));
@@ -114,14 +130,22 @@ export async function runLayaEval(
   }
   const rows = await readLayaDecisions(sidecar);
   if (rows.length === 0) {
-    console.log(`no decisions in ${sidecar} — run a surface in LAYA_MODE=shadow first`);
+    console.log(
+      `no decisions in ${sidecar} — run a surface in LAYA_MODE=shadow first`,
+    );
     return 0;
   }
   const modes = new Set<LayaMode>(rows.map((r) => r.mode));
-  console.log(`corpus: ${sidecar} (${rows.length} row(s), modes: ${[...modes].join(", ")})`);
+  console.log(
+    `corpus: ${sidecar} (${rows.length} row(s), modes: ${[...modes].join(", ")})`,
+  );
   console.log("");
-  console.log("surface  shadow-rows  answered  agreed  agreement  gate     verdict");
-  console.log("-------  -----------  --------  ------  ---------  -------  -------");
+  console.log(
+    "surface  shadow-rows  answered  agreed  agreement  gate     verdict",
+  );
+  console.log(
+    "-------  -----------  --------  ------  ---------  -------  -------",
+  );
   let allPass = true;
   for (const gate of GATES) {
     const s = summarizeAgreement(rows, gate.surface);
@@ -143,9 +167,13 @@ export async function runLayaEval(
   }
   console.log("");
   if (allPass) {
-    console.log("all surfaces with data meet their §7 gate — promotion to LAYA_MODE=on is justified");
+    console.log(
+      "all surfaces with data meet their §7 gate — promotion to LAYA_MODE=on is justified",
+    );
   } else {
-    console.log("promotion blocked until every surface with data meets its gate (or stays in shadow)");
+    console.log(
+      "promotion blocked until every surface with data meets its gate (or stays in shadow)",
+    );
   }
   return 0;
 }
@@ -159,7 +187,9 @@ export function registerLaya(program: Command): void {
 
   laya
     .command("health")
-    .description("probe the local Laya service (/health) and print the resolved config")
+    .description(
+      "probe the local Laya service (/health) and print the resolved config",
+    )
     .option("--cwd <dir>", "base directory for config resolution")
     .action(async (opts: { cwd?: string }) => {
       process.exitCode = await runLayaHealth({ cwd: opts.cwd });
@@ -178,9 +208,17 @@ export function registerLaya(program: Command): void {
 
   laya
     .command("eval")
-    .description("§7 shadow-agreement table from a project's laya-decisions.jsonl")
-    .argument("[project]", "project: topic, folder name, path, or unique prefix")
-    .option("--file <path>", "read this laya-decisions.jsonl instead of a project's")
+    .description(
+      "§7 shadow-agreement table from a project's laya-decisions.jsonl",
+    )
+    .argument(
+      "[project]",
+      "project: topic, folder name, path, or unique prefix",
+    )
+    .option(
+      "--file <path>",
+      "read this laya-decisions.jsonl instead of a project's",
+    )
     .option("--cwd <dir>", "base directory for the project")
     .action(
       async (

@@ -125,7 +125,7 @@ describe("runAudioPlan", () => {
     // Empty narrations: strict parseArticle throws, lenient recovers.
     await writeFile(
       path.join(proj, "article.md"),
-      ARTICLE.replace("    narration: n", "    narration: \"\""),
+      ARTICLE.replace("    narration: n", '    narration: ""'),
       "utf8",
     );
     const code = await runAudioPlan({

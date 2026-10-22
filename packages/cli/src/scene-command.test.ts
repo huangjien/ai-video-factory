@@ -102,7 +102,11 @@ describe("runSceneRestore", () => {
 
     // Human edits scene a; the new content becomes v2.
     const edited = STORYBOARD.replace('"original a"', '"edited a"');
-    await writeFile(path.join(proj, "storyboard", "storyboard.yaml"), edited, "utf8");
+    await writeFile(
+      path.join(proj, "storyboard", "storyboard.yaml"),
+      edited,
+      "utf8",
+    );
     await recordSceneVersion(
       proj,
       "a",
@@ -141,12 +145,24 @@ describe("runSceneRestore", () => {
 
 describe("runSceneApprove", () => {
   it("fails for a scene that is not in the storyboard", async () => {
-    const code = await runSceneApprove("sc-demo", "zzz", undefined, undefined, projectsRoot);
+    const code = await runSceneApprove(
+      "sc-demo",
+      "zzz",
+      undefined,
+      undefined,
+      projectsRoot,
+    );
     expect(code).toBe(1);
   });
 
   it("approves the version matching the current content (recording it if needed)", async () => {
-    const code = await runSceneApprove("sc-demo", "a", undefined, undefined, projectsRoot);
+    const code = await runSceneApprove(
+      "sc-demo",
+      "a",
+      undefined,
+      undefined,
+      projectsRoot,
+    );
     expect(code).toBe(0);
     const approval = await readSceneApproval(proj, "a");
     expect(approval).not.toBeNull();
@@ -155,7 +171,13 @@ describe("runSceneApprove", () => {
   });
 
   it("approves an explicit version number", async () => {
-    const code = await runSceneApprove("sc-demo", "a", 1, "looks good", projectsRoot);
+    const code = await runSceneApprove(
+      "sc-demo",
+      "a",
+      1,
+      "looks good",
+      projectsRoot,
+    );
     expect(code).toBe(0);
     const approval = await readSceneApproval(proj, "a");
     expect(approval?.version).toBe(1);

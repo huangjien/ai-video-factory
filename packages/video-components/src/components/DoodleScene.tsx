@@ -55,7 +55,11 @@ export type DoodleSceneProps = {
 const CANVAS_W = 1920;
 const CANVAS_H = 1080;
 
-const PAPER: DoodleStyle = { background: "#F5F1E8", ink: "#1F1D1A", wobble: 2.5 };
+const PAPER: DoodleStyle = {
+  background: "#F5F1E8",
+  ink: "#1F1D1A",
+  wobble: 2.5,
+};
 
 export const DoodleScene = (props: DoodleSceneProps) => {
   const {
@@ -72,7 +76,8 @@ export const DoodleScene = (props: DoodleSceneProps) => {
   // Raw props (no zod defaults applied at this boundary) — undefined
   // must not overwrite the style defaults (wobble=NaN poisoned strokes).
   const style: DoodleStyle = {
-    background: background === "paper" ? PAPER.background : theme.colors.background,
+    background:
+      background === "paper" ? PAPER.background : theme.colors.background,
     ink: background === "paper" ? PAPER.ink : theme.colors.primary,
     wobble: wobble ?? PAPER.wobble,
   };

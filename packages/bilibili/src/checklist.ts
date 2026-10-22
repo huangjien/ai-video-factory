@@ -54,7 +54,9 @@ export function renderChecklist(input: ChecklistInput): string {
   if (input.warning) {
     lines.push(`> ⚠️ ${input.warning}`);
     lines.push(">");
-    lines.push("> 下面这份元数据是由 article.md 确定性推导出来的，未经 LLM 润色。");
+    lines.push(
+      "> 下面这份元数据是由 article.md 确定性推导出来的，未经 LLM 润色。",
+    );
     lines.push("");
   }
 
@@ -135,10 +137,14 @@ export function renderChecklist(input: ChecklistInput): string {
 
   lines.push("## 需要你自己决定的字段");
   lines.push("");
-  lines.push("- **自制 / 转载**：本片由本流水线生成，通常选「自制」。转载他人素材需注明出处。");
+  lines.push(
+    "- **自制 / 转载**：本片由本流水线生成，通常选「自制」。转载他人素材需注明出处。",
+  );
   lines.push("- **分区**：见上，务必核对。");
   lines.push("- **播放权限**：建议先「仅自己可见」确认无误再改公开。");
-  lines.push("- **字幕**：如需 CC 字幕，投稿页支持上传；本流水线只生成 `captions/*.srt`，未做样式化。");
+  lines.push(
+    "- **字幕**：如需 CC 字幕，投稿页支持上传；本流水线只生成 `captions/*.srt`，未做样式化。",
+  );
   lines.push("- **相关推荐 / 动态**：投稿页可勾选，可留空。");
   lines.push("");
 

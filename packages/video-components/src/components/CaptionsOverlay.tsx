@@ -101,10 +101,8 @@ export const CaptionsOverlay = ({
   const sec = fps > 0 ? localFrame / fps : 0;
   // The last cue absorbs the final frame so the caption does not blink out
   // one frame before the scene cuts.
-  const cue = (
-    cues.find((c) => sec >= c.startSec && sec < c.endSec) ??
-    cues[cues.length - 1]
-  )!;
+  const cue = (cues.find((c) => sec >= c.startSec && sec < c.endSec) ??
+    cues[cues.length - 1])!;
   if (cue.lines.length === 0) return null;
   const fontSize = captionFontSize(height);
   const lineBaseStyle = {

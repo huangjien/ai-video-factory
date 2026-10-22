@@ -1,7 +1,4 @@
-import {
-  storyboardSchema,
-  type TimelineAnimation,
-} from "@video/vdsl";
+import { storyboardSchema, type TimelineAnimation } from "@video/vdsl";
 import type { ChatMessage, ChatResponse, Provider } from "@video/llm";
 import { chatWithFallback } from "@video/llm";
 import { parse as parseYaml } from "yaml";
@@ -49,7 +46,9 @@ export async function callMotionAgent(
   const out = await chatWithFallback(provider, fallback ?? null, {
     messages,
     ...(opts.model !== undefined ? { model: opts.model } : {}),
-    ...(opts.temperature !== undefined ? { temperature: opts.temperature } : {}),
+    ...(opts.temperature !== undefined
+      ? { temperature: opts.temperature }
+      : {}),
   });
   const res: ChatResponse = out.response;
   try {
@@ -61,10 +60,7 @@ export async function callMotionAgent(
       messages,
     };
   } catch (err) {
-    throw new MotionAgentError(
-      (err as Error).message,
-      out.provider,
-    );
+    throw new MotionAgentError((err as Error).message, out.provider);
   }
 }
 
@@ -80,7 +76,11 @@ export function parseMotionSpec(
     animations?: TimelineAnimation[];
     transition?: { in?: string; out?: string };
   } | null;
-  if (!parsed || !Array.isArray(parsed.animations) || parsed.animations.length === 0) {
+  if (
+    !parsed ||
+    !Array.isArray(parsed.animations) ||
+    parsed.animations.length === 0
+  ) {
     throw new Error("model output has no animations[]");
   }
   // Strict, schema-shaped probe: storyboardSchema rejects unknown keys and

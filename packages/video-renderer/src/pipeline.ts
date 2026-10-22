@@ -277,8 +277,7 @@ export function sceneCacheIsFresh(
     // Absent on sidecars written before the field existed — a mismatch,
     // so pre-existing caches invalidate exactly once.
     meta.rendererRevision === rendererRevision &&
-    (captionsHash === null ||
-      meta.captionsHash === captionsHash) &&
+    (captionsHash === null || meta.captionsHash === captionsHash) &&
     (meta.audioPath ?? null) === (audioPath ?? null) &&
     Math.abs((meta.audioMtimeMs ?? 0) - audioMtimeMs) < 1
   );

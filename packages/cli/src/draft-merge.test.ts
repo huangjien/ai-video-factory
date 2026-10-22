@@ -1,5 +1,11 @@
 import { describe, expect, it, beforeAll, afterAll } from "vitest";
-import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync } from "node:fs";
+import {
+  mkdtempSync,
+  mkdirSync,
+  writeFileSync,
+  readFileSync,
+  rmSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import type { ChatRequest, ChatResponse, Provider } from "@video/llm";
@@ -102,9 +108,9 @@ describe("writeAudioConfigIfAbsent (merged video draft audio-plan step)", () => 
       null,
     );
     expect(step.status).toBe("skipped");
-    expect(readFileSync(path.join(root, "audio-config.yaml"), "utf8")).toContain(
-      "my-own-choice",
-    );
+    expect(
+      readFileSync(path.join(root, "audio-config.yaml"), "utf8"),
+    ).toContain("my-own-choice");
   });
 
   it("degrades to failed (not thrown) on a provider outage", async () => {

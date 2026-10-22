@@ -63,7 +63,9 @@ export async function runScript(opts: ScriptOptions): Promise<number> {
 
   const code = await ensureProject(cwd, slug, projectRoot);
   if (code !== 0) return code;
-  if (!(await assertStageWritable(projectRoot, "script", opts.force === true))) {
+  if (
+    !(await assertStageWritable(projectRoot, "script", opts.force === true))
+  ) {
     return 1;
   }
 
@@ -204,58 +206,60 @@ ${s.conclusion}
 }
 
 export function registerScript(program: Command): void {
-program
-  .command("script")
-  .argument("<topic>", "topic to write a script for")
-  .option("--cwd <dir>", "base directory for the project")
-  .option(
-    "--model <provider>",
-    "model provider: minimax|glm (default from config)",
-  )
-  .option("--lang <lang>", "language: zh-CN|en-US (default zh-CN)")
-  .option("--duration <seconds>", "total duration target", (v) =>
-    parseInt(v, 10),
-  )
-  .option("--audience <text>", "target audience (default: developers)")
-  .option(
-    "--from-research <dir>",
-    "consume approved research from this directory",
-  )
-  .option(
-    "--direction <text>",
-    "human-provided story direction; agent adapts structure but keeps 7 sections",
-  )
-  .option(
-    "--force",
-    "regenerate even when the project is FINAL_APPROVED (prints a warning)",
-  )
-  .action(
-    async (
-      topic: string,
-      opts: {
-        cwd?: string;
-        model?: "minimax" | "glm";
-        lang?: "zh-CN" | "en-US";
-        duration?: number;
-        audience?: string;
-        fromResearch?: string;
-        direction?: string;
-        force?: boolean;
+  program
+    .command("script")
+    .argument("<topic>", "topic to write a script for")
+    .option("--cwd <dir>", "base directory for the project")
+    .option(
+      "--model <provider>",
+      "model provider: minimax|glm (default from config)",
+    )
+    .option("--lang <lang>", "language: zh-CN|en-US (default zh-CN)")
+    .option("--duration <seconds>", "total duration target", (v) =>
+      parseInt(v, 10),
+    )
+    .option("--audience <text>", "target audience (default: developers)")
+    .option(
+      "--from-research <dir>",
+      "consume approved research from this directory",
+    )
+    .option(
+      "--direction <text>",
+      "human-provided story direction; agent adapts structure but keeps 7 sections",
+    )
+    .option(
+      "--force",
+      "regenerate even when the project is FINAL_APPROVED (prints a warning)",
+    )
+    .action(
+      async (
+        topic: string,
+        opts: {
+          cwd?: string;
+          model?: "minimax" | "glm";
+          lang?: "zh-CN" | "en-US";
+          duration?: number;
+          audience?: string;
+          fromResearch?: string;
+          direction?: string;
+          force?: boolean;
+        },
+      ) => {
+        process.exitCode = await runScript({
+          topic,
+          ...(opts.cwd !== undefined ? { cwd: opts.cwd } : {}),
+          ...(opts.model !== undefined ? { model: opts.model } : {}),
+          ...(opts.lang !== undefined ? { lang: opts.lang } : {}),
+          ...(opts.duration !== undefined ? { duration: opts.duration } : {}),
+          ...(opts.audience !== undefined ? { audience: opts.audience } : {}),
+          ...(opts.fromResearch !== undefined
+            ? { fromResearch: opts.fromResearch }
+            : {}),
+          ...(opts.direction !== undefined
+            ? { direction: opts.direction }
+            : {}),
+          ...(opts.force !== undefined ? { force: opts.force } : {}),
+        });
       },
-    ) => {
-      process.exitCode = await runScript({
-        topic,
-        ...(opts.cwd !== undefined ? { cwd: opts.cwd } : {}),
-        ...(opts.model !== undefined ? { model: opts.model } : {}),
-        ...(opts.lang !== undefined ? { lang: opts.lang } : {}),
-        ...(opts.duration !== undefined ? { duration: opts.duration } : {}),
-        ...(opts.audience !== undefined ? { audience: opts.audience } : {}),
-        ...(opts.fromResearch !== undefined
-          ? { fromResearch: opts.fromResearch }
-          : {}),
-        ...(opts.direction !== undefined ? { direction: opts.direction } : {}),
-        ...(opts.force !== undefined ? { force: opts.force } : {}),
-      });
-    },
-  );
+    );
 }

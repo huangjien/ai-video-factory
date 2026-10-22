@@ -10,12 +10,7 @@ import { callReview, ReviewPackageSchema } from "@video/review";
 import { parse as parseYaml, stringify as yamlStringify } from "yaml";
 import type { ChatMessage, Provider } from "@video/llm";
 import { formatRunId } from "@video/workflow";
-import {
-  MARK_FAIL,
-  MARK_OK,
-  brandBannerLine,
-  channelHeader,
-} from "./ui.js";
+import { MARK_FAIL, MARK_OK, brandBannerLine, channelHeader } from "./ui.js";
 
 export interface ReviewOptions {
   project: string;
@@ -67,7 +62,9 @@ export async function runReview(opts: ReviewOptions): Promise<number> {
   for (const f of [sbPath, scriptPath, claimsPath]) {
     if (!existsSync(f)) {
       console.error(`missing input: ${f}`);
-      console.error(`  run video storyboard / video script / video research first`);
+      console.error(
+        `  run video storyboard / video script / video research first`,
+      );
       return 1;
     }
   }
@@ -164,7 +161,9 @@ export async function runReview(opts: ReviewOptions): Promise<number> {
   ];
   const verdict = overall.every((v) => v === "pass") ? "pass" : "warn";
   console.log(brandBannerLine());
-  console.log(channelHeader(opts.project, `review · ${verdict} · ${result.providerName}`));
+  console.log(
+    channelHeader(opts.project, `review · ${verdict} · ${result.providerName}`),
+  );
   console.log("");
   console.log(`${MARK_OK} wrote review/{content,visual,technical}-review.yaml`);
   console.log(
@@ -186,24 +185,27 @@ function stringifyYaml(value: unknown): string {
 export { ReviewPackageSchema, parseYaml };
 
 export function registerReview(program: Command): void {
-program
-  .command("review")
-  .argument("<project>", "project to review: topic, folder name, path, or unique prefix")
-  .option("--cwd <dir>", "base directory for the project")
-  .option(
-    "--model <provider>",
-    "model provider: minimax|glm (default: research-role config)",
-  )
-  .action(
-    async (
-      project: string,
-      opts: { cwd?: string; model?: "minimax" | "glm" },
-    ) => {
-      process.exitCode = await runReview({
-        project,
-        ...(opts.cwd !== undefined ? { cwd: opts.cwd } : {}),
-        ...(opts.model !== undefined ? { model: opts.model } : {}),
-      });
-    },
-  );
+  program
+    .command("review")
+    .argument(
+      "<project>",
+      "project to review: topic, folder name, path, or unique prefix",
+    )
+    .option("--cwd <dir>", "base directory for the project")
+    .option(
+      "--model <provider>",
+      "model provider: minimax|glm (default: research-role config)",
+    )
+    .action(
+      async (
+        project: string,
+        opts: { cwd?: string; model?: "minimax" | "glm" },
+      ) => {
+        process.exitCode = await runReview({
+          project,
+          ...(opts.cwd !== undefined ? { cwd: opts.cwd } : {}),
+          ...(opts.model !== undefined ? { model: opts.model } : {}),
+        });
+      },
+    );
 }

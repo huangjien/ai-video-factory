@@ -83,7 +83,16 @@ describe("renderPlanToVideo (todo 10)", () => {
     const jpg = path.join(root, "assets", "images", "scene_1.jpg");
     execFileSync(
       "ffmpeg",
-      ["-y", "-f", "lavfi", "-i", "color=c=red:s=320x180", "-frames:v", "1", jpg],
+      [
+        "-y",
+        "-f",
+        "lavfi",
+        "-i",
+        "color=c=red:s=320x180",
+        "-frames:v",
+        "1",
+        jpg,
+      ],
       { stdio: "ignore" },
     );
 
@@ -96,7 +105,8 @@ describe("renderPlanToVideo (todo 10)", () => {
         { stdio: "ignore" },
       );
       const rgb = execFileSync(
-        "ffmpeg", ["-i", png, "-vf", "format=rgb24", "-f", "rawvideo", "-"],
+        "ffmpeg",
+        ["-i", png, "-vf", "format=rgb24", "-f", "rawvideo", "-"],
         { encoding: "buffer", maxBuffer: 1e8 },
       );
       let r = 0;

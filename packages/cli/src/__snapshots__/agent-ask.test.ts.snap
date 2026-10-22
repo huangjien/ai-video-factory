@@ -98,6 +98,10 @@ exports[`emitQuestionsDoc > emits the full video-ask/1 envelope (snapshot) 1`] =
           "note": "restrained ink linework, low-saturation washes; historical scenes",
           "value": "gongbi",
         },
+        {
+          "note": "dark CRT console with phosphor-green and cyan glow; code/CLI environments",
+          "value": "terminal",
+        },
       ],
       "default": "flat-vector",
       "flag": "--image-style",

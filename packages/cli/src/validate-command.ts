@@ -52,14 +52,14 @@ export async function runValidate(
 }
 
 export function registerValidate(program: Command): void {
-program
-  .command("validate")
-  .description(
-    "validate a storyboard.yaml (VDSL 0.1) against the full rule set",
-  )
-  .argument("<file>", "path to storyboard.yaml")
-  .option("--root <dir>", "project root for resolving assets")
-  .action(async (file: string, opts: { root?: string }) => {
-    process.exitCode = await runValidate(file, opts.root);
-  });
+  program
+    .command("validate")
+    .description(
+      "validate a storyboard.yaml (VDSL 0.1) against the full rule set",
+    )
+    .argument("<file>", "path to storyboard.yaml")
+    .option("--root <dir>", "project root for resolving assets")
+    .action(async (file: string, opts: { root?: string }) => {
+      process.exitCode = await runValidate(file, opts.root);
+    });
 }

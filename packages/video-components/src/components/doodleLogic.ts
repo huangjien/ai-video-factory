@@ -80,7 +80,10 @@ export function shapeStrokes(
     const pts: [number, number][] = [];
     const w = size * 2;
     for (let i = 0; i <= 6; i++) {
-      pts.push([x - w / 2 + (w * i) / 6, y + (i % 2 === 0 ? -size : size) * 0.5]);
+      pts.push([
+        x - w / 2 + (w * i) / 6,
+        y + (i % 2 === 0 ? -size : size) * 0.5,
+      ]);
     }
     return pts;
   }
@@ -162,7 +165,13 @@ export function buildStrokePlan(
   const each = total / Math.max(1, strokes.length);
   return strokes.map((spec, i) => {
     const strokeSeed = (seed ^ hashStr(spec.id)) >>> 0;
-    const generated = shapeStrokes(spec.shape ?? "circle", spec.x ?? 0, spec.y ?? 0, spec.size ?? 100, strokeSeed);
+    const generated = shapeStrokes(
+      spec.shape ?? "circle",
+      spec.x ?? 0,
+      spec.y ?? 0,
+      spec.size ?? 100,
+      strokeSeed,
+    );
     const base = spec.points ?? generated;
     const passes = Math.max(1, spec.passes ?? 2);
     const passPoints: [number, number][][] = Array.from(
@@ -214,10 +223,7 @@ export function drawDoodleFrame(
     ctx.lineJoin = "round";
     entry.passes.forEach((pass, pi) => {
       ctx.globalAlpha = pi === 0 ? 0.95 : 0.45;
-      const count = Math.max(
-        2,
-        Math.ceil(pass.length * progress),
-      );
+      const count = Math.max(2, Math.ceil(pass.length * progress));
       ctx.beginPath();
       ctx.moveTo(pass[0]![0]!, pass[0]![1]!);
       for (let i = 1; i < count; i++) {

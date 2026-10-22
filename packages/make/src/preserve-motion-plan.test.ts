@@ -45,7 +45,9 @@ describe("preserveMotionPlan — a re-derivation must not drop the plan", () => 
     expect(s1["animations"]).toEqual([]);
     expect(s1["transition"]).toEqual({ in: "fade", out: "cut" });
     expect(
-      (s1["visual"] as { props: Record<string, unknown> }).props["kenBurnsScale"],
+      (s1["visual"] as { props: Record<string, unknown> }).props[
+        "kenBurnsScale"
+      ],
     ).toBe(0);
   });
 
@@ -86,7 +88,9 @@ describe("preserveMotionPlan — a re-derivation must not drop the plan", () => 
     expect(s1["animations"]).toEqual([{ id: "x" }]);
     expect(s1["transition"]).toEqual({ in: "cut", out: "cut" });
     expect(
-      (s1["visual"] as { props: Record<string, unknown> }).props["kenBurnsScale"],
+      (s1["visual"] as { props: Record<string, unknown> }).props[
+        "kenBurnsScale"
+      ],
     ).toBe(0.015);
   });
 });

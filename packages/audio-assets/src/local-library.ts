@@ -73,7 +73,6 @@ export async function probeLibrary(
   return results.map(({ e, d }) => ({ ...e, durationSec: d }));
 }
 
-
 /** Locator attempts, in priority order, when resolving a tag to a real
  *  audio file. First hit wins. Each attempt is the absolute directory
  *  the resolver scans; the resolver accepts every supported extension
@@ -161,7 +160,11 @@ function pickFuzzy(dir: string, tag: string): string | null {
     .filter((f) => {
       const lc = f.toLowerCase();
       if (lc.endsWith(".silent.wav")) return false; // make's placeholder
-      if (!(lc.endsWith(".wav") || lc.endsWith(".mp3") || lc.endsWith(".m4a"))) {
+      if (!(
+        lc.endsWith(".wav") ||
+        lc.endsWith(".mp3") ||
+        lc.endsWith(".m4a")
+      )) {
         return false;
       }
       return lc.slice(0, lc.lastIndexOf(".")).includes(tagLc);

@@ -10,7 +10,10 @@ import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
 
 const execFileAsync = promisify(execFile);
-const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const repoRoot = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  "..",
+);
 const rendererRequire = createRequire(
   path.join(repoRoot, "packages/video-renderer/package.json"),
 );
@@ -26,9 +29,14 @@ await mkdir(outDir, { recursive: true });
 // Deterministic placeholder icon: 128px orange disc.
 const iconPath = path.join(outDir, "icon.png");
 await execFileAsync("ffmpeg", [
-  "-y", "-f", "lavfi",
-  "-i", "color=c=orange:s=128x128,format=rgba",
-  "-frames:v", "1", iconPath,
+  "-y",
+  "-f",
+  "lavfi",
+  "-i",
+  "color=c=orange:s=128x128,format=rgba",
+  "-frames:v",
+  "1",
+  iconPath,
 ]);
 const iconB64 = Buffer.from(await readFile(iconPath)).toString("base64");
 
@@ -50,7 +58,13 @@ const scene = (id, i, cursor, props) => ({
 });
 
 const renderPlan = {
-  project: { id: "brand-smoke", language: "zh-CN", fps: FPS, width: 1920, height: 1080 },
+  project: {
+    id: "brand-smoke",
+    language: "zh-CN",
+    fps: FPS,
+    width: 1920,
+    height: 1080,
+  },
   style: {
     theme: "paper-light",
     brand: {
@@ -64,8 +78,14 @@ const renderPlan = {
   },
   totalFrames: dur * 2,
   scenes: [
-    scene("scene-01", 0, 0, { quote: "开场画面：品牌横幅 + 角标", author: "intro window" }),
-    scene("scene-02", 1, dur, { quote: "正片画面：只剩右下角标", author: "after intro" }),
+    scene("scene-01", 0, 0, {
+      quote: "开场画面：品牌横幅 + 角标",
+      author: "intro window",
+    }),
+    scene("scene-02", 1, dur, {
+      quote: "正片画面：只剩右下角标",
+      author: "after intro",
+    }),
   ],
 };
 
@@ -103,8 +123,17 @@ const composition = await selectComposition({
   inputProps: { renderPlan },
 });
 
-for (const [frame, label] of [[30, "intro"], [dur + 30, "after-intro"]]) {
+for (const [frame, label] of [
+  [30, "intro"],
+  [dur + 30, "after-intro"],
+]) {
   const out = path.join(outDir, `${label}.png`);
-  await renderStill({ composition, serveUrl, inputProps: { renderPlan }, frame, output: out });
+  await renderStill({
+    composition,
+    serveUrl,
+    inputProps: { renderPlan },
+    frame,
+    output: out,
+  });
   console.log(`[brand-smoke] ${label} → ${out}`);
 }

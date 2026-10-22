@@ -1,7 +1,14 @@
 import { describe, expect, it, beforeAll, afterAll } from "vitest";
 import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
-import { mkdtemp, mkdir, rm, writeFile, readFile, readdir } from "node:fs/promises";
+import {
+  mkdtemp,
+  mkdir,
+  rm,
+  writeFile,
+  readFile,
+  readdir,
+} from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -10,7 +17,8 @@ import { extractSuggestions, runRetrospect } from "./retrospect-command.js";
 
 describe("extractSuggestions (T10)", () => {
   it("strips a single fenced YAML block", () => {
-    const md = "Here is what I suggest:\n```yaml\n- foo: bar\n- baz: qux\n```\nDone.";
+    const md =
+      "Here is what I suggest:\n```yaml\n- foo: bar\n- baz: qux\n```\nDone.";
     expect(extractSuggestions(md)).toBe("- foo: bar\n- baz: qux");
   });
   it("returns trimmed content when no fence is present", () => {
@@ -53,7 +61,8 @@ beforeAll(async () => {
     base: process.env["GLM_BASE_URL"],
   };
   process.env["GLM_API_KEY"] = "test-key";
-  process.env["GLM_BASE_URL"] = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
+  process.env["GLM_BASE_URL"] =
+    `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
 
   projectsRoot = await mkdtemp(path.join(tmpdir(), "vf-retro-"));
 });
@@ -87,7 +96,9 @@ describe("runRetrospect", () => {
     });
     expect(code).toBe(0);
     expect(
-      existsSync(path.join(projectsRoot, "projects", "rt-dry", "retrospect.md")),
+      existsSync(
+        path.join(projectsRoot, "projects", "rt-dry", "retrospect.md"),
+      ),
     ).toBe(false);
   });
 
@@ -105,7 +116,10 @@ describe("runRetrospect", () => {
       "utf8",
     );
 
-    const code = await runRetrospect({ project: "rt-happy", cwd: projectsRoot });
+    const code = await runRetrospect({
+      project: "rt-happy",
+      cwd: projectsRoot,
+    });
     expect(code).toBe(0);
 
     const out = await readFile(path.join(proj, "retrospect.md"), "utf8");
@@ -127,14 +141,20 @@ describe("runRetrospect", () => {
       "{not yaml at all",
       "utf8",
     );
-    const code = await runRetrospect({ project: "rt-corrupt", cwd: projectsRoot });
+    const code = await runRetrospect({
+      project: "rt-corrupt",
+      cwd: projectsRoot,
+    });
     expect(code).toBe(0);
   });
 });
 describe("runRetrospect — evidence gathering edges", () => {
   it("succeeds when article.md is missing (excerpt placeholder)", async () => {
     await makeProject("rt-noarticle");
-    const code = await runRetrospect({ project: "rt-noarticle", cwd: projectsRoot });
+    const code = await runRetrospect({
+      project: "rt-noarticle",
+      cwd: projectsRoot,
+    });
     expect(code).toBe(0);
     const out = await readFile(
       path.join(projectsRoot, "projects", "rt-noarticle", "retrospect.md"),

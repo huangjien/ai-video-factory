@@ -6,7 +6,10 @@ import path from "node:path";
 import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
 
-const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const repoRoot = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  "..",
+);
 // @remotion/* is a dependency of @video/video-renderer, not the root — resolve
 // through that package so the script can live anywhere.
 const rendererRequire = createRequire(
@@ -98,7 +101,13 @@ const scenes = SCENES.map(([component, props], i) => {
 });
 
 const renderPlan = {
-  project: { id: "visual-smoke", language: "zh-CN", fps: FPS, width: 1920, height: 1080 },
+  project: {
+    id: "visual-smoke",
+    language: "zh-CN",
+    fps: FPS,
+    width: 1920,
+    height: 1080,
+  },
   style: { theme: "paper-light" },
   totalFrames: cursor,
   scenes,

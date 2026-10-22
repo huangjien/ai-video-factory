@@ -131,9 +131,7 @@ export function extractSuggestions(content: string): string {
   return (m?.[1] ?? content).trim();
 }
 
-export async function runRetrospect(
-  opts: RetrospectOptions,
-): Promise<number> {
+export async function runRetrospect(opts: RetrospectOptions): Promise<number> {
   const resolved = resolveProjectDir(opts.project, opts.cwd);
   if (!resolved.ok) {
     console.error(resolved.message);
@@ -238,27 +236,30 @@ export async function runRetrospect(
 }
 
 export function registerRetrospect(program: Command): void {
-program
-  .command("retrospect")
-  .description(
-    "v0.4: ask the LLM for 3 concrete edits to article.md based on the latest runs + QA report (writes projects/<slug>/retrospect.md)",
-  )
-  .argument("[project]", "project: topic, folder name, path, or unique prefix")
-  .option("--cwd <dir>", "project root base directory")
-  .option(
-    "--dry-run",
-    "print what would be sent to the LLM without calling it",
-  )
-  .action(
-    async (
-      project: string | undefined,
-      opts: { cwd?: string; dryRun?: boolean },
-    ) => {
-      process.exitCode = await runRetrospect({
-        project: project ?? "",
-        ...(opts.cwd !== undefined ? { cwd: opts.cwd } : {}),
-        dryRun: opts.dryRun === true,
-      });
-    },
-  );
+  program
+    .command("retrospect")
+    .description(
+      "v0.4: ask the LLM for 3 concrete edits to article.md based on the latest runs + QA report (writes projects/<slug>/retrospect.md)",
+    )
+    .argument(
+      "[project]",
+      "project: topic, folder name, path, or unique prefix",
+    )
+    .option("--cwd <dir>", "project root base directory")
+    .option(
+      "--dry-run",
+      "print what would be sent to the LLM without calling it",
+    )
+    .action(
+      async (
+        project: string | undefined,
+        opts: { cwd?: string; dryRun?: boolean },
+      ) => {
+        process.exitCode = await runRetrospect({
+          project: project ?? "",
+          ...(opts.cwd !== undefined ? { cwd: opts.cwd } : {}),
+          dryRun: opts.dryRun === true,
+        });
+      },
+    );
 }

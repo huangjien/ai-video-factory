@@ -178,9 +178,7 @@ export async function runCharacter(
       (r) => r.style === style && r.version === version,
     );
     if (target === undefined) {
-      console.error(
-        `✗ character "${id}" has no reference ${style}/${version}`,
-      );
+      console.error(`✗ character "${id}" has no reference ${style}/${version}`);
       return 1;
     }
     const imagePath = path.join(root, id, target.file);
@@ -234,7 +232,10 @@ export async function runCharacter(
       );
       return 1;
     }
-    if (opts.variant !== undefined && !profile.variants.some((v) => v.id === opts.variant)) {
+    if (
+      opts.variant !== undefined &&
+      !profile.variants.some((v) => v.id === opts.variant)
+    ) {
       console.error(
         `character: "${id}" has no variant "${opts.variant}" (has: ${profile.variants.map((v) => v.id).join(", ") || "none"})`,
       );
@@ -282,33 +283,45 @@ export async function runCharacter(
     });
     const updated = CharacterProfileSchema.parse({ ...profile, references });
     writeFileSync(file, yamlStringify(updated), "utf8");
-    console.log(
-      `✓ ${id}: ${style}/${version} candidate written to ${out}`,
-    );
+    console.log(`✓ ${id}: ${style}/${version} candidate written to ${out}`);
     console.log(
       `  review the anchors against it, then: video character approve ${id} ${style} ${version} --by <name>`,
     );
     return 0;
   }
 
-  console.error(`character: unknown subcommand "${sub}" — use list, sheet or approve`);
+  console.error(
+    `character: unknown subcommand "${sub}" — use list, sheet or approve`,
+  );
   return 1;
 }
 
 export function registerCharacter(program: Command): void {
   program
     .command("character")
-    .argument(
-      "[args...]",
-      "list (default) | approve <id> <style> <version>",
-    )
+    .argument("[args...]", "list (default) | approve <id> <style> <version>")
     .option("--cwd <dir>", "workspace root holding assets/characters")
     .option("--by <name>", "reviewer recorded on an approval")
-    .option("--root <dir>", "character bible root (default: <cwd>/assets/characters)")
-    .option("--style <style>", "art style for a generated sheet (see image-styles.yaml)")
-    .option("--variant <id>", "appearance variant to draw (default: the base identity)")
-    .option("--version <vN>", "version label for a generated sheet (default: the next free one)")
-    .option("--provider <p>", "image provider for a generated sheet: minimax (default) | mock")
+    .option(
+      "--root <dir>",
+      "character bible root (default: <cwd>/assets/characters)",
+    )
+    .option(
+      "--style <style>",
+      "art style for a generated sheet (see image-styles.yaml)",
+    )
+    .option(
+      "--variant <id>",
+      "appearance variant to draw (default: the base identity)",
+    )
+    .option(
+      "--version <vN>",
+      "version label for a generated sheet (default: the next free one)",
+    )
+    .option(
+      "--provider <p>",
+      "image provider for a generated sheet: minimax (default) | mock",
+    )
     .action(
       async (
         args: string[],

@@ -29,7 +29,11 @@ import { z } from "zod";
 /** Why an anchor reads the way it does. `sourced` MUST name a source. */
 export const ANCHOR_BASIS = ["sourced", "inferred"] as const;
 
-export const REFERENCE_STATUS = ["candidate", "approved", "superseded"] as const;
+export const REFERENCE_STATUS = [
+  "candidate",
+  "approved",
+  "superseded",
+] as const;
 
 const AnchoredValueSchema = z
   .object({
@@ -72,7 +76,10 @@ const ReferenceSchema = z
   })
   .strict()
   .superRefine((v, ctx) => {
-    if (v.status === "approved" && (v.reviewedBy === undefined || v.reviewedAt === undefined)) {
+    if (
+      v.status === "approved" &&
+      (v.reviewedBy === undefined || v.reviewedAt === undefined)
+    ) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ["reviewedBy"],
@@ -202,8 +209,9 @@ export function anchorPromptLines(
     .filter(([, v]) =>
       Array.isArray(v.value) ? v.value.length > 0 : v.value.trim() !== "",
     )
-    .map(([key, v]) =>
-      `${key}: ${Array.isArray(v.value) ? v.value.join("; ") : v.value}`,
+    .map(
+      ([key, v]) =>
+        `${key}: ${Array.isArray(v.value) ? v.value.join("; ") : v.value}`,
     );
 }
 
@@ -238,9 +246,7 @@ export function approveReference(
     );
   }
   if (target.status === "approved") {
-    throw new Error(
-      `${style}/${version} is already approved — nothing to do`,
-    );
+    throw new Error(`${style}/${version} is already approved — nothing to do`);
   }
   if (target.status === "superseded") {
     throw new Error(
@@ -254,7 +260,12 @@ export function approveReference(
     // list, so the history is traceable; but leaving them as "candidate"
     // would falsely suggest they are still awaiting review.
     if (r.version === version) {
-      return { ...r, status: "approved" as const, reviewedBy: reviewer, reviewedAt };
+      return {
+        ...r,
+        status: "approved" as const,
+        reviewedBy: reviewer,
+        reviewedAt,
+      };
     }
     return { ...r, status: "superseded" as const };
   });

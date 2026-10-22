@@ -34,14 +34,13 @@ const report = (findings: QaFinding[]): RenderReport =>
       assets: { missing: [], ok: true },
       sceneAudioSync: { rows: [], ok: true },
       captions: { ok: true } as RenderReport["checks"]["captions"],
-      sceneBoundaries: { ok: true } as RenderReport["checks"]["sceneBoundaries"],
+      sceneBoundaries: {
+        ok: true,
+      } as RenderReport["checks"]["sceneBoundaries"],
     },
   }) as RenderReport;
 
-const decision = (
-  value: string,
-  confidence = 0.9,
-): LayaDecision => ({
+const decision = (value: string, confidence = 0.9): LayaDecision => ({
   answers: {
     triage: { type: "choice", value, confidence, routingModel: "english" },
   },
@@ -56,7 +55,9 @@ const fakeClient = (
 describe("deterministicTriageVerdict", () => {
   it("error → block, warn-only → review, clean → pass", () => {
     expect(deterministicTriageVerdict(report([]))).toBe("pass");
-    expect(deterministicTriageVerdict(report([finding("warn")]))).toBe("review");
+    expect(deterministicTriageVerdict(report([finding("warn")]))).toBe(
+      "review",
+    );
     expect(
       deterministicTriageVerdict(report([finding("warn"), finding("error")])),
     ).toBe("block");
@@ -65,7 +66,10 @@ describe("deterministicTriageVerdict", () => {
 
 describe("buildTriageState", () => {
   it("summarizes counts and top findings", () => {
-    const r = report([finding("error", "assets"), finding("warn", "blackFrames")]);
+    const r = report([
+      finding("error", "assets"),
+      finding("warn", "blackFrames"),
+    ]);
     const s = buildTriageState(r);
     expect(s).toContain("errors=1 warnings=1");
     expect(s).toContain("assets");

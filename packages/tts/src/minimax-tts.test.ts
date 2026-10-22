@@ -2,12 +2,18 @@ import { describe, expect, it, beforeEach, afterEach } from "vitest";
 import { MinimaxTTSProvider } from "./minimax-tts.js";
 import { TTSError } from "./provider.js";
 
-function makeFetch(
-  reply: () => Response,
-): { fetch: typeof globalThis.fetch; bodies: unknown[] } {
+function makeFetch(reply: () => Response): {
+  fetch: typeof globalThis.fetch;
+  bodies: unknown[];
+} {
   const bodies: unknown[] = [];
-  const handle = async (_input: string | URL, init?: RequestInit): Promise<Response> => {
-    bodies.push(init?.body !== undefined ? JSON.parse(String(init.body)) : null);
+  const handle = async (
+    _input: string | URL,
+    init?: RequestInit,
+  ): Promise<Response> => {
+    bodies.push(
+      init?.body !== undefined ? JSON.parse(String(init.body)) : null,
+    );
     return reply();
   };
   return { fetch: handle as typeof globalThis.fetch, bodies };
@@ -29,7 +35,9 @@ describe("MinimaxTTSProvider", () => {
   });
 
   it("decodes hex audio and maps duration from extra_info", async () => {
-    const { fetch, bodies } = makeFetch(() => new Response(JSON.stringify(OK_BODY)));
+    const { fetch, bodies } = makeFetch(
+      () => new Response(JSON.stringify(OK_BODY)),
+    );
     const provider = new MinimaxTTSProvider({ fetchImpl: fetch });
     const result = await provider.synthesize({
       text: "第一场的话。",
@@ -50,14 +58,24 @@ describe("MinimaxTTSProvider", () => {
   });
 
   it("maps en-US to English boost and honors model override", async () => {
-    const { fetch, bodies } = makeFetch(() => new Response(JSON.stringify(OK_BODY)));
-    const provider = new MinimaxTTSProvider({ fetchImpl: fetch, model: "speech-2.8-hd" });
+    const { fetch, bodies } = makeFetch(
+      () => new Response(JSON.stringify(OK_BODY)),
+    );
+    const provider = new MinimaxTTSProvider({
+      fetchImpl: fetch,
+      model: "speech-2.8-hd",
+    });
     await provider.synthesize({ text: "hi", voice: "v", language: "en-US" });
-    expect(bodies[0]).toMatchObject({ model: "speech-2.8-hd", language_boost: "English" });
+    expect(bodies[0]).toMatchObject({
+      model: "speech-2.8-hd",
+      language_boost: "English",
+    });
   });
 
   it("injects <#x#> pause markers between sentences", async () => {
-    const { fetch, bodies } = makeFetch(() => new Response(JSON.stringify(OK_BODY)));
+    const { fetch, bodies } = makeFetch(
+      () => new Response(JSON.stringify(OK_BODY)),
+    );
     const provider = new MinimaxTTSProvider({ fetchImpl: fetch });
     await provider.synthesize({
       text: "第一句。第二句！第三句？",
@@ -65,7 +83,9 @@ describe("MinimaxTTSProvider", () => {
       language: "zh-CN",
       pauseBetweenSentencesSec: 0.35,
     });
-    expect(bodies[0]).toMatchObject({ text: "第一句。<#0.35#>第二句！<#0.35#>第三句？" });
+    expect(bodies[0]).toMatchObject({
+      text: "第一句。<#0.35#>第二句！<#0.35#>第三句？",
+    });
   });
 
   it("throws when MINIMAX_API_KEY is missing", async () => {
@@ -82,27 +102,41 @@ describe("MinimaxTTSProvider", () => {
       () =>
         new Response(
           JSON.stringify({
-            base_resp: { status_code: 1008, status_msg: "Insufficient account balance" },
+            base_resp: {
+              status_code: 1008,
+              status_msg: "Insufficient account balance",
+            },
             trace_id: "t2",
           }),
         ),
     );
     const provider = new MinimaxTTSProvider({ fetchImpl: fetch });
-    const promise = provider.synthesize({ text: "x", voice: "v", language: "zh-CN" });
+    const promise = provider.synthesize({
+      text: "x",
+      voice: "v",
+      language: "zh-CN",
+    });
     await expect(promise).rejects.toBeInstanceOf(TTSError);
     await expect(promise).rejects.toMatchObject({ status: 1008 });
-    await expect(promise).rejects.toThrow(/Insufficient account balance.*trace t2/);
+    await expect(promise).rejects.toThrow(
+      /Insufficient account balance.*trace t2/,
+    );
   });
 
   it("surfaces HTTP-level failures and empty audio payloads", async () => {
-    const { fetch } = makeFetch(() => new Response("gateway boom", { status: 502 }));
+    const { fetch } = makeFetch(
+      () => new Response("gateway boom", { status: 502 }),
+    );
     const provider = new MinimaxTTSProvider({ fetchImpl: fetch });
     await expect(
       provider.synthesize({ text: "x", voice: "v", language: "zh-CN" }),
     ).rejects.toThrow(/HTTP 502/);
 
     const { fetch: fetch2 } = makeFetch(
-      () => new Response(JSON.stringify({ data: null, base_resp: { status_code: 0 } })),
+      () =>
+        new Response(
+          JSON.stringify({ data: null, base_resp: { status_code: 0 } }),
+        ),
     );
     const provider2 = new MinimaxTTSProvider({ fetchImpl: fetch2 });
     await expect(

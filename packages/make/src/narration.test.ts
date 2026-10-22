@@ -10,7 +10,11 @@ const base = {
 
 describe("resolveNarration — backend policy", () => {
   it("voicebox wins when the server is healthy", () => {
-    const d = resolveNarration({ ...base, ttsProvider: "voicebox", voice: "narrator-zh" });
+    const d = resolveNarration({
+      ...base,
+      ttsProvider: "voicebox",
+      voice: "narrator-zh",
+    });
     expect(d.provider.name).toBe("voicebox");
     expect(d.voice).toBe("narrator-zh");
     expect(d.warnings).toEqual([]);
@@ -54,13 +58,21 @@ describe("resolveNarration — backend policy", () => {
   });
 
   it("unknown provider warns and falls back to Edge with the given voice", () => {
-    const d = resolveNarration({ ...base, ttsProvider: "voiceb0x", voice: "zh-CN-YunjianNeural" });
+    const d = resolveNarration({
+      ...base,
+      ttsProvider: "voiceb0x",
+      voice: "zh-CN-YunjianNeural",
+    });
     expect(d.provider.name).toBe("edge");
     expect(d.warnings[0]).toMatch(/unknown tts_provider "voiceb0x"/);
   });
 
   it("default (no tts_provider) stays Edge, silently", () => {
-    const d = resolveNarration({ ...base, ttsProvider: undefined, voice: "zh-CN-YunjianNeural" });
+    const d = resolveNarration({
+      ...base,
+      ttsProvider: undefined,
+      voice: "zh-CN-YunjianNeural",
+    });
     expect(d.provider.name).toBe("edge");
     expect(d.warnings).toEqual([]);
   });
@@ -131,4 +143,3 @@ describe("tts_speed is provider-agnostic", () => {
     ).toBe("minimax-tts");
   });
 });
-

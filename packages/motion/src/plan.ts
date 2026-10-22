@@ -61,7 +61,9 @@ export function isStillFirstProfile(value: unknown): boolean {
  * spec (non-positive duration). */
 export function planSceneMotion(input: SceneMotionInput): MotionSpec {
   if (!(input.durationSec > 0)) {
-    throw new Error(`planSceneMotion: scene ${input.sceneId} has non-positive duration`);
+    throw new Error(
+      `planSceneMotion: scene ${input.sceneId} has non-positive duration`,
+    );
   }
   // CS-09: a still-first channel plans a still shot. No entrance, no
   // mid-scene emphasis, no pan — the only permitted motion is the slow
@@ -76,7 +78,8 @@ export function planSceneMotion(input: SceneMotionInput): MotionSpec {
       kenBurnsScale: input.kenBurnsScale ?? 0,
     };
   }
-  const targets = input.targets && input.targets.length > 0 ? input.targets : [input.sceneId];
+  const targets =
+    input.targets && input.targets.length > 0 ? input.targets : [input.sceneId];
   const animations: TimelineAnimation[] = [];
 
   const entranceType = entranceTypeForComponent(input.component);
@@ -160,7 +163,7 @@ export function validateMotionSpec(
     }
     if (anim.start + anim.duration > sceneDurationSec + eps) {
       problems.push(
-        `${anim.id}: runs ${ (anim.start + anim.duration).toFixed(2) }s but scene is ${sceneDurationSec.toFixed(2)}s`,
+        `${anim.id}: runs ${(anim.start + anim.duration).toFixed(2)}s but scene is ${sceneDurationSec.toFixed(2)}s`,
       );
     }
   }

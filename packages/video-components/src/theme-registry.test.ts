@@ -42,12 +42,18 @@ describe("theme registry (v0.2 themes)", () => {
     // margin, otherwise text is invisible.
     const luma = (hex: string): number => {
       const n = parseInt(hex.slice(1), 16);
-      return 0.2126 * (n >> 16) + 0.7152 * ((n >> 8) & 255) + 0.0722 * (n & 255);
+      return (
+        0.2126 * (n >> 16) + 0.7152 * ((n >> 8) & 255) + 0.0722 * (n & 255)
+      );
     };
     for (const name of THEME_NAMES) {
       const t = THEMES[name]!;
-      const spread = Math.abs(luma(t.colors.primary) - luma(t.colors.background));
-      expect(spread, `${name} primary/background luma spread`).toBeGreaterThan(120);
+      const spread = Math.abs(
+        luma(t.colors.primary) - luma(t.colors.background),
+      );
+      expect(spread, `${name} primary/background luma spread`).toBeGreaterThan(
+        120,
+      );
     }
   });
 

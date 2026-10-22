@@ -4,8 +4,4 @@ export {
   SYSTEM_PROMPT,
   type ScriptInput,
 } from "./prompt.js";
-export {
-  callScript,
-  ScriptError,
-  type CallScriptResult,
-} from "./agent.js";
+export { callScript, ScriptError, type CallScriptResult } from "./agent.js";

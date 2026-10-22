@@ -233,9 +233,7 @@ export function loadAndValidateBgmCatalogue(
   if (existsSync(libDir)) {
     for (const entry of readdirSync(libDir)) {
       const ext = path.extname(entry).toLowerCase();
-      if (
-        (BGM_TRACK_EXTENSIONS as readonly string[]).includes(ext)
-      ) {
+      if ((BGM_TRACK_EXTENSIONS as readonly string[]).includes(ext)) {
         filesOnDisk.add(entry.slice(0, -ext.length));
       }
     }

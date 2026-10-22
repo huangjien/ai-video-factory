@@ -196,7 +196,7 @@ describe("callBilibili degradation", () => {
           "```yaml",
           'title: "一个关于 Agent 的视频"',
           'description: "讲清楚一件事。"',
-          "tags: [\"AI Agent\", \"大模型\"]",
+          'tags: ["AI Agent", "大模型"]',
           'suggested_category: "科技"',
           'cover_prompt: "a brass machine on a dark desk · medium shot"',
           "```",

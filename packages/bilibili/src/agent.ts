@@ -1,4 +1,9 @@
-import { chatWithFallback, type ChatMessage, type Provider, type Usage } from "@video/llm";
+import {
+  chatWithFallback,
+  type ChatMessage,
+  type Provider,
+  type Usage,
+} from "@video/llm";
 import { parse as parseYaml } from "yaml";
 import { buildFallbackPackage, type FallbackInput } from "./fallback.js";
 import { BilibiliPackageSchema, type BilibiliPackage } from "./schemas.js";
@@ -58,7 +63,9 @@ export async function callBilibili(
   ): CallBilibiliResult => {
     const fb = buildFallbackPackage({
       article: input.article,
-      ...(input.imageStyle !== undefined ? { imageStyle: input.imageStyle } : {}),
+      ...(input.imageStyle !== undefined
+        ? { imageStyle: input.imageStyle }
+        : {}),
       ...(coverReuse?.youtubeCoverPrompt !== undefined
         ? { youtubeCoverPrompt: coverReuse.youtubeCoverPrompt }
         : {}),
@@ -73,7 +80,9 @@ export async function callBilibili(
 
   let out;
   try {
-    out = await chatWithFallback(provider, fallbackProvider ?? null, { messages });
+    out = await chatWithFallback(provider, fallbackProvider ?? null, {
+      messages,
+    });
   } catch (err) {
     return degrade(`LLM call failed: ${(err as Error).message}`);
   }

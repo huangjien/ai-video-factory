@@ -25,7 +25,9 @@ describe("evals fixtures on disk", () => {
       "image-prompt",
       "storyboard",
     ]);
-    expect(listEvalFiles(evalsDir(), "article-review").length).toBeGreaterThan(0);
+    expect(listEvalFiles(evalsDir(), "article-review").length).toBeGreaterThan(
+      0,
+    );
     expect(listEvalFiles(evalsDir(), "draft").length).toBeGreaterThan(0);
     expect(listEvalFiles(evalsDir(), "storyboard").length).toBeGreaterThan(0);
   });

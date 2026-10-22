@@ -1,8 +1,4 @@
-import {
-  existsSync,
-  readdirSync,
-  readFileSync,
-} from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { probeAudioDurationOrNull } from "@video/media";
 import type {
@@ -16,11 +12,7 @@ import { AudioAssetError } from "./schemas.js";
 /** Audio formats `FileBasedAudioAssetProvider.lookup` accepts. Order matches
  *  the priority of "exact filename match" — the first extension tried is
  *  the file the resolver will hand to ffmpeg without a remux step. */
-export const SUPPORTED_AUDIO_EXTENSIONS = [
-  ".wav",
-  ".mp3",
-  ".m4a",
-] as const;
+export const SUPPORTED_AUDIO_EXTENSIONS = [".wav", ".mp3", ".m4a"] as const;
 
 export type AudioExtension = (typeof SUPPORTED_AUDIO_EXTENSIONS)[number];
 
@@ -32,7 +24,6 @@ function contentTypeFor(ext: string): AssetResult["contentType"] {
   if (lower === ".m4a") return "audio/mp4";
   throw new AudioAssetError(`unsupported extension: ${ext}`, "file-based");
 }
-
 
 /** Deterministic local-only provider — returns a short synthetic WAV
  * (RIFF header + 1-second silence at 8kHz mono 8-bit) so downstream mixers

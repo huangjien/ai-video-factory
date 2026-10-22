@@ -8,10 +8,7 @@ import {
   initState,
   writeProjectState,
 } from "@video/workflow";
-import {
-  loadOrCompileStoryboard,
-  renderPreviewProject,
-} from "./pipeline.js";
+import { loadOrCompileStoryboard, renderPreviewProject } from "./pipeline.js";
 
 const STORYBOARD_YAML = (component: string) => `schema_version: "0.1"
 project: {id: pl, language: zh-CN, fps: 30, width: 1920, height: 1080}

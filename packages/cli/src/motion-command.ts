@@ -17,9 +17,7 @@ import {
 } from "@video/llm";
 import { validateStoryboard } from "@video/vdsl";
 import { parse as parseYaml, stringify as yamlStringify } from "yaml";
-import {
-  syncSceneDurations,
-} from "@video/media";
+import { syncSceneDurations } from "@video/media";
 import {
   callMotionAgent,
   planSceneMotion,
@@ -50,7 +48,9 @@ function modelFor(providerName: string): string {
   return providerName === "glm" ? "glm-5.3" : "MiniMax-M3";
 }
 
-function sha256OfMessages(messages: { role: string; content: string }[]): string {
+function sha256OfMessages(
+  messages: { role: string; content: string }[],
+): string {
   const canon = JSON.stringify(
     messages.map((m) => ({ role: m.role, content: m.content })),
   );
@@ -249,7 +249,9 @@ export async function runMotion(opts: MotionOptions): Promise<number> {
     ? rawGuidance.body.slice(0, GUIDANCE_MAX_CHARS)
     : null;
   if (!opts.baseline && guidance === null) {
-    console.log("  skills not found — using schema rules only (baseline-aware)");
+    console.log(
+      "  skills not found — using schema rules only (baseline-aware)",
+    );
   }
 
   let storyboardText = text;
@@ -412,12 +414,9 @@ export async function runMotion(opts: MotionOptions): Promise<number> {
     const sceneObj = (
       Array.isArray(parsedFrag) ? parsedFrag[0] : parsedFrag
     ) as Record<string, unknown>;
-    const visualObj = sceneObj["visual"] as
-      | Record<string, unknown>
-      | undefined;
+    const visualObj = sceneObj["visual"] as Record<string, unknown> | undefined;
     const propsObj = visualObj?.["props"] as
-      | Record<string, unknown>
-      | undefined;
+      Record<string, unknown> | undefined;
     // CS-09: a still-first profile expresses its slow push on the scene
     // image itself — ImageBackground.kenBurnsScale, which lives in
     // visual.props — so it must be compared alongside the animations,
@@ -425,7 +424,10 @@ export async function runMotion(opts: MotionOptions): Promise<number> {
     if (
       specEquals(sceneObj["animations"] ?? null, spec.animations) &&
       specEquals(sceneObj["transition"] ?? null, spec.transition) &&
-      specEquals(propsObj?.["kenBurnsScale"] ?? null, spec.kenBurnsScale ?? null)
+      specEquals(
+        propsObj?.["kenBurnsScale"] ?? null,
+        spec.kenBurnsScale ?? null,
+      )
     ) {
       console.log(`  scene ${scene.id}: motion unchanged`);
       continue;
@@ -438,7 +440,11 @@ export async function runMotion(opts: MotionOptions): Promise<number> {
     const imageComponent =
       visualObj?.["component"] === "ImageBackground" ||
       visualObj?.["component"] === "AnimatedIllustration";
-    if (spec.kenBurnsScale !== undefined && propsObj !== undefined && imageComponent) {
+    if (
+      spec.kenBurnsScale !== undefined &&
+      propsObj !== undefined &&
+      imageComponent
+    ) {
       propsObj["kenBurnsScale"] = spec.kenBurnsScale;
     }
     const indent = leadingSpace(frag);
@@ -488,58 +494,64 @@ export async function runMotion(opts: MotionOptions): Promise<number> {
 }
 
 export function registerMotion(program: Command): void {
-program
-  .command("motion")
-  .description(
-    "Motion Agent: plan per-scene timeline animations + transitions (plan §13/T4.2)",
-  )
-  .argument("<project>", "project: topic, folder name, path, or unique prefix")
-  .option("--cwd <dir>", "base directory for the project")
-  .option("--scene <id>", "plan motion for one scene only")
-  .option(
-    "--bpm <n>",
-    "beat grid to quantize entrance/emphasis moments to (e.g. 120)",
-    (v) => parseInt(v, 10),
-  )
-  .option(
-    "--baseline",
-    "skip the LLM — apply the deterministic motion heuristics verbatim",
-  )
-  .option("--model <provider>", "model provider: minimax|glm (default from motion role config)")
-  .option(
-    "--ken-burns <n>",
-    "CS-09: slow-push amount for a still-first channel profile — 0 (held frame, default) or ~0.015 for a 1–2% push",
-    (v) => parseFloat(v),
-  )
-  .option(
-    "--force",
-    "regenerate even when the storyboard checkpoint is approved or the project is FINAL_APPROVED (prints a warning)",
-  )
-  .action(
-    async (
-      project: string,
-      opts: {
-        cwd?: string;
-        scene?: string;
-        bpm?: number;
-        baseline?: boolean;
-        model?: "minimax" | "glm";
-        kenBurnsScale?: number;
-        force?: boolean;
+  program
+    .command("motion")
+    .description(
+      "Motion Agent: plan per-scene timeline animations + transitions (plan §13/T4.2)",
+    )
+    .argument(
+      "<project>",
+      "project: topic, folder name, path, or unique prefix",
+    )
+    .option("--cwd <dir>", "base directory for the project")
+    .option("--scene <id>", "plan motion for one scene only")
+    .option(
+      "--bpm <n>",
+      "beat grid to quantize entrance/emphasis moments to (e.g. 120)",
+      (v) => parseInt(v, 10),
+    )
+    .option(
+      "--baseline",
+      "skip the LLM — apply the deterministic motion heuristics verbatim",
+    )
+    .option(
+      "--model <provider>",
+      "model provider: minimax|glm (default from motion role config)",
+    )
+    .option(
+      "--ken-burns <n>",
+      "CS-09: slow-push amount for a still-first channel profile — 0 (held frame, default) or ~0.015 for a 1–2% push",
+      (v) => parseFloat(v),
+    )
+    .option(
+      "--force",
+      "regenerate even when the storyboard checkpoint is approved or the project is FINAL_APPROVED (prints a warning)",
+    )
+    .action(
+      async (
+        project: string,
+        opts: {
+          cwd?: string;
+          scene?: string;
+          bpm?: number;
+          baseline?: boolean;
+          model?: "minimax" | "glm";
+          kenBurnsScale?: number;
+          force?: boolean;
+        },
+      ) => {
+        process.exitCode = await runMotion({
+          project,
+          ...(opts.cwd !== undefined ? { cwd: opts.cwd } : {}),
+          ...(opts.scene !== undefined ? { scene: opts.scene } : {}),
+          ...(opts.bpm !== undefined ? { bpm: opts.bpm } : {}),
+          ...(opts.baseline !== undefined ? { baseline: opts.baseline } : {}),
+          ...(opts.model !== undefined ? { model: opts.model } : {}),
+          ...(opts.kenBurnsScale !== undefined
+            ? { kenBurnsScale: opts.kenBurnsScale }
+            : {}),
+          ...(opts.force !== undefined ? { force: opts.force } : {}),
+        });
       },
-    ) => {
-      process.exitCode = await runMotion({
-        project,
-        ...(opts.cwd !== undefined ? { cwd: opts.cwd } : {}),
-        ...(opts.scene !== undefined ? { scene: opts.scene } : {}),
-        ...(opts.bpm !== undefined ? { bpm: opts.bpm } : {}),
-        ...(opts.baseline !== undefined ? { baseline: opts.baseline } : {}),
-        ...(opts.model !== undefined ? { model: opts.model } : {}),
-        ...(opts.kenBurnsScale !== undefined
-          ? { kenBurnsScale: opts.kenBurnsScale }
-          : {}),
-        ...(opts.force !== undefined ? { force: opts.force } : {}),
-      });
-    },
-  );
+    );
 }

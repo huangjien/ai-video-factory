@@ -93,8 +93,7 @@ export class MiniMaxImageProvider implements ImageProvider {
       "https://api.minimax.io";
     this.defaultModel = opts.defaultModel ?? DEFAULT_MODEL;
     this.retrySleeps = opts.retrySleeps ?? [1000, 2000, 4000];
-    this.requestTimeoutMs =
-      opts.requestTimeoutMs ?? DEFAULT_REQUEST_TIMEOUT_MS;
+    this.requestTimeoutMs = opts.requestTimeoutMs ?? DEFAULT_REQUEST_TIMEOUT_MS;
     this.promptOptimizer = opts.promptOptimizer ?? false;
   }
 
@@ -123,7 +122,10 @@ export class MiniMaxImageProvider implements ImageProvider {
         // parent process kills it. Race a deadline against the fetch
         // and abort the request if the API hasn't answered by then.
         const controller = new AbortController();
-        const timer = setTimeout(() => controller.abort(), this.requestTimeoutMs);
+        const timer = setTimeout(
+          () => controller.abort(),
+          this.requestTimeoutMs,
+        );
         let res: Response;
         try {
           res = await fetch(`${this.apiHost}/v1/image_generation`, {
@@ -184,7 +186,8 @@ export class MiniMaxImageProvider implements ImageProvider {
         // hasn't hung anything; we may legitimately retry the same
         // request later. Internal errors are also retried (they sometimes
         // resolve on a second attempt), only 4xx is not.
-        isRetriable: (err) => !/MiniMax image API (?:4\d\d|request timed out)/.test(String(err)),
+        isRetriable: (err) =>
+          !/MiniMax image API (?:4\d\d|request timed out)/.test(String(err)),
         sleeps: this.retrySleeps,
       },
     );

@@ -90,11 +90,11 @@ export async function readStateOrNull(projectRoot: string) {
 }
 
 export function registerNew(program: Command): void {
-program
-  .command("new")
-  .argument("<project-id>", "project id (used as directory name)")
-  .option("--cwd <dir>", "base directory for the project")
-  .action(async (projectId: string, opts: { cwd?: string }) => {
-    process.exitCode = await runNew({ projectId, cwd: opts.cwd });
-  });
+  program
+    .command("new")
+    .argument("<project-id>", "project id (used as directory name)")
+    .option("--cwd <dir>", "base directory for the project")
+    .action(async (projectId: string, opts: { cwd?: string }) => {
+      process.exitCode = await runNew({ projectId, cwd: opts.cwd });
+    });
 }

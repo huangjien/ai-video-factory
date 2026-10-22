@@ -37,7 +37,9 @@ export const FlowChart: FC<FlowChartProps> = ({
   // final = 30fps). When durationInFrames is 0 (shouldn't happen), fall
   // back to 30fps so sceneSec is well-defined.
   const sceneSec =
-    durationInFrames > 0 ? frame * ((durationInFrames / 30) / durationInFrames) : frame / 30;
+    durationInFrames > 0
+      ? frame * (durationInFrames / 30 / durationInFrames)
+      : frame / 30;
   const cols =
     direction === "left-to-right" ? Math.ceil(Math.sqrt(nodes.length)) : 1;
   const positions = nodes.map((_, i) => {

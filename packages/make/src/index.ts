@@ -997,6 +997,12 @@ interface AudioConfigShape {
   bgm_tracks?: { track: string; until_sec?: number }[];
   bgm_fade_in_sec?: number;
   bgm_fade_out_sec?: number;
+  /** BGM bed level while narration is silent, in dBFS below full scale.
+   *  The mixer default is -18; quieter ambient beds (e.g.
+   *  ambient-take-your-pick at -12.5 LUFS) sit too far under the
+   *  narration at that level and land the master below -23 LUFS.
+   *  Optional — omit to use the mixer default. */
+  bgm_attenuation_db?: number;
   pause_between_sentences_sec?: number;
   sfx?: Record<string, string>;
 }
@@ -1467,6 +1473,9 @@ async function runMix(
   }
   if (typeof config.bgm_fade_in_sec === "number") {
     mixArgs.push("--bgm-fade-in", String(config.bgm_fade_in_sec));
+  }
+  if (typeof config.bgm_attenuation_db === "number") {
+    mixArgs.push("--bgm-attenuation", String(config.bgm_attenuation_db));
   }
   if (typeof config.bgm_fade_out_sec === "number") {
     mixArgs.push("--bgm-fade-out", String(config.bgm_fade_out_sec));

@@ -1,5 +1,5 @@
 import type { Command } from "commander";
-import { existsSync, readdirSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { mkdir } from "node:fs/promises";
 import { createHash } from "node:crypto";
 import { execFile, execSync } from "node:child_process";
@@ -13,6 +13,7 @@ import {
   SfxCueKeySchema,
 } from "@video/audio-mix";
 import { formatRunId } from "@video/workflow";
+import { parse as parseYaml } from "yaml";
 import {
   curatedBgmDirectory,
   resolveBgmTag,
@@ -179,7 +180,17 @@ function sceneWavNumber(f: string): number {
  * load-bearing: lexicographic order interleaves scene_10..scene_14 between
  * scene_1 and scene_2 whenever a video has ≥10 scenes, so the mixed audio
  * track stops matching the visual/caption timeline (observed 2026-10-16:
- * "audio has nothing to do with images and subtitle"). */
+ * "audio has nothing to do with images and subtitle").
+ *
+ * The scene LIST comes from storyboard.yaml, not from the directory
+ * listing. A re-draft that shrinks the video (49 scenes → 24) leaves the
+ * old scene_25..scene_49.wav files on disk; globbing picked those up and
+ * concatenated them AFTER the current narration, so the mixed audio ran
+ * 256 s longer than the rendered video. The container then advertised the
+ * longer audio duration while the video stream ended early, and the last
+ * four minutes played as a frozen final frame (observed 2026-10-22).
+ * Reading the storyboard makes the two timelines the same length by
+ * construction: one scene, one wav, in the storyboard's order. */
 export function pickNarrations(projectRoot: string): string[] {
   const audioDir = path.join(projectRoot, "assets", "audio");
   if (!existsSync(audioDir)) {
@@ -187,14 +198,70 @@ export function pickNarrations(projectRoot: string): string[] {
       `no narration audio in ${audioDir} — run \`video audio <project>\` first`,
     );
   }
-  const files = readdirSync(audioDir)
-    .filter((f) => /^scene[-_]\d+\.wav$/.test(f))
-    .sort((a, b) => sceneWavNumber(a) - sceneWavNumber(b) || a.localeCompare(b))
-    .map((f) => path.join(audioDir, f));
-  if (files.length === 0) {
+  const onDisk = readdirSync(audioDir).filter((f) =>
+    /^scene[-_]\d+\.wav$/.test(f),
+  );
+  if (onDisk.length === 0) {
     throw new Error(`no scene-N.wav files in ${audioDir}`);
   }
+  // Index the on-disk wavs by scene number. Zero-padded and unpadded
+  // names both land on the same key ("scene_01" and "scene_1" → 1).
+  const byNumber = new Map<number, string>();
+  for (const f of onDisk) {
+    byNumber.set(sceneWavNumber(f), path.join(audioDir, f));
+  }
+  // The storyboard is the authority on which scenes exist and in what
+  // order. Fall back to the directory listing only when there is no
+  // storyboard to read (a bare `video mix` on a project mid-draft).
+  const sceneNumbers = readStoryboardSceneNumbers(projectRoot);
+  const numbers =
+    sceneNumbers !== null && sceneNumbers.length > 0
+      ? sceneNumbers
+      : [...byNumber.keys()].sort((a, b) => a - b);
+  const files: string[] = [];
+  const missing: number[] = [];
+  for (const n of numbers) {
+    const f = byNumber.get(n);
+    if (f === undefined) {
+      missing.push(n);
+      continue;
+    }
+    files.push(f);
+  }
+  if (missing.length > 0) {
+    throw new Error(
+      `narration audio missing for scene(s) ${missing.join(", ")} in ${audioDir} — run \`video audio <project>\` first`,
+    );
+  }
+  if (files.length === 0) {
+    throw new Error(`no usable scene-N.wav files in ${audioDir}`);
+  }
   return files;
+}
+
+/** Scene numbers from storyboard.yaml, in document order. null when the
+ *  storyboard is missing or unreadable — the caller then falls back to
+ *  the directory listing. */
+function readStoryboardSceneNumbers(projectRoot: string): number[] | null {
+  const storyboardPath = path.join(
+    projectRoot,
+    "storyboard",
+    "storyboard.yaml",
+  );
+  if (!existsSync(storyboardPath)) return null;
+  try {
+    const text = readFileSync(storyboardPath, "utf8");
+    const doc = parseYaml(text) as { scenes?: Array<{ id?: string }> };
+    if (!Array.isArray(doc.scenes)) return null;
+    const nums: number[] = [];
+    for (const s of doc.scenes) {
+      const m = (s?.id ?? "").match(/scene[-_]?(\d+)/);
+      if (m) nums.push(parseInt(m[1]!, 10));
+    }
+    return nums.length > 0 ? nums : null;
+  } catch {
+    return null;
+  }
 }
 
 /** Parse `--sfx scene_2=whoosh` flags into a cue map.

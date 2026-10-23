@@ -47,13 +47,19 @@ const titleProps = z
   .object({
     text: z.string().min(1),
     subtext: z.string().optional(),
+    /** Small uppercase kicker above the title (e.g. "Chapter One"). */
+    kicker: z.string().optional(),
+    /** Hex accent color override; defaults to theme.accent. */
+    accent: z.string().optional(),
   })
   .passthrough();
 
 const paragraphProps = z
   .object({
     text: z.string().min(1),
-    align: z.enum(["left", "center"]).default("center"),
+    /** Optional title rendered above the body. */
+    title: z.string().optional(),
+    align: z.enum(["left", "center", "right"]).default("center"),
   })
   .passthrough();
 
@@ -69,6 +75,9 @@ const codeBlockProps = z
     code: z.string().min(1),
     language: z.string().default("text"),
     highlightLines: z.array(z.number().int().positive()).default([]),
+    /** Optional file name / path rendered in a window-chrome bar
+     *  above the code (e.g. "src/agent.ts"). */
+    fileName: z.string().optional(),
   })
   .passthrough();
 
@@ -84,6 +93,8 @@ const imageProps = z
   .object({
     src: z.string().min(1),
     fit: z.enum(["contain", "cover"]).default("contain"),
+    alt: z.string().optional(),
+    caption: z.string().optional(),
   })
   .passthrough();
 
@@ -222,6 +233,9 @@ const statEntry = z
   .object({
     value: z.string().default(""),
     label: z.string().default(""),
+    hint: z.string().optional(),
+    /** Optional single-char icon shown above the value. */
+    icon: z.string().optional(),
   })
   .passthrough();
 const statGridProps = z
@@ -236,6 +250,10 @@ const barEntry = z
     label: z.string().default(""),
     value: z.number().default(0),
     display: z.string().optional(),
+    /** Optional small icon shown to the left of the bar. */
+    icon: z.string().optional(),
+    /** Optional short caption shown beside the value. */
+    caption: z.string().optional(),
   })
   .passthrough();
 const barChartProps = z
@@ -249,6 +267,8 @@ const leaderboardEntry = z
   .object({
     name: z.string().min(1),
     score: z.string().optional(),
+    subtitle: z.string().optional(),
+    color: z.string().optional(),
   })
   .passthrough();
 const leaderboardProps = z
@@ -258,9 +278,18 @@ const leaderboardProps = z
   })
   .passthrough();
 
+const checklistItem = z
+  .object({
+    text: z.string().min(1),
+    description: z.string().optional(),
+    status: z.enum(["done", "pending", "skip"]).optional(),
+    group: z.string().optional(),
+  })
+  .passthrough();
 const checklistProps = z
   .object({
-    items: z.array(z.object({ text: z.string().min(1) }).passthrough()).min(1),
+    /** Back-compat: string[] is treated as all-done items. */
+    items: z.array(z.union([z.string().min(1), checklistItem])).min(1),
     title: z.string().optional(),
   })
   .passthrough();
@@ -269,26 +298,60 @@ const bigIdeaProps = z
   .object({
     text: z.string().min(1),
     kicker: z.string().optional(),
+    attribution: z.string().optional(),
   })
   .passthrough();
 
 const pyramidProps = z
   .object({
-    levels: z.array(z.string().min(1)).min(1),
+    /** Either plain strings (back-compat) or objects with optional
+     *  `role` (small chip on the left) and `icon` (single-letter
+     *  monogram on the right) for a richer treatment. */
+    levels: z
+      .array(
+        z.union([
+          z.string().min(1),
+          z.object({
+            label: z.string().min(1),
+            role: z.string().optional(),
+            icon: z.string().optional(),
+          }),
+        ]),
+      )
+      .min(1),
+    /** Optional headline rendered above the apex. */
+    title: z.string().optional(),
   })
   .passthrough();
 
+const vennSet = z
+  .object({
+    label: z.string().min(1),
+    detail: z.string().optional(),
+  })
+  .passthrough();
 const vennProps = z
   .object({
-    sets: z.array(z.string().min(1)).min(1),
+    /** 1–3 sets; extras are dropped. Strings are treated as `{label}`. */
+    sets: z.array(z.union([z.string().min(1), vennSet])).min(1),
     center: z.string().optional(),
   })
   .passthrough();
 
+const cycleStage = z
+  .object({
+    label: z.string().min(1),
+    detail: z.string().optional(),
+    /** Optional single-letter monogram shown inside the stage node. */
+    icon: z.string().optional(),
+  })
+  .passthrough();
 const cycleProps = z
   .object({
-    stages: z.array(z.string().min(1)).min(1),
+    /** 1–8 stages; extras are dropped. Strings are treated as `{label}`. */
+    stages: z.array(z.union([z.string().min(1), cycleStage])).min(1),
     title: z.string().optional(),
+    caption: z.string().optional(),
   })
   .passthrough();
 
@@ -478,22 +541,16 @@ export type RegistryPropsByName = {
     kenBurnsScale?: number;
     textOverlaySrc?: string;
   };
-  QuoteBlock: { quote: string; author?: string; source?: string };
-  StatGrid: { stats: { value: string; label: string }[]; caption?: string };
-  BarChart: {
-    bars: { label: string; value: number; display?: string }[];
-    title?: string;
-  };
-  Leaderboard: {
-    entries: { name: string; score?: string }[];
-    title?: string;
-  };
-  Checklist: { items: { text: string }[]; title?: string };
-  BigIdea: { text: string; kicker?: string };
+  QuoteBlock: { quote: string; author?: string; source?: string; kicker?: string };
+  StatGrid: { stats: { value: string; label: string; hint?: string; icon?: string }[]; caption?: string };
+  BarChart: { bars: { label: string; value: number; display?: string; icon?: string; caption?: string }[]; title?: string };
+  Leaderboard: { entries: { name: string; score?: string; subtitle?: string; color?: string }[]; title?: string };
+  Checklist: { items: (string | { text: string; description?: string; status?: "done" | "pending" | "skip"; group?: string })[]; title?: string };
+  BigIdea: { text: string; kicker?: string; attribution?: string };
   PyramidDiagram: {
     levels: (string | { label: string; role?: string; icon?: string })[];
     title?: string;
   };
-  VennDiagram: { sets: string[]; center?: string };
-  CycleDiagram: { stages: string[]; title?: string };
+  VennDiagram: { sets: (string | { label: string; detail?: string })[]; center?: string };
+  CycleDiagram: { stages: (string | { label: string; detail?: string; icon?: string })[]; title?: string; caption?: string };
 };

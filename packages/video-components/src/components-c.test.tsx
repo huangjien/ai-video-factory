@@ -102,17 +102,22 @@ describe("v0.4.2 visual components (renders without throwing)", () => {
     expect(html).toContain("Top 2");
   });
 
-  it("Checklist strokes check marks and text", () => {
+  it("Checklist renders items with status + progress bar", () => {
     const html = renderToStaticMarkup(
       <Checklist
-        items={[{ text: "先写测试" }, { text: "再实现" }]}
+        items={[
+          { text: "先写测试", status: "done" },
+          { text: "再实现", status: "pending", group: "流程" },
+        ]}
         {...baseScene(40)}
       />,
     );
     expect(html).toContain("先写测试");
     expect(html).toContain("再实现");
-    // pathLength-based stroke draw must be present.
-    expect(html).toContain("stroke-dashoffset");
+    expect(html).toContain("流程");
+    // "完成 1 / 2" + 50% readout on the progress bar.
+    expect(html).toContain("完成 1 / 2");
+    expect(html).toContain("50%");
   });
 
   it("BigIdea reveals tokens by frame", () => {

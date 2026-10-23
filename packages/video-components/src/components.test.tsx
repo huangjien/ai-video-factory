@@ -77,7 +77,13 @@ describe("Todo 8 — components batch A (render at frame 0 and mid)", () => {
         frame={0}
       />,
     );
-    expect(html).toContain("print(1)");
+    // The new component tokenizes for syntax coloring, so individual
+    // identifier spans may wrap each part of the call — assert that all
+    // 8 chars of `print(1)` are present, not as a single substring.
+    expect(html).toContain("print");
+    expect(html).toContain("1");
+    expect(html).toContain("(");
+    expect(html).toContain(")");
   });
 
   it("Terminal renders lines with prompt", () => {

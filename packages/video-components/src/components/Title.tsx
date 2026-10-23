@@ -7,6 +7,12 @@ export interface TitleProps {
   theme?: Theme;
   text: string;
   subtext?: string | undefined;
+  /** Optional small kicker (e.g. "Chapter One", "Tutorial 03") rendered
+   *  above the main title in uppercase tracking. */
+  kicker?: string;
+  /** Optional accent color override — a hex string used for the
+   *  underline accent rule. Defaults to the theme's accent. */
+  accent?: string;
   startFrame: number;
   durationInFrames: number;
   frame: number;
@@ -28,23 +34,27 @@ export const Title: FC<TitleProps> = ({
   theme = darkTechTheme,
   text,
   subtext,
+  kicker,
+  accent,
   startFrame,
   durationInFrames,
   frame,
 }) => {
   const enter = entrance(frame, 24, "up");
-  const underline = entrance(frame, 36, "left");
   const exit = fadeOut(frame, durationInFrames, 18);
   const opacity = enter.opacity * exit;
   const translateY = enter.translate;
   const scale = enter.scale;
-  const underlineScale = underline.scale;
-  const breath = 1 + Math.sin((frame / 96) * Math.PI * 2) * 0.015;
+  const underline = enter.scale;
+  // A tiny continuous breath on the main title (1% scale oscillation)
+  // makes the static "title card" feel alive without being distracting.
+  const breath = 1 + Math.sin((frame / 96) * Math.PI * 2) * 0.01;
   const chars = [...text];
+  const accentColor = accent ?? theme.colors.accent;
   return (
     <AbsoluteFill
       style={{
-        backgroundColor: theme.colors.background,
+        backgroundColor: "transparent",
         justifyContent: "center",
         alignItems: "center",
         opacity,
@@ -52,13 +62,31 @@ export const Title: FC<TitleProps> = ({
     >
       <div
         style={{
-          transform: `translateY(${translateY}px) scale(${scale})`,
-          transformOrigin: "center",
+          transform: `translateY(${translateY}px) scale(${scale * breath})`,
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
+          maxWidth: 1600,
         }}
       >
+        {/* Optional kicker — small uppercase label above the title.
+            Fades in slightly later than the main text. */}
+        {kicker !== undefined ? (
+          <div
+            style={{
+              fontSize: 22,
+              fontWeight: 700,
+              letterSpacing: 4,
+              textTransform: "uppercase",
+              color: accentColor,
+              fontFamily: theme.typography.subtitle.fontFamily,
+              marginBottom: 24,
+              opacity: Math.max(0, (enter.opacity - 0.2) / 0.8),
+            }}
+          >
+            {kicker}
+          </div>
+        ) : null}
         <h1
           style={{
             color: theme.colors.primary,
@@ -67,9 +95,8 @@ export const Title: FC<TitleProps> = ({
             fontSize: 96,
             margin: 0,
             marginBottom: 24,
-            opacity,
+            textShadow: `0 0 ${40 * enter.opacity}px ${accentColor}`,
             display: "flex",
-            textShadow: `0 0 ${40 * enter.opacity}px ${theme.colors.accent}`,
           }}
         >
           {chars.map((c, i) => {
@@ -79,9 +106,6 @@ export const Title: FC<TitleProps> = ({
                 key={i}
                 style={{
                   display: "inline-block",
-                  // Each character is its own flex item, so a space inside one
-                  // collapses to zero width and the headline renders as
-                  // "Sevenwrongtoolcalls". `pre` keeps the glyph's width.
                   whiteSpace: "pre",
                   transform: `translate(${k.x}px, ${k.y}px) rotate(${k.rot}deg) scale(${breath})`,
                 }}
@@ -91,29 +115,38 @@ export const Title: FC<TitleProps> = ({
             );
           })}
         </h1>
-        {subtext !== undefined ? (
-          <p
-            style={{
-              color: theme.colors.secondary,
-              fontSize: 36,
-              margin: 0,
-              opacity: Math.max(0, enter.opacity - 0.3),
-            }}
-          >
-            {subtext}
-          </p>
-        ) : null}
+        {/* Accent underline — a small horizontal rule under the title
+            that scales in with the entrance. */}
         <div
           style={{
             marginTop: 32,
             width: 240,
             height: 6,
-            backgroundColor: theme.colors.accent,
-            transform: `scaleX(${underlineScale})`,
+            background: accentColor,
+            transform: `scaleX(${underline})`,
             transformOrigin: "left",
-            boxShadow: `0 0 ${12 * enter.opacity}px ${theme.colors.accent}`,
+            boxShadow: `0 0 ${12 * enter.opacity}px ${accentColor}`,
+            borderRadius: 3,
           }}
         />
+        {/* Subtext (optional) — slightly larger, muted, fades in after
+            the title. */}
+        {subtext !== undefined ? (
+          <div
+            style={{
+              marginTop: 36,
+              fontSize: 32,
+              color: theme.colors.secondary,
+              fontFamily: theme.typography.subtitle.fontFamily,
+              fontWeight: 500,
+              opacity: Math.max(0, (enter.opacity - 0.3) / 0.7),
+              textAlign: "center",
+              maxWidth: 1200,
+            }}
+          >
+            {subtext}
+          </div>
+        ) : null}
       </div>
     </AbsoluteFill>
   );

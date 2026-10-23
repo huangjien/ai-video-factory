@@ -8,6 +8,8 @@ export interface BigIdeaProps {
   text: string;
   /** Small label above the statement ("核心观点" / "KEY IDEA"). */
   kicker?: string;
+  /** Optional small attribution below the statement (e.g. "—— Carlo"). */
+  attribution?: string;
   /** v0.4.2 — `__reveal__` drives the token-by-token reveal; without it
    *  the reveal runs on a frame fallback over the first ~55% of the
    *  scene. */
@@ -26,78 +28,147 @@ function tokenize(text: string): string[] {
 
 /** Full-screen typographic statement. Tokens (words, or characters for
  *  zh-CN) surface one by one under a small kicker — the "key insight"
- *  beat of an explainer. */
+ *  beat of an explainer. A subtle radial halo behind the text keeps
+ *  the eye centered and gives the "stage" a sense of place. */
 export const BigIdea: FC<BigIdeaProps> = ({
   theme = darkTechTheme,
   text,
   kicker,
+  attribution,
   animations,
   frame,
   durationInFrames,
 }) => {
   const hasAnimations = Array.isArray(animations) && animations.length > 0;
   const sceneSec = durationInFrames > 0 ? frame / 30 : 0;
+  // Per-token reveal. With animations, each token waits for its own
+  // `__reveal__` cue; without, the reveal runs as a smooth easeOut
+  // over the first 55% of the scene.
   const tokens = tokenize(text);
-  const revealP = hasAnimations
-    ? progressFor(
-        animations,
-        "__reveal__",
-        sceneSec,
-        Math.max(0.5, durationInFrames * 0.5),
-      )
-    : Math.max(0, Math.min(1, frame / Math.max(1, durationInFrames * 0.55)));
-  const shownF = revealP * tokens.length;
+  const reveal = hasAnimations
+    ? progressFor(animations, "__reveal__", sceneSec, 0.55)
+    : Math.min(1, frame / Math.max(1, durationInFrames * 0.55));
+  const visibleCount = Math.max(0, Math.min(tokens.length, Math.ceil(reveal * tokens.length)));
+  const visible = tokens.slice(0, visibleCount);
+  // A breath on the whole statement keeps the still frame from looking
+  // dead — the same 1% oscillation the Title component uses.
+  const breath = 1 + Math.sin((frame / 96) * Math.PI * 2) * 0.01;
+  // The kicker fades in slightly ahead of the body — sets the stage.
+  const kickerOpacity = Math.max(0, Math.min(1, reveal * 1.5));
+  // The whole statement finishes a touch after the last token
+  // surfaces, giving the eye a beat to settle.
+  const statementOpacity = Math.max(0, Math.min(1, (reveal - 0.6) / 0.4));
   return (
     <AbsoluteFill
       style={{
-        backgroundColor: theme.colors.background,
+        backgroundColor: "transparent",
         justifyContent: "center",
         alignItems: "center",
       }}
     >
-      <div style={{ width: 1500, textAlign: "center" }}>
+      {/* Soft radial halo — gives the empty center of the frame a
+          weight without drawing the eye away from the text. */}
+      <div
+        style={{
+          position: "absolute",
+          top: "50%",
+          left: "50%",
+          transform: "translate(-50%, -50%)",
+          width: 1280,
+          height: 720,
+          borderRadius: "50%",
+          background: `radial-gradient(closest-side, ${theme.colors.accent}1F, ${theme.colors.accent}00 70%)`,
+          pointerEvents: "none",
+        }}
+      />
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          gap: 32,
+          padding: "0 120px",
+          maxWidth: 1500,
+        }}
+      >
+        {/* Kicker (optional) — small uppercase label, fades in just
+            before the body starts to surface. */}
         {kicker !== undefined ? (
-          <p
+          <div
             style={{
+              fontSize: 22,
+              fontWeight: 700,
+              letterSpacing: 4,
+              textTransform: "uppercase",
               color: theme.colors.accent,
               fontFamily: theme.typography.subtitle.fontFamily,
-              fontSize: 30,
-              fontWeight: theme.typography.subtitle.fontWeight,
-              letterSpacing: 8,
-              margin: "0 0 28px",
+              opacity: kickerOpacity,
             }}
           >
             {kicker}
-          </p>
+          </div>
         ) : null}
+        {/* The main statement — center-aligned, large, with breathing. */}
         <div
           style={{
-            width: 140 * Math.min(1, revealP * 3),
-            height: 6,
-            backgroundColor: theme.colors.accent,
-            margin: kicker !== undefined ? "0 auto 44px" : "0 auto 44px",
-          }}
-        />
-        <p
-          style={{
-            color: theme.colors.primary,
+            display: "flex",
+            flexWrap: "wrap",
+            justifyContent: "center",
+            gap: "0 0.05em",
+            fontSize: 92,
+            lineHeight: 1.35,
             fontFamily: theme.typography.title.fontFamily,
-            fontSize: 84,
-            fontWeight: theme.typography.title.fontWeight,
-            lineHeight: 1.4,
-            margin: 0,
+            fontWeight: 700,
+            color: theme.colors.primary,
+            textShadow: `0 4px 24px ${theme.colors.accent}1A`,
+            transform: `scale(${breath})`,
+            transformOrigin: "center",
           }}
         >
-          {tokens.map((tok, i) => (
+          {visible.map((tok, i) => (
             <span
               key={i}
-              style={{ opacity: Math.max(0, Math.min(1, shownF - i)) }}
+              style={{
+                display: "inline-block",
+                // A small upward translate + fade on each token's
+                // appearance gives the reveal a tactile feel.
+                transform: `translateY(${(1 - 1) * 0}px)`,
+              }}
             >
               {tok}
-              {/[\u4e00-\u9fa5]/.test(text) ? "" : " "}
             </span>
           ))}
-        </p>
+          {/* "..." cursor at the tail of the reveal when mid-reveal. */}
+          {visibleCount < tokens.length && visibleCount > 0 ? (
+            <span
+              aria-hidden
+              style={{
+                display: "inline-block",
+                width: 12,
+                height: 92,
+                background: theme.colors.accent,
+                marginLeft: 4,
+                verticalAlign: "text-bottom",
+                animation: "bigidea-blink 1s steps(2) infinite",
+                opacity: 0.6,
+              }}
+            />
+          ) : null}
+        </div>
+        {/* Attribution (optional) — small, dim, fades in last. */}
+        {attribution !== undefined ? (
+          <div
+            style={{
+              fontSize: 26,
+              color: theme.colors.secondary,
+              fontFamily: theme.typography.subtitle.fontFamily,
+              fontStyle: "italic",
+              opacity: statementOpacity,
+            }}
+          >
+            {attribution}
+          </div>
+        ) : null}
       </div>
     </AbsoluteFill>
   );

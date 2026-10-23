@@ -4,10 +4,16 @@ import { fade } from "../animations.js";
 import { darkTechTheme, type Theme } from "../theme.js";
 import { progressFor, type TimelineAnim } from "./timelineTiming.js";
 
+export interface VennSet {
+  label: string;
+  /** Optional short description rendered under the label. */
+  detail?: string;
+}
+
 export interface VennDiagramProps {
   theme?: Theme;
-  /** 1–3 set names; extra sets are dropped by the builder. */
-  sets: string[];
+  /** 1–3 set names. Extra sets are dropped. */
+  sets: (string | VennSet)[];
   /** Optional label rendered in the shared intersection. */
   center?: string;
   /** v0.4.2 — `set-${i}` fades each circle in. */
@@ -19,9 +25,18 @@ export interface VennDiagramProps {
 
 const SET_COLORS = ["accent", "warning", "success"] as const;
 
-/** Overlapping translucent circles (2-set or classic 3-set). Each set
- *  uses a different theme pop color at low fill opacity so the overlap
- *  region blends visibly. */
+function pickColor(theme: Theme, kind: (typeof SET_COLORS)[number]): string {
+  return kind === "accent"
+    ? theme.colors.accent
+    : kind === "warning"
+      ? theme.colors.warning
+      : theme.colors.success;
+}
+
+/** Two- or three-set Venn diagram. Each set uses a different theme pop
+ *  color at low fill opacity so the overlap region reads as a deeper,
+ *  richer blend. Set labels float above each circle; the center label
+ *  sits in the intersection. */
 export const VennDiagram: FC<VennDiagramProps> = ({
   theme = darkTechTheme,
   sets = [],
@@ -32,89 +47,134 @@ export const VennDiagram: FC<VennDiagramProps> = ({
 }) => {
   const hasAnimations = Array.isArray(animations) && animations.length > 0;
   const sceneSec = durationInFrames > 0 ? frame / 30 : 0;
-  const shown = sets.slice(0, 3);
-  const n = shown.length;
-  const R = 300;
-  const centers: [number, number][] =
-    n === 1
-      ? [[960, 540]]
-      : n === 2
-        ? [
-            [770, 540],
-            [1150, 540],
-          ]
-        : [
-            [790, 440],
-            [1130, 440],
-            [960, 740],
-          ];
-  // Label sits away from the overlap, toward the circle's outer edge.
-  const labelOffset: [number, number][] =
-    n === 1
-      ? [[0, 0]]
-      : n === 2
-        ? [
-            [-150, 0],
-            [150, 0],
-          ]
-        : [
-            [-110, -110],
-            [110, -110],
-            [0, 150],
-          ];
+  // Normalize legacy string[] to the new typed shape.
+  const typed: VennSet[] = sets.slice(0, 3).map((s) =>
+    typeof s === "string" ? { label: s } : s,
+  );
+  // Circle positions on a 1920×1080 canvas. Center biased to leave the
+  // upper third for the label and the lower third for breathing room.
+  const CX = 960;
+  const CY = 600;
+  // Offset between the two main circle centers — sized so the
+  // overlap is roughly 30% of each circle's area, which reads as a
+  // "Venn overlap" rather than "concentric".
+  const R = 280;
+  const D = 200;
+  const positions: Array<{ x: number; y: number; color: string }> = [
+    { x: CX - D / 2, y: CY, color: pickColor(theme, "accent") },
+    { x: CX + D / 2, y: CY, color: pickColor(theme, "warning") },
+    { x: CX, y: CY - 110, color: pickColor(theme, "success") },
+  ];
   return (
     <AbsoluteFill
       style={{
-        backgroundColor: theme.colors.background,
+        backgroundColor: "transparent",
         justifyContent: "center",
+        alignItems: "center",
       }}
     >
       <svg width="100%" height="100%" viewBox="0 0 1920 1080">
-        {shown.map((label, i) => {
-          const p = hasAnimations
+        <defs>
+          <filter id="venn-shadow" x="-20%" y="-20%" width="140%" height="140%">
+            <feGaussianBlur in="SourceAlpha" stdDeviation="6" />
+            <feOffset dx="0" dy="4" result="offsetblur" />
+            <feComponentTransfer>
+              <feFuncA type="linear" slope="0.15" />
+            </feComponentTransfer>
+            <feMerge>
+              <feMergeNode />
+              <feMergeNode in="SourceGraphic" />
+            </feMerge>
+          </filter>
+        </defs>
+
+        {typed.map((s, i) => {
+          const p = positions[i];
+          if (!p) return null;
+          const setProgress = hasAnimations
             ? progressFor(animations, `set-${i}`, sceneSec, 0.5)
-            : fade(frame - i * 8, 20);
-          const colorKey = SET_COLORS[i % SET_COLORS.length] ?? "accent";
-          const color = theme.colors[colorKey];
-          const [cx, cy] = centers[i] ?? [960, 540];
-          const [lx, ly] = labelOffset[i] ?? [0, 0];
+            : fade(frame - i * 6, 18);
           return (
-            <g key={i} opacity={p}>
+            <g key={`set-${i}`} opacity={setProgress} filter="url(#venn-shadow)">
               <circle
-                cx={cx}
-                cy={cy}
+                cx={p.x}
+                cy={p.y}
                 r={R}
-                fill={color}
-                fillOpacity={0.32 * p}
-                stroke={color}
+                fill={p.color}
+                fillOpacity={0.18}
+                stroke={p.color}
                 strokeWidth={3}
               />
-              <text
-                x={cx + lx}
-                y={cy + ly}
-                fill={theme.colors.primary}
-                fontSize={38}
-                textAnchor="middle"
-                dominantBaseline="middle"
-                fontFamily={theme.typography.subtitle.fontFamily}
-              >
-                {label}
-              </text>
             </g>
           );
         })}
-        {center !== undefined && n >= 2 ? (
-          <text
-            x={n === 2 ? 960 : 960}
-            y={n === 2 ? 540 : 560}
-            fill={theme.colors.primary}
-            fontSize={34}
-            textAnchor="middle"
-            dominantBaseline="middle"
-            fontFamily={theme.typography.body.fontFamily}
-          >
-            {center}
-          </text>
+
+        {/* Set labels — sit just above the corresponding circle. The
+            label reads as the circle's "name" and the detail as a
+            short expansion underneath. */}
+        {typed.map((s, i) => {
+          const p = positions[i];
+          if (!p) return null;
+          const labelY = i < 2 ? p.y + R + 50 : p.y - R - 50;
+          // Three-set configuration: the top circle's label sits
+          // above its arc; the side circles' labels sit below theirs.
+          return (
+            <g key={`label-${i}`} opacity={hasAnimations ? 1 : 1}>
+              <text
+                x={p.x}
+                y={labelY}
+                fill={p.color}
+                fontSize={28}
+                fontWeight={700}
+                textAnchor="middle"
+                fontFamily={theme.typography.subtitle.fontFamily}
+              >
+                {s.label}
+              </text>
+              {s.detail !== undefined ? (
+                <text
+                  x={p.x}
+                  y={labelY + 26}
+                  fill={theme.colors.secondary}
+                  fontSize={18}
+                  textAnchor="middle"
+                  fontFamily={theme.typography.body.fontFamily}
+                >
+                  {s.detail}
+                </text>
+              ) : null}
+            </g>
+          );
+        })}
+
+        {/* Center label — the intersection, in a soft white pill so
+            it reads against the overlap regardless of which colors
+            are blending. */}
+        {center !== undefined ? (
+          <g>
+            <rect
+              x={CX - 80}
+              y={CY - 18}
+              width={160}
+              height={36}
+              rx={18}
+              fill={theme.colors.surface}
+              opacity={0.94}
+              stroke={theme.colors.accent}
+              strokeWidth={1.5}
+            />
+            <text
+              x={CX}
+              y={CY + 6}
+              fill={theme.colors.accent}
+              fontSize={20}
+              fontWeight={700}
+              textAnchor="middle"
+              fontFamily={theme.typography.subtitle.fontFamily}
+            >
+              {center}
+            </text>
+          </g>
         ) : null}
       </svg>
     </AbsoluteFill>

@@ -490,7 +490,10 @@ export type RegistryPropsByName = {
   };
   Checklist: { items: { text: string }[]; title?: string };
   BigIdea: { text: string; kicker?: string };
-  PyramidDiagram: { levels: string[] };
+  PyramidDiagram: {
+    levels: (string | { label: string; role?: string; icon?: string })[];
+    title?: string;
+  };
   VennDiagram: { sets: string[]; center?: string };
   CycleDiagram: { stages: string[]; title?: string };
 };

@@ -66,7 +66,7 @@ export const QuoteBlock: FC<QuoteBlockProps> = ({
           border: `1.5px solid ${theme.colors.accent}`,
           borderLeft: `10px solid ${theme.colors.accent}`,
           boxShadow:
-            "0 20px 48px rgba(15, 23, 42, 0.10), 0 4px 12px rgba(15, 23, 42, 0.06)",
+            "0 6px 16px rgba(15, 23, 42, 0.06), 0 1px 3px rgba(15, 23, 42, 0.04)",
           transform: `scale(${enterScale})`,
         }}
       >
@@ -90,16 +90,15 @@ export const QuoteBlock: FC<QuoteBlockProps> = ({
             It's a styled accent, not a unicode character, so it
             doesn't depend on the font supporting U+201C. */}
         <svg
-          width={64}
-          height={48}
+          width={32}
+          height={24}
           viewBox="0 0 64 48"
-          style={{ marginBottom: 18 }}
+          style={{ marginBottom: 12, opacity: 0.55 }}
           aria-hidden
         >
           <path
             d="M 8 32 Q 8 8 24 8 L 24 18 Q 16 18 16 28 L 28 28 L 28 38 L 8 38 Z M 36 32 Q 36 8 52 8 L 52 18 Q 44 18 44 28 L 56 28 L 56 38 L 36 38 Z"
             fill={theme.colors.accent}
-            opacity={0.65}
           />
         </svg>
         {/* The quote text — wraps, larger font, with a slight letter-
@@ -118,15 +117,16 @@ export const QuoteBlock: FC<QuoteBlockProps> = ({
           {quote}
         </div>
         {/* Horizontal rule — grows from 0 to its full width as the
-            scene's entrance completes. Anchored on the left so the
-            rule reads as a "trail" from the quote down to the source. */}
+            scene's entrance completes. Single solid accent color, no
+            gradient — keeps the visual flat. */}
         <div
           style={{
-            height: 2,
-            width: 600,
+            height: 1.5,
+            width: 400,
             maxWidth: `${ruleProgress * 100}%`,
-            background: `linear-gradient(90deg, ${theme.colors.accent}, ${theme.colors.accent}33)`,
-            marginBottom: 20,
+            background: theme.colors.accent,
+            opacity: 0.7,
+            marginBottom: 16,
             transition: "max-width 120ms linear",
           }}
         />

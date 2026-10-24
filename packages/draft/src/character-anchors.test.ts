@@ -1,14 +1,21 @@
 import { describe, expect, it } from "vitest";
 import { mkdtempSync, mkdirSync, writeFileSync } from "node:fs";
+import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { buildScenePromptMessages } from "./image-prompt.js";
+import type { ChatRequest, ChatResponse, Provider } from "@video/llm";
 import {
-  anchorPromptLines,
+  buildScenePromptMessages,
+  expandScenePrompt,
+  type ScenePromptInput,
+} from "./image-prompt.js";
+import { resolveSceneIdentities } from "./scene-identity.js";
+import { anchorPromptLines } from "./character-profile.js";
+import {
   characterRootFor,
   loadCharacterById,
   loadCharacterProfile,
-} from "./character-profile.js";
+} from "./character-bible.js";
 
 const REPO = path.resolve(import.meta.dirname, "../../..");
 const BIBLE = path.join(REPO, "assets", "characters");
@@ -88,16 +95,21 @@ describe("the two variants share an identity but differ in dress (CS-12)", () =>
 describe("character anchors reach the image brief (CS-12)", () => {
   const p = loadCharacterById(BIBLE, "li_shimin")!;
 
+  /** The brief a scene gets, with its 关键视觉锚点 resolved from the bible. */
+  function briefFor(
+    scene: ScenePromptInput,
+    characterRoot: string | null = BIBLE,
+  ): string {
+    const identities = resolveSceneIdentities(scene.characters, characterRoot);
+    return buildScenePromptMessages(scene, { identities })[1]!.content;
+  }
+
   it("splices the cited character's anchors into the brief", () => {
-    const msgs = buildScenePromptMessages(
-      {
-        id: "scene-05",
-        visual: "年轻统帅在战场上凯旋",
-        characters: [{ id: "li_shimin", variant: "li_shimin__young_prince" }],
-      },
-      { characterRoot: BIBLE },
-    );
-    const user = msgs[1]!.content;
+    const user = briefFor({
+      id: "scene-05",
+      visual: "年轻统帅在战场上凯旋",
+      characters: [{ id: "li_shimin", variant: "li_shimin__young_prince" }],
+    });
     expect(user).toContain("李世民");
     expect(user).toContain("face_shape");
     expect(user).toContain("暗色圆领袍");
@@ -105,29 +117,67 @@ describe("character anchors reach the image brief (CS-12)", () => {
 
   it("distinguishes the two variants in the brief", () => {
     const brief = (variant: string) =>
-      buildScenePromptMessages(
-        { id: "s", visual: "v", characters: [{ id: "li_shimin", variant }] },
-        { characterRoot: BIBLE },
-      )[1]!.content;
+      briefFor({
+        id: "s",
+        visual: "v",
+        characters: [{ id: "li_shimin", variant }],
+      });
     expect(brief("li_shimin__young_prince")).toContain("暗色圆领袍");
     expect(brief("li_shimin__emperor")).toContain("赭黄");
   });
 
   it("adds nothing when a scene cites no character", () => {
-    const plain = buildScenePromptMessages(
-      { id: "s", visual: "v" },
-      {
-        characterRoot: BIBLE,
-      },
-    )[1]!.content;
+    const plain = briefFor({ id: "s", visual: "v" });
     expect(plain).not.toContain('Character "');
   });
 
   it("adds nothing for a character that has no profile", () => {
-    const plain = buildScenePromptMessages(
-      { id: "s", visual: "v", characters: [{ id: "nobody" }] },
-      { characterRoot: BIBLE },
-    )[1]!.content;
+    const plain = briefFor({
+      id: "s",
+      visual: "v",
+      characters: [{ id: "nobody" }],
+    });
     expect(plain).not.toContain('Character "');
+  });
+
+  it("reaches the prompt the render actually writes", async () => {
+    // The production path: `expandScenePrompt` caches the brief and writes
+    // the sidecar the image model is given. Before, the cache key hashed the
+    // bible while the brief dropped it, so the anchors never reached the
+    // model — and the test above could not see it, because it never went
+    // through this function.
+    const root = await mkdtemp(path.join(tmpdir(), "vf-anchor-proj-"));
+    try {
+      const provider: Provider = {
+        name: "fake",
+        async chat(req: ChatRequest): Promise<ChatResponse> {
+          const last = req.messages[req.messages.length - 1];
+          return {
+            content: last?.content ?? "",
+            usage: { input: 1, output: 1 },
+          };
+        },
+      };
+      await expandScenePrompt(
+        {
+          id: "scene-05",
+          visual: "年轻统帅在战场上凯旋",
+          characters: [{ id: "li_shimin", variant: "li_shimin__young_prince" }],
+        },
+        provider,
+        root,
+        1,
+        { characterRoot: BIBLE },
+      );
+      const written = await readFile(
+        path.join(root, "assets", "images", "scene_1.prompt.txt"),
+        "utf8",
+      );
+      expect(written).toContain("李世民");
+      expect(written).toContain("face_shape");
+      expect(written).toContain("暗色圆领袍");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
   });
 });

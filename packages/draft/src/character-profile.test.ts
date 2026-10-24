@@ -4,9 +4,8 @@ import {
   anchorPromptLines,
   anchorsForVariant,
   approvedReferenceFor,
-  loadCharacterProfile,
-  listCharacterIds,
 } from "./character-profile.js";
+import { loadCharacterProfile, listCharacterIds } from "./character-bible.js";
 
 const PROFILE = {
   schema: "character-profile/1",

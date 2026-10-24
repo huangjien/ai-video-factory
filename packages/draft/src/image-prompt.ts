@@ -11,7 +11,11 @@ import {
   resolveImageStyle,
   type ImageStyle,
 } from "./image-style.js";
-import { anchorPromptLines, loadCharacterById } from "./character-profile.js";
+import {
+  identityDigest,
+  resolveSceneIdentities,
+  type SceneIdentity,
+} from "./scene-identity.js";
 
 /**
  * v0.4 (T3) — image-prompt expansion for the MiniMax image provider.
@@ -126,6 +130,22 @@ export interface ScenePromptContext {
    *  the expander only has the narration to guess from, which is how a Tang
    *  court scene ends up rendered in Western medieval armour. */
   setting?: string | undefined;
+  /** CS-12: the 关键视觉锚点 for the characters this scene cites, already
+   *  resolved against the 角色圣经 by `resolveSceneIdentities`.
+   *
+   *  The brief names the resolved identities, not the bible path: there is
+   *  one way to say who is in the scene, so the anchors cannot be dropped
+   *  on one path and kept on another. */
+  identities?: readonly SceneIdentity[] | undefined;
+}
+
+/** What `expandScenePrompt` needs beyond the brief context: where the
+ *  角色圣经 lives. It resolves the identities itself and hands them to the
+ *  brief, so the cache key and the brief body come from one resolution. */
+export interface ExpandSceneOptions extends Omit<
+  ScenePromptContext,
+  "identities"
+> {
   /** CS-12: the character bible root. Null when the project is not under
    *  a workspace `projects/` dir, or no bible exists. */
   characterRoot?: string | null | undefined;
@@ -164,15 +184,12 @@ export function buildScenePromptMessages(
   // model takes NO reference image (MiniMax has no subject_reference), so
   // the anchors ARE the consistency mechanism — they must be in the brief
   // or the same person drifts between scenes.
-  for (const entry of scene.characters ?? []) {
-    const profile = loadCharacterById(context.characterRoot ?? null, entry.id);
-    if (profile === undefined) continue;
-    const label = entry.variant ?? "base identity";
-    const anchors = anchorPromptLines(profile, entry.variant);
-    if (anchors.length === 0) continue;
+  for (const identity of context.identities ?? []) {
+    if (identity.anchorLines.length === 0) continue;
+    const label = identity.variant === "" ? "base identity" : identity.variant;
     parts.push(
-      `Character "${profile.name}" (${entry.id}, ${label}) — reproduce these identity anchors EXACTLY, and keep this the same person as in every other scene:`,
-      ...anchors.map((a) => `  - ${a}`),
+      `Character "${identity.name}" (${identity.id}, ${label}) — reproduce these identity anchors EXACTLY, and keep this the same person as in every other scene:`,
+      ...identity.anchorLines.map((a) => `  - ${a}`),
     );
   }
   if (scene.narration) {
@@ -241,42 +258,27 @@ export async function expandSceneBrief(
   };
 }
 
-/**
- * The character anchors a scene will inherit, as one stable string.
- *
- * Feeds the prompt cache key. Hashing the character ID alone would be
- * wrong: the anchors are what actually reach the image model, so an
- * edited anchor must invalidate the cached brief. A character with no
- * profile contributes nothing — the scene simply has no anchors.
- */
-function characterAnchorDigest(
-  scene: ScenePromptInput,
-  characterRoot: string | null,
-): string {
-  const parts: string[] = [];
-  for (const entry of scene.characters ?? []) {
-    const profile = loadCharacterById(characterRoot, entry.id);
-    if (profile === undefined) continue;
-    parts.push(
-      `${entry.id}@${entry.variant ?? ""}:` +
-        anchorPromptLines(profile, entry.variant).join("|"),
-    );
-  }
-  return parts.join(";");
-}
-
 export async function expandScenePrompt(
   scene: ScenePromptInput,
   provider: Provider,
   projectRoot: string,
   sceneNumber: number,
-  opts: ScenePromptContext = {},
+  opts: ExpandSceneOptions = {},
 ): Promise<ExpandedPrompt> {
   const style =
     opts.style !== undefined
       ? resolveImageStyle(opts.style)
       : DEFAULT_IMAGE_STYLE;
   const learned = opts.learned ?? "";
+  // CS-12: resolve the 关键视觉锚点 ONCE. The cache key and the brief body
+  // are then the same facts about who is in the scene. Before, the key
+  // hashed the 角色圣经 while the brief silently dropped it, so a cached
+  // brief could carry no anchors at all — the identity of the prompt and
+  // the content of the prompt were derived separately.
+  const identities = resolveSceneIdentities(
+    scene.characters,
+    opts.characterRoot ?? null,
+  );
   const cacheKey = createHash("sha256");
   cacheKey.update(scene.visual ?? "");
   cacheKey.update("|");
@@ -300,7 +302,7 @@ export async function expandScenePrompt(
   // was picked) would silently keep the old face, so the anchors go
   // into the key — not just the character id.
   cacheKey.update("|");
-  cacheKey.update(characterAnchorDigest(scene, opts.characterRoot ?? null));
+  cacheKey.update(identityDigest(identities));
   // Same argument for the expander itself: a reworded `draft-image-prompt.md`
   // must not keep serving briefs that were written by the previous wording.
   cacheKey.update("|");
@@ -334,6 +336,7 @@ export async function expandScenePrompt(
     style,
     learned,
     setting: opts.setting,
+    identities,
   });
   const model = "expanded-via-llm";
 

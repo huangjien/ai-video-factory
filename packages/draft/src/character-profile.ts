@@ -1,6 +1,3 @@
-import { existsSync, readFileSync, readdirSync } from "node:fs";
-import path from "node:path";
-import { parse as parseYaml } from "yaml";
 import { z } from "zod";
 
 /**
@@ -215,10 +212,6 @@ export function anchorPromptLines(
     );
 }
 
-export function loadCharacterProfile(file: string): CharacterProfile {
-  return CharacterProfileSchema.parse(parseYaml(readFileSync(file, "utf8")));
-}
-
 /**
  * Promote a candidate reference to `approved` (CS-13).
  *
@@ -270,51 +263,4 @@ export function approveReference(
     return { ...r, status: "superseded" as const };
   });
   return CharacterProfileSchema.parse({ ...profile, references });
-}
-
-/**
- * Every character id under `root`, sorted. A directory counts only when
- * it holds a character.yaml, so refs/ subfolders and stray files are
- * ignored rather than reported as broken characters.
- */
-export function listCharacterIds(root: string): string[] {
-  if (!existsSync(root)) return [];
-  return readdirSync(root, { withFileTypes: true })
-    .filter((e) => e.isDirectory())
-    .map((e) => e.name)
-    .filter((name) => existsSync(path.join(root, name, "character.yaml")))
-    .sort();
-}
-
-/**
- * The character bible lives at the WORKSPACE root, not inside a project:
- * it is shared across films, which is the whole point of the bible. A
- * project under `<workspace>/projects/<id>` therefore reaches it at
- * `<workspace>/assets/characters`.
- *
- * Returns null when the project is not under a `projects/` directory, so
- * a project used standalone simply has no character bible rather than
- * guessing at a path.
- */
-export function characterRootFor(projectRoot: string): string | null {
-  const parent = path.dirname(projectRoot);
-  if (path.basename(parent) !== "projects") return null;
-  const root = path.join(path.dirname(parent), "assets", "characters");
-  return existsSync(root) ? root : null;
-}
-
-/**
- * Load a character by id from a bible root, or undefined when it is not
- * there. A missing character is not an error: a scene may cite someone
- * who has no profile yet, and the prompt simply carries no anchors for
- * them.
- */
-export function loadCharacterById(
-  root: string | null,
-  id: string,
-): CharacterProfile | undefined {
-  if (root === null) return undefined;
-  const file = path.join(root, id, "character.yaml");
-  if (!existsSync(file)) return undefined;
-  return loadCharacterProfile(file);
 }

@@ -1,19 +1,19 @@
 import type { Command } from "commander";
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import path from "node:path";
-import { stringify as yamlStringify } from "yaml";
+import { existsSync } from "node:fs";
 import {
-  approveReference,
-  anchorPromptLines,
+  approveCharacterReference,
+  buildSheetPrompt,
+  characterFilePath,
   listCharacterIds,
   loadCharacterById,
   loadCharacterProfile,
+  nextVersionLabel,
+  workspaceCharacterRoot,
+  writeCandidateReference,
   resolveImageStyle,
-  stylePromptSuffix,
   styleSystemBlock,
-  CharacterProfileSchema,
+  type ApprovalOutcome,
   type CharacterProfile,
-  type ImageStyle,
 } from "@video/draft";
 import {
   MiniMaxImageProvider,
@@ -40,7 +40,7 @@ import { brandBannerLine } from "./ui.js";
 /** Default bible root: the WORKSPACE's assets/characters, so the bible is
  *  shared across films. */
 export function defaultCharacterRoot(cwd = process.cwd()): string {
-  return path.join(cwd, "assets", "characters");
+  return workspaceCharacterRoot(cwd);
 }
 
 export interface CharacterListLine {
@@ -70,41 +70,14 @@ export function formatCharacterList(
 /**
  * Build the image prompt for a character reference sheet.
  *
- * Straight from the profile's anchors — no LLM in the loop. A reference
- * sheet has to be a faithful rendering of the ANCHORS, and an expander
- * that "improves" the description would defeat the point: the sheet is
- * the thing the anchors are checked against.
+ * The prompt belongs to the bible, not to this command: a second importer
+ * of an externally drawn sheet must build the same one, and it is built
+ * from the profile's anchors — no LLM in the loop. A reference sheet has
+ * to be a faithful rendering of the ANCHORS, and an expander that
+ * "improves" the description would defeat the point: the sheet is the
+ * thing the anchors are checked against.
  */
-export function buildSheetPrompt(
-  profile: CharacterProfile,
-  style: ImageStyle,
-  variantId?: string,
-): string {
-  const anchors = anchorPromptLines(profile, variantId);
-  const variantLabel =
-    variantId === undefined
-      ? "base identity"
-      : (profile.variants.find((v) => v.id === variantId)?.label ?? variantId);
-  // The style SYSTEM block is written for the LLM expander (it teaches a
-  // six-part brief structure) and runs ~2.9k characters — the image API
-  // accepts 1500. The image model only needs the style SUFFIX, which
-  // carries the same palette and the no-text rules.
-  //
-  // "Sheet" and "on paper" are deliberately NOT used: the model reads
-  // them as a traditional 工笔 character sheet, which is an ARTWORK on
-  // paper and therefore gets a calligraphy inscription, a seal and a
-  // date — the exact text leak the no-text rules exist to stop. Asking
-  // for a plain portrait instead is what actually keeps it unsigned.
-  return [
-    `Character portrait: ${profile.name}, ${variantLabel}.`,
-    `Setting: ${profile.identity.era_region}${profile.identity.role ? `, ${profile.identity.role}` : ""}.`,
-    "Reproduce these identity anchors exactly:",
-    ...anchors.map((a) => `- ${a}`),
-    "A plain single-figure portrait, one figure only, facing the viewer, upper body and the costume clearly visible, on a plain even background.",
-    "A plain illustration, not a framed artwork: no calligraphy, no inscription, no seal, no red stamp, no signature, no artist mark, no date, no border, no characters of any language.",
-    stylePromptSuffix(style),
-  ].join("\n");
-}
+export { buildSheetPrompt };
 
 export interface CharacterCommandOptions {
   cwd?: string | undefined;
@@ -165,47 +138,31 @@ export async function runCharacter(
       );
       return 1;
     }
-    const file = path.join(root, id, "character.yaml");
+    const file = characterFilePath(root, id);
     if (!existsSync(file)) {
       console.error(`character: no profile at ${file}`);
       return 1;
     }
-    const profile = loadCharacterProfile(file);
-    // The sheet must actually exist: approving a reference to a missing
-    // image would make the official asset unusable, and the gap would
-    // only show up much later, in a generated frame.
-    const target = profile.references.find(
-      (r) => r.style === style && r.version === version,
-    );
-    if (target === undefined) {
-      console.error(`✗ character "${id}" has no reference ${style}/${version}`);
-      return 1;
-    }
-    const imagePath = path.join(root, id, target.file);
-    if (!existsSync(imagePath)) {
-      console.error(
-        `✗ ${style}/${version} points at a missing file: ${imagePath} — generate the candidate sheet first`,
-      );
-      return 1;
-    }
-    let updated: CharacterProfile;
+    // The rules of the review live in the bible module: the sheet must
+    // exist, one official sheet per style, the previous one superseded
+    // rather than deleted, and a superseded sheet never resurrected.
+    let outcome: ApprovalOutcome;
     try {
-      updated = approveReference(profile, style, version, opts.by.trim());
+      outcome = approveCharacterReference(
+        root,
+        id,
+        style,
+        version,
+        opts.by.trim(),
+      );
     } catch (err) {
       console.error(`✗ ${(err as Error).message}`);
       return 1;
     }
-    writeFileSync(file, yamlStringify(updated), "utf8");
-    const approved = updated.references.find(
-      (r) => r.style === style && r.version === version,
-    );
     console.log(
-      `✓ ${id}: ${style}/${version} approved by ${approved?.reviewedBy} (${approved?.reviewedAt})`,
+      `✓ ${id}: ${style}/${version} approved by ${outcome.approved.reviewedBy} (${outcome.approved.reviewedAt})`,
     );
-    const superseded = updated.references.filter(
-      (r) => r.style === style && r.status === "superseded",
-    );
-    for (const r of superseded) {
+    for (const r of outcome.superseded) {
       console.log(`  previous ${r.version} → superseded (kept on disk)`);
     }
     return 0;
@@ -219,7 +176,7 @@ export async function runCharacter(
       );
       return 1;
     }
-    const file = path.join(root, id, "character.yaml");
+    const file = characterFilePath(root, id);
     if (!existsSync(file)) {
       console.error(`character: no profile at ${file}`);
       return 1;
@@ -242,12 +199,7 @@ export async function runCharacter(
       return 1;
     }
     // The next free version — sheets are never overwritten.
-    const used = new Set(
-      profile.references.filter((r) => r.style === style).map((r) => r.version),
-    );
-    let n = 1;
-    while (used.has(`v${n}`)) n++;
-    const version = opts.version ?? `v${n}`;
+    const version = opts.version ?? nextVersionLabel(profile, style);
 
     const provider =
       (opts.provider ?? "minimax") === "mock"
@@ -266,23 +218,15 @@ export async function runCharacter(
       console.error(`✗ sheet generation failed: ${(err as Error).message}`);
       return 1;
     }
-    const dir = path.join(root, id, "refs", style);
-    mkdirSync(dir, { recursive: true });
-    const out = path.join(dir, `${version}.jpg`);
-    writeFileSync(out, bytes);
-    // A fresh sheet is always a CANDIDATE: it becomes official only through
-    // `video character approve`, after a human has checked the anchors.
-    const references = profile.references.filter(
-      (r) => !(r.style === style && r.version === version),
-    );
-    references.push({
+    // The sheet is written and recorded as a 候选角色参考 by the bible
+    // module: the file layout and the candidate record are its rules.
+    const { file: out } = writeCandidateReference(
+      root,
+      id,
       style,
       version,
-      status: "candidate" as const,
-      file: path.posix.join("refs", style, `${version}.jpg`),
-    });
-    const updated = CharacterProfileSchema.parse({ ...profile, references });
-    writeFileSync(file, yamlStringify(updated), "utf8");
+      bytes,
+    );
     console.log(`✓ ${id}: ${style}/${version} candidate written to ${out}`);
     console.log(
       `  review the anchors against it, then: video character approve ${id} ${style} ${version} --by <name>`,

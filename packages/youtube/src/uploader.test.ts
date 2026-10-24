@@ -74,8 +74,8 @@ describe("chaptersBlock", () => {
   it("formats MM:SS title lines", () => {
     expect(
       chaptersBlock([
-        { timestamp: "00:00", title: "开场" },
-        { timestamp: "01:23", title: "Part 2" },
+        { scene: 1, timestamp: "00:00", title: "开场" },
+        { scene: 4, timestamp: "01:23", title: "Part 2" },
       ]),
     ).toBe("00:00 开场\n01:23 Part 2");
   });
@@ -216,9 +216,11 @@ describe("readPreparedProject / uploadPreparedProject", () => {
         "title: 测试标题",
         'description: "正文说明 #tag"',
         "chapters:",
-        "  - timestamp: '00:00'",
+        "  - scene: 1",
+        "    timestamp: '00:00'",
         "    title: 开场",
-        "  - timestamp: '00:42'",
+        "  - scene: 3",
+        "    timestamp: '00:42'",
         "    title: 第二幕",
         "thumbnail_prompt: n/a",
         "shorts_hook: n/a",

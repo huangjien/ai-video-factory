@@ -1,4 +1,4 @@
-import { execFile, spawnSync } from "node:child_process";
+import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import {
   mkdir,
@@ -9,7 +9,6 @@ import {
   stat,
 } from "node:fs/promises";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
-import { promisify } from "node:util";
 import path from "node:path";
 import {
   parseArticleWithRecovery,
@@ -61,17 +60,28 @@ import {
   runBakeText,
 } from "@video/media-generators";
 import { loadLessonStore, promptRules, rulesDigest } from "@video/learn";
+import { mixProject, type MixProjectOptions } from "./mix.js";
 import {
   imageCacheKey,
   readImageCacheSidecar,
+  requestedImageSize,
   selfRenderedSceneNumbers,
   visualsGateState,
   writeImageCacheSidecar,
 } from "./visual-cache.js";
-import { ttsCacheKey, ZH_VOICE, EN_VOICE } from "./tts-cache.js";
+import { ttsCacheKey, effectiveTtsVoice } from "./tts-cache.js";
 
 export { ttsCacheKey, ZH_VOICE, EN_VOICE } from "./tts-cache.js";
 export { computeMakeImpact, formatImpact } from "./impact.js";
+export {
+  listAvailableBgms,
+  mixProject,
+  parseSfxFlags,
+  pickNarrations,
+  resolveBgmByTag,
+  type MixOutcome,
+  type MixProjectOptions,
+} from "./mix.js";
 export {
   imageSceneNumbers,
   readVisualsCheckpoint,
@@ -79,8 +89,6 @@ export {
   visualsGateState,
   writeVisualsCheckpoint,
 } from "./visual-cache.js";
-
-const execFileAsync = promisify(execFile);
 
 /**
  * `video-progress/1` — live pipeline progress events (v0.7.1 plan).
@@ -570,7 +578,7 @@ export function preserveMotionPlan(
   return kept;
 }
 
-async function syncStoryboardFromArticle(
+export async function syncStoryboardFromArticle(
   projectRoot: string,
   article: ParsedArticle,
 ): Promise<string[]> {
@@ -579,6 +587,37 @@ async function syncStoryboardFromArticle(
     "storyboard",
     "storyboard.yaml",
   );
+  const hashPath = path.join(path.dirname(storyboardPath), ".derived-hash");
+  // Content-aware sync (2026-10-24): the ids-match fast path used to skip
+  // re-derivation even when article content that FEEDS the storyboard
+  // changed (frontmatter `captions_source`, per-scene caption/visual/
+  // narration/duration) — the operator had to rm the storyboard by hand
+  // (hit twice on 2026-10-24). Hash that content into a sidecar and
+  // re-derive (keeping the motion plan) whenever it drifts. Pure hand
+  // edits to storyboard.yaml still win: the hash only moves when
+  // article.md moves.
+  const derivedHash = createHash("sha256")
+    .update(
+      JSON.stringify({
+        fm: {
+          no_captions: article.frontmatter["no_captions"] === true,
+          captions_source: article.frontmatter["captions_source"],
+          channel_profile: article.frontmatter["channel_profile"],
+        },
+        scenes: article.scenes.map((s) => ({
+          id: s.id,
+          duration: s.duration,
+          caption: s.caption,
+          visual: s.visual,
+          narration: s.narration,
+        })),
+      }),
+    )
+    .digest("hex")
+    .slice(0, 16);
+  const storedHash = existsSync(hashPath)
+    ? readFileSync(hashPath, "utf8").trim()
+    : null;
   if (!existsSync(storyboardPath)) {
     const laya = await runLayaVisualAssist(article, projectRoot);
     await mkdir(path.dirname(storyboardPath), { recursive: true });
@@ -590,6 +629,7 @@ async function syncStoryboardFromArticle(
       ),
       "utf8",
     );
+    await writeFile(hashPath, derivedHash, "utf8");
     return [
       "storyboard.yaml: created from article.md",
       ...(laya.summary ? [laya.summary] : []),
@@ -621,7 +661,7 @@ async function syncStoryboardFromArticle(
     articleIds.length === storyboardIds.length &&
     articleIds.every((id, i) => id === storyboardIds[i]);
 
-  if (idsMatch) return [];
+  if (idsMatch && storedHash === derivedHash) return [];
 
   const laya = await runLayaVisualAssist(article, projectRoot);
   const derived = articleToStoryboardYaml(
@@ -633,8 +673,11 @@ async function syncStoryboardFromArticle(
   };
   const kept = preserveMotionPlan(nextDoc, parsed);
   await writeFile(storyboardPath, yamlStringify(nextDoc), "utf8");
+  await writeFile(hashPath, derivedHash, "utf8");
   return [
-    `storyboard.yaml: ${articleIds.length} scenes synced from article.md`,
+    idsMatch
+      ? `storyboard.yaml: article content changed — re-derived (${articleIds.length} scenes, motion plan kept: ${kept})`
+      : `storyboard.yaml: ${articleIds.length} scenes synced from article.md`,
     ...(kept > 0
       ? [`storyboard.yaml: kept the motion plan (${kept} field(s))`]
       : []),
@@ -739,8 +782,9 @@ export async function generateSceneVisuals(
   } else {
     provider = new MockImageProvider();
   }
-  const reqWidth = isMock ? 64 : 1920;
-  const reqHeight = isMock ? 36 : 1080;
+  const reqSize = requestedImageSize(opts.provider);
+  const reqWidth = reqSize.width;
+  const reqHeight = reqSize.height;
 
   // v0.6: image-style preset from article.md frontmatter (`image_style:`),
   // defaulting to flat-vector. Shapes prompt expansion + the fallback line.
@@ -1024,7 +1068,7 @@ export { syncSceneDurations as syncStoryboardDurations } from "@video/media";
  * track was compiled with, so the burned captions and this file cannot
  * disagree about where a cue starts. Scene-relative cue times are offset
  * by the accumulated runtime to give absolute SRT stamps. */
-async function writeCaptionsSrt(
+export async function writeCaptionsSrt(
   projectRoot: string,
   lang: string,
 ): Promise<string[]> {
@@ -1037,12 +1081,14 @@ async function writeCaptionsSrt(
   for (const s of scenes) {
     // CS-03: the same window the burn-in uses — the scene's spoken
     // length when it holds silence, so the SRT and the burned captions
-    // cannot drift apart.
+    // cannot drift apart. The opening beat (lead-in) shifts the cues
+    // forward: the voice starts after it, so the text must too.
     const window = s.speechSec ?? s.duration;
+    const leadIn = s.leadInSec ?? 0;
     for (const cue of buildCaptionCues(s.narration, window)) {
       index += 1;
       blocks.push(
-        `${index}\n${formatSrtTime(sceneStart + cue.startSec)} --> ${formatSrtTime(sceneStart + cue.endSec)}\n${cue.lines.join("\n")}\n`,
+        `${index}\n${formatSrtTime(sceneStart + leadIn + cue.startSec)} --> ${formatSrtTime(sceneStart + leadIn + cue.endSec)}\n${cue.lines.join("\n")}\n`,
       );
     }
     sceneStart += s.duration;
@@ -1063,9 +1109,10 @@ async function runTts(
   onEvent: ProgressEmit = noopEmit,
 ): Promise<string[]> {
   const ttsProvider = article.frontmatter.tts_provider;
-  const frontmatterVoice =
-    article.frontmatter.voice ||
-    (article.frontmatter.language === "en-US" ? EN_VOICE : ZH_VOICE);
+  const frontmatterVoice = effectiveTtsVoice(
+    article.frontmatter.voice,
+    article.frontmatter.language,
+  );
   // Pre-flight (2026-10-18 policy): a voicebox article degrades loudly to
   // the MiniMax system voice when the local server is down, and to Edge
   // when the MiniMax key is missing too. --fake never probes localhost.
@@ -1101,12 +1148,78 @@ async function runTts(
     typeof audioConfig.pause_between_sentences_sec === "number"
       ? audioConfig.pause_between_sentences_sec
       : undefined;
-  const audioDir = path.join(projectRoot, "assets", "audio");
+
+  const { outputs } = await synthesizeSceneAudio({
+    projectRoot,
+    scenes: article.scenes.map((s) => ({
+      id: s.id,
+      narration: s.narration,
+      durationSec: s.duration,
+      ...(s.hold_after_sec !== undefined
+        ? { holdAfterSec: s.hold_after_sec }
+        : {}),
+      ...(s.lead_in_sec !== undefined ? { leadInSec: s.lead_in_sec } : {}),
+    })),
+    provider,
+    voice,
+    language: article.frontmatter.language,
+    ...(pause !== undefined ? { pauseSec: pause } : {}),
+    ...(voiceboxSpeed !== undefined ? { voiceboxSpeed } : {}),
+    ...(voiceboxSentencePauseSec !== undefined
+      ? { voiceboxSentencePauseSec }
+      : {}),
+    convertMp3,
+    onEvent,
+  });
+  return outputs;
+}
+
+/** Per-scene narration synthesis with the content-keyed TTS cache — the
+ *  one loop behind both `video make`'s tts step and the `video audio`
+ *  verb (one WAV-sniff, one cache, one hold-padding rule). Callers own
+ *  provider selection: make resolves the voicebox/minimax degradation
+ *  chain, the verb passes its Edge/Fake choice. */
+export async function synthesizeSceneAudio(params: {
+  projectRoot: string;
+  scenes: {
+    id: string;
+    narration: string;
+    durationSec: number;
+    /** CS-03 hold: silence padded INTO the wav after the voice stops. */
+    holdAfterSec?: number;
+    /** The opening beat: silence padded into the FRONT of the wav, so
+     *  the voice enters after the picture has settled. */
+    leadInSec?: number;
+  }[];
+  provider: TTSProvider;
+  voice: string;
+  language: string;
+  pauseSec?: number;
+  voiceboxSpeed?: number;
+  voiceboxSentencePauseSec?: number;
+  convertMp3?: (
+    mp3Bytes: Uint8Array,
+    minDurationSec: number,
+  ) => Promise<Uint8Array>;
+  onEvent?: ProgressEmit;
+}): Promise<{
+  outputs: string[];
+  synthesized: string[];
+  cached: string[];
+  totalDurationMs: number;
+}> {
+  const convertMp3 = params.convertMp3 ?? mp3ToWav;
+  const onEvent = params.onEvent ?? noopEmit;
+  const audioDir = path.join(params.projectRoot, "assets", "audio");
   await mkdir(audioDir, { recursive: true });
 
   const outputs: string[] = [];
-  const total = article.scenes.length;
-  for (const [idx, scene] of article.scenes.entries()) {
+  const synthesized: string[] = [];
+  const cached: string[] = [];
+  let totalDurationMs = 0;
+  const total = params.scenes.length;
+  for (const [idx, scene] of params.scenes.entries()) {
+    if (!scene.narration) continue; // nothing to say — keep any placeholder
     const wavPath = path.join(audioDir, `${scene.id}.wav`);
     // Cache key: the narration TEXT (hashed), voice, and pause option —
     // not file existence. An existence check silently kept stale WAVs
@@ -1115,16 +1228,18 @@ async function runTts(
     // content-hash discipline).
     const cacheKey = ttsCacheKey(
       scene.narration,
-      voice,
-      pause,
-      provider.name,
-      article.frontmatter.language,
-      voiceboxSpeed,
-      voiceboxSentencePauseSec,
-      scene.hold_after_sec,
+      params.voice,
+      params.pauseSec,
+      params.provider.name,
+      params.language,
+      params.voiceboxSpeed,
+      params.voiceboxSentencePauseSec,
+      scene.holdAfterSec,
+      scene.leadInSec,
     );
     const meta = await readTtsMeta(wavPath);
     if (meta !== null && meta.cacheKey === cacheKey && existsSync(wavPath)) {
+      cached.push(scene.id);
       continue;
     }
     const itemLabel = `tts ${scene.id}`;
@@ -1136,11 +1251,13 @@ async function runTts(
       result = await heartbeat(
         itemLabel,
         () =>
-          provider.synthesize({
+          params.provider.synthesize({
             text: scene.narration,
-            voice,
-            language: article.frontmatter.language,
-            ...(pause !== undefined ? { pauseBetweenSentencesSec: pause } : {}),
+            voice: params.voice,
+            language: params.language,
+            ...(params.pauseSec !== undefined
+              ? { pauseBetweenSentencesSec: params.pauseSec }
+              : {}),
           }),
         onEvent,
       );
@@ -1160,7 +1277,7 @@ async function runTts(
       ...itemAt,
       elapsedSec: elapsedSinceSec(itemT0),
     });
-    // Same WAV/MP3 detection as @video/cli runAudio.
+    // WAV providers return RIFF bytes; everything else is MP3.
     const isWav =
       result.audio.length >= 12 &&
       result.audio[0] === 0x52 &&
@@ -1169,32 +1286,81 @@ async function runTts(
       result.audio[3] === 0x46;
     const wavBytes = isWav
       ? result.audio
-      : await convertMp3(result.audio, scene.duration);
+      : await convertMp3(result.audio, scene.durationSec);
     // CS-03: the scene's 留白 — silence held after the voice stops. It is
     // padded INTO the narration wav, so the measured scene length is
     // speech + hold and the still frame keeps breathing after the line
     // ends. Padding the wav (rather than the storyboard duration) keeps
     // sync-durations' job intact: it still measures, it never guesses.
-    const hold = scene.hold_after_sec;
+    const hold = scene.holdAfterSec;
     const padded =
       hold !== undefined && hold > 0
         ? await appendSilenceToWav(wavBytes, hold)
         : wavBytes;
-    await writeFile(wavPath, padded);
+    // The opening beat: silence BEFORE the voice, so the title card
+    // settles (and the music bed rises) before the narration starts.
+    // Prepended AFTER the hold padding, so the wav reads
+    // [lead-in][speech][hold].
+    const leadIn = scene.leadInSec;
+    const withLeadIn =
+      leadIn !== undefined && leadIn > 0
+        ? await prependSilenceToWav(padded, leadIn)
+        : padded;
+    await writeFile(wavPath, withLeadIn);
     await writeTtsMeta(wavPath, {
       cacheKey,
       synthesizedAt: new Date().toISOString(),
     });
     outputs.push(`assets/audio/${scene.id}.wav`);
+    synthesized.push(scene.id);
+    totalDurationMs += result.durationMs;
   }
 
-  return outputs;
+  return { outputs, synthesized, cached, totalDurationMs };
 }
 
 /** Sidecar shape for the TTS cache (`scene_N.wav.json`). */
 interface TtsCacheMeta {
   cacheKey: string;
   synthesizedAt: string;
+}
+
+/**
+ * Prepend `seconds` of silence to a WAV — the opening beat.
+ *
+ * The bytes go through ffmpeg's `adelay`, so the result is a real WAV the
+ * mixer and the renderer read unchanged; the silence sits at the FRONT of
+ * the file, ahead of the voice.
+ */
+async function prependSilenceToWav(
+  wavBytes: Uint8Array,
+  seconds: number,
+): Promise<Uint8Array> {
+  const { execFile } = await import("node:child_process");
+  const { promisify } = await import("node:util");
+  const { mkdtemp, readFile, rm } = await import("node:fs/promises");
+  const os = await import("node:os");
+  const path = await import("node:path");
+  const execFileAsync = promisify(execFile);
+  const dir = await mkdtemp(path.join(os.tmpdir(), "video-leadin-"));
+  const src = path.join(dir, "in.wav");
+  const out = path.join(dir, "out.wav");
+  try {
+    await writeFile(src, wavBytes);
+    await execFileAsync("ffmpeg", [
+      "-y",
+      "-i",
+      src,
+      "-af",
+      `adelay=${Math.round(seconds * 1000)}:all=1`,
+      "-c:a",
+      "pcm_s16le",
+      out,
+    ]);
+    return new Uint8Array(await readFile(out));
+  } finally {
+    await rm(dir, { recursive: true, force: true }).catch(() => {});
+  }
 }
 
 /**
@@ -1413,36 +1579,19 @@ async function runMix(
   projectRoot: string,
   config: AudioConfigShape,
 ): Promise<string[]> {
-  const slug = path.basename(projectRoot);
-  const workspaceRoot = path.dirname(path.dirname(projectRoot));
-  // Fail with the actual fix instead of Node's raw module-not-found stack.
-  const cliEntry = path.join(
-    workspaceRoot,
-    "packages",
-    "cli",
-    "dist",
-    "index.js",
-  );
-  if (!existsSync(cliEntry)) {
-    throw new Error(
-      `mix step needs the built CLI — run \`pnpm build\` first (missing ${cliEntry})`,
-    );
-  }
-  // Translate audio-config.yaml → video mix CLI flags rather than
-  // duplicating the existing pipeline.
-  const mixArgs: string[] = ["node", cliEntry, "mix", slug];
+  // Translate audio-config.yaml → mix options: resolve tags against the
+  // curated library (`assets/bgm/`) with the project's own
+  // `assets/audio-assets/bgm/` shadowing it — the file is passed straight
+  // to ffmpeg, NOT copied, which would write an mp3 under a .wav name
+  // (the library is mp3) and duplicate ~6 MB per project.
+  const mixOpts: MixProjectOptions = {};
   if (config.bgm && typeof config.bgm === "string") {
-    // Resolve the tag against the curated library (`assets/bgm/`) with the
-    // project's own `assets/audio-assets/bgm/` shadowing it. The file is
-    // passed straight to ffmpeg — it is NOT copied to
-    // `assets/audio-assets/bgm/<tag>.wav`, which would write an mp3 under a
-    // .wav name (the library is mp3) and duplicate ~6 MB per project.
-    mixArgs.push("--bgm", await resolveLibraryBgm(projectRoot, config.bgm));
+    mixOpts.bgmPath = await resolveLibraryBgm(projectRoot, config.bgm);
   }
   if (config.bgm_tracks && config.bgm_tracks.length > 0) {
     // Multi-BGM timeline (branding 2026-10-05): pre-render the ordered
-    // windows into one wav, then mix it through the normal single-`--bgm`
-    // path — the ducker and master fades in mix.ts apply unchanged.
+    // windows into one wav, then mix it through the normal single-bgm
+    // path — the ducker and master fades in the engine apply unchanged.
     const wsRoot = workspaceRootFor(projectRoot);
     const total = await totalNarrationSeconds(projectRoot);
     const windows = planBgmWindows(config.bgm_tracks, total, (track) => {
@@ -1471,34 +1620,33 @@ async function runMix(
     console.log(
       `  bgm timeline: ${windows.map((w) => `${path.basename(w.path)}[${w.startSec.toFixed(1)}-${w.endSec.toFixed(1)}s]`).join(" → ")}`,
     );
-    mixArgs.push("--bgm", timelinePath);
+    mixOpts.bgmPath = timelinePath;
   }
   if (typeof config.bgm_fade_in_sec === "number") {
-    mixArgs.push("--bgm-fade-in", String(config.bgm_fade_in_sec));
+    mixOpts.bgmFadeInSec = config.bgm_fade_in_sec;
   }
   if (typeof config.bgm_attenuation_db === "number") {
-    mixArgs.push("--bgm-attenuation", String(config.bgm_attenuation_db));
+    mixOpts.bgmAttenuationDb = config.bgm_attenuation_db;
   }
   if (typeof config.bgm_fade_out_sec === "number") {
-    mixArgs.push("--bgm-fade-out", String(config.bgm_fade_out_sec));
+    mixOpts.bgmFadeOutSec = config.bgm_fade_out_sec;
   }
   // CS-15: the SFX cues live in audio-config.yaml — one of the two
   // human-edit files — but the mix engine only ever read mix.yaml, so
   // every cue declared here was silently dropped: the .wav files were
   // materialised and then never played. Pass them through explicitly.
-  for (const [sceneKey, tag] of Object.entries(config.sfx ?? {})) {
-    mixArgs.push("--sfx", `${sceneKey}=${tag}`);
+  if (config.sfx !== undefined) {
+    mixOpts.sfx = config.sfx;
   }
-  await runCli(mixArgs, { cwd: workspaceRoot });
-  // `video mix` exits 0 even when it wrote nothing useful elsewhere in
-  // its history — verify the artifact instead of asserting by convention.
-  const mixed = path.join(projectRoot, "output", "final-mixed.mp4");
-  if (!existsSync(mixed)) {
-    throw new Error(
-      "video mix reported success but output/final-mixed.mp4 is missing",
-    );
+  // In-process call into the shared mix operation (the same one behind
+  // `video mix`) — no nested CLI subprocess, no dist-path assumptions.
+  const outcome = await mixProject(projectRoot, mixOpts);
+  for (const warning of outcome.warnings) console.warn(`  ! ${warning}`);
+  for (const line of outcome.lines) console.log(line);
+  if (!outcome.ok) {
+    throw new Error(outcome.error !== "" ? outcome.error : "mix failed");
   }
-  return ["output/final-mixed.mp4"];
+  return outcome.outputs;
 }
 
 /** A track value is a FILE PATH when it looks like one — contains a
@@ -1534,22 +1682,6 @@ async function totalNarrationSeconds(projectRoot: string): Promise<number> {
     total += await probeAudioDuration(path.join(audioDir, f));
   }
   return total;
-}
-
-async function runCli(args: string[], opts: { cwd: string }): Promise<void> {
-  const { spawn } = await import("node:child_process");
-  await new Promise<void>((resolve, reject) => {
-    const proc = spawn(args[0] ?? "node", args.slice(1), {
-      cwd: opts.cwd,
-      stdio: "inherit",
-    });
-    proc.on("close", (code) =>
-      code === 0
-        ? resolve()
-        : reject(new Error(`${args.join(" ")} exited with code ${code}`)),
-    );
-    proc.on("error", reject);
-  });
 }
 
 async function collectOutputs(projectRoot: string): Promise<string[]> {

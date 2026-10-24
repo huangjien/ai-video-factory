@@ -11,8 +11,18 @@ export {
   loadOrCompileStoryboard,
   mergeBrandConfig,
   renderPreviewProject,
-  sceneCacheIsFresh,
-  RENDERER_REVISION,
   type IncrementalRenderResult,
   type PreviewOutcome,
 } from "./pipeline.js";
+export {
+  readSceneCacheMeta,
+  sceneCacheFile,
+  sceneCacheIsFresh,
+  sceneFileName,
+  sceneImageDigest,
+  scenesDirFor,
+  writeSceneCacheMeta,
+  RENDERER_REVISION,
+  type SceneCacheMeta,
+  type SceneCacheTerms,
+} from "./scene-cache.js";

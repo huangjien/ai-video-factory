@@ -275,6 +275,37 @@ describe("articleToStoryboardYaml (VDSL sync)", () => {
     expect(parsed["schema_version"]).toBe("0.2");
   });
 
+  it("carries a scene's lead_in_sec into the storyboard yaml", () => {
+    const yaml = articleToStoryboardYaml({
+      ...fixture,
+      scenes: [{ ...fixture.scenes[0]!, lead_in_sec: 1.2 }, fixture.scenes[1]!],
+    });
+    const parsed = parseYaml(yaml) as {
+      scenes: { id: string; lead_in_sec?: number }[];
+    };
+    expect(parsed.scenes[0]?.lead_in_sec).toBe(1.2);
+    // Absent on scenes that don't ask for a lead-in.
+    expect(parsed.scenes[1]?.lead_in_sec).toBeUndefined();
+  });
+
+  it("rejects a negative or over-long lead_in_sec", () => {
+    const scene = (leadInSec: number) => ({
+      scenes: [
+        {
+          id: "scene_1",
+          duration: 5,
+          caption: "x",
+          visual: "y",
+          narration: "z",
+          lead_in_sec: leadInSec,
+        },
+      ],
+    });
+    expect(SceneBlockSchema.safeParse(scene(-1)).success).toBe(false);
+    expect(SceneBlockSchema.safeParse(scene(999)).success).toBe(false);
+    expect(SceneBlockSchema.safeParse(scene(1.2)).success).toBe(true);
+  });
+
   it("emits one scene per article scene with zero-padded IDs", () => {
     const yaml = articleToStoryboardYaml(fixture);
     const parsed = parseYaml(yaml) as {

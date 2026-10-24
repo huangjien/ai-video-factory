@@ -8,9 +8,15 @@ import { resolveProjectDir } from "./project-path.js";
 import { existsSync } from "node:fs";
 import { GLMProvider, loadProviderConfig, MiniMaxProvider } from "@video/llm";
 import {
+  YOUTUBE_MANAGE_SCOPE,
+  YOUTUBE_UPLOAD_SCOPE,
+  buildAuthUrl,
   callYouTube,
   chaptersToVtt,
+  deleteVideo,
   exchangeCodeForTokens,
+  refreshAccessToken,
+  setVideoPrivacy,
   parseClientSecret,
   uploadPreparedProject,
   YouTubeUploadError,
@@ -116,6 +122,7 @@ export async function resolveYouTubeCredentials(
  *  for the code, exchanges it, prints the env lines to store. */
 export async function runYouTubeAuth(
   clientSecretPath?: string,
+  scope: "upload" | "manage" = "upload",
 ): Promise<number> {
   const file = clientSecretPath ?? defaultClientSecretPath();
   if (!existsSync(file)) {
@@ -141,7 +148,6 @@ export async function runYouTubeAuth(
     await readFile(file, "utf8"),
   );
 
-  const { buildAuthUrl } = await import("@video/youtube");
   const granted = await new Promise<{ code: string; redirectUri: string }>(
     (resolve, reject) => {
       let redirectUri = "";
@@ -164,7 +170,15 @@ export async function runYouTubeAuth(
         const addr = server.address();
         const port = typeof addr === "object" && addr !== null ? addr.port : 0;
         redirectUri = `http://127.0.0.1:${port}`;
-        const authUrl = buildAuthUrl({ clientId, redirectUri });
+        const authUrl = buildAuthUrl({
+          clientId,
+          redirectUri,
+          ...(scope === "manage"
+            ? {
+                scope: `${YOUTUBE_UPLOAD_SCOPE} ${YOUTUBE_MANAGE_SCOPE}`,
+              }
+            : {}),
+        });
         console.log("opening browser for Google consent…");
         console.log(`  (if nothing opens, visit:)\n  ${authUrl}\n`);
         const opener = process.platform === "darwin" ? "open" : "xdg-open";
@@ -224,6 +238,10 @@ export async function runYouTube(opts: YouTubeOptions): Promise<number> {
   // legacy triple; article.md is synthesized to that shape below.
   let articleInput: ReturnType<typeof synthFromArticle> | null = null;
   let legacyInput: YouTubeInput | null = null;
+  // The RENDERED per-scene durations, when the project has them: the
+  // chapter timestamps are derived from these, not from the model's
+  // arithmetic on the declared (estimated) ones.
+  let syncedDurations: number[] | undefined = undefined;
   const articlePath = path.join(projectRoot, "article.md");
   if (existsSync(articlePath)) {
     const articleMd = await readFile(articlePath, "utf8");
@@ -237,12 +255,16 @@ export async function runYouTube(opts: YouTubeOptions): Promise<number> {
     const rendered = existsSync(renderedPath)
       ? await readFile(renderedPath, "utf8")
       : undefined;
-    const sceneCount =
-      parseArticleWithRecovery(articleMd).article.scenes.length;
-    articleInput = synthFromArticle(
-      articleMd,
-      readSyncedDurations(rendered, sceneCount),
-    );
+    const parsedArticle = parseArticleWithRecovery(articleMd).article;
+    const sceneCount = parsedArticle.scenes.length;
+    // The RENDERED durations when they cover the same scenes; otherwise
+    // the article's DECLARED ones (estimates, but monotonic and in the
+    // right order — better than no timeline at all, and what the packager
+    // has always fallen back to).
+    syncedDurations =
+      readSyncedDurations(rendered, sceneCount) ??
+      parsedArticle.scenes.map((sc) => sc.duration);
+    articleInput = synthFromArticle(articleMd, syncedDurations);
   } else {
     const sbPath = path.join(projectRoot, "storyboard", "storyboard.yaml");
     const scriptPath = path.join(projectRoot, "script", "script.zh-CN.md");
@@ -259,11 +281,15 @@ export async function runYouTube(opts: YouTubeOptions): Promise<number> {
         return 1;
       }
     }
+    const storyboardText = await readFile(sbPath, "utf8");
     legacyInput = {
-      storyboard: await readFile(sbPath, "utf8"),
+      storyboard: storyboardText,
       script: await readFile(scriptPath, "utf8"),
       research: await readFile(researchMdPath, "utf8"),
     };
+    // The legacy path's storyboard IS the film's scene list, so its
+    // durations place the chapters — no scene-count guess needed.
+    syncedDurations = readStoryboardDurations(storyboardText);
   }
   const input: YouTubeInput = articleInput ?? (legacyInput as YouTubeInput);
   const inputFiles = articleInput
@@ -319,6 +345,23 @@ export async function runYouTube(opts: YouTubeOptions): Promise<number> {
     }
   }
 
+  // The model names the scene each chapter starts at; the timestamps come
+  // from the rendered scene durations (the declared ones are estimates and
+  // the narration is measured — a model-computed timestamp drifts by that
+  // gap, leaving the tail of the video outside any chapter).
+  const { chapters, warning } = deriveChapterTimestamps(
+    result.youtube.chapters,
+    syncedDurations,
+  );
+  if (warning !== undefined) {
+    console.warn(`  ! ${warning}`);
+  }
+  const totalDurationSec =
+    syncedDurations !== undefined
+      ? syncedDurations.reduce((a, b) => a + b, 0)
+      : undefined;
+  const packaged = { ...result.youtube, chapters };
+
   await mkdir(path.join(projectRoot, "youtube"), { recursive: true });
   await writeFile(
     path.join(projectRoot, "youtube", "title.txt"),
@@ -332,12 +375,12 @@ export async function runYouTube(opts: YouTubeOptions): Promise<number> {
   );
   await writeFile(
     path.join(projectRoot, "youtube", "package.yaml"),
-    yamlStringify(result.youtube),
+    yamlStringify(packaged),
     "utf8",
   );
   await writeFile(
     path.join(projectRoot, "youtube", "chapters.vtt"),
-    chaptersToVtt(result.youtube.chapters),
+    chaptersToVtt(chapters, totalDurationSec),
     "utf8",
   );
   await writeFile(
@@ -479,6 +522,102 @@ function synthFromArticle(
   };
 }
 
+/**
+ * Turn the model's scene positions into chapter timestamps on the
+ * RENDERED timeline.
+ *
+ * The model names the scene each chapter starts at; the pipeline knows
+ * when that scene actually starts (the storyboard's durations are the
+ * measured ones, written by sync-durations). Deriving the timestamps
+ * here removes the model's time arithmetic from the loop — its guesses
+ * drift by the gap between the declared and the measured runtime, and the
+ * tail chapters end up pointing past the end of the film.
+ *
+ * Falls back to the model's own timestamp when the scene positions are
+ * unusable (no rendered durations, an out-of-range index, a non-ascending
+ * order) — the package is still worth having.
+ */
+/** The durations a storyboard document declares, in scene order. */
+function readStoryboardDurations(storyboardYaml: string): number[] | undefined {
+  let parsed: { scenes?: { duration?: unknown }[] };
+  try {
+    parsed = parseYaml(storyboardYaml) as typeof parsed;
+  } catch {
+    return undefined;
+  }
+  const scenes = parsed.scenes;
+  if (!Array.isArray(scenes) || scenes.length === 0) return undefined;
+  const durations = scenes.map((s) =>
+    typeof s.duration === "number" && Number.isFinite(s.duration)
+      ? s.duration
+      : Number.NaN,
+  );
+  return durations.every((d) => Number.isFinite(d)) ? durations : undefined;
+}
+
+/** A chapter as the packager returns it: the scene it starts at, its
+ *  title, and the model's own timestamp guess (optional). */
+export type ChapterWithTime = {
+  scene: number;
+  title: string;
+  timestamp?: string | undefined;
+};
+
+export function deriveChapterTimestamps(
+  chapters: ChapterWithTime[],
+  syncedDurations: number[] | undefined,
+): {
+  chapters: ChapterWithTime[];
+  warning?: string | undefined;
+} {
+  if (syncedDurations === undefined || syncedDurations.length === 0) {
+    // Nothing measured to place the chapters on — keep the model's own
+    // timestamps (or start at zero so the file is still valid).
+    return {
+      chapters: chapters.map((c) => ({
+        ...c,
+        timestamp: c.timestamp ?? "00:00",
+      })),
+      warning:
+        "no rendered scene durations — chapter timestamps are the model's own",
+    };
+  }
+  const starts: number[] = [];
+  let t = 0;
+  for (const d of syncedDurations) {
+    starts.push(t);
+    t += d;
+  }
+  const stamp = (sec: number): string =>
+    `${String(Math.floor(sec / 60)).padStart(2, "0")}:${String(
+      Math.floor(sec % 60),
+    ).padStart(2, "0")}`;
+  // Chapters that do not move forward through the film cannot be placed
+  // by scene position — keep the model's own timestamps for those.
+  const scenes = chapters.map((c) => c.scene);
+  const ascending = scenes.every((s, i) => i === 0 || s > (scenes[i - 1] ?? 0));
+  if (!ascending) {
+    return {
+      chapters: chapters.map((c) => ({
+        ...c,
+        timestamp: c.timestamp ?? "00:00",
+      })),
+      warning:
+        "chapter scene positions are not ascending — kept the model's timestamps",
+    };
+  }
+  const out = chapters.map((c) => {
+    const index = c.scene - 1;
+    if (!Number.isInteger(index) || index < 0 || index >= starts.length) {
+      // The scene is unusable — keep the model's own timestamp, or start at
+      // zero so the chapter still lands on the timeline.
+      return { ...c, timestamp: c.timestamp ?? "00:00" };
+    }
+    return { ...c, timestamp: stamp(starts[index] ?? 0) };
+  });
+  return { chapters: out };
+}
+
 /** Read the per-scene durations from the rendered storyboard.yaml, when it
  * describes the same scene count as the article.
  *
@@ -554,6 +693,71 @@ function yamlScalar(s: string): string {
   return s;
 }
 
+/** Manage an EXISTING YouTube upload: flip visibility or delete it.
+ * Both calls need the MANAGE OAuth scope — an upload-only token answers
+ * 403 "insufficient authentication scopes" (2026-10-24). */
+export async function runYouTubeManage(opts: {
+  videoId: string;
+  setPrivacy?: string | undefined;
+  delete?: boolean | undefined;
+  clientSecretPath?: string | undefined;
+}): Promise<number> {
+  if (opts.setPrivacy === undefined && opts.delete !== true) {
+    console.error(
+      "nothing to do — pass --set-privacy <status> and/or --delete with --video-id",
+    );
+    return 1;
+  }
+  if (
+    opts.setPrivacy !== undefined &&
+    !["private", "unlisted", "public"].includes(opts.setPrivacy)
+  ) {
+    console.error(
+      `--set-privacy must be private|unlisted|public (got ${opts.setPrivacy})`,
+    );
+    return 1;
+  }
+  let creds: YouTubeCredentials;
+  try {
+    creds = await resolveYouTubeCredentials(opts.clientSecretPath);
+  } catch (err) {
+    console.error(`${MARK_FAIL} ${(err as Error).message}`);
+    return 1;
+  }
+  let accessToken: string;
+  try {
+    accessToken = await refreshAccessToken(creds);
+  } catch (err) {
+    console.error(
+      `${MARK_FAIL} token refresh failed: ${(err as Error).message}\n  hint: re-run \`video youtube --auth --scope manage\``,
+    );
+    return 1;
+  }
+  try {
+    if (opts.setPrivacy !== undefined) {
+      await setVideoPrivacy({
+        accessToken,
+        videoId: opts.videoId,
+        privacyStatus: opts.setPrivacy as PrivacyStatus,
+      });
+      console.log(
+        `${MARK_OK} ${opts.videoId} → ${opts.setPrivacy} (https://youtu.be/${opts.videoId})`,
+      );
+    }
+    if (opts.delete === true) {
+      await deleteVideo({ accessToken, videoId: opts.videoId });
+      console.log(`${MARK_OK} deleted ${opts.videoId}`);
+    }
+  } catch (err) {
+    console.error(`${MARK_FAIL} ${(err as Error).message}`);
+    console.error(
+      "  hint: an upload-only OAuth token cannot manage videos — re-run `video youtube --auth --scope manage`",
+    );
+    return 1;
+  }
+  return 0;
+}
+
 export function registerYouTube(program: Command): void {
   program
     .command("youtube")
@@ -583,6 +787,23 @@ export function registerYouTube(program: Command): void {
       "--client-secret <path>",
       "client_secret.json location (default: $YOUTUBE_CLIENT_SECRET_FILE or ~/.config/secrets/client_secret_youtube.json)",
     )
+    .option(
+      "--scope <scope>",
+      "scope requested by --auth: upload (default) | manage (also allows --set-privacy and --delete)",
+      "upload",
+    )
+    .option(
+      "--video-id <id>",
+      "manage an EXISTING upload (no project needed): the YouTube video id",
+    )
+    .option(
+      "--set-privacy <status>",
+      "change an existing upload's visibility: private|unlisted|public (needs --video-id + manage scope)",
+    )
+    .option(
+      "--delete",
+      "delete an existing upload (needs --video-id + manage scope)",
+    )
     .action(
       async (
         project: string | undefined,
@@ -593,10 +814,28 @@ export function registerYouTube(program: Command): void {
           privacy?: string;
           auth?: boolean;
           clientSecret?: string;
+          scope?: string;
+          videoId?: string;
+          setPrivacy?: string;
+          delete?: boolean;
         },
       ) => {
         if (opts.auth) {
-          process.exitCode = await runYouTubeAuth(opts.clientSecret);
+          process.exitCode = await runYouTubeAuth(
+            opts.clientSecret,
+            opts.scope === "manage" ? "manage" : "upload",
+          );
+          return;
+        }
+        if (opts.videoId !== undefined) {
+          process.exitCode = await runYouTubeManage({
+            videoId: opts.videoId,
+            ...(opts.setPrivacy !== undefined ? { setPrivacy: opts.setPrivacy } : {}),
+            ...(opts.delete === true ? { delete: true } : {}),
+            ...(opts.clientSecret !== undefined
+              ? { clientSecretPath: opts.clientSecret }
+              : {}),
+          });
           return;
         }
         if (!project) {

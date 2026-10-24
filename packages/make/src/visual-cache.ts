@@ -118,6 +118,18 @@ export function imageCacheKey(input: ImageCacheKeyInput): string {
   return "sha256:" + createHash("sha256").update(stable).digest("hex");
 }
 
+/** Requested image raster size for a provider — the cache-key term and the
+ *  generate call must agree, so both derive it from here. Mock placeholders
+ *  are intentionally tiny (64×36); hosted providers get full HD. */
+export function requestedImageSize(provider: string): {
+  width: number;
+  height: number;
+} {
+  return provider === "mock"
+    ? { width: 64, height: 36 }
+    : { width: 1920, height: 1080 };
+}
+
 export interface ImageCacheSidecar {
   cacheKey: string;
   createdAt: string;

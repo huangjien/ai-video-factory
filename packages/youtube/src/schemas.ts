@@ -14,8 +14,17 @@ export type Timestamp = z.infer<typeof TimestampSchema>;
 
 export const ChapterSchema = z
   .object({
-    timestamp: TimestampSchema,
+    /** 1-based position of the scene where this chapter starts. The
+     *  timestamp is DERIVED from the RENDERED scene durations by the
+     *  caller: the model names the scene, the pipeline does the time
+     *  arithmetic. A model-computed timestamp drifts by the gap between
+     *  the declared and the measured runtime (~25% on a 300 s draft), and
+     *  the tail chapters end up pointing past the end of the film. */
+    scene: z.number().int().positive(),
     title: z.string().min(1),
+    /** The model's own timestamp guess. Optional, and OVERWRITTEN by the
+     *  caller when the scene index is usable. */
+    timestamp: TimestampSchema.optional(),
   })
   .strict();
 export type Chapter = z.infer<typeof ChapterSchema>;

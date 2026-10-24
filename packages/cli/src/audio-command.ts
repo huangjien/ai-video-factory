@@ -1,16 +1,19 @@
 import type { Command } from "commander";
-import { execFile } from "node:child_process";
-import { mkdir, writeFile } from "node:fs/promises";
-import { promisify } from "node:util";
-import path from "node:path";
 import { execSync } from "node:child_process";
+import path from "node:path";
 import { parse as parseYaml } from "yaml";
 import { FakeTTSProvider, type TTSProvider } from "@video/tts";
-import { mp3ToWav } from "@video/media";
+import { syncSceneDurations } from "@video/media";
+import {
+  EN_VOICE,
+  synthesizeSceneAudio,
+  writeCaptionsSrt,
+  ZH_VOICE,
+} from "@video/make";
+import { formatRunId } from "@video/workflow";
 import { resolveProjectDir } from "./project-path.js";
 import { assertStageWritable } from "./stage-guard.js";
-
-const execFileAsync = promisify(execFile);
+import { formatProgressEvent } from "./ui.js";
 
 export interface AudioOptions {
   cwd?: string | undefined;
@@ -20,13 +23,6 @@ export interface AudioOptions {
   /** Overwrite a human-approved storyboard's audio without the guard. */
   force?: boolean | undefined;
 }
-
-// Default: male narration voices. Female alternatives: zh-CN-XiaoxiaoNeural,
-// en-US-AriaNeural.
-const ZH_VOICE = "zh-CN-YunjianNeural";
-const EN_VOICE = "en-US-ChristopherNeural";
-
-// mp3ToWav now lives in @video/media (one copy; make imports it too).
 
 function safeGitHead(cwd: string): string {
   try {
@@ -95,77 +91,42 @@ export async function runAudio(opts: AudioOptions): Promise<number> {
     : new (await import("@video/tts")).EdgeTTSProvider();
   const voice = language === "en-US" ? EN_VOICE : ZH_VOICE;
 
-  await mkdir(path.join(projectRoot, "assets", "audio"), { recursive: true });
-  await mkdir(path.join(projectRoot, "captions"), { recursive: true });
-
-  let totalActualMs = 0;
-  for (const scene of sceneNarrations) {
-    if (!scene.text) {
-      // No narration — skip (keep existing anullsrc placeholder behavior untouched)
-      continue;
-    }
-    try {
-      const result = await provider.synthesize({
-        text: scene.text,
-        voice,
-        language,
-      });
-      // If the provider returned WAV bytes already (e.g. FakeTTSProvider for
-      // tests), write them as-is. Otherwise treat as MP3 and convert to WAV
-      // at the scene's exact duration via ffmpeg.
-      const isWav =
-        result.audio.length >= 12 &&
-        result.audio[0] === 0x52 && // R
-        result.audio[1] === 0x49 && // I
-        result.audio[2] === 0x46 && // F
-        result.audio[3] === 0x46; // F
-      const wavBytes = isWav
-        ? result.audio
-        : await mp3ToWav(result.audio, scene.duration);
-      await writeFile(
-        path.join(projectRoot, "assets", "audio", `${scene.sceneId}.wav`),
-        wavBytes,
-      );
-      totalActualMs += result.durationMs;
-    } catch (err) {
-      console.error(
-        `TTS failed for ${scene.sceneId}: ${(err as Error).message}`,
-      );
-      return 1;
-    }
+  // Same synthesis loop, WAV handling, content-keyed cache, and hold
+  // padding as `video make`'s tts step (@video/make) — one implementation,
+  // two entry points.
+  let totalDurationMs = 0;
+  let cachedCount = 0;
+  let spokenCount = 0;
+  try {
+    const r = await synthesizeSceneAudio({
+      projectRoot,
+      scenes: sceneNarrations.map((s) => ({
+        id: s.sceneId,
+        narration: s.text,
+        durationSec: s.duration,
+      })),
+      provider,
+      voice,
+      language,
+      onEvent: (e) => process.stderr.write(formatProgressEvent(e) + "\n"),
+    });
+    totalDurationMs = r.totalDurationMs;
+    cachedCount = r.cached.length;
+    spokenCount = r.synthesized.length;
+  } catch (err) {
+    console.error(`TTS failed: ${(err as Error).message}`);
+    return 1;
   }
 
-  // Write a minimal SRT — one cue per scene at its start time
-  const srtPath = path.join(projectRoot, "captions", `${language}.srt`);
-  const srtLines = scenes.map((s, i) => {
-    const start = scenes.slice(0, i).reduce((acc, x) => acc + x.duration, 0);
-    const end = start + s.duration;
-    const fmt = (sec: number) => {
-      const h = Math.floor(sec / 3600)
-        .toString()
-        .padStart(2, "0");
-      const m = Math.floor((sec % 3600) / 60)
-        .toString()
-        .padStart(2, "0");
-      const s2 = Math.floor(sec % 60)
-        .toString()
-        .padStart(2, "0");
-      const ms = Math.round((sec - Math.floor(sec)) * 1000)
-        .toString()
-        .padStart(3, "0");
-      return `${h}:${m}:${s2},${ms}`;
-    };
-    const narration = s.narration?.text ?? "";
-    return `${i + 1}\n${fmt(start)} --> ${fmt(end)}\n${narration}\n`;
-  });
-  await writeFile(srtPath, srtLines.join("\n"), "utf8");
+  // Captions from MEASURED durations — sync the storyboard to the actual
+  // wavs first (syncSceneDurations), then the same cue builder the burn-in
+  // track uses (CS-07: SRT and burned captions cannot disagree). The old
+  // one-cue-per-scene SRT at LLM-estimated times drifted from the audio.
+  await syncSceneDurations(projectRoot);
+  await writeCaptionsSrt(projectRoot, language);
 
   // Run record (provider/tool/prompt_hash/tokens absent — no LLM, just TTS)
-  const runId = `tts-${new Date().toISOString().replace(/\.\d+Z$/, "Z")}-${Math.floor(
-    Math.random() * 1000,
-  )
-    .toString()
-    .padStart(3, "0")}`;
+  const runId = formatRunId("tts");
   const record = {
     run_id: runId,
     stage: "audio",
@@ -176,7 +137,7 @@ export async function runAudio(opts: AudioOptions): Promise<number> {
     input_files: ["storyboard/storyboard.yaml", `script/script.${language}.md`],
     output_files: ["captions/" + `${language}.srt`, "assets/audio/scene-*.wav"],
     created_at: new Date().toISOString(),
-    duration_ms: totalActualMs,
+    duration_ms: totalDurationMs,
     provider: provider.name,
     model: voice,
     tokens: { input: 0, output: 0 },
@@ -185,8 +146,10 @@ export async function runAudio(opts: AudioOptions): Promise<number> {
   const { writeRun } = await import("@video/workflow");
   await writeRun(projectRoot, record);
 
+  const target = sceneNarrations.filter((s) => s.text).length;
   console.log(
-    `\u2713 generated audio for ${sceneNarrations.filter((s) => s.text).length}/${scenes.length} scenes`,
+    `\u2713 generated audio for ${spokenCount}/${target} scenes` +
+      (cachedCount > 0 ? ` (${cachedCount} cached)` : ""),
   );
   console.log(
     `  provider=${provider.name}  voice=${voice}  srt=captions/${language}.srt`,

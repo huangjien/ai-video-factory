@@ -53,14 +53,56 @@ from PIL import Image, ImageDraw, ImageFont
 
 # ---- font discovery -----------------------------------------------------
 
-FONT_CANDIDATES: tuple[str, ...] = (
-    "/System/Library/Fonts/Supplemental/Arial.ttf",
+# Latin-only faces (nice for the en videos) — chosen when the banner
+# text holds no CJK.
+FONT_CANDIDATES_LATIN: tuple[str, ...] = (
     "/System/Library/Fonts/Supplemental/Arial Bold.ttf",
-    "/Library/Fonts/Arial Unicode.ttf",
-    "/System/Library/Fonts/Helvetica.ttc",
+    "/System/Library/Fonts/Supplemental/Arial.ttf",
     "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
     "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",
 )
+
+# Faces with CJK coverage — REQUIRED for Chinese banners. Arial on macOS
+# has no CJK glyphs, and a missing glyph renders as a tofu box (2026-10-24:
+# every Chinese banner in the zh video shipped as empty squares). The
+# picker verifies coverage instead of trusting the file name.
+FONT_CANDIDATES_CJK: tuple[str, ...] = (
+    "/System/Library/Fonts/STHeiti Medium.ttc",
+    "/System/Library/Fonts/Hiragino Sans GB.ttc",
+    "/System/Library/Fonts/Supplemental/Arial Unicode.ttf",
+    "/Library/Fonts/Arial Unicode.ttf",
+    "/usr/share/fonts/opentype/noto/NotoSansCJK-Bold.ttc",
+    "/usr/share/fonts/truetype/noto/NotoSansCJK-Bold.ttc",
+    "/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc",
+)
+
+# Kept for backwards compatibility with anything importing the old name.
+FONT_CANDIDATES: tuple[str, ...] = FONT_CANDIDATES_LATIN + FONT_CANDIDATES_CJK
+
+
+def has_cjk(text: str) -> bool:
+    """True when the text contains CJK ideographs or fullwidth forms."""
+    return any(
+        "\u2e80" <= ch <= "\u9fff" or "\uff00" <= ch <= "\uffef" or "\u3000" <= ch <= "\u303f"
+        for ch in text
+    )
+
+
+def font_covers_cjk(font: ImageFont.FreeTypeFont) -> bool:
+    """True when the font has a real glyph for a CJK character.
+
+    A missing glyph renders as the .notdef box, which is bit-identical to
+    a private-use codepoint in a font that has no PUA glyphs. Comparing the
+    two masks tells tofu from a real glyph without extra dependencies
+    (fontTools is not assumed to be installed)."""
+    try:
+        cjk = bytes(font.getmask("验"))
+        pua = bytes(font.getmask("\ue000"))
+    except Exception:
+        return False
+    if not cjk:
+        return False
+    return cjk != pua
 
 
 def pick_font() -> ImageFont.FreeTypeFont | ImageFont.ImageFont:
@@ -120,9 +162,12 @@ def _fit_size(
     step = 2
     size = start_size
     while size >= min_size:
-        font = ImageFont.truetype(
-            pick_font_path(), size=size
-        ) if pick_font_path() else ImageFont.load_default()
+        font_path = pick_font_path(text)
+        font = (
+            ImageFont.truetype(font_path, size=size)
+            if font_path
+            else ImageFont.load_default()
+        )
         lines = _wrap_to_width(draw, text, font, max_w)
         # Measure resulting block
         line_heights: list[int] = []
@@ -136,27 +181,53 @@ def _fit_size(
             return font, lines
         size -= step
     # Final fallback at min size
+    font_path = pick_font_path(text)
     font = (
-        ImageFont.truetype(pick_font_path(), size=min_size)
-        if pick_font_path()
+        ImageFont.truetype(font_path, size=min_size)
+        if font_path
         else ImageFont.load_default()
     )
     return font, _wrap_to_width(draw, text, font, max_w)
 
 
-_FONT_PATH_CACHE: Optional[str] = None
+_FONT_PATH_CACHE: Optional[dict] = None
 
 
-def pick_font_path() -> Optional[str]:
+def pick_font_path(text: str = "") -> Optional[str]:
+    """Path of a font that can actually RENDER `text`.
+
+    CJK text picks a CJK-capable face (verified by glyph comparison);
+    Latin text keeps the previous bold-sans preference. Returns None when
+    nothing suitable exists, and the caller falls back to Pillow's default
+    bitmap font.
+    """
     global _FONT_PATH_CACHE
-    if _FONT_PATH_CACHE is not None:
-        return _FONT_PATH_CACHE or None
-    for path in FONT_CANDIDATES:
-        if os.path.exists(path):
-            _FONT_PATH_CACHE = path
-            return path
-    _FONT_PATH_CACHE = ""
-    return None
+    cache_key = "cjk" if has_cjk(text) else "latin"
+    if (
+        _FONT_PATH_CACHE is not None
+        and getattr(_FONT_PATH_CACHE, "key", None) == cache_key
+    ):
+        return _FONT_PATH_CACHE["path"] or None
+    candidates = (
+        FONT_CANDIDATES_CJK + FONT_CANDIDATES_LATIN
+        if has_cjk(text)
+        else FONT_CANDIDATES_LATIN + FONT_CANDIDATES_CJK
+    )
+    chosen = ""
+    for path in candidates:
+        if not os.path.exists(path):
+            continue
+        try:
+            probe = ImageFont.truetype(path, size=64)
+        except OSError:
+            continue
+        if has_cjk(text) and not font_covers_cjk(probe):
+            # This face would render tofu for the CJK text — keep looking.
+            continue
+        chosen = path
+        break
+    _FONT_PATH_CACHE = {"key": cache_key, "path": chosen}
+    return chosen or None
 
 
 # ---- drawing -----------------------------------------------------------

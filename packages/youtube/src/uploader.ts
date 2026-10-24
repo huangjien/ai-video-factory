@@ -28,6 +28,11 @@ const THUMBNAIL_URL =
   "https://www.googleapis.com/upload/youtube/v3/thumbnails/set";
 export const YOUTUBE_UPLOAD_SCOPE =
   "https://www.googleapis.com/auth/youtube.upload";
+/** The broader manage scope: videos.update (privacy status) and
+ * videos.delete. The upload-only scope CANNOT do either — the API answers
+ * 403 "insufficient authentication scopes" (2026-10-24: replacing an
+ * uploaded video needed exactly these two calls). */
+export const YOUTUBE_MANAGE_SCOPE = "https://www.googleapis.com/auth/youtube";
 
 export type FetchImpl = typeof fetch;
 
@@ -88,12 +93,16 @@ export function parseClientSecret(json: string): {
 export function buildAuthUrl(opts: {
   clientId: string;
   redirectUri: string;
+  /** Scope to request. Defaults to the upload-only scope; pass
+   * `YOUTUBE_MANAGE_SCOPE` (or a space-joined list) to also allow
+   * privacy changes and deletes. */
+  scope?: string | undefined;
 }): string {
   const params = new URLSearchParams({
     client_id: opts.clientId,
     redirect_uri: opts.redirectUri,
     response_type: "code",
-    scope: YOUTUBE_UPLOAD_SCOPE,
+    scope: opts.scope ?? YOUTUBE_UPLOAD_SCOPE,
     access_type: "offline",
     prompt: "consent",
   });
@@ -270,6 +279,55 @@ export async function uploadVideo(opts: {
     throw new YouTubeUploadError("upload response had no video id");
   }
   return { videoId: upload, watchUrl: `https://youtu.be/${upload}` };
+}
+
+/** Flip an existing upload's visibility (videos.update, part=status).
+ * Needs the MANAGE scope — an upload-only token answers 403. */
+export async function setVideoPrivacy(opts: {
+  accessToken: string;
+  videoId: string;
+  privacyStatus: PrivacyStatus;
+  fetchImpl?: FetchImpl;
+}): Promise<void> {
+  const doFetch = opts.fetchImpl ?? fetch;
+  const url = `https://www.googleapis.com/youtube/v3/videos?id=${encodeURIComponent(opts.videoId)}&part=status`;
+  const res = await doFetch(url, {
+    // PUT, not PATCH: the YouTube Data API's videos.update is a PUT.
+    // A PATCH answers 404 with an empty body (verified 2026-10-24 — every
+    // PATCH variant, with and without snippet, 404'd while the same
+    // payload as PUT returned 200 and flipped privacyStatus).
+    method: "PUT",
+    headers: {
+      Authorization: `Bearer ${opts.accessToken}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      id: opts.videoId,
+      status: { privacyStatus: opts.privacyStatus },
+    }),
+  });
+  if (!res.ok) {
+    const body = await res.text();
+    throw httpError("setVideoPrivacy", res.status, body);
+  }
+}
+
+/** Delete an upload (videos.delete). Needs the MANAGE scope. */
+export async function deleteVideo(opts: {
+  accessToken: string;
+  videoId: string;
+  fetchImpl?: FetchImpl;
+}): Promise<void> {
+  const doFetch = opts.fetchImpl ?? fetch;
+  const url = `https://www.googleapis.com/youtube/v3/videos?id=${encodeURIComponent(opts.videoId)}`;
+  const res = await doFetch(url, {
+    method: "DELETE",
+    headers: { Authorization: `Bearer ${opts.accessToken}` },
+  });
+  if (!res.ok) {
+    const body = await res.text();
+    throw httpError("deleteVideo", res.status, body);
+  }
 }
 
 export async function setThumbnail(opts: {

@@ -111,6 +111,13 @@ export const SceneBlockSchema = z
              *  55–70% of the runtime. It is padded into the narration WAV,
              *  so the scene's measured length IS speech + hold. */
             hold_after_sec: z.number().min(0).max(30).optional(),
+            /** Seconds of silence BEFORE this scene's narration. The
+             *  opening beat of a video: the title card settles (and the
+             *  music bed rises) before the voice starts, so the opening
+             *  doesn't slam out on an empty frame. Padded into the front
+             *  of the narration WAV, so the scene's measured length is
+             *  lead-in + speech + hold. */
+            lead_in_sec: z.number().min(0).max(10).optional(),
             /** CS-14: the map geometry for a MapInsert scene — authored,
              *  not generated. The image model invents geography, so the
              *  shapes and routes come from the article (the source of
@@ -257,6 +264,13 @@ export function articleToStoryboardYaml(
       // scene's SPOKEN length, which is what the caption cues are timed
       // against.
       lines.push(`    hold_after_sec: ${s.hold_after_sec}`);
+    }
+    if (s.lead_in_sec !== undefined) {
+      // The opening beat: silence before the voice, so the title card is
+      // readable before the narration starts. sync-durations subtracts it
+      // from the spoken length, and the compiler offsets the caption cues
+      // by it.
+      lines.push(`    lead_in_sec: ${s.lead_in_sec}`);
     }
     lines.push(`    narration:`);
     lines.push(`      text: ${yamlStr(s.narration ?? "")}`);

@@ -17,6 +17,16 @@ export {
 export { withRetry, chatWithFallback } from "./retry.js";
 export { LLM_TIMEOUT_MS } from "./timeout.js";
 export { stripReasoning, chatStream, isHeadersTimeout } from "./stream.js";
+export {
+  callStructuredAgent,
+  extractBalancedJson,
+  extractFencedYaml,
+  formatSchemaIssues,
+  parseStructuredYaml,
+  type SafeParseResult,
+  type SafeParseSchema,
+  type StructuredAgentResult,
+} from "./structured-agent.js";
 export { GLMProvider, type GLMProviderOptions } from "./glm.js";
 export { MiniMaxProvider, type MiniMaxProviderOptions } from "./minimax.js";
 export {

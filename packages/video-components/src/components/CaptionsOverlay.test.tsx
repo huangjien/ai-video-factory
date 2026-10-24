@@ -184,3 +184,41 @@ describe("ImageBackground's own caption — same treatment as the track", () => 
     );
   });
 });
+
+/** A scene may open on a lead-in beat (silence before the voice). The
+ *  caption must not appear in that gap: the fallback to the last cue
+ *  used to paint it from the first frame, so the text preceded the
+ *  words it captions. */
+describe("CaptionsOverlay — nothing is drawn before the first cue", () => {
+  const cueFrom = (startSec: number, endSec: number) => ({
+    lines: ["后一句"],
+    startSec,
+    endSec,
+  });
+
+  it("draws nothing in the gap before the first cue", () => {
+    const html = renderToStaticMarkup(
+      <CaptionsOverlay
+        cues={[cueFrom(1.2, 8)]}
+        localFrame={9} // 0.3s
+        fps={30}
+        {...FRAME}
+        theme={paperLightTheme}
+      />,
+    );
+    expect(html).not.toContain("后一句");
+  });
+
+  it("still draws the cue once it starts", () => {
+    const html = renderToStaticMarkup(
+      <CaptionsOverlay
+        cues={[cueFrom(1.2, 8)]}
+        localFrame={45} // 1.5s
+        fps={30}
+        {...FRAME}
+        theme={paperLightTheme}
+      />,
+    );
+    expect(html).toContain("后一句");
+  });
+});

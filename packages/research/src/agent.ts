@@ -1,6 +1,5 @@
 import type { ChatMessage, Provider } from "@video/llm";
-import { chatWithFallback } from "@video/llm";
-import { parse as parseYaml } from "yaml";
+import { callStructuredAgent } from "@video/llm";
 import { buildMessages, type ResearchInput } from "./prompt.js";
 import {
   ResearchOutputSchema,
@@ -42,14 +41,6 @@ export interface CallResearchResult {
   messages: ChatMessage[];
 }
 
-/** Extract the first YAML code block from the LLM response and parse it. */
-export function extractYaml(content: string): string {
-  const fence = /```(?:yaml)?\s*([\s\S]*?)```/m;
-  const match = content.match(fence);
-  if (match && match[1]) return match[1].trim();
-  return content.trim();
-}
-
 export async function callResearch(
   input: ResearchInput,
   provider: Provider,
@@ -70,62 +61,45 @@ export async function callResearch(
       webSearchFailed = true;
     }
   }
-  const messages = buildMessages({
-    ...input,
-    ...(webContext && webContext.length > 0 ? { webContext } : {}),
+  const r = await callStructuredAgent({
+    messages: buildMessages({
+      ...input,
+      ...(webContext && webContext.length > 0 ? { webContext } : {}),
+    }),
+    provider,
+    fallback: fallback ?? null,
+    schema: ResearchOutputSchema,
+    schemaLabel: "Research output schema",
+    toError: (message, providerName, cause) =>
+      new ResearchError(message, providerName, cause),
   });
-  const out = await chatWithFallback(provider, fallback ?? null, { messages });
-  const res = out.response;
-  const actualProvider = out.provider;
-  const yamlText = extractYaml(res.content);
-  if (!yamlText) {
-    throw new ResearchError("no YAML in response", actualProvider);
-  }
-  let parsed: unknown;
-  try {
-    parsed = parseYaml(yamlText);
-  } catch (err) {
-    throw new ResearchError(
-      `YAML parse failed: ${(err as Error).message}`,
-      actualProvider,
-      err,
-    );
-  }
-  const result = ResearchOutputSchema.safeParse(parsed);
-  if (!result.success) {
-    throw new ResearchError(
-      `Research output schema invalid: ${result.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; ")}`,
-      actualProvider,
-      result.error,
-    );
-  }
   // Cross-validate: every claim.sources[i] must exist in output.sources
-  const sourceIds = new Set(result.data.sources.map((s) => s.id));
-  for (const claim of result.data.claims) {
+  const sourceIds = new Set(r.data.sources.map((s) => s.id));
+  for (const claim of r.data.claims) {
     for (const sid of claim.sources as string[]) {
       if (!sourceIds.has(sid)) {
         throw new ResearchError(
           `unknown source id ${sid} in claim ${claim.id}`,
-          actualProvider,
+          r.providerName,
         );
       }
     }
   }
   // Stamp meta with provider/model
   const output: ResearchOutput = {
-    ...result.data,
+    ...r.data,
     meta: {
-      ...result.data.meta,
+      ...r.data.meta,
       web_search_used: webSearchUsed,
       web_search_failed: webSearchFailed,
-      provider: actualProvider,
-      model: result.data.meta.model,
+      provider: r.providerName,
+      model: r.data.meta.model,
     },
   };
   return {
     output,
-    usage: res.usage,
-    providerName: actualProvider,
-    messages,
+    usage: r.usage,
+    providerName: r.providerName,
+    messages: r.messages,
   };
 }

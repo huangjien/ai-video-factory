@@ -1,6 +1,6 @@
 import { storyboardSchema, type TimelineAnimation } from "@video/vdsl";
 import type { ChatMessage, ChatResponse, Provider } from "@video/llm";
-import { chatWithFallback } from "@video/llm";
+import { chatWithFallback, extractFencedYaml } from "@video/llm";
 import { parse as parseYaml } from "yaml";
 import { validateMotionSpec, type MotionSpec } from "./plan.js";
 import { buildMotionMessages, type MotionAgentSceneInput } from "./prompt.js";
@@ -21,12 +21,10 @@ export class MotionAgentError extends Error {
   }
 }
 
-/** Strip ```yaml fences (same habit as the other agents). */
+/** Strip ```yaml fences (the shared extractor in @video/llm — reasoning
+ *  stripping included, so a thinking model's sketch is never parsed). */
 export function extractMotionYaml(content: string): string {
-  const fence = /```(?:yaml)?\s*([\s\S]*?)```/m;
-  const match = content.match(fence);
-  if (match && match[1]) return match[1].trim();
-  return content.trim();
+  return extractFencedYaml(content);
 }
 
 export interface MotionAgentResult {

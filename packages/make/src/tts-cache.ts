@@ -22,6 +22,31 @@ export const TTS_PROVIDER_REVISION = "3";
 export const ZH_VOICE = "zh-CN-YunjianNeural";
 export const EN_VOICE = "en-US-ChristopherNeural";
 
+/** Effective narration voice for an article: frontmatter `voice:` wins,
+ *  else the language default. The one resolution rule shared by runTts and
+ *  the dry-run impact table — two copies of this `||` already diverged
+ *  once (the impact table used to read audio-config.yaml's `voice:`,
+ *  which make ignores on the synthesis path, so the table lied). */
+export function effectiveTtsVoice(
+  frontmatterVoice: string | undefined,
+  language: string,
+): string {
+  return frontmatterVoice || (language === "en-US" ? EN_VOICE : ZH_VOICE);
+}
+
+/** Cache provider-name for a frontmatter `tts_provider` value — mirrors
+ *  the providers' `name` fields, since that is what runTts feeds
+ *  ttsCacheKey. The dry-run cannot probe voicebox health or the MiniMax
+ *  key, so a degraded run (voicebox down ⇒ minimax/edge) may still
+ *  re-synthesize where the table said cached: over-report only. */
+export function ttsCacheProviderName(
+  frontmatterTtsProvider: string | undefined,
+): string {
+  if (frontmatterTtsProvider === "voicebox") return "voicebox";
+  if (frontmatterTtsProvider === "minimax") return "minimax-tts";
+  return "edge";
+}
+
 export function ttsCacheKey(
   narration: string,
   voice: string,
@@ -42,6 +67,9 @@ export function ttsCacheKey(
   /** CS-03: the scene's held silence. It is padded INTO the wav, so it
    *  changes the bytes just as much as the speed does. */
   holdAfterSec?: number,
+  /** Seconds of silence BEFORE the voice — the opening beat. Padded into
+   *  the front of the wav, so it changes the bytes too. */
+  leadInSec?: number,
 ): string {
   // The provider must be part of the key: "narrator-zh" through Voicebox and
   // "zh-CN-YunjianNeural" through Edge are different audio, and a provider
@@ -66,6 +94,10 @@ export function ttsCacheKey(
       : `${providerTag}\u0000${langTag}${voice}`;
   const speedTag = voiceboxSpeed === undefined ? "" : `${voiceboxSpeed}\u0000`;
   const holdTag = holdAfterSec === undefined ? "" : `${holdAfterSec}\u0000`;
+  // The lead-in tag is prefixed so it can never collide with the hold
+  // tag, and it is omitted entirely when there is no lead-in — the
+  // pinned key for a plain scene must not move.
+  const leadInTag = leadInSec === undefined ? "" : `lead${leadInSec}\u0000`;
   const sentencePauseTag =
     voiceboxSentencePauseSec === undefined
       ? ""
@@ -74,7 +106,7 @@ export function ttsCacheKey(
     "sha256:" +
     createHash("sha256")
       .update(
-        `${core}\u0000${pauseSec ?? "-"}\u0000${speedTag}${sentencePauseTag}${holdTag}${revisionTag}${narration.trim()}`,
+        `${core}\u0000${pauseSec ?? "-"}\u0000${speedTag}${sentencePauseTag}${holdTag}${leadInTag}${revisionTag}${narration.trim()}`,
       )
       .digest("hex")
   );

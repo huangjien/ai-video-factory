@@ -100,10 +100,14 @@ export const CaptionsOverlay = ({
   if (cues.length === 0) return null;
   const sec = fps > 0 ? localFrame / fps : 0;
   // The last cue absorbs the final frame so the caption does not blink out
-  // one frame before the scene cuts.
-  const cue = (cues.find((c) => sec >= c.startSec && sec < c.endSec) ??
-    cues[cues.length - 1])!;
-  if (cue.lines.length === 0) return null;
+  // one frame before the scene cuts — but only AFTER it has started. Before
+  // the first cue (a scene that opens on a lead-in beat) nothing is drawn:
+  // falling back to the last cue there printed the text before the voice
+  // said it.
+  const active = cues.find((c) => sec >= c.startSec && sec < c.endSec);
+  const last = cues[cues.length - 1]!;
+  const cue = active ?? (sec >= last.startSec ? last : null);
+  if (!cue || cue.lines.length === 0) return null;
   const fontSize = captionFontSize(height);
   const lineBaseStyle = {
     ...captionLineStyle(width, height),

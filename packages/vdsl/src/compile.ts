@@ -75,6 +75,13 @@ export interface RenderPlan {
    *  per-scene renders rebase `useCurrentFrame()` to 0 per scene.
    *  Undefined/0 = frames are already absolute (whole-plan renders). */
   frameOffsetFrames?: number;
+  /** The FILM's total frame count, carried into a sliced composition.
+   *  `slicePlanScene` overwrites `totalFrames` with the single scene's
+   *  length, which loses the information "is this the film's last
+   *  scene?" — the head/tail fade needs it, and without it every scene
+   *  would fade to black at its own edges. Undefined = `totalFrames` is
+   *  already the film's length (whole-plan renders). */
+  filmTotalFrames?: number;
 }
 
 export interface CompileOptions {
@@ -126,7 +133,11 @@ export function compileStoryboard(
     // CS-03: the cue window is the scene's SPOKEN length when it is known
     // (the scene also holds silence), never the whole scene — timing the
     // cues across the hold would make the text lag the voice.
-    const captionWindow = scene.captions?.speech_sec ?? scene.duration;
+    // The lead-in is the scene's opening beat: the voice starts AFTER it,
+    // so the window shrinks by it and the cues start at it.
+    const leadInSec = scene.lead_in_sec ?? 0;
+    const captionWindow =
+      scene.captions?.speech_sec ?? Math.max(0, scene.duration - leadInSec);
     const captions = captionText
       ? {
           cues: buildCaptionCues(captionText, captionWindow, {
@@ -134,7 +145,11 @@ export function compileStoryboard(
             ...(scene.captions?.highlight_terms !== undefined
               ? { markers: scene.captions.highlight_terms }
               : {}),
-          }),
+          }).map((cue) => ({
+            ...cue,
+            startSec: cue.startSec + leadInSec,
+            endSec: cue.endSec + leadInSec,
+          })),
         }
       : null;
     // CS-06: the overlay's window defaults to the scene's own span; a
@@ -229,6 +244,9 @@ export function slicePlanScene(
       totalFrames: scene.durationInFrames,
       scenes: [sliced],
       frameOffsetFrames: scene.startFrame,
+      // The film's real length, so the renderer can still tell whether
+      // this scene opens or closes the film.
+      filmTotalFrames: plan.filmTotalFrames ?? plan.totalFrames,
     },
     scene,
   };

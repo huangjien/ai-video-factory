@@ -28,6 +28,14 @@ scenes:
       component: Title
       props:
         text: "hello"
+  - id: scene-02
+    duration: 7
+    narration:
+      text: "第二段文本"
+    visual:
+      component: Title
+      props:
+        text: "world"
 `;
 
 const SCRIPT = `# Script
@@ -42,9 +50,9 @@ const goodYaml = `title: "AI 思维链有什么用？"
 description: |
   本视频讲解 CoT。
 chapters:
-  - timestamp: "00:00"
+  - scene: 1
     title: Hook
-  - timestamp: "00:05"
+  - scene: 2
     title: Problem
 thumbnail_prompt: "Young woman · eyes wide with surprise · cozy kitchen at dawn · warm side-light · 35mm cinematic"
 shorts_hook: "A person leans toward camera · reveals the surprise with a clear voice · kitchen morning light · curious hopeful tone"`;
@@ -107,7 +115,12 @@ describe("video youtube end-to-end (todo 2) — mock MiniMax", () => {
       "utf8",
     );
     expect(vtt).toContain("WEBVTT");
-    expect(vtt).toContain("00:00:00 --> 00:00:05");
+    // The timestamps are derived from the rendered scene durations (the
+    // model only names the scene): scene 1 starts at 0, scene 2 after the
+    // first scene's 8s — and the LAST chapter ends at the film's end
+    // (8 + 7 = 15s), not a one-second stub.
+    expect(vtt).toContain("00:00:00 --> 00:00:08");
+    expect(vtt).toContain("00:00:08 --> 00:00:15");
     expect(vtt).toContain("Hook");
     expect(vtt).toContain("Problem");
     const pkg = readFileSync(

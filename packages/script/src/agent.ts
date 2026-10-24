@@ -1,6 +1,5 @@
 import type { ChatMessage, Provider } from "@video/llm";
-import { chatWithFallback } from "@video/llm";
-import { parse as parseYaml } from "yaml";
+import { callStructuredAgent } from "@video/llm";
 import { buildScriptMessages, type ScriptInput } from "./prompt.js";
 import { ScriptSchema, type Script } from "./schemas.js";
 
@@ -28,48 +27,24 @@ export interface CallScriptResult {
   messages: ChatMessage[];
 }
 
-export function extractYaml(content: string): string {
-  const fence = /```(?:yaml)?\s*([\s\S]*?)```/m;
-  const match = content.match(fence);
-  if (match && match[1]) return match[1].trim();
-  return content.trim();
-}
-
 export async function callScript(
   input: ScriptInput,
   provider: Provider,
   fallback?: Provider | null,
 ): Promise<CallScriptResult> {
-  const messages = buildScriptMessages(input);
-  const out = await chatWithFallback(provider, fallback ?? null, { messages });
-  const res = out.response;
-  const actualProvider = out.provider;
-  const yamlText = extractYaml(res.content);
-  if (!yamlText) {
-    throw new ScriptError("no YAML in response", actualProvider);
-  }
-  let parsed: unknown;
-  try {
-    parsed = parseYaml(yamlText);
-  } catch (err) {
-    throw new ScriptError(
-      `YAML parse failed: ${(err as Error).message}`,
-      actualProvider,
-      err,
-    );
-  }
-  const result = ScriptSchema.safeParse(parsed);
-  if (!result.success) {
-    throw new ScriptError(
-      `Script schema invalid: ${result.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; ")}`,
-      actualProvider,
-      result.error,
-    );
-  }
+  const r = await callStructuredAgent({
+    messages: buildScriptMessages(input),
+    provider,
+    fallback: fallback ?? null,
+    schema: ScriptSchema,
+    schemaLabel: "Script schema",
+    toError: (message, providerName, cause) =>
+      new ScriptError(message, providerName, cause),
+  });
   return {
-    script: result.data,
-    usage: res.usage,
-    providerName: actualProvider,
-    messages,
+    script: r.data,
+    usage: r.usage,
+    providerName: r.providerName,
+    messages: r.messages,
   };
 }

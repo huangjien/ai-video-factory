@@ -125,6 +125,46 @@ function sceneOpacityAtFrame(
   return Math.max(0, Math.min(1, opacity));
 }
 
+/**
+ * The film's head and tail fade through black.
+ *
+ * A video whose first frame is a bare lit canvas reads as a mistake, not
+ * as a cut — the eye has nothing to land on and the voice arrives before
+ * the picture does. Fading in from black (and out to it) gives the
+ * opening a frame to arrive on, and closes the film the same way.
+ *
+ * Pure function so the shape can be asserted without rendering: the head
+ * starts fully black and lifts over `fadeFrames`; the tail darkens over
+ * the last `fadeFrames` and ends fully black.
+ */
+export function edgeFadeOpacity(
+  absoluteStartFrame: number,
+  absoluteEndFrame: number,
+  localFrame: number,
+  sceneDurationInFrames: number,
+  filmTotalFrames: number,
+  fadeFrames: number,
+): number {
+  if (fadeFrames <= 0) return 0;
+  const clamp = (v: number) => Math.max(0, Math.min(1, v));
+  // The fade belongs to the FILM's edges, not to every scene: a scene
+  // that opens the film fades in from black, the one that closes it
+  // fades out — and nothing in between does.
+  const head =
+    absoluteStartFrame === 0 ? clamp(1 - localFrame / fadeFrames) : 0;
+  const tail =
+    absoluteEndFrame >= filmTotalFrames && sceneDurationInFrames > 1
+      ? clamp(
+          (localFrame - (sceneDurationInFrames - fadeFrames)) /
+            (fadeFrames - 1),
+        )
+      : 0;
+  return clamp(Math.max(head, tail));
+}
+
+/** How long the film's edge fade runs, in seconds. */
+export const EDGE_FADE_SEC = 0.8;
+
 export const Root = ({ renderPlan }: RootProps) => {
   const frame = useCurrentFrame();
   // The storyboard's style.theme picks the palette (plan §25/v0.2 themes);
@@ -146,6 +186,20 @@ export const Root = ({ renderPlan }: RootProps) => {
     scene,
     localFrame,
     renderPlan.project.fps,
+  );
+
+  // The film's head and tail fade through black (see edgeFadeOpacity).
+  // The positions are ABSOLUTE: in a per-scene render the plan is
+  // rebased to frame 0, so `frameOffsetFrames` carries where the scene
+  // really sits in the film.
+  const absoluteStartFrame = renderPlan.frameOffsetFrames ?? scene.startFrame;
+  const edgeFade = edgeFadeOpacity(
+    absoluteStartFrame,
+    absoluteStartFrame + scene.durationInFrames,
+    localFrame,
+    scene.durationInFrames,
+    renderPlan.filmTotalFrames ?? renderPlan.totalFrames,
+    Math.round(EDGE_FADE_SEC * renderPlan.project.fps),
   );
 
   // Which layer draws this scene's caption — exactly one of them does, and
@@ -244,6 +298,20 @@ export const Root = ({ renderPlan }: RootProps) => {
           brand={renderPlan.style.brand}
           width={renderPlan.project.width}
           height={renderPlan.project.height}
+        />
+      ) : null}
+      {/* The film's head/tail fade through black — the topmost layer, so
+          it covers picture, captions and chrome alike (above the
+          branding's z-index 40). */}
+      {edgeFade > 0 ? (
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            backgroundColor: "#000000",
+            opacity: edgeFade,
+            zIndex: 50,
+          }}
         />
       ) : null}
     </div>

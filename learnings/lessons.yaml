@@ -50,7 +50,7 @@ lessons:
       image regeneration, delete scenes/*.mp4 and scenes/*.json before
       re-rendering or the video replays stale pictures (video qa flags this as
       stale-render)
-    seenCount: 1
+    seenCount: 2
     projects:
       - ai-era-software-engineering-11-shifts-en
     firstSeenAt: 2026-10-24T00:00:00.000Z

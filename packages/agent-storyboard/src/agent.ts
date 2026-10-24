@@ -1,5 +1,5 @@
 import type { ChatMessage, Provider } from "@video/llm";
-import { chatWithFallback } from "@video/llm";
+import { chatWithFallback, extractFencedYaml } from "@video/llm";
 import { validateStoryboard } from "@video/vdsl/validate.js";
 import type { Storyboard } from "@video/vdsl/schema.js";
 import { buildMessages, type AgentInput } from "./prompt.js";
@@ -31,13 +31,10 @@ export class AgentError extends Error {
   }
 }
 
-/** Strip ```yaml or ``` ... ``` fences around the model's output so we
- * can parse the inner YAML reliably regardless of the model's habit. */
+/** Strip ```yaml fences via the shared extractor in @video/llm (reasoning
+ *  stripping included — a thinking model's sketch is never the answer). */
 export function extractYaml(content: string): string {
-  const fence = /```(?:yaml)?\s*([\s\S]*?)```/m;
-  const match = content.match(fence);
-  if (match && match[1]) return match[1].trim();
-  return content.trim();
+  return extractFencedYaml(content);
 }
 
 /** How many repair passes to attempt after a validation failure. One is

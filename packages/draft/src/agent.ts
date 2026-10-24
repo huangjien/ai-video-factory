@@ -1,6 +1,17 @@
 import type { ChatMessage, Provider } from "@video/llm";
-import { chatWithFallback, stripReasoning } from "@video/llm";
+import {
+  chatWithFallback,
+  extractBalancedJson as extractBalancedJsonImpl,
+  stripReasoning,
+} from "@video/llm";
 import { buildMessages, type DraftInput } from "./prompt.js";
+
+/** Shared balanced-JSON extractor (@video/llm) — re-exported because the
+ *  quality judge (article-review.ts) and the drafter tests import it from
+ *  this package's surface. */
+export function extractBalancedJson(text: string): string | null {
+  return extractBalancedJsonImpl(text);
+}
 
 export class DraftError extends Error {
   override readonly cause: unknown;
@@ -127,38 +138,6 @@ function candidates(text: string): string[] {
   const m = text.match(fence);
   if (m && m[1] !== undefined) out.push(m[1].trim());
   return out;
-}
-
-/** Find the first balanced JSON object substring. Handles strings
- * (with escape sequences), escaped backslashes, and nested objects.
- * Returns `null` if no balanced object is found. */
-export function extractBalancedJson(text: string): string | null {
-  let start = -1;
-  let depth = 0;
-  let inString = false;
-  let escapeNext = false;
-  for (let i = 0; i < text.length; i++) {
-    const ch = text[i];
-    if (inString) {
-      if (escapeNext) escapeNext = false;
-      else if (ch === "\\") escapeNext = true;
-      else if (ch === '"') inString = false;
-      continue;
-    }
-    if (ch === '"') {
-      inString = true;
-      continue;
-    }
-    if (ch === "{") {
-      if (depth === 0) start = i;
-      depth++;
-    } else if (ch === "}") {
-      if (depth === 0) continue;
-      depth--;
-      if (depth === 0 && start >= 0) return text.slice(start, i + 1);
-    }
-  }
-  return null;
 }
 
 /** Compose article.md from a structured RawArticle — guaranteed shape; the

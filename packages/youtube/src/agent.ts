@@ -1,6 +1,9 @@
 import type { ChatMessage, ChatResponse, Provider } from "@video/llm";
-import { chatWithFallback, stripReasoning } from "@video/llm";
-import { parse as parseYaml } from "yaml";
+import {
+  chatWithFallback,
+  extractFencedYaml,
+  parseStructuredYaml,
+} from "@video/llm";
 import {
   YouTubePackageSchema,
   type Chapter,
@@ -38,19 +41,19 @@ export function extractYaml(content: string): string {
   // A reasoning-enabled model emits its thinking BEFORE the answer, and
   // that thinking often contains a YAML *sketch* with `...` placeholders.
   // Taking the first fence therefore grabbed the sketch, not the answer —
-  // and the sketch does not parse into the package schema. Drop the
-  // reasoning first, exactly as the image-brief expander does
-  // (`extractBrief` in @video/draft).
-  const out = stripReasoning(content);
-  const fence = /```(?:yaml)?\s*([\s\S]*?)```/m;
-  const match = out.match(fence);
-  if (match && match[1]) return match[1].trim();
-  return out.trim();
+  // and the sketch does not parse into the package schema. The reasoning
+  // strip now lives in the shared extractor (@video/llm).
+  return extractFencedYaml(content);
 }
 
 /** Convert a chapters array to WebVTT format for upload. Each chapter's
- * end-time is the next chapter's start (or +1s for the last one). */
-export function chaptersToVtt(chapters: Chapter[]): string {
+ * end-time is the next chapter's start — or the FILM's end when
+ * `totalDurationSec` is given, so the last chapter covers the tail
+ * instead of a one-second stub. */
+export function chaptersToVtt(
+  chapters: Chapter[],
+  totalDurationSec?: number,
+): string {
   const ts = (s: string): number => {
     const parts = s.split(":").map((p) => Number.parseInt(p, 10));
     if (parts.length === 2) return (parts[0] ?? 0) * 60 + (parts[1] ?? 0);
@@ -66,9 +69,16 @@ export function chaptersToVtt(chapters: Chapter[]): string {
   for (let i = 0; i < chapters.length; i++) {
     const ch = chapters[i];
     if (!ch) continue;
+    // A chapter without a timestamp (the model names the scene; the
+    // caller derives the time) starts at zero.
+    const startTs = ts(ch.timestamp ?? "00:00");
     const next = chapters[i + 1];
-    const endTs = next ? ts(next.timestamp) : ts(ch.timestamp) + 1;
-    lines.push(`${fmt(ts(ch.timestamp))} --> ${fmt(endTs)}`);
+    const endTs = next
+      ? ts(next.timestamp ?? "00:00")
+      : totalDurationSec !== undefined
+        ? totalDurationSec
+        : startTs + 1;
+    lines.push(`${fmt(startTs)} --> ${fmt(endTs)}`);
     lines.push(ch.title);
     lines.push("");
   }
@@ -108,52 +118,34 @@ function buildPackage(
   actualProvider: string,
   messages: ChatMessage[],
 ): CallYouTubeResult {
-  const yamlText = extractYaml(res.content);
-  if (!yamlText) {
-    throw new YouTubeError("no YAML in response", actualProvider);
+  const data = parseStructuredYaml(res.content, actualProvider, {
+    schema: YouTubePackageSchema,
+    schemaLabel: "YouTube package schema",
+    toError: (message, providerName, cause) =>
+      new YouTubeError(message, providerName, cause),
+  });
+  // Sanity: chapters must move FORWARD through the film. The model
+  // names the scene each chapter starts at; the caller turns that into
+  // a timestamp on the rendered timeline. Strictly increasing scene
+  // positions are what make the derived timestamps increase too.
+  const scenes = data.chapters.map((c) => c.scene);
+  for (let i = 1; i < scenes.length; i += 1) {
+    if ((scenes[i] ?? 0) <= (scenes[i - 1] ?? 0)) {
+      throw new YouTubeError(
+        "chapters must be ordered by scene position",
+        actualProvider,
+      );
+    }
   }
-  let parsed: unknown;
-  try {
-    parsed = parseYaml(yamlText);
-  } catch (err) {
-    throw new YouTubeError(
-      `YAML parse failed: ${(err as Error).message}`,
-      actualProvider,
-      err,
-    );
-  }
-  const result = YouTubePackageSchema.safeParse(parsed);
-  if (!result.success) {
-    throw new YouTubeError(
-      `YouTube package schema invalid: ${result.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; ")}`,
-      actualProvider,
-      result.error,
-    );
-  }
-  // Sanity: chapters sorted by timestamp — reject unsorted output.
-  const ts = (s: string): number => {
-    const parts = s.split(":").map((p) => Number.parseInt(p, 10));
-    if (parts.length === 2) return (parts[0] ?? 0) * 60 + (parts[1] ?? 0);
-    return (parts[0] ?? 0) * 3600 + (parts[1] ?? 0) * 60 + (parts[2] ?? 0);
-  };
-  const sorted = [...result.data.chapters].sort(
-    (a, b) => ts(a.timestamp) - ts(b.timestamp),
-  );
-  if (sorted.some((c, i) => c !== result.data.chapters[i])) {
-    throw new YouTubeError(
-      "chapters must be sorted by timestamp",
-      actualProvider,
-    );
-  }
-  if (hasTextOverlay(result.data.thumbnail_prompt)) {
+  if (hasTextOverlay(data.thumbnail_prompt)) {
     throw new YouTubeError(
       "thumbnail_prompt contains banned tokens (text/字幕/字体/logo/标题/海报) — re-prompt with stricter negative constraints",
       actualProvider,
-      { thumbnail_prompt: result.data.thumbnail_prompt },
+      { thumbnail_prompt: data.thumbnail_prompt },
     );
   }
   return {
-    youtube: result.data,
+    youtube: data,
     usage: res.usage,
     providerName: actualProvider,
     messages,

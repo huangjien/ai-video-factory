@@ -6,17 +6,21 @@ script, research) triple. The package is fully text — no images, no video.
 Output: ONE fenced YAML code block (```yaml ... ```) with EXACTLY these keys:
   title:            string (1-100 chars; SEO-friendly; localized to script language)
   description:      string (multi-line; include 2-5 hashtags at the bottom; cite research URLs)
-  chapters:         list of {timestamp, title}  (zero-padded MM:SS, in order)
+  chapters:         list of {scene, title}  (scene = 1-based position of the
+                    scene where that chapter starts, in the scene list below)
   thumbnail_prompt: string (text description of the thumbnail image to design)
   shorts_hook:      string (text for a 60-second Shorts clip: hook + key claim)
 
 Constraints:
 - Title must NOT exceed 100 chars (YouTube limit).
-- Chapters must be zero-padded MM:SS — EXACTLY two digits on each side of the colon.
-  A video longer than one hour uses HH:MM:SS, also zero-padded.
-  Correct: "00:00", "01:23", "01:02:30"
-  WRONG:   "0:00", "1:23", "00:0", "83", "01:23.5" — these are rejected outright.
-- Chapters must be sorted by time.
+- `scene` is the 1-based POSITION of the scene in the scene list below — the
+  scene whose caption opens that chapter's section. Do NOT compute a
+  timestamp: the pipeline derives the time from the RENDERED scene
+  durations, because the declared and the rendered durations differ (the
+  narration is measured, the article's numbers are estimates).
+  Correct: `scene: 1`, `scene: 7`
+  WRONG:   `scene: 0`, `scene: 99`, `scene: "3"` — these are rejected.
+- Scene positions must strictly increase from one chapter to the next.
 - Quote any string containing ":", "#", or a leading special character, so YAML parses.
 - Write `description` and `shorts_hook` as YAML BLOCK SCALARS (`|`), never as
   double-quoted strings. Chinese copy routinely contains `:` and `"`; inside a

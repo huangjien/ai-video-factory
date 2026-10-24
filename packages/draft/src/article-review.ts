@@ -726,23 +726,36 @@ export async function runScoredDraft(
 
     let score: ArticleScore | null = null;
     let scoreError: string | undefined;
-    try {
-      score = await scoreArticle(
-        draft.markdown,
-        provider,
-        fallback,
-        input.channelProfile,
-        // Dimension H needs the commission, not just the article —
-        // see ReviewTaskSpec.
-        {
-          topic: input.topic,
-          audience: input.audience,
-          language: input.language,
-          durationSec: input.duration,
-        },
-      );
-    } catch (err) {
-      scoreError = (err as Error).message;
+    // Bounded single retry on judge parse/schema breakdowns
+    // (ArticleReviewError): a transient judge formatting hiccup used to
+    // abort the whole loop, discarding the remaining draft attempts and
+    // shipping the video unreviewed (2026-10-24, two confirmed
+    // occurrences). Provider-level failures already have
+    // chatWithFallback inside scoreArticle; the retry here is fixed at
+    // one — deterministic policy, no LLM-driven control flow.
+    for (let judgeTry = 1; judgeTry <= 2; judgeTry++) {
+      try {
+        score = await scoreArticle(
+          draft.markdown,
+          provider,
+          fallback,
+          input.channelProfile,
+          // Dimension H needs the commission, not just the article —
+          // see ReviewTaskSpec.
+          {
+            topic: input.topic,
+            audience: input.audience,
+            language: input.language,
+            durationSec: input.duration,
+          },
+        );
+        scoreError = undefined;
+        break;
+      } catch (err) {
+        scoreError = (err as Error).message;
+        const isJudgeError = err instanceof ArticleReviewError;
+        if (!isJudgeError || judgeTry === 2) break;
+      }
     }
 
     const entry: ScoredAttempt = {

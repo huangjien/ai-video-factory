@@ -1,4 +1,11 @@
 #!/usr/bin/env node
+import { installStreamGuard } from "./stream-guard.js";
+
+// Undici http2 teardown noise must not kill long LLM steps mid-run
+// (2026-10-24: a 480s GLM draft crashed on a stray h2 stream error
+// while the bounded retry could have recovered it).
+installStreamGuard();
+
 import { Command } from "commander";
 import { registerNew } from "./new-command.js";
 import { registerMix } from "./mix-command.js";

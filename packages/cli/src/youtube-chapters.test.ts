@@ -4,12 +4,12 @@ import {
   type Server,
   type ServerResponse,
 } from "node:http";
-import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import type { AddressInfo } from "node:net";
 import path from "node:path";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { runYouTube } from "./youtube-command.js";
+import { deriveChapterTimestamps, runYouTube } from "./youtube-command.js";
 
 /** Article whose DECLARED durations deliberately disagree with the rendered
  *  storyboard. Chapter timestamps are cumulative offsets into the finished
@@ -74,8 +74,10 @@ const goodYaml = `title: "标题"
 description: |
   描述。
 chapters:
-  - timestamp: "00:00"
+  - scene: 1
     title: 开场
+  - scene: 2
+    title: 第二场
 thumbnail_prompt: "A person leaning toward camera · warm side-light · cozy room at dawn"
 shorts_hook: "A hand lifts a card · clear voice · morning light · curious tone"`;
 
@@ -168,6 +170,31 @@ describe("youtube packaging uses the RENDERED scene durations", () => {
     expect(sb).not.toContain("duration: 10.5");
   });
 
+  it("derives the chapter timestamps from the RENDERED scene durations", async () => {
+    // The model names the scene; the pipeline computes the time. With
+    // rendered durations 10.5 and 9.5, chapter 2 starts at 10.5s → 00:10.
+    // The old behaviour let the model guess a timestamp on the DECLARED
+    // timeline, which drifted by the declared/measured gap.
+    const cwd = mkdtempSync(path.join(tmpdir(), "video-yt-ch-"));
+    const root = path.join(cwd, "projects", "demo4");
+    seed(root, [20, 20], [10.5, 9.5]);
+    sent.length = 0;
+
+    expect(await runYouTube({ project: "demo4", cwd, model: "minimax" })).toBe(
+      0,
+    );
+
+    const vtt = readFileSync(
+      path.join(root, "youtube", "chapters.vtt"),
+      "utf8",
+    );
+    // The VTT writer uses the long form (HH:MM:SS).
+    expect(vtt).toContain("00:00:00 --> 00:00:10");
+    // The last chapter ends at the film's end (10.5 + 9.5 = 20s), not a
+    // one-second stub.
+    expect(vtt).toContain("00:00:10 --> 00:00:20");
+  });
+
   it("falls back to declared durations when no storyboard.yaml exists", async () => {
     const cwd = mkdtempSync(path.join(tmpdir(), "video-yt-ch-"));
     const root = path.join(cwd, "projects", "demo3");
@@ -182,5 +209,51 @@ describe("youtube packaging uses the RENDERED scene durations", () => {
     );
 
     expect(storyboardBlock()).toContain("duration: 20");
+  });
+});
+
+describe("deriveChapterTimestamps — scene positions become times", () => {
+  it("places each chapter at the measured start of its scene", () => {
+    const { chapters, warning } = deriveChapterTimestamps(
+      [
+        { scene: 1, title: "开场" },
+        { scene: 3, title: "第三场" },
+      ],
+      [10.5, 9.5, 20],
+    );
+    expect(warning).toBeUndefined();
+    expect(chapters[0]?.timestamp).toBe("00:00");
+    // scene 3 starts after 10.5 + 9.5 = 20s
+    expect(chapters[1]?.timestamp).toBe("00:20");
+  });
+
+  it("overwrites the model's own timestamp", () => {
+    const { chapters } = deriveChapterTimestamps(
+      [{ scene: 2, title: "第二场", timestamp: "03:00" }],
+      [10.5, 9.5],
+    );
+    expect(chapters[0]?.timestamp).toBe("00:10");
+  });
+
+  it("keeps the model's timestamps when the scene positions do not ascend", () => {
+    const { chapters, warning } = deriveChapterTimestamps(
+      [
+        { scene: 4, title: "后", timestamp: "01:00" },
+        { scene: 2, title: "前", timestamp: "00:30" },
+      ],
+      [10.5, 9.5, 20, 5],
+    );
+    expect(warning).toBeDefined();
+    expect(chapters[0]?.timestamp).toBe("01:00");
+    expect(chapters[1]?.timestamp).toBe("00:30");
+  });
+
+  it("falls back to the model's timestamps without rendered durations", () => {
+    const { chapters, warning } = deriveChapterTimestamps(
+      [{ scene: 2, title: "第二场", timestamp: "00:30" }],
+      undefined,
+    );
+    expect(warning).toBeDefined();
+    expect(chapters[0]?.timestamp).toBe("00:30");
   });
 });

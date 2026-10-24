@@ -1,5 +1,5 @@
 import type { Provider } from "@video/llm";
-import { chatWithFallback } from "@video/llm";
+import { chatWithFallback, stripReasoning } from "@video/llm";
 import { parse as parseYaml } from "yaml";
 import { buildMessages, type AudioPlanInput } from "./prompt.js";
 import {
@@ -108,16 +108,11 @@ export async function callAudioPlan(
   };
 }
 
-/** Strip `` tags GLM-5.3 emits despite JSON mode + unwrap
- * any surrounding ```json``` fence. Tolerant to either order. */
+/** Strip <think> tags GLM-5.3 emits despite JSON mode + unwrap any
+ * surrounding ```json``` fence. Tolerant to either order. The think-strip
+ * is the shared `stripReasoning`; a model's sketch is never the answer. */
 function unwrapJson(text: string): string {
-  let out = text;
-  const thinkMatch = out.match(/<think>([\s\S]*?)<\/think>/);
-  while (thinkMatch && thinkMatch[1] !== undefined) {
-    out = out.replace(/<think>[\s\S]*?<\/think>/, "").trim();
-    const m = out.match(/<think>([\s\S]*?)<\/think>/);
-    if (!m) break;
-  }
+  const out = stripReasoning(text).trim();
   const fenced = /^```(?:json|yaml)?\s*\n?([\s\S]*?)\n?```\s*$/;
   const fm = out.match(fenced);
   if (fm && fm[1] !== undefined) return fm[1].trim();

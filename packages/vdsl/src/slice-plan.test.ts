@@ -61,4 +61,16 @@ describe("slicePlanScene frame offset", () => {
     const { plan: sliced } = slicePlanScene(plan, "scene-01");
     expect(sliced.frameOffsetFrames).toBe(0);
   });
+
+  it("keeps the FILM's frame count so the renderer can find the film's edges", () => {
+    // `totalFrames` is overwritten with the single scene's length, which
+    // would make every scene look like the film's last scene (and fade
+    // to black at its own end). `filmTotalFrames` carries the real one.
+    const plan = planWithTwoScenes();
+    const { plan: sliced } = slicePlanScene(plan, "scene-02");
+    expect(sliced.totalFrames).toBe(90);
+    expect(sliced.filmTotalFrames).toBe(180);
+    const { plan: slicedFirst } = slicePlanScene(plan, "scene-01");
+    expect(slicedFirst.filmTotalFrames).toBe(180);
+  });
 });

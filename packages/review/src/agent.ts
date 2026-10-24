@@ -1,6 +1,5 @@
 import type { ChatMessage, Provider } from "@video/llm";
-import { chatWithFallback } from "@video/llm";
-import { parse as parseYaml } from "yaml";
+import { callStructuredAgent } from "@video/llm";
 import { ReviewPackageSchema, type ReviewPackage } from "./schemas.js";
 import { buildReviewMessages, type ReviewInput } from "./prompt.js";
 
@@ -30,48 +29,24 @@ export interface CallReviewResult {
   messages: ChatMessage[];
 }
 
-export function extractYaml(content: string): string {
-  const fence = /```(?:yaml)?\s*([\s\S]*?)```/m;
-  const match = content.match(fence);
-  if (match && match[1]) return match[1].trim();
-  return content.trim();
-}
-
 export async function callReview(
   input: ReviewInput,
   provider: Provider,
   fallback?: Provider | null,
 ): Promise<CallReviewResult> {
-  const messages = buildReviewMessages(input);
-  const out = await chatWithFallback(provider, fallback ?? null, { messages });
-  const res = out.response;
-  const actualProvider = out.provider;
-  const yamlText = extractYaml(res.content);
-  if (!yamlText) {
-    throw new ReviewError("no YAML in response", actualProvider);
-  }
-  let parsed: unknown;
-  try {
-    parsed = parseYaml(yamlText);
-  } catch (err) {
-    throw new ReviewError(
-      `YAML parse failed: ${(err as Error).message}`,
-      actualProvider,
-      err,
-    );
-  }
-  const result = ReviewPackageSchema.safeParse(parsed);
-  if (!result.success) {
-    throw new ReviewError(
-      `Review package schema invalid: ${result.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; ")}`,
-      actualProvider,
-      result.error,
-    );
-  }
+  const r = await callStructuredAgent({
+    messages: buildReviewMessages(input),
+    provider,
+    fallback: fallback ?? null,
+    schema: ReviewPackageSchema,
+    schemaLabel: "Review package schema",
+    toError: (message, providerName, cause) =>
+      new ReviewError(message, providerName, cause),
+  });
   return {
-    review: result.data,
-    usage: res.usage,
-    providerName: actualProvider,
-    messages,
+    review: r.data,
+    usage: r.usage,
+    providerName: r.providerName,
+    messages: r.messages,
   };
 }

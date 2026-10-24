@@ -1,10 +1,11 @@
 import {
   chatWithFallback,
+  extractFencedYaml,
+  parseStructuredYaml,
   type ChatMessage,
   type Provider,
   type Usage,
 } from "@video/llm";
-import { parse as parseYaml } from "yaml";
 import { buildFallbackPackage, type FallbackInput } from "./fallback.js";
 import { BilibiliPackageSchema, type BilibiliPackage } from "./schemas.js";
 import { buildBilibiliMessages, type BilibiliInput } from "./prompt.js";
@@ -22,10 +23,7 @@ export class BilibiliError extends Error {
 
 /** Pull the YAML body out of a fenced block, or accept a bare document. */
 export function extractYaml(content: string): string {
-  const fence = /```(?:yaml)?\s*([\s\S]*?)```/m;
-  const match = content.match(fence);
-  if (match && match[1]) return match[1].trim();
-  return content.trim();
+  return extractFencedYaml(content);
 }
 
 export interface CallBilibiliResult {
@@ -87,35 +85,23 @@ export async function callBilibili(
     return degrade(`LLM call failed: ${(err as Error).message}`);
   }
 
-  const providerName = out.provider;
-  const yamlText = extractYaml(out.response.content);
-  if (!yamlText) {
-    return degrade("model returned no YAML", providerName);
-  }
-
-  let parsed: unknown;
   try {
-    parsed = parseYaml(yamlText);
+    const bilibili = parseStructuredYaml(out.response.content, out.provider, {
+      schema: BilibiliPackageSchema,
+      schemaLabel: "Bilibili package schema",
+      toError: (message, providerName, cause) =>
+        new BilibiliError(message, providerName, cause),
+    });
+    return {
+      bilibili,
+      source: "agent",
+      providerName: out.provider,
+      usage: out.response.usage,
+      messages,
+    };
   } catch (err) {
-    return degrade(
-      `YAML parse failed: ${(err as Error).message}`,
-      providerName,
-    );
+    // no YAML / YAML parse failure / schema violation — all degrade, never
+    // throw (the policy that shipped a video when the model typoed).
+    return degrade((err as Error).message, out.provider);
   }
-
-  const result = BilibiliPackageSchema.safeParse(parsed);
-  if (!result.success) {
-    const detail = result.error.issues
-      .map((i) => `${i.path.join(".")}: ${i.message}`)
-      .join("; ");
-    return degrade(`schema invalid — ${detail}`, providerName);
-  }
-
-  return {
-    bilibili: result.data,
-    source: "agent",
-    providerName,
-    usage: out.response.usage,
-    messages,
-  };
 }

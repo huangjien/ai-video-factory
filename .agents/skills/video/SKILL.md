@@ -231,6 +231,43 @@ is the single source; both renderers read it. To eyeball it against a real
 image, render one still over a project's `assets/images/scene_N.jpg` rather
 than trusting the markup assertions.
 
+### The opening beat: `lead_in_sec` on a scene
+
+A scene may ask for silence **before** its narration — the opening beat that
+keeps a video from slamming out on an empty frame with the voice already
+talking. Set it per scene in `article.md`:
+
+```yaml
+  - id: scene_1
+    duration: 10
+    lead_in_sec: 1.2      # 0–10 s; the title card settles before the voice
+```
+
+What the pipeline does with it, end to end:
+
+| Stage | Effect |
+|---|---|
+| TTS | 1.2 s of silence is padded into the FRONT of the narration WAV → the scene's measured length is lead-in + speech (+ hold). It is part of the TTS cache key, so changing it re-synthesizes that scene. |
+| sync-durations | Writes `captions.speech_sec` = measured − lead-in − hold, i.e. the true SPOKEN length. |
+| compiler | The burned caption cues are offset by the lead-in, so the text appears WITH the voice. |
+| SRT writer | The external `captions/*.srt` is offset by the same amount — the SRT and the burned track cannot drift (CS-07). |
+
+Gotchas: `lead_in_sec` reaches the storyboard only when it is **derived from
+the article** — patching an existing storyboard does nothing, and patching
+the article does nothing until `storyboard/storyboard.yaml` is removed and
+re-derived (same rule as any frontmatter edit). The caption overlay draws
+nothing before the first cue starts, so the lead-in is a genuine silence,
+not a caption waiting on the voice.
+
+### The film's head and tail fade through black
+
+Every render fades in from black over 0.8 s and out to black over 0.8 s
+(`edgeFadeOpacity` in `packages/video-renderer/src/Root.tsx`). The fade
+belongs to the FILM, not to each scene — a per-scene render is a slice of
+the plan, so the slice carries the film's frame count (`filmTotalFrames`)
+and the renderer decides from absolute positions. Without that, every
+scene flashed black at its own edges.
+
 ### Every render cache needs the thing that made it as an input
 
 Three caches decide "can I reuse this?" — and each one was blind to a class
@@ -239,11 +276,11 @@ cache key.** Bump the matching revision when you edit the thing it names.
 
 | Cache | Key | Revision to bump | Set when |
 |---|---|---|---|
-| Scene mp4 (`scenes/*.mp4.json`) | fragment hash + `projectHash` + audio + `rendererRevision` | `RENDERER_REVISION` in `packages/video-renderer/src/pipeline.ts` | any change under `video-renderer/src` or `video-components/src` that alters a frame |
+| Scene mp4 (`scenes/*.mp4.json`) | fragment hash + `projectHash` + audio + `rendererRevision` | `RENDERER_REVISION` in `packages/video-renderer/src/scene-cache.ts` | any change under `video-renderer/src` or `video-components/src` that alters a frame |
 | Scene image (`assets/images/scene_N.jpg`) | scene content + style + provider + `learnedDigest` + `promptRevision` | `IMAGE_PROMPT_REVISION` in `packages/draft/src/image-prompt.ts` | the brief expander prompt, its stripping rules, or its instruction text changes |
 | Image brief (`assets/images/.prompt-cache/*.json`) | scene content + style + learned + `IMAGE_PROMPT_REVISION` | same | same |
 
-⚠️ Known blind spot (2026-10-24): the scene-mp4 key omits the jpg's content — a regenerated image replays the OLD render. `video qa` now flags this as `stale-render`; until the key includes an image digest, force re-renders with `rm scenes/*.mp4 scenes/*.json`.
+✅ Blind spot FIXED (P1, 2026-10-24): the scene-mp4 key now includes the scene image's content digest (`imageHash`, hashed from the data-URI the compiled plan carries — decode-identical to the file bytes, so `video make --dry-run` parity holds via the shared `sceneImageDigest`). Legacy sidecars without `imageHash` invalidate exactly once on the next make. The `video qa` `stale-render` check remains as a backstop.
 
 Why this bit us twice, on the same day:
 
@@ -596,9 +633,13 @@ packages/
 - **Storyboard schema mismatch**: `video validate projects/<id>/storyboard/storyboard.yaml --root projects/<id>`.
 - **Edge TTS fails**: try `--fake` to confirm pipeline; fall back to a different voice via `audio-config.yaml`.
 - **Style consistency across scenes**: sampling drifts ground dominance (warm cream vs cool teal) even inside a locked-palette style. Steer per-scene grounds in the `visual:` line ("on a warm cream ground") when the block must match; regenerate rejects by deleting `scene_N.jpg` + `scene_N.cache.json`. Sketch idioms (whiteboard) render poorly on minimax (thin pen ink, palette drift) — prefer painted styles there, or `--image-provider openai`.
-- **Scene-mp4 cache ignores image content**: regenerating `scene_N.jpg` does NOT invalidate `scenes/NN-scene-XX.mp4` — the video silently replays the old picture (symptom: "style inconsistent from X:XX to Y:YY" while the contact sheet looks fine). `video qa` flags this as `stale-render`; fix by `rm scenes/*.mp4 scenes/*.json` and re-running `video make`.
+- **Scene-mp4 cache keys on image content (fixed 2026-10-24, P1)**: `imageHash` (sha256 of the compiled data-URI's decoded bytes) is part of scene freshness, so regenerated scene images re-render their scene mp4 automatically; legacy sidecars invalidate once. `video qa`'s `stale-render` warn stays as a backstop. Dry-run parity lives in `impact.ts` via the shared `sceneImageDigest`.
 - **en-US drafts need `captions_source: caption`**: narration source overflows the caption safe area and `video make` refuses to render. Add it to `article.md` frontmatter after drafting. Note: patching frontmatter does NOT re-derive an existing storyboard (sync only fires on scene-id changes) — `rm storyboard/storyboard.yaml` to force re-derivation.
 - **Long LLM steps: run foreground, retry once**: GLM http2 streams occasionally die mid-draft (`ECONNRESET` ~8min in, unhandled). Backgrounded CLI steps can also be killed silently between harness turns. Re-run the same command in the foreground before switching providers; nothing is written on failure, so retries are clean.
+- **Never hand-edit `storyboard/storyboard.yaml`**: `sync-durations` rewrites it in place, and its line edits (inserting `captions.speech_sec`, dropping overrunning animations) are collected against the ORIGINAL line numbers — apply both kinds in ONE descending pass or the drops cut the wrong lines (observed 2026-10-24: a lead-in insert shifted every later index and the storyboard stopped parsing). Change `article.md` and delete the storyboard instead.
+- **The CLI runs the built `dist/`**: `pnpm build` after changing a package, or the next `video make` silently uses the old code (this cost a full re-render cycle on 2026-10-24).
+- **YouTube chapters: the model names the SCENE, the pipeline names the TIME.** The packager used to ask the model for timestamps, and the model computed them on the article's DECLARED timeline (~295 s) while the film is timed by the MEASURED narration (~221 s) — so the last 20 s fell outside any chapter and the last chapter was one second long. Now a chapter carries `scene: <1-based position>` and `deriveChapterTimestamps` (`packages/cli/src/youtube-command.ts`) turns that into a timestamp on the rendered timeline, with the last chapter ending at the film's duration. If you ever see a chapter contract change, keep the arithmetic on this side: the model names the place, the pipeline measures it.
+- **Richer key-info banners without bake.json**: the Pillow overlay picks text by priority — `visual.props.text_overlay` (curated line) → `visual.props.caption` → … → captions text. Set `text_overlay` on a scene's `visual.props` in storyboard.yaml for a stronger banner than the caption; it survives re-derives only if the article's scene content stays consistent (see content-aware sync).
 - **Disk usage**: `node_modules`, `output/`, and Remotion caches grow fast; `pnpm store prune` periodically.
 
 ## 7. More reading

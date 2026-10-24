@@ -101,18 +101,34 @@ export async function syncSceneDurations(
   // would bump the storyboard mtime on every preview and make the
   // per-scene render cache look stale forever.
   if (outputs.length === 0) return [];
-  // Descending order: each insert shifts the lines after it, and going
-  // backwards keeps the already-collected positions valid.
-  for (const w of [...speechWindows].sort((a, b) => b.at - a.at)) {
-    lines.splice(w.at, 0, w.line);
+  // ONE descending pass over BOTH edit kinds. The drops and the
+  // speech-window inserts are collected against the ORIGINAL line
+  // numbers, so applying the inserts first shifted every later index
+  // and the drops then cut the wrong lines — observed 2026-10-24: a
+  // lead-in insert near the top moved the animation drops one line
+  // early, orphaning a `source: narration` and leaving the storyboard
+  // unparseable. Going backwards keeps the not-yet-applied positions
+  // valid, and the two kinds never overlap (a scene's captions block
+  // sits above its animations block).
+  const edits: {
+    at: number;
+    kind: "insert" | "drop";
+    to?: number;
+    line?: string;
+  }[] = [];
+  for (const w of speechWindows) {
+    edits.push({ at: w.at, kind: "insert", line: w.line });
   }
-  if (dropRanges.length > 0) {
-    const dropped = new Set<number>();
-    for (const [from, to] of dropRanges) {
-      for (let k = from; k <= to; k++) dropped.add(k);
-    }
-    for (let k = lines.length - 1; k >= 0; k--) {
-      if (dropped.has(k)) lines.splice(k, 1);
+  for (const [from, to] of dropRanges) {
+    edits.push({ at: from, kind: "drop", to });
+  }
+  edits.sort((a, b) => b.at - a.at);
+  for (const edit of edits) {
+    if (edit.kind === "insert") {
+      lines.splice(edit.at, 0, edit.line ?? "");
+    } else {
+      const to = edit.to ?? edit.at;
+      lines.splice(edit.at, to - edit.at + 1);
     }
   }
   await mkdir(path.dirname(storyboardPath), { recursive: true });
@@ -137,6 +153,7 @@ function collectSpeechWindow(
   let holdIdx = -1;
   let captionsIdx = -1;
   let speechIdx = -1;
+  let leadIn = 0;
   for (let k = sceneStart + 1; k < sceneEnd; k++) {
     const line = lines[k]!;
     const holdMatch = line.match(/^(\s*)hold_after_sec:\s*([0-9.]+)\s*$/);
@@ -145,19 +162,28 @@ function collectSpeechWindow(
       holdIdx = k;
       continue;
     }
+    // The opening beat: silence BEFORE the narration. The measured wav
+    // length covers lead-in + speech (+ hold), so the spoken window must
+    // exclude it or the caption text precedes the words it captions.
+    const leadMatch = line.match(/^(\s*)lead_in_sec:\s*([0-9.]+)\s*$/);
+    if (leadMatch) {
+      leadIn = parseFloat(leadMatch[2]!);
+      continue;
+    }
     if (/^\s*captions:\s*$/.test(line)) captionsIdx = k;
     // Already written by a previous pass — leave it alone, or the block
     // would grow a second `speech_sec` key and stop being valid YAML.
     if (/^\s*speech_sec:\s*[0-9.]+\s*$/.test(line)) speechIdx = k;
   }
-  if (holdIdx < 0 || captionsIdx < 0 || hold <= 0) return;
+  if (captionsIdx < 0) return;
+  if (hold <= 0 && leadIn <= 0) return;
+  const speech = measured - hold - leadIn;
+  if (speech <= 0) return;
   if (speechIdx >= 0) {
     const indent = lines[speechIdx]!.match(/^(\s*)/)![1] ?? "";
-    lines[speechIdx] = `${indent}speech_sec: ${(measured - hold).toFixed(2)}`;
+    lines[speechIdx] = `${indent}speech_sec: ${speech.toFixed(2)}`;
     return;
   }
-  const speech = measured - hold;
-  if (speech <= 0) return;
   // The captions block is written AFTER the `captions:` key, so the
   // speech window goes on the following line at the same indent.
   const indent = lines[captionsIdx]!.match(/^(\s*)/)![1] ?? "";
@@ -166,7 +192,7 @@ function collectSpeechWindow(
     line: `${indent}  speech_sec: ${speech.toFixed(2)}`,
   });
   outputs.push(
-    `storyboard.yaml: scene_${sceneKey} speech=${speech.toFixed(2)}s (hold ${hold}s)`,
+    `storyboard.yaml: scene_${sceneKey} speech=${speech.toFixed(2)}s (lead-in ${leadIn}s, hold ${hold}s)`,
   );
 }
 
@@ -261,6 +287,9 @@ export interface StoryboardSceneTiming {
   narration: string;
   /** CS-03: the spoken length when the scene holds silence after it. */
   speechSec?: number | undefined;
+  /** The opening beat: silence BEFORE the voice. Cues start after it, so
+   *  the SRT and the burned-in track agree (CS-07). */
+  leadInSec?: number | undefined;
 }
 
 /** Read per-scene id/duration/narration from the (duration-synced)
@@ -279,6 +308,7 @@ export async function readSceneTimings(
     scenes?: {
       id?: string;
       duration?: number;
+      lead_in_sec?: number;
       narration?: { text?: string };
       captions?: { speech_sec?: number };
     }[];
@@ -290,5 +320,6 @@ export async function readSceneTimings(
       duration: s.duration as number,
       narration: s.narration?.text ?? "",
       speechSec: s.captions?.speech_sec,
+      leadInSec: s.lead_in_sec,
     }));
 }

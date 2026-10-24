@@ -9,21 +9,28 @@ import {
   IMAGE_PROMPT_REVISION,
 } from "@video/draft";
 import { loadLessonStore, promptRules, rulesDigest } from "@video/learn";
-import { RENDERER_REVISION } from "@video/video-renderer";
+import {
+  readSceneCacheMeta,
+  sceneCacheFile,
+  sceneCacheIsFresh,
+  sceneImageDigest,
+  scenesDirFor,
+  RENDERER_REVISION,
+} from "@video/video-renderer";
 import {
   imageCacheKey,
   readImageCacheSidecar,
+  requestedImageSize,
   selfRenderedSceneNumbers,
   storyboardSceneComponents,
   visualsGateState,
 } from "./visual-cache.js";
 import {
-  EN_VOICE,
-  resolveImageProvider,
+  effectiveTtsVoice,
   ttsCacheKey,
-  workspaceRootFor,
-  ZH_VOICE,
-} from "./index.js";
+  ttsCacheProviderName,
+} from "./tts-cache.js";
+import { resolveImageProvider, workspaceRootFor } from "./index.js";
 
 /**
  * Read-only impact report for `video make --dry-run` (v0.8 plan G2).
@@ -104,8 +111,9 @@ export function computeMakeImpact(
   );
   if (provider !== "none") {
     const selfRendered = selfRenderedSceneNumbers(projectRoot);
-    const reqWidth = provider === "mock" ? 64 : 1920;
-    const reqHeight = provider === "mock" ? 36 : 1080;
+    const reqSize = requestedImageSize(provider);
+    const reqWidth = reqSize.width;
+    const reqHeight = reqSize.height;
     const imageStyle = resolveImageStyle(article.frontmatter.image_style);
     // Same lookup as generateSceneVisuals, or the table predicts spend
     // the render never makes: shared resolver, shared root detection.
@@ -170,19 +178,15 @@ export function computeMakeImpact(
   // default. (This used to read audio-config.yaml's `voice:`, which make
   // ignores on the synthesis path — the table lied whenever the two files
   // disagreed.)
-  const effectiveVoice =
-    article.frontmatter.voice ||
-    (article.frontmatter.language === "en-US" ? EN_VOICE : ZH_VOICE);
+  const effectiveVoice = effectiveTtsVoice(
+    article.frontmatter.voice,
+    article.frontmatter.language,
+  );
   // --fake runs synthesize under the "fake" provider namespace; the impact
   // report has no fake flag, so it can over-report resynthesis there.
-  // Names mirror the providers' `name` fields (MinimaxTTSProvider is
-  // "minimax-tts"), since that is what runTts feeds ttsCacheKey.
-  const effectiveTtsProvider =
-    article.frontmatter.tts_provider === "voicebox"
-      ? "voicebox"
-      : article.frontmatter.tts_provider === "minimax"
-        ? "minimax-tts"
-        : "edge";
+  const effectiveTtsProvider = ttsCacheProviderName(
+    article.frontmatter.tts_provider,
+  );
   article.scenes.forEach((scene) => {
     const wav = path.join(audioDir, `${scene.id}.wav`);
     if (!existsSync(wav)) {
@@ -231,50 +235,90 @@ export function computeMakeImpact(
     // (renderer: `<index>-<slug>.mp4.json`, e.g. 00-scene-01.mp4.json) —
     // article ids may be unpadded (scene_1) and would never match.
     const sb = storyboardSceneComponents(projectRoot);
+    // P1 parity: the renderer's freshness includes the scene image's
+    // content digest; the dry-run applies the same term (shared helper)
+    // so a regenerated jpg is reported as "will render", never "cached".
+    const imageSrcs = new Map<string, string>();
+    const overlaySrcs = new Map<string, string>();
+    try {
+      const sbDoc = parseYaml(storyboardText) as {
+        scenes?: Array<{
+          id?: string;
+          visual?: {
+            component?: string;
+            props?: { src?: unknown; textOverlaySrc?: unknown };
+          };
+        }>;
+      };
+      for (const s of sbDoc.scenes ?? []) {
+        const src = s.visual?.props?.src;
+        if (
+          s.id &&
+          s.visual?.component === "ImageBackground" &&
+          typeof src === "string"
+        ) {
+          imageSrcs.set(s.id, src);
+        }
+        const overlay =
+          (s.visual?.props as { textOverlaySrc?: unknown } | undefined)
+            ?.textOverlaySrc;
+        if (s.id && typeof overlay === "string") {
+          overlaySrcs.set(s.id, overlay);
+        }
+      }
+    } catch {
+      /* unparseable storyboard → image term unresolved → scenes render */
+    }
     article.scenes.forEach((scene, i) => {
       const sbId = sb.ids[i];
       if (sbId === undefined) {
         scenesRender.push(scene.id);
         return;
       }
-      const slug = sbId.replace(/[^a-zA-Z0-9_-]+/g, "_") || "scene";
-      const sidecar = readTextSafe(
-        path.join(
-          projectRoot,
-          "scenes",
-          `${String(i).padStart(2, "0")}-${slug}.mp4.json`,
-        ),
+      const sidecar = readSceneCacheMeta(
+        sceneCacheFile(scenesDirFor(projectRoot, false), i, sbId),
       );
-      if (sidecar === null) {
-        scenesRender.push(scene.id);
-        return;
-      }
-      try {
-        const m = JSON.parse(sidecar) as {
-          sceneHash?: string;
-          rendererRevision?: string;
-        };
-        const frag = extractSceneFragment(storyboardText, sbId);
-        const hash = frag === null ? null : hashSceneFragment(frag);
-        // The renderer revision is a plain field in the sidecar, so the
-        // dry-run can check it with a string compare — it has no compiled
-        // renderPlan and must not rebuild one just to answer "will this
-        // re-render?". projectHash (theme/brand/geometry) still gates
-        // freshness at make time and is not predicted here; it only ever
-        // forces MORE work than this table shows, never less.
-        if (
-          m.sceneHash &&
-          hash &&
-          m.sceneHash === hash &&
-          m.rendererRevision === RENDERER_REVISION
-        ) {
-          scenesCached.push(scene.id);
-        } else {
-          scenesRender.push(scene.id);
-        }
-      } catch {
-        scenesRender.push(scene.id);
-      }
+      const frag = extractSceneFragment(storyboardText, sbId);
+      const sceneHash = frag === null ? null : hashSceneFragment(frag);
+      // The dry-run's terms are the offline SUBSET of the renderer's:
+      // fragment hash, renderer revision, image content digest. The terms
+      // it cannot compute without compiling (projectHash, captions, audio)
+      // are omitted, so the table can only under-predict work — but every
+      // term it DOES pass runs through the same sceneCacheIsFresh the
+      // renderer calls, so the two sides cannot drift apart again (the
+      // "lying dry-run" class: 2026-10-17 captions, 2026-10-24 image
+      // bytes — both needed hand parity patches before this).
+      // The Pillow overlay PNG is a render input too — a regenerated
+      // banner must predict "render", not "cached" (2026-10-24).
+      const overlaySrc = overlaySrcs.get(sbId);
+      const overlayDigest =
+        overlaySrc === undefined
+          ? null
+          : sceneImageDigest(
+              path.isAbsolute(overlaySrc)
+                ? overlaySrc
+                : path.join(projectRoot, overlaySrc),
+            );
+      const src = imageSrcs.get(sbId);
+      const digest =
+        src === undefined
+          ? null
+          : sceneImageDigest(
+              path.isAbsolute(src) ? src : path.join(projectRoot, src),
+            );
+      const fresh =
+        src !== undefined && digest === null
+          ? false // image declared but unreadable — never report "cached"
+          : sceneCacheIsFresh(sidecar, {
+              sceneHash,
+              rendererRevision: RENDERER_REVISION,
+              ...(digest !== null ? { imageHash: digest } : {}),
+              ...(overlayDigest !== null
+                ? { overlayHash: overlayDigest }
+                : {}),
+            });
+      if (fresh) scenesCached.push(scene.id);
+      else scenesRender.push(scene.id);
     });
   }
 

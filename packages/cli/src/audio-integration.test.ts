@@ -79,7 +79,10 @@ describe("video audio (todo 2) — FakeTTSProvider integration", () => {
     expect(wav.slice(8, 12).toString()).toBe("WAVE");
 
     const srt = readFileSync(path.join(root, "captions", "zh-CN.srt"), "utf8");
-    expect(srt).toContain("00:00:00,000 --> 00:00:05,000");
+    // CS-07 contract: cue times come from MEASURED audio (syncSceneDurations
+    // + buildCaptionCues — the same builder the burn-in track uses), not the
+    // storyboard's LLM-estimated duration. The first cue starts at zero.
+    expect(srt).toMatch(/00:00:00,000 --> 00:00:0[\d],\d{3}/);
     expect(srt).toContain("你好世界");
 
     const runs = execFileSync("ls", [path.join(root, "runs")], {

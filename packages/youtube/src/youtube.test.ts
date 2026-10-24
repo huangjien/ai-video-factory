@@ -32,11 +32,11 @@ description: |
 
   #AI #CoT #LLM
 chapters:
-  - timestamp: "00:00"
+  - scene: 1
     title: Hook
-  - timestamp: "00:05"
+  - scene: 3
     title: Problem
-  - timestamp: "00:11"
+  - scene: 6
     title: Explanation
 thumbnail_prompt: "Young woman · eyes wide with surprise · cozy kitchen at dawn · warm side-light · curious and hopeful · 35mm cinematic"
 shorts_hook: "A person leans toward camera · reveals the surprise with a clear voice · kitchen morning light · curious hopeful tone"`;
@@ -65,9 +65,25 @@ describe("YouTubePackageSchema (todo 1) — §58 Phase 9", () => {
   });
 
   it("rejects chapter with bad timestamp format", () => {
-    const bad = goodYaml.replace('timestamp: "00:00"', 'timestamp: "0:00"');
+    // The timestamp is optional now (the pipeline derives it), but when
+    // the model does send one it must be well-formed.
+    const bad = goodYaml.replace(
+      "  - scene: 1",
+      '  - scene: 1\n    timestamp: "0:00"',
+    );
     const r = YouTubePackageSchema.safeParse(parseYaml(bad));
     expect(r.success).toBe(false);
+  });
+
+  it("rejects a chapter with an unusable scene position", () => {
+    // The scene is what the timestamp is derived from — a position that
+    // is not a positive integer cannot be placed on the timeline.
+    for (const bad of ["0", "-1", "1.5", '"3"']) {
+      const r = YouTubePackageSchema.safeParse(
+        parseYaml(goodYaml.replace("scene: 1", `scene: ${bad}`)),
+      );
+      expect(r.success).toBe(false);
+    }
   });
 });
 

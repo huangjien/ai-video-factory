@@ -787,6 +787,13 @@ const sceneSchema = z
      */
     hold_after_sec: z.number().min(0).max(30).optional(),
     /**
+     * Seconds of silence BEFORE this scene's narration — the opening
+     * beat. The narration wav carries the silence at its front, so the
+     * scene's duration is lead-in + speech + hold, and the caption cues
+     * are offset by the lead-in so the text appears with the voice.
+     */
+    lead_in_sec: z.number().min(0).max(10).optional(),
+    /**
      * CS-06 — a text layer composited OVER the scene's own image. It
      * never replaces the picture and never becomes its own scene: the
      * film's title sits in the opening shot's quiet area and fades, and a

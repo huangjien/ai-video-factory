@@ -376,6 +376,34 @@ describe("runScoredDraft", () => {
     expect(p.requests).toHaveLength(2);
   });
 
+  it("retries the judge once on a parse breakdown instead of aborting the loop", async () => {
+    const p = new FakeProvider([
+      GOOD_ARTICLE, // attempt 1 draft
+      "not json at all {{{", // attempt 1 judge — parse breakdown
+      buildPassingRaw(4), // judge retry — valid
+    ]);
+    const r = await runScoredDraft(INPUT, p, null, { minScore: 70 });
+    expect(r.passing).toBe(true);
+    expect(r.attempts).toHaveLength(1);
+    expect(r.attempts[0]!.score).not.toBeNull();
+    expect(r.attempts[0]!.scoreError).toBeUndefined();
+    expect(p.requests).toHaveLength(3); // 1 draft + 2 judge calls
+  });
+
+  it("two consecutive judge breakdowns still break the loop after exactly one retry", async () => {
+    const p = new FakeProvider([
+      GOOD_ARTICLE, // attempt 1 draft
+      "bad one", // judge fails
+      "bad two", // retry fails → bounded, accept unreviewed
+    ]);
+    const r = await runScoredDraft(INPUT, p, null, { minScore: 70 });
+    expect(r.passing).toBe(false);
+    expect(r.attempts).toHaveLength(1);
+    expect(r.attempts[0]!.score).toBeNull();
+    expect(r.attempts[0]!.scoreError).toBeDefined();
+    expect(p.requests).toHaveLength(3); // bounded at one retry
+  });
+
   it("regenerates below the bar, passes judge feedback into the next draft", async () => {
     const p = new FakeProvider([
       GOOD_ARTICLE,

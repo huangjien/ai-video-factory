@@ -235,4 +235,32 @@ describe("T6.1 extended QA checks — injected defects are caught with fixes", (
     expect(fresh.checks.ok).toBe(true);
     expect(fresh.findings).toHaveLength(0);
   });
+
+  it("DEFECT 7 — a low-contrast illustration cut is detected (threshold 0.02, was 0.4)", async () => {
+    // two same-palette frames differing only in a 40x40 corner — the
+    // illustration-cut regime that scores ~0.01-0.04 on the scene metric
+    const lowContrast = path.join(dir, "low-contrast.mp4");
+    await execFileAsync("ffmpeg", [
+      "-y",
+      "-f", "lavfi", "-i", "color=c=0x202020:size=320x180:rate=30:duration=1",
+      "-f", "lavfi", "-i", "color=c=0x202020:size=320x180:rate=30:duration=1,drawbox=x=280:y=140:w=40:h=40:color=white:t=fill",
+      "-filter_complex", "[0:v][1:v]concat=n=2:v=1:a=0[out]",
+      "-map", "[out]",
+      lowContrast,
+    ]);
+    // sanity: the cut genuinely scores below the OLD 0.4 calibration
+    const probe = await execFileAsync("ffmpeg", [
+      "-i", lowContrast,
+      "-vf", "select='gte(scene,0.4)',showinfo",
+      "-f", "null", "-",
+    ]);
+    expect(probe.stderr.match(/pts_time:[\d.]+/g)).toBeNull();
+
+    const p = plan([{}, { startFrame: 30, durationInFrames: 60 }]);
+    p.totalFrames = 90;
+    const { checks } = await checkSceneBoundaries(p, lowContrast);
+    expect(checks.detectedCutsSec.some((d) => Math.abs(d - 1) <= 0.5)).toBe(
+      true,
+    );
+  });
 });

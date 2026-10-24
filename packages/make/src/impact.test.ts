@@ -4,6 +4,8 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { createHash } from "node:crypto";
 import { parseArticleWithRecovery } from "@video/draft";
+import { extractSceneFragment, hashSceneFragment } from "@video/workflow";
+import { RENDERER_REVISION } from "@video/video-renderer";
 import { generateSceneVisuals } from "./index.js";
 import { computeMakeImpact, formatImpact } from "./impact.js";
 import { ttsCacheKey } from "./tts-cache.js";
@@ -58,6 +60,59 @@ async function mkProject(article = ARTICLE): Promise<string> {
 }
 
 describe("computeMakeImpact", () => {
+  it("P1 parity: regenerated jpg bytes predict render even with an intact fragment", async () => {
+    const dir = await mkProject();
+    try {
+      const sb = `project:\n  id: impact\n  language: zh-CN\nscenes:\n  - id: scene-01\n    visual:\n      component: ImageBackground\n      props:\n        src: assets/images/scene_1.jpg\n  - id: scene-02\n    visual:\n      component: Title\n      props: {}\n`;
+      await mkdir(path.join(dir, "scenes"), { recursive: true });
+      await mkdir(path.join(dir, "storyboard"), { recursive: true });
+      await writeFile(
+        path.join(dir, "storyboard", "storyboard.yaml"),
+        sb,
+        "utf8",
+      );
+      await writeFile(path.join(dir, "assets", "images", "scene_1.jpg"), "v1");
+      await writeFile(path.join(dir, "assets", "images", "scene_2.jpg"), "v1");
+      const frag = extractSceneFragment(sb, "scene-01");
+      const meta = {
+        sceneHash: hashSceneFragment(frag ?? ""),
+        rendererRevision: RENDERER_REVISION,
+        imageHash: `sha256:${createHash("sha256")
+          .update("v1")
+          .digest("hex")
+          .slice(0, 16)}`,
+      };
+      await writeFile(
+        path.join(dir, "scenes", "00-scene-01.mp4.json"),
+        JSON.stringify(meta),
+        "utf8",
+      );
+      const frag2 = extractSceneFragment(sb, "scene-02");
+      await writeFile(
+        path.join(dir, "scenes", "01-scene-02.mp4.json"),
+        JSON.stringify({
+          sceneHash: hashSceneFragment(frag2 ?? ""),
+          rendererRevision: RENDERER_REVISION,
+        }),
+        "utf8",
+      );
+
+      const fresh = computeMakeImpact(dir, { imageProvider: "mock" });
+      expect(fresh.scenesRender).toEqual([]);
+      expect(fresh.scenesCached).toContain("scene_1");
+      expect(fresh.scenesCached).toContain("scene_2");
+
+      // regenerate the jpg in place (same path, same prompt, new bytes)
+      // → the dry-run must predict render for exactly that scene
+      await writeFile(path.join(dir, "assets", "images", "scene_1.jpg"), "v2");
+      const impact = computeMakeImpact(dir, { imageProvider: "mock" });
+      expect(impact.scenesRender).toEqual(["scene_1"]);
+      expect(impact.scenesCached).toEqual(["scene_2"]);
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+
   it("fresh project: everything generates/synthesizes/renders", async () => {
     const dir = await mkProject();
     try {

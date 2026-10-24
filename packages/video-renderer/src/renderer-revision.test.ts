@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { RENDERER_REVISION, sceneCacheIsFresh } from "./pipeline.js";
+import { RENDERER_REVISION, sceneCacheIsFresh } from "./scene-cache.js";
 
 /**
  * A rendered scene mp4 is reused when its storyboard fragment, its
@@ -10,8 +10,8 @@ import { RENDERER_REVISION, sceneCacheIsFresh } from "./pipeline.js";
  * replayed with the old pixels.
  *
  * Observed 2026-10-17: the caption plate and 45px type were changed and all
- * 59 cached scene mp4s across the four shipped projects still matched, so the
- * change was invisible in any re-render. `rendererRevision` closes that.
+ * 59 cached scene mp4s across the four shipped projects still matched, so
+ * the change was invisible in any re-render. `rendererRevision` closes that.
  */
 
 const HASH_A = "sha256:" + "a".repeat(64);
@@ -30,20 +30,24 @@ const sidecar = (
 
 describe("sceneCacheIsFresh — the renderer is an input", () => {
   it("is fresh when everything matches, including the revision", () => {
-    expect(sceneCacheIsFresh(sidecar(), HASH_A, HASH_B, null, 0)).toBe(true);
+    expect(
+      sceneCacheIsFresh(sidecar(), {
+        sceneHash: HASH_A,
+        projectHash: HASH_B,
+        audio: { path: null, mtimeMs: 0 },
+      }),
+    ).toBe(true);
   });
 
   it("is stale when the renderer revision moved, plan untouched", () => {
     // The exact case that left 59 stale mp4s in place: no storyboard edit,
     // no theme flip, no audio change — only the renderer moved.
     expect(
-      sceneCacheIsFresh(
-        sidecar({ rendererRevision: "1" }),
-        HASH_A,
-        HASH_B,
-        null,
-        0,
-      ),
+      sceneCacheIsFresh(sidecar({ rendererRevision: "1" }), {
+        sceneHash: HASH_A,
+        projectHash: HASH_B,
+        audio: { path: null, mtimeMs: 0 },
+      }),
     ).toBe(false);
   });
 
@@ -56,25 +60,33 @@ describe("sceneCacheIsFresh — the renderer is an input", () => {
       audioMtimeMs: 0,
       renderedAt: "t",
     };
-    expect(sceneCacheIsFresh(legacy, HASH_A, HASH_B, null, 0)).toBe(false);
+    expect(
+      sceneCacheIsFresh(legacy, {
+        sceneHash: HASH_A,
+        projectHash: HASH_B,
+        audio: { path: null, mtimeMs: 0 },
+      }),
+    ).toBe(false);
   });
 
   it("accepts a sidecar stamped with the current revision", () => {
     expect(
-      sceneCacheIsFresh(
-        sidecar({ rendererRevision: RENDERER_REVISION }),
-        HASH_A,
-        HASH_B,
-        null,
-        0,
-        RENDERER_REVISION,
-      ),
+      sceneCacheIsFresh(sidecar({ rendererRevision: RENDERER_REVISION }), {
+        sceneHash: HASH_A,
+        projectHash: HASH_B,
+        rendererRevision: RENDERER_REVISION,
+        audio: { path: null, mtimeMs: 0 },
+      }),
     ).toBe(true);
   });
 
   it("still goes stale on a theme flip (projectHash unchanged behaviour)", () => {
     expect(
-      sceneCacheIsFresh(sidecar(), HASH_A, "sha256:" + "c".repeat(64), null, 0),
+      sceneCacheIsFresh(sidecar(), {
+        sceneHash: HASH_A,
+        projectHash: "sha256:" + "c".repeat(64),
+        audio: { path: null, mtimeMs: 0 },
+      }),
     ).toBe(false);
   });
 

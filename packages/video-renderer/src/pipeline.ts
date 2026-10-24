@@ -1,5 +1,5 @@
 import { existsSync, readFileSync } from "node:fs";
-import { readFile, stat, writeFile } from "node:fs/promises";
+import { readFile, stat } from "node:fs/promises";
 import { execSync } from "node:child_process";
 import path from "node:path";
 import { parse as parseYaml } from "yaml";
@@ -13,6 +13,15 @@ import {
 } from "@video/vdsl";
 import { syncSceneDurations, probeAudioDuration } from "@video/media";
 import { sharedBrowser } from "./browser.js";
+import {
+  readSceneCacheMeta,
+  sceneCacheFile,
+  sceneCacheIsFresh,
+  sceneImageDigest,
+  scenesDirFor,
+  writeSceneCacheMeta,
+  RENDERER_REVISION,
+} from "./scene-cache.js";
 import { REGISTRY } from "@video/video-components";
 import {
   extractSceneFragment,
@@ -185,121 +194,6 @@ function parseBrandFile(
     : null;
 }
 
-/** Per-scene cache file name: index-prefixed (stable concat order) with a
- *  filesystem-safe slug of the scene id. */
-function sceneFileName(index: number, id: string): string {
-  const slug = id.replace(/[^a-zA-Z0-9_-]+/g, "_") || "scene";
-  return `${String(index).padStart(2, "0")}-${slug}.mp4`;
-}
-
-interface SceneCacheMeta {
-  sceneHash: string;
-  /** Hash of project-level render inputs (style.theme + project geometry).
-   * Absent on sidecars written before this field existed — treated as a
-   * mismatch so legacy caches invalidate exactly once. */
-  projectHash?: string;
-  /** Hash of the scene's COMPILED caption lines. The storyboard fragment
-   * cannot see wrapText output: a change to @video/media's wrapText or the
-   * compile-time caption width alters the burned-in lines while every
-   * fragment hash stays identical. Absent on legacy sidecars — mismatch. */
-  captionsHash?: string;
-  /** `RENDERER_REVISION` that produced these pixels. Explicit rather than
-   * folded into `projectHash` so `video make --dry-run` can check it with a
-   * string compare — the dry-run has no compiled renderPlan and must not
-   * reconstruct one just to answer "will this re-render?". */
-  rendererRevision?: string;
-  audioPath?: string;
-  audioMtimeMs?: number;
-  renderedAt: string;
-}
-
-/**
- * Identity of the renderer build, recorded in every scene cache sidecar.
- *
- * The cache decides freshness from the storyboard fragment, the project
- * inputs, and the audio. None of those move when the RENDERER changes —
- * editing a component's colour, type size, or layout leaves all three
- * identical, so every cached scene mp4 is replayed with the old pixels.
- * That is not hypothetical: changing the caption treatment on 2026-10-17
- * left all 59 cached scene mp4s across the four shipped projects matching,
- * i.e. the change was invisible in any re-render.
- *
- * Bump this whenever a change under `video-renderer/src` or
- * `video-components/src` alters what a frame looks like. It does NOT need
- * bumping for refactors with identical output — an unnecessary bump
- * re-renders every scene, which is expensive.
- *
- * Frame-affecting inputs also live OUTSIDE those two directories: the
- * compiled caption lines come from @video/media's `wrapText` and the vdsl
- * compiler (compile.ts). Caption-content changes are covered by the
- * sidecar's `captionsHash`, but a wrapText/compile change that alters
- * frames in other ways (timing, geometry) still requires a revision bump.
- *
- * Same contract as `IMAGE_PROMPT_REVISION` in @video/draft, and deliberately
- * manual: hashing the source tree would re-render on every comment edit.
- */
-export const RENDERER_REVISION = "7";
-// 2: caption type + halo + no-plate overlay
-// 3: the title card preserves inter-word spaces — each glyph is its own flex
-// item, so a bare space collapsed to zero width and headlines rendered run-on.
-// 4: ImageBackground's caption band now shares captionStyle.ts geometry
-// (bottom offset, max-width, padding) with the CaptionsOverlay track and
-// drops the title-face override — image-scene captions moved.
-// 5: ImageBackground's veil is bottom-weighted (was a 0.45→0.65 full-frame
-// wash, which cost a paper-white ground half its luma), the img no longer
-// fades in, and `kenBurnsScale: 0` now freezes the opacity ramps too.
-// 6: captions are timed cues — the overlay draws only the cue active at the
-// current frame, so a scene's narration can no longer stack past two rows.
-// 7: the per-scene corner watermark honours `brand.watermark: false`, so a
-// project can drop the inherited mark without dropping the rest of the brand.
-
-/** Cache freshness: the scene fragment, the narration audio, AND every
- * project-level render input (theme, fps/width/height) must match. A
- * style.theme flip leaves all fragment hashes identical — without the
- * projectHash term it silently reused the old-theme MP4s. `captionsHash`
- * (compiled caption lines) is optional: the renderer always passes it;
- * callers without a compiled plan (video make --dry-run) omit it and the
- * term is skipped rather than falsely stale. */
-export function sceneCacheIsFresh(
-  meta: SceneCacheMeta | null,
-  sceneHash: string | null,
-  projectHash: string,
-  audioPath: string | null,
-  audioMtimeMs: number,
-  rendererRevision: string = RENDERER_REVISION,
-  captionsHash: string | null = null,
-): boolean {
-  return (
-    meta !== null &&
-    sceneHash !== null &&
-    meta.sceneHash === sceneHash &&
-    meta.projectHash === projectHash &&
-    // Absent on sidecars written before the field existed — a mismatch,
-    // so pre-existing caches invalidate exactly once.
-    meta.rendererRevision === rendererRevision &&
-    (captionsHash === null || meta.captionsHash === captionsHash) &&
-    (meta.audioPath ?? null) === (audioPath ?? null) &&
-    Math.abs((meta.audioMtimeMs ?? 0) - audioMtimeMs) < 1
-  );
-}
-
-async function readSceneCacheMeta(
-  file: string,
-): Promise<SceneCacheMeta | null> {
-  try {
-    return JSON.parse(await readFile(`${file}.json`, "utf8")) as SceneCacheMeta;
-  } catch {
-    return null;
-  }
-}
-
-async function writeSceneCacheMeta(
-  file: string,
-  meta: SceneCacheMeta,
-): Promise<void> {
-  await writeFile(`${file}.json`, JSON.stringify(meta, null, 2), "utf8");
-}
-
 export interface IncrementalRenderResult {
   /** Scene mp4s in concat order. */
   sceneFiles: string[];
@@ -319,10 +213,7 @@ async function renderScenesIncrementally(
   opts: { draft?: boolean; log?: (line: string) => void } = {},
 ): Promise<IncrementalRenderResult> {
   const log = opts.log ?? (() => {});
-  const scenesDir = path.join(
-    root,
-    opts.draft === true ? "scenes-draft" : "scenes",
-  );
+  const scenesDir = scenesDirFor(root, opts.draft === true);
   const projectHash = hashSceneFragment(
     JSON.stringify({
       project: renderPlan.project,
@@ -335,7 +226,7 @@ async function renderScenesIncrementally(
     renderedSceneIds: [],
   };
   for (const scene of renderPlan.scenes) {
-    const file = path.join(scenesDir, sceneFileName(scene.index, scene.id));
+    const file = sceneCacheFile(scenesDir, scene.index, scene.id);
     result.sceneFiles.push(file);
     const frag = extractSceneFragment(storyboardText, scene.id);
     const sceneHash = frag === null ? null : hashSceneFragment(frag);
@@ -350,17 +241,36 @@ async function renderScenesIncrementally(
         : hashSceneFragment(JSON.stringify(scene.captions.cues));
     const audioPath = scene.audio ? path.join(root, scene.audio) : null;
     const audioM = audioPath ? await mtimeOrZero(audioPath) : 0;
-    const sidecar = await readSceneCacheMeta(file);
+    // P1 (2026-10-24): the image's CONTENT is a render input for
+    // ImageBackground scenes — a same-prompt regeneration changes bytes,
+    // not the fragment hash, and the cache used to replay old pixels.
+    const imageSrc =
+      scene.component === "ImageBackground" &&
+      typeof scene.props?.src === "string"
+        ? (scene.props as { src: string }).src
+        : null;
+    const imageHash = imageSrc === null ? null : sceneImageDigest(imageSrc);
+    // The Pillow text-overlay PNG is composited INTO the frame at render
+    // time, so its content is a render input too (2026-10-24: banners
+    // re-rendered with a CJK font while cached scene mp4s kept the old
+    // tofu boxes).
+    const overlaySrc =
+      typeof scene.props?.textOverlaySrc === "string"
+        ? (scene.props as { textOverlaySrc: string }).textOverlaySrc
+        : null;
+    const overlayHash =
+      overlaySrc === null ? null : sceneImageDigest(overlaySrc);
+    const sidecar = readSceneCacheMeta(file);
     if (
-      sceneCacheIsFresh(
-        sidecar,
+      sceneCacheIsFresh(sidecar, {
         sceneHash,
         projectHash,
-        audioPath,
-        audioM,
-        RENDERER_REVISION,
+        rendererRevision: RENDERER_REVISION,
         captionsHash,
-      )
+        imageHash,
+        overlayHash,
+        audio: { path: audioPath, mtimeMs: audioM },
+      })
     ) {
       log(`  scene ${scene.id}: cached`);
       result.cachedSceneIds.push(scene.id);
@@ -368,10 +278,12 @@ async function renderScenesIncrementally(
     }
     log(`  scene ${scene.id}: rendering`);
     await renderSceneToVideo(renderPlan, scene.id, file);
-    await writeSceneCacheMeta(file, {
+    writeSceneCacheMeta(file, {
       sceneHash: sceneHash ?? "",
       projectHash,
       ...(captionsHash !== null ? { captionsHash } : {}),
+      ...(imageHash !== null ? { imageHash } : {}),
+      ...(overlayHash !== null ? { overlayHash } : {}),
       rendererRevision: RENDERER_REVISION,
       ...(audioPath !== null ? { audioPath, audioMtimeMs: audioM } : {}),
       renderedAt: new Date().toISOString(),

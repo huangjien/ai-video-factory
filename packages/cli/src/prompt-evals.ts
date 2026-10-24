@@ -1,6 +1,11 @@
 import path from "node:path";
 import type { ChatMessage, Provider } from "@video/llm";
-import { chatWithFallback, GLMProvider, MiniMaxProvider } from "@video/llm";
+import {
+  chatWithFallback,
+  extractBalancedJson,
+  GLMProvider,
+  MiniMaxProvider,
+} from "@video/llm";
 import type { AgentInput } from "@video/agent-storyboard";
 import {
   buildMessages as buildStoryboardMessages,
@@ -310,37 +315,9 @@ export class JudgeError extends Error {
   }
 }
 
-/** First balanced `{…}` object, ignoring braces inside strings — the same
- *  extraction the article-review judge relies on. */
-export function extractBalancedJson(text: string): string | null {
-  const start = text.indexOf("{");
-  if (start < 0) return null;
-  let depth = 0;
-  let inString = false;
-  let escaped = false;
-  for (let i = start; i < text.length; i += 1) {
-    const ch = text[i];
-    if (escaped) {
-      escaped = false;
-      continue;
-    }
-    if (ch === "\\") {
-      escaped = true;
-      continue;
-    }
-    if (ch === '"') {
-      inString = !inString;
-      continue;
-    }
-    if (inString) continue;
-    if (ch === "{") depth += 1;
-    else if (ch === "}") {
-      depth -= 1;
-      if (depth === 0) return text.slice(start, i + 1);
-    }
-  }
-  return null;
-}
+/** First balanced `{…}` object — the shared extractor in @video/llm
+ *  (the same one the article-review judge relies on). */
+export { extractBalancedJson } from "@video/llm";
 
 /** Coerce one judge value into 0-10. LLMs emit floats and the occasional 11.
  *  A non-numeric value is a failure, not a silent zero: `Number(null)`,

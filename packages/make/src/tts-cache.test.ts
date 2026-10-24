@@ -157,3 +157,67 @@ describe("ttsCacheKey — provider + language namespacing", () => {
     );
   });
 });
+
+describe("ttsCacheKey — the opening beat (lead-in)", () => {
+  it("changes the key when a lead-in is added", () => {
+    // The lead-in silence changes the WAV's bytes, so it belongs in the
+    // key — otherwise a scene that gained (or lost) its opening beat
+    // would keep replaying the old audio.
+    const withoutLeadIn = ttsCacheKey("n", "v", 0.3, "edge", "zh-CN");
+    const withLeadIn = ttsCacheKey(
+      "n",
+      "v",
+      0.3,
+      "edge",
+      "zh-CN",
+      undefined,
+      undefined,
+      undefined,
+      1.2,
+    );
+    expect(withLeadIn).not.toBe(withoutLeadIn);
+    expect(
+      ttsCacheKey(
+        "n",
+        "v",
+        0.3,
+        "edge",
+        "zh-CN",
+        undefined,
+        undefined,
+        undefined,
+        1.2,
+      ),
+    ).not.toBe(
+      ttsCacheKey(
+        "n",
+        "v",
+        0.3,
+        "edge",
+        "zh-CN",
+        undefined,
+        undefined,
+        undefined,
+        2.4,
+      ),
+    );
+  });
+
+  it("leaves the key untouched when no lead-in is set", () => {
+    // The pinned hash above is the regression guard: adding a term that
+    // is always present would re-synthesize every scene in every project.
+    expect(ttsCacheKey("n", "v", 0.3, "edge", "zh-CN")).toBe(
+      ttsCacheKey(
+        "n",
+        "v",
+        0.3,
+        "edge",
+        "zh-CN",
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+      ),
+    );
+  });
+});

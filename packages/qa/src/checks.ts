@@ -324,7 +324,11 @@ export async function checkSceneBoundaries(
       "-i",
       videoPath,
       "-vf",
-      "select='gte(scene,0.4)',showinfo",
+      // 0.02, not the camera-footage 0.4: illustration-to-illustration cuts
+      // share most pixels between consecutive scenes and score ~0.01-0.02
+      // (measured on carlo-pizza 2026-10-24 — 0.4 detected 0/45 hard cuts,
+      // 0.02 detected 24 at pts exactly on expected starts).
+      "select='gte(scene,0.02)',showinfo",
       "-f",
       "null",
       "-",

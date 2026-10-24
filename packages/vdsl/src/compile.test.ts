@@ -112,6 +112,40 @@ scenes:
     }
   });
 
+  it("offsets caption cues by a scene's lead_in_sec (the opening beat)", () => {
+    // The voice starts after the lead-in silence, so the caption must
+    // start there too — otherwise the burned caption precedes the words
+    // it is captioning.
+    const withLeadIn = `schema_version: "0.2"
+project: {id: t, language: zh-CN, fps: 30, width: 1920, height: 1080}
+scenes:
+  - id: a
+    duration: 8
+    lead_in_sec: 1.5
+    narration: {text: "这是一段开场旁白，用来测试字幕与前导静音的对齐。"}
+    captions: {source: narration}
+    visual: {component: Title, props: {text: "a"}}
+`;
+    const { renderPlan } = compileStoryboard(withLeadIn, "/proj");
+    const cues = renderPlan.scenes[0]?.captions?.cues ?? [];
+    expect(cues.length).toBeGreaterThan(0);
+    expect(cues[0]?.startSec).toBeCloseTo(1.5, 3);
+    for (const cue of cues) {
+      expect(cue.startSec).toBeGreaterThanOrEqual(1.5);
+    }
+  });
+
+  it("keeps cue timing at zero when a scene has no lead-in", () => {
+    const { renderPlan } = compileStoryboard(validStoryboardYaml, "/proj");
+    const first = renderPlan.scenes[0];
+    expect(first?.captions?.cues).toBeDefined();
+    expect(first?.captions?.cues.length).toBeGreaterThan(0);
+    for (const cue of first?.captions?.cues ?? []) {
+      expect(cue.lines.length).toBeLessThanOrEqual(2);
+      expect(cue.endSec).toBeGreaterThan(cue.startSec);
+    }
+  });
+
   it("exposes ANIMATION_ENTRANCES and TRANSITIONS constants", () => {
     expect(ANIMATION_ENTRANCES).toContain("fade");
     expect(TRANSITIONS).toContain("cut");

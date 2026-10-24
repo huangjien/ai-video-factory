@@ -1,5 +1,5 @@
 import { existsSync } from "node:fs";
-import { readdir, readFile } from "node:fs/promises";
+import { readdir, readFile, stat } from "node:fs/promises";
 import path from "node:path";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
@@ -250,6 +250,65 @@ export interface BoundaryChecks {
  * scores and compared to the plan's expected boundaries. Fades blur the
  * exact timestamp, so this is tolerance- and warn-level — the contact
  * sheet remains the visual ground truth. */
+export interface StaleRenderChecks {
+  checked: number;
+  stale: string[];
+  ok: boolean;
+}
+
+/**
+ * Stale scene-render detection (learned 2026-10-24,
+ * ai-era-software-engineering-11-shifts-en): the per-scene mp4 cache keys
+ * do NOT include the scene image's content, so a regenerated scene_N.jpg
+ * does not invalidate scenes/NN-scene-XX.mp4 — the render replays the OLD
+ * picture and the video becomes a patchwork of eras. Compare mtimes: an
+ * mp4 older than its scene image means the shipped frame is stale.
+ */
+export async function checkStaleSceneRenders(
+  plan: RenderPlan,
+  projectRoot: string,
+): Promise<{ findings: QaFixableFinding[]; checks: StaleRenderChecks }> {
+  const findings: QaFixableFinding[] = [];
+  const stale: string[] = [];
+  let checked = 0;
+  const scenesDir = path.join(projectRoot, "scenes");
+  if (!existsSync(scenesDir)) {
+    return { findings, checks: { checked: 0, stale: [], ok: true } };
+  }
+  const files = await readdir(scenesDir);
+  for (const scene of plan.scenes) {
+    if (scene.component !== "ImageBackground") continue;
+    const src =
+      typeof (scene.props as { src?: unknown } | undefined)?.src === "string"
+        ? ((scene.props as { src: string }).src)
+        : undefined;
+    if (!src || !existsSync(src)) continue;
+    const idNum = scene.id?.match(/scene[-_]?(\d+)/)?.[1];
+    if (idNum === undefined) continue;
+    const n = parseInt(idNum, 10);
+    const mp4File = files.find((f) => {
+      const fm = f.match(/scene[-_]?(\d+)\.mp4$/);
+      return fm !== null && fm[1] !== undefined && parseInt(fm[1], 10) === n;
+    });
+    if (mp4File === undefined) continue; // no render at all — not this check's job
+    const [imgStat, mp4Stat] = await Promise.all([
+      stat(src),
+      stat(path.join(scenesDir, mp4File)),
+    ]);
+    checked += 1;
+    if (mp4Stat.mtimeMs < imgStat.mtimeMs) {
+      stale.push(scene.id ?? `scene-${n}`);
+      findings.push({
+        level: "warn",
+        check: "stale-render",
+        message: `scene ${n}'s mp4 predates its regenerated scene image — the video may show a stale picture`,
+        fix: "rm scenes/*.mp4 scenes/*.json and re-run `video make` to re-render the affected scenes.",
+      });
+    }
+  }
+  return { findings, checks: { checked, stale, ok: stale.length === 0 } };
+}
+
 export async function checkSceneBoundaries(
   plan: RenderPlan,
   videoPath: string,

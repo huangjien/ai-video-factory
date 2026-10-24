@@ -5,6 +5,7 @@ import {
   mkdtempSync,
   readFileSync,
   rmSync,
+  utimesSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
@@ -17,6 +18,7 @@ import {
   checkCaptions,
   checkSceneAudioSync,
   checkSceneBoundaries,
+  checkStaleSceneRenders,
   parseSrt,
 } from "./index.js";
 
@@ -200,5 +202,37 @@ describe("T6.1 extended QA checks — injected defects are caught with fixes", (
       true,
     );
     expect(checks.ok).toBe(true);
+  });
+
+  it("DEFECT 6 — a scene mp4 older than its regenerated image is a stale-render warn", async () => {
+    const imgDir = path.join(dir, "assets", "images");
+    const scenesDir = path.join(dir, "scenes");
+    mkdirSync(imgDir, { recursive: true });
+    mkdirSync(scenesDir, { recursive: true });
+    const img = path.join(imgDir, "scene_1.jpg");
+    writeFileSync(img, "jpg");
+    const mp4 = path.join(scenesDir, "01-scene-01.mp4");
+    writeFileSync(mp4, "mp4");
+    // mp4 rendered BEFORE the image was last regenerated → stale
+    const old = new Date(Date.now() - 60_000);
+    utimesSync(mp4, old, old);
+    const p = plan([
+      {
+        component: "ImageBackground",
+        renderer: "remotion",
+        props: { src: img },
+      },
+    ]);
+    const { findings, checks } = await checkStaleSceneRenders(p, dir);
+    expect(checks.checked).toBe(1);
+    expect(checks.ok).toBe(false);
+    expect(findings).toHaveLength(1);
+    expect(findings[0]).toMatchObject({ level: "warn", check: "stale-render" });
+
+    // a fresh render (mp4 newer than the image) passes clean
+    utimesSync(mp4, new Date(), new Date());
+    const fresh = await checkStaleSceneRenders(p, dir);
+    expect(fresh.checks.ok).toBe(true);
+    expect(fresh.findings).toHaveLength(0);
   });
 });

@@ -193,12 +193,14 @@ async function runTextOverlayPass(projectRoot: string): Promise<string[]> {
     if (scene.visual?.component !== "ImageBackground") continue;
     const idNum = scene.id?.match(/scene[-_]?(\d+)/)?.[1];
     if (idNum === undefined) continue;
+    // pillow-text-overlay.py writes UNPADDED names (scene_2.png) while
+    // ids are zero-padded (scene-02) — normalize or 2-9 never match.
     const overlayPath = path.join(
       projectRoot,
       "assets",
       "images",
       "text",
-      `scene_${idNum}.png`,
+      `scene_${parseInt(idNum, 10)}.png`,
     );
     if (!existsSync(overlayPath)) continue;
     scene.visual.props = {

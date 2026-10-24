@@ -31,3 +31,4 @@ projects/benchmark-v01/output/
 __pycache__/
 projects/benchmark-v01/runs/
 projects/benchmark-v01/youtube/
+stderr.txt

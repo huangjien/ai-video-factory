@@ -243,6 +243,8 @@ cache key.** Bump the matching revision when you edit the thing it names.
 | Scene image (`assets/images/scene_N.jpg`) | scene content + style + provider + `learnedDigest` + `promptRevision` | `IMAGE_PROMPT_REVISION` in `packages/draft/src/image-prompt.ts` | the brief expander prompt, its stripping rules, or its instruction text changes |
 | Image brief (`assets/images/.prompt-cache/*.json`) | scene content + style + learned + `IMAGE_PROMPT_REVISION` | same | same |
 
+⚠️ Known blind spot (2026-10-24): the scene-mp4 key omits the jpg's content — a regenerated image replays the OLD render. `video qa` now flags this as `stale-render`; until the key includes an image digest, force re-renders with `rm scenes/*.mp4 scenes/*.json`.
+
 Why this bit us twice, on the same day:
 
 - Changing the caption treatment left all **59** cached scene mp4s across the
@@ -593,6 +595,10 @@ packages/
 - **Render stuck on port**: Remotion needs a free port; check `output/` for crash logs.
 - **Storyboard schema mismatch**: `video validate projects/<id>/storyboard/storyboard.yaml --root projects/<id>`.
 - **Edge TTS fails**: try `--fake` to confirm pipeline; fall back to a different voice via `audio-config.yaml`.
+- **Style consistency across scenes**: sampling drifts ground dominance (warm cream vs cool teal) even inside a locked-palette style. Steer per-scene grounds in the `visual:` line ("on a warm cream ground") when the block must match; regenerate rejects by deleting `scene_N.jpg` + `scene_N.cache.json`. Sketch idioms (whiteboard) render poorly on minimax (thin pen ink, palette drift) — prefer painted styles there, or `--image-provider openai`.
+- **Scene-mp4 cache ignores image content**: regenerating `scene_N.jpg` does NOT invalidate `scenes/NN-scene-XX.mp4` — the video silently replays the old picture (symptom: "style inconsistent from X:XX to Y:YY" while the contact sheet looks fine). `video qa` flags this as `stale-render`; fix by `rm scenes/*.mp4 scenes/*.json` and re-running `video make`.
+- **en-US drafts need `captions_source: caption`**: narration source overflows the caption safe area and `video make` refuses to render. Add it to `article.md` frontmatter after drafting. Note: patching frontmatter does NOT re-derive an existing storyboard (sync only fires on scene-id changes) — `rm storyboard/storyboard.yaml` to force re-derivation.
+- **Long LLM steps: run foreground, retry once**: GLM http2 streams occasionally die mid-draft (`ECONNRESET` ~8min in, unhandled). Backgrounded CLI steps can also be killed silently between harness turns. Re-run the same command in the foreground before switching providers; nothing is written on failure, so retries are clean.
 - **Disk usage**: `node_modules`, `output/`, and Remotion caches grow fast; `pnpm store prune` periodically.
 
 ## 7. More reading
@@ -602,3 +608,4 @@ packages/
 - `docs/architecture.md` — package boundaries and design decisions
 - `docs/RELEASES.md` — version history
 - `docs/AI_Video_Factory_Design_and_Plan_v1.1.md` — the canonical design doc
+- `.pi/agents/video-improver.md` — the `video-factory.video-improver` subagent: retrieves lessons/QA/review signals and proposes (or, on explicit "apply", lands) pipeline improvements. Spawn it when the operator asks to improve the factory from accumulated experience.

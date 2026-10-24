@@ -19,3 +19,40 @@ lessons:
     firstSeenAt: 2026-10-17T09:00:00.000Z
     lastSeenAt: 2026-10-17T09:00:00.000Z
     highConfidence: false
+  - id: "image-prompt:avoid whiteboard/marker-sketch styles on the minimax provider - strokes come out as thin pen ink with off-palette colors"
+    scope: image-prompt
+    statement: >-
+      avoid whiteboard/marker-sketch styles on the minimax provider - strokes
+      come out as thin pen ink with off-palette colors; use painted styles
+      (editorial) on minimax, or switch provider for sketch idioms
+    seenCount: 1
+    projects:
+      - ai-era-software-engineering-11-shifts-en
+    firstSeenAt: 2026-10-24T00:00:00.000Z
+    lastSeenAt: 2026-10-24T00:00:00.000Z
+    highConfidence: true
+  - id: "image-prompt:pin the ground color per scene in the visual line when cross-scene style consistency matters"
+    scope: image-prompt
+    statement: >-
+      pin the ground color per scene in the visual line (e.g. 'on a warm cream
+      ground') when cross-scene style consistency matters - sampling otherwise
+      alternates warm and cool backgrounds between scenes
+    seenCount: 1
+    projects:
+      - ai-era-software-engineering-11-shifts-en
+    firstSeenAt: 2026-10-24T00:00:00.000Z
+    lastSeenAt: 2026-10-24T00:00:00.000Z
+    highConfidence: true
+  - id: "render:regenerated scene images do not invalidate cached scene mp4s - delete scenes/*.mp4 before re-rendering"
+    scope: render
+    statement: >-
+      regenerated scene images do not invalidate cached scene mp4s - after any
+      image regeneration, delete scenes/*.mp4 and scenes/*.json before
+      re-rendering or the video replays stale pictures (video qa flags this as
+      stale-render)
+    seenCount: 1
+    projects:
+      - ai-era-software-engineering-11-shifts-en
+    firstSeenAt: 2026-10-24T00:00:00.000Z
+    lastSeenAt: 2026-10-24T00:00:00.000Z
+    highConfidence: true

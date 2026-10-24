@@ -16,6 +16,7 @@ import {
   checkCaptions,
   checkSceneAudioSync,
   checkSceneBoundaries,
+  checkStaleSceneRenders,
 } from "./checks.js";
 
 const execFileAsync = promisify(execFile);
@@ -219,6 +220,7 @@ export interface RenderReport {
     };
     captions: import("./checks.js").CaptionChecks;
     sceneBoundaries: import("./checks.js").BoundaryChecks;
+    staleRenders: import("./checks.js").StaleRenderChecks;
   };
 }
 
@@ -332,6 +334,8 @@ export async function buildRenderReport(
   findings.push(...captions.findings);
   const boundaries = await checkSceneBoundaries(plan, videoPath);
   findings.push(...boundaries.findings);
+  const staleRenders = await checkStaleSceneRenders(plan, projectRoot);
+  findings.push(...staleRenders.findings);
 
   return {
     video: videoPath,
@@ -359,6 +363,7 @@ export async function buildRenderReport(
       },
       captions: captions.checks,
       sceneBoundaries: boundaries.checks,
+      staleRenders: staleRenders.checks,
     },
   };
 }
@@ -514,11 +519,13 @@ export {
   checkCaptions,
   checkSceneAudioSync,
   checkSceneBoundaries,
+  checkStaleSceneRenders,
   findCaptionFile,
   parseSrt,
   type BoundaryChecks,
   type CaptionChecks,
   type QaFixableFinding,
   type SceneSyncRow,
+  type StaleRenderChecks,
   type SrtCue,
 } from "./checks.js";

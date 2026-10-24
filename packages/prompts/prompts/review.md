@@ -36,6 +36,7 @@ Evaluate the visual plan and supplied visual artifacts:
 - `density`: Assess whether each scene contains an appropriate amount of text and visual information for its duration and purpose.
 - `pacing`: Assess whether scene durations, narration, transitions, and information delivery are appropriate and mutually consistent. Use actual timings when available; do not invent timing measurements.
 - `visual_hierarchy`: Assess whether the main subject, supporting information, captions, and calls to action have a clear visual priority.
+- `style_continuity`: When per-scene images or frames are supplied, assess whether they share one visual style — palette, ground dominance (warm vs cool), medium, saturation, and rendering weight. Flag any scene that visibly departs from its neighboring scenes or from the video's dominant look, naming the scenes and the dimension in which they drift.
 - `caption_length`: Check caption length, segmentation, and estimated reading time against the intended platform, language, and display duration. Do not apply arbitrary character limits without an explicit profile or specification.
 
 Do not claim that actual text is legible, visual elements are correctly positioned, or composition is visually balanced unless rendered frames, images, or equivalent inspection evidence are available. When only a storyboard description is supplied, evaluate the planned composition and identify any limitations.

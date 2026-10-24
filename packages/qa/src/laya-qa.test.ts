@@ -37,6 +37,7 @@ const report = (findings: QaFinding[]): RenderReport =>
       sceneBoundaries: {
         ok: true,
       } as RenderReport["checks"]["sceneBoundaries"],
+      staleRenders: { checked: 0, stale: [], ok: true },
     },
   }) as RenderReport;
 

@@ -422,7 +422,7 @@ index with swatches; `video theme <name>` for one palette; `video theme
 
 The full token set (7 colours + 4 typography roles + spacing + easing
 
-- fonts) is locked in `packages/video-components/src/theme.ts`; adding
+- fonts) is locked in `packages/theme/src/theme.ts`; adding
   adding a custom palette requires editing that file and exporting the new theme
   from `THEMES`.
 
@@ -1296,6 +1296,54 @@ existing python env). `video approve visuals` records per-scene hashes in
 `checkpoints/visuals.yaml`. Once armed, `video make` refuses to render
 while the checkpoint is missing or stale, naming the offending scenes.
 The workflow stage machine is untouched; the gate is a checkpoint record.
+
+## 9.7 Character bible (`video character`)
+
+The **角色圣经** is the cross-film character store: a workspace-level
+directory of characters, their identity anchors, and their reviewed
+reference sheets. It lives at the WORKSPACE root — `assets/characters/` —
+not inside a project, because the point of a bible is that it is shared
+across films.
+
+```
+assets/characters/<id>/
+  character.yaml              # name, identity, appearance variants, references
+  refs/<style>/<version>.jpg  # reference sheets, one per art style
+```
+
+### The three subcommands
+
+```bash
+video character list                              # every character + its sheets
+video character sheet <id> <style>                # generate a CANDIDATE sheet
+video character approve <id> <style> <version> --by <name>
+```
+
+`sheet` builds its prompt straight from the profile's 关键视觉锚点 — no LLM
+in the loop. A reference sheet has to be a faithful rendering of the
+anchors, and an expander that "improved" the description would defeat the
+point: the sheet is the thing the anchors are checked against. Use
+`--provider mock` to generate offline.
+
+`approve` is a deliberate, recorded act. It stamps who reviewed the sheet
+and when, and it supersedes the previous official sheet for that art style
+rather than overwriting it — the old sheet stays on disk. An approval is
+refused if the sheet's image is missing: an approval of a missing image
+makes the official asset unusable, and the gap would only show up much
+later, in a generated frame. `--by <name>` is required — an approval
+without a reviewer is not a review.
+
+Sheets are never overwritten. A new sheet takes the next free `vN` label
+for that style.
+
+### How a scene uses it
+
+The image model takes no reference image, so the **关键视觉锚点** text is
+the consistency mechanism. A scene that cites a character carries that
+character's anchors into its image prompt, and the same resolved anchors
+feed the prompt's cache key — so an edited anchor invalidates the cached
+scene rather than silently replaying the old picture. A character with no
+profile contributes nothing; that is not an error.
 
 ## 10. Project artifacts and provenance
 

@@ -1,4 +1,4 @@
-import { DEFAULT_THEME_NAME, THEME_NAMES } from "@video/video-components";
+import { DEFAULT_THEME_NAME, THEME_NAMES } from "@video/theme";
 
 /** One row of the README "Minimal API (recommended)" table. */
 export interface MinimalApiCommand {
@@ -49,6 +49,11 @@ export const MINIMAL_API_COMMANDS: readonly MinimalApiCommand[] = [
       "**v0.4** palette inspector — list every theme, print one theme's full token set, or resolve `style.theme` from a project's storyboard",
   },
   {
+    invocation: "video character list / sheet / approve",
+    purpose:
+      "manage the 角色圣经 (character bible) shared across films at `<workspace>/assets/characters/` — `list` every character, `sheet <id> <style>` generate a candidate reference sheet (`--provider mock` for offline), `approve <id> <style> <version> --by <name>` promote a candidate to the 正式角色参考 for its art style",
+  },
+  {
     invocation: "video laya health / ask / eval",
     purpose:
       "**v0.6** local decision-model diagnostics — probe the Laya sidecar (/health), run one bounded-decision consult with raw probabilities, and score the project's `laya-decisions.jsonl` against the §7 promotion gates; advisory only, `LAYA_MODE=off` by default",
@@ -85,6 +90,7 @@ export const ADVANCED_VERBS: readonly string[] = [
   "learn",
   "prompts",
   "laya",
+  "character",
 ];
 
 /** Human gates documented in the README table. "visuals" is opt-in

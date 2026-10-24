@@ -15,9 +15,11 @@ from those two files.
 
 ## Stack
 
-- npm-workspaces TypeScript monorepo (strict mode)
+- pnpm-workspace TypeScript monorepo (strict mode), 25 packages under `packages/`
 - Remotion 4 (bundler-flavored composition) + FFmpeg encode
 - VDSL (Video Description Language) as the schema layer between storyboard and render
+- `@video/theme` owns the 9 `style.theme` palettes; every consumer reads them from there
+- `@video/llm` owns one shared structured-agent call loop, so the reasoning-strip fix cannot drift between agents
 - Vitest for tests; Playwright-style render tests via ffprobe
 
 ## Quickstart
@@ -27,23 +29,27 @@ from those two files.
 brew install ffmpeg          # required by §4
 npm install -g pnpm@12.5.1   # or use corepack: corepack enable pnpm
 pnpm install                  # workspace deps
+pnpm build                    # compile the workspace (tsc -b)
 
-# Scaffold a project
-node packages/cli/dist/index.js new demo
-
-# Edit the storyboard, approve it (human gate), then render
-node packages/cli/dist/index.js validate projects/demo/storyboard/storyboard.yaml --root projects/demo
+# The recommended path — four commands, two human-edit files:
+node packages/cli/dist/index.js new "demo"
+node packages/cli/dist/index.js draft "demo"        # LLM writes article.md + audio-config.yaml
+#   → edit projects/demo/article.md and projects/demo/audio-config.yaml
 node packages/cli/dist/index.js approve storyboard --cwd projects/demo
-node packages/cli/dist/index.js preview --cwd projects/demo
-
-# Approve review, render final
-node packages/cli/dist/index.js approve review --cwd projects/demo
-node packages/cli/dist/index.js final --cwd projects/demo
+node packages/cli/dist/index.js make "demo"          # TTS → assets → render → mix
+#   → projects/demo/output/preview.mp4
+#   → projects/demo/output/final-mixed.mp4
 ```
 
-The `preview` output lands at `output/preview-faststart.mp4` and `final`
-produces `output/final-faststart.mp4`, each 1920x1080@30fps. Every step
-writes a YAML record to `runs/<run-id>.yaml` and updates `state.yaml`.
+That is the entire workflow. Two commands after scaffolding, two human-edit
+checkpoints, one output. `video make` is gated on an approved storyboard, so
+it fails with an explicit instruction until you approve. Re-run `video make`
+after editing either file — it skips work whose outputs are newer than its
+inputs (`--dry-run` shows what it would do).
+
+The per-stage verbs (`video research`, `video script`, `video storyboard`,
+`video audio`, `video preview`, `video final`, …) still work and are
+documented below, but they are not the recommended path.
 
 ### Remotion Studio — `video studio <project>`
 
@@ -75,8 +81,10 @@ use `--cwd <dir>` to choose another project root.
 
 ## Quickstart (minimal API — recommended)
 
+The same four commands as above, with the global `video` binary:
+
 ```bash
-video new "transformer architectures"   # scaffold project/<slug>/
+video new "transformer architectures"   # scaffold projects/<slug>/
 
 # Two human-edit checkpoints, one command:
 video draft "transformer architectures"  # writes article.md + audio-config.yaml (LLM)
@@ -94,10 +102,8 @@ video make "transformer architectures"    # TTS → assets → render → mix
 #   → projects/.../output/final-mixed.mp4
 ```
 
-That is the entire workflow. Two commands after scaffolding, two human-edit
-checkpoints, one output. Re-run `video make` after editing either file — it skips
-work whose outputs are newer than its inputs (`--dry-run` shows what it would
-do).
+Re-run `video make` after editing either file — it skips work whose outputs
+are newer than its inputs (`--dry-run` shows what it would do).
 
 ## Commands
 
@@ -115,6 +121,7 @@ do).
 | `video retrospect <project>`                | **v0.4** ask the LLM for 3 concrete edits to `article.md` based on the latest runs + QA report (writes `projects/<slug>/retrospect.md`); `--dry-run` shows the input without calling the LLM                                                                                                                                          |
 | `video status <project>`                    | shows current workflow checkpoint + **v0.4** the latest QA finding count next to the gate                                                                                                                                                                                                                                             |
 | `video theme [name] / --cwd <root>`         | **v0.4** palette inspector — list every theme, print one theme's full token set, or resolve `style.theme` from a project's storyboard                                                                                                                                                                                                 |
+| `video character list / sheet / approve`    | manage the 角色圣经 (character bible) shared across films at `<workspace>/assets/characters/` — `list` every character, `sheet <id> <style>` generate a candidate reference sheet (`--provider mock` for offline), `approve <id> <style> <version> --by <name>` promote a candidate to the 正式角色参考 for its art style             |
 | `video laya health / ask / eval`            | **v0.6** local decision-model diagnostics — probe the Laya sidecar (/health), run one bounded-decision consult with raw probabilities, and score the project's `laya-decisions.jsonl` against the §7 promotion gates; advisory only, `LAYA_MODE=off` by default                                                                       |
 | `video prompts / show <name> / path / eval` | **v0.8** inspect the central prompt registry — every LLM/Laya prompt body lives as an editable file under `packages/prompts/prompts/`; list them, print one, or get the directory. **v0.10** `eval` runs the golden set in `packages/prompts/evals/` (structural by default, CI-safe; `--judge <provider>` adds the LLM rubric layer) |
 
@@ -133,7 +140,7 @@ that actually served is recorded in `runs/<id>.yaml` under
 routing per-command with `--model <provider>` or globally via the
 `LL_CONFIG` YAML file.
 
-The fine-grained per-stage verbs (`video research`, `video script`, `video storyboard`, `video audio`, `video audio-asset`, `video mix`, `video motion`, `video qa`, `video scene`, `video final`, `video preview`, `video approve`/`reject`/`rollback`, `video review`, `video youtube`, `video thumbnail`, `video shorts`, `video bilibili`, `video status`/`video resume`, `video validate`, `video studio`, `video theme`, `video laya`, `video learn`, `video prompts`) remain wired for back-compat with projects created before the minimal API but are not part of the recommended path.
+The fine-grained per-stage verbs (`video research`, `video script`, `video storyboard`, `video audio`, `video audio-asset`, `video mix`, `video motion`, `video qa`, `video scene`, `video final`, `video preview`, `video approve`/`reject`/`rollback`, `video review`, `video youtube`, `video thumbnail`, `video shorts`, `video bilibili`, `video status`/`video resume`, `video validate`, `video studio`, `video theme`, `video laya`, `video learn`, `video prompts`, `video character`) remain wired for back-compat with projects created before the minimal API but are not part of the recommended path.
 
 ### Theme presets
 

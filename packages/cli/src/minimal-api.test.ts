@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { THEME_NAMES, DEFAULT_THEME_NAME } from "@video/video-components";
+import { THEME_NAMES, DEFAULT_THEME_NAME } from "@video/theme";
 import {
   ADVANCED_VERBS,
   MINIMAL_API_COMMANDS,

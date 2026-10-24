@@ -106,6 +106,7 @@ flowchart TD
     end
 
     subgraph renderG["3 · render"]
+        themePkg["@video/theme — the 9 style.theme palettes<br/>+ the default + resolveTheme()"]
         componentsPkg["@video/video-components — scene components<br/>+ captions/watermark/intro chrome"]
         rendererPkg["@video/video-renderer (Remotion) —<br/>per-scene MP4 cache → concatScenes"]
     end
@@ -117,6 +118,7 @@ flowchart TD
     agentPkgs --> vdsl
     motionPkg --> vdsl
     vdsl --> renderG
+    themePkg --> componentsPkg
     assetsG --> renderG
     rendererPkg --> qaPkg
 ```
@@ -130,12 +132,13 @@ parentheses; v0.5.2 additions marked):
 | `@video/vdsl` | schema | VDSL 0.1/0.2 zod schema, validator (line-numbered errors), deterministic compiler → `vdsl/vdsl.yaml` + `RenderPlan` |
 | `@video/motion` | motion | IartSkillAdapter, motion heuristics, deterministic `planSceneMotion`, Motion Agent (`callMotionAgent`) |
 | `@video/prompts` | prompts | central prompt registry — every LLM/Laya prompt body is a file under `packages/prompts/prompts/` (`loadPrompt()`/`fillPrompt()`), so prompts are edited without touching agent code |
+| `@video/theme` | theme | the 9 `style.theme` palettes, the default theme, the per-theme metadata, and `resolveTheme()`. Owns the vocabulary so the storyboard writer, the VDSL schema, the compiler, the CLI and the renderer cannot disagree on it — the theme is a cross-cutting invariant, so it lives BELOW all of them, not inside the rendering layer. |
 | `@video/draft` | draft | article drafter agent + scored quality judge + image-prompt expansion + image-style presets + regex visual classifier (+ Laya fall-through assist) |
 | `@video/make` | make | `video make` pipeline: TTS → audio assets → scene visuals → scene-isolated render → mix; impact analysis, content-keyed caches |
 | `@video/audio-plan` | audio-plan | Audio Planner agent (audio-config.yaml proposals from a parsed article) |
 | `@video/agent-storyboard`, `@video/research`, `@video/script`, `@video/review`, `@video/youtube` | agent | LLM agents (per-role provider routing incl. `motion`, transient retry, quota fallback) |
 | `@video/bilibili` | agent | Bilibili submission metadata. Packaging only — no public upload API exists, so there is no uploader here. Degrades to a deterministic package instead of failing. |
-| `@video/video-components` | renderer | 22 scene components in `REGISTRY` incl. `DoodleScene` (canvas hand-drawn + beat-sync); chrome overlays (`CaptionsOverlay`, `BrandWatermark`, `BrandIntro`); 9 `style.theme` palettes; 5 intro gradients; animation/easing/doodle logic. |
+| `@video/video-components` | renderer | 23 scene components in `REGISTRY` incl. `DoodleScene` (canvas hand-drawn + beat-sync); chrome overlays (`CaptionsOverlay`, `BrandWatermark`, `BrandIntro`); 5 intro gradients; animation/easing/doodle logic. Reads its tokens from `@video/theme`. |
 | `@video/video-renderer` | remotion | scene-isolated Remotion rendering (`renderSceneToVideo`, `concatScenes`), draft mode, studio workspace generator |
 | `@video/media` | assets | CJK caption wrap, ffprobe, duration sync (`syncSceneDurations`), scene-timing reader |
 | `@video/media-generators` | images | `ImageProvider` + `VideoProvider` abstractions; `MockImageProvider`, `MiniMaxImageProvider` (**default since v0.8.1**), the OpenAI and Gemini image providers, `MiniMaxVideoProvider`. |
@@ -159,7 +162,13 @@ Unwired renderer/component combinations fail loudly at render time.
 
 - The compiler is pure (no clock/locale/fs order); re-compiling emitted
   vdsl.yaml is byte-identical (tested).
-- Scene caches key on fragment content hash + narration audio state.
+- Scene caches key on fragment content hash + narration audio state + the
+  scene image's own content digest (`imageHash`) + the Pillow text-overlay
+  PNG's digest (`overlayHash`). Regenerating a scene image therefore
+  invalidates that scene's cached MP4 automatically — the digest is
+  computed by one shared helper (`sceneImageDigest`) on both the render
+  and the dry-run side, so the impact table and the render cannot
+  disagree about what will re-render.
 - Canvas/SVG drawing is a pure function of the frame: seeded PRNG
   (`rng(seed)`), never `Math.random`/`Date` (javascript-animation skill
   contract).

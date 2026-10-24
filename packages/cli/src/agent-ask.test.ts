@@ -10,7 +10,7 @@ import {
   type AskOpts,
   type AskQuestion,
 } from "./agent-ask.js";
-import { THEMES, THEME_NAMES } from "@video/video-components";
+import { THEMES, THEME_NAMES } from "@video/theme";
 
 /**
  * Tests for the `video-ask/1` agent-ask module (v0.7 plan §9–§11,

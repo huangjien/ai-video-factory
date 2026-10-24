@@ -229,16 +229,17 @@ describe("computeMakeImpact", () => {
         await writeFile(
           `${wav}.json`,
           JSON.stringify({
-            cacheKey: ttsCacheKey(
-              scene.narration,
-              "zh-CN-YunjianNeural",
-              undefined,
-              "edge",
-              "zh-CN",
-              undefined,
-              undefined,
-              scene.hold_after_sec,
-            ),
+            cacheKey: ttsCacheKey({
+              narration: scene.narration,
+              voice: "zh-CN-YunjianNeural",
+              pauseSec: undefined,
+              providerName: "edge",
+              language: "zh-CN",
+              voiceboxSpeed: undefined,
+              voiceboxSentencePauseSec: undefined,
+              holdAfterSec: scene.hold_after_sec,
+              leadInSec: scene.lead_in_sec,
+            }),
           }),
           "utf8",
         );
@@ -246,6 +247,48 @@ describe("computeMakeImpact", () => {
       const impact = computeMakeImpact(dir, { imageProvider: "mock" });
       expect(impact.ttsSynthesize).toEqual([]);
       expect(impact.ttsCached).toEqual(["scene-01", "scene-02"]);
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("TTS cache: a scene with a lead-in reports cached, not resynthesize", async () => {
+    // The lead-in is silence padded into the FRONT of the wav, so it is
+    // part of the audio's identity. The impact table used to leave it out
+    // of the key, so every scene with an opening beat was reported as a
+    // re-synthesis the render never made.
+    const withLeadIn = ARTICLE.replace(
+      "    narration: 第一句。",
+      "    narration: 第一句。\n    lead_in_sec: 1.2",
+    );
+    const dir = await mkProject(withLeadIn);
+    try {
+      const article = parseArticleWithRecovery(withLeadIn).article;
+      await mkdir(path.join(dir, "assets", "audio"), { recursive: true });
+      for (const scene of article.scenes) {
+        const wav = path.join(dir, "assets", "audio", `${scene.id}.wav`);
+        await writeFile(wav, Buffer.from("RIFF"));
+        await writeFile(
+          `${wav}.json`,
+          JSON.stringify({
+            cacheKey: ttsCacheKey({
+              narration: scene.narration,
+              voice: "zh-CN-YunjianNeural",
+              pauseSec: undefined,
+              providerName: "edge",
+              language: "zh-CN",
+              voiceboxSpeed: undefined,
+              voiceboxSentencePauseSec: undefined,
+              holdAfterSec: scene.hold_after_sec,
+              leadInSec: scene.lead_in_sec,
+            }),
+          }),
+          "utf8",
+        );
+      }
+      const impact = computeMakeImpact(dir, { imageProvider: "mock" });
+      expect(impact.ttsResynth).toEqual([]);
+      expect(impact.ttsCached).toEqual(["scene_1", "scene_2"]);
     } finally {
       await rm(dir, { recursive: true, force: true });
     }

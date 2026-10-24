@@ -69,9 +69,24 @@ import {
   visualsGateState,
   writeImageCacheSidecar,
 } from "./visual-cache.js";
-import { ttsCacheKey, effectiveTtsVoice } from "./tts-cache.js";
+import {
+  ttsCacheKey,
+  ttsCacheInputsFor,
+  ttsScenesFromArticle,
+  effectiveTtsVoice,
+  type TtsScene,
+} from "./tts-cache.js";
 
-export { ttsCacheKey, ZH_VOICE, EN_VOICE } from "./tts-cache.js";
+export {
+  ttsCacheKey,
+  ttsCacheInputsFor,
+  ttsScenesFromArticle,
+  ZH_VOICE,
+  EN_VOICE,
+  type TtsCacheKeyInput,
+  type TtsScene,
+  type TtsSettings,
+} from "./tts-cache.js";
 export { computeMakeImpact, formatImpact } from "./impact.js";
 export {
   listAvailableBgms,
@@ -1151,15 +1166,7 @@ async function runTts(
 
   const { outputs } = await synthesizeSceneAudio({
     projectRoot,
-    scenes: article.scenes.map((s) => ({
-      id: s.id,
-      narration: s.narration,
-      durationSec: s.duration,
-      ...(s.hold_after_sec !== undefined
-        ? { holdAfterSec: s.hold_after_sec }
-        : {}),
-      ...(s.lead_in_sec !== undefined ? { leadInSec: s.lead_in_sec } : {}),
-    })),
+    scenes: ttsScenesFromArticle(article),
     provider,
     voice,
     language: article.frontmatter.language,
@@ -1181,16 +1188,7 @@ async function runTts(
  *  chain, the verb passes its Edge/Fake choice. */
 export async function synthesizeSceneAudio(params: {
   projectRoot: string;
-  scenes: {
-    id: string;
-    narration: string;
-    durationSec: number;
-    /** CS-03 hold: silence padded INTO the wav after the voice stops. */
-    holdAfterSec?: number;
-    /** The opening beat: silence padded into the FRONT of the wav, so
-     *  the voice enters after the picture has settled. */
-    leadInSec?: number;
-  }[];
+  scenes: TtsScene[];
   provider: TTSProvider;
   voice: string;
   language: string;
@@ -1227,15 +1225,14 @@ export async function synthesizeSceneAudio(params: {
     // picture and subtitles (the render cache uses the same
     // content-hash discipline).
     const cacheKey = ttsCacheKey(
-      scene.narration,
-      params.voice,
-      params.pauseSec,
-      params.provider.name,
-      params.language,
-      params.voiceboxSpeed,
-      params.voiceboxSentencePauseSec,
-      scene.holdAfterSec,
-      scene.leadInSec,
+      ttsCacheInputsFor(scene, {
+        voice: params.voice,
+        pauseSec: params.pauseSec,
+        providerName: params.provider.name,
+        language: params.language,
+        voiceboxSpeed: params.voiceboxSpeed,
+        voiceboxSentencePauseSec: params.voiceboxSentencePauseSec,
+      }),
     );
     const meta = await readTtsMeta(wavPath);
     if (meta !== null && meta.cacheKey === cacheKey && existsSync(wavPath)) {

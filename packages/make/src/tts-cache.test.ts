@@ -4,6 +4,25 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 
 import { runMake, ttsCacheKey } from "./index.js";
+import type { TtsCacheKeyInput } from "./tts-cache.js";
+
+/** The cache key for a scene, with only the inputs a test cares about
+ *  changed. Every input is stated: the formula takes them all, and a
+ *  forgotten one is a cache miss, not a no-op. */
+function key(overrides: Partial<TtsCacheKeyInput> = {}): string {
+  return ttsCacheKey({
+    narration: "n",
+    voice: "v",
+    pauseSec: 0.3,
+    providerName: "edge",
+    language: "zh-CN",
+    voiceboxSpeed: undefined,
+    voiceboxSentencePauseSec: undefined,
+    holdAfterSec: undefined,
+    leadInSec: undefined,
+    ...overrides,
+  });
+}
 
 /** Regression: runTts used to skip on WAV existence, so any re-draft or
  * narration edit kept narrating the OLD text — audio desynced from the
@@ -122,29 +141,25 @@ describe("ttsCacheKey — provider + language namespacing", () => {
     // output for identical inputs, and the key could not otherwise see
     // that. The pin moves with it.
     expect(
-      ttsCacheKey(
-        "第一场的话。",
-        "zh-CN-YunjianNeural",
-        undefined,
-        "edge",
-        "zh-CN",
-      ),
+      key({
+        narration: "第一场的话。",
+        voice: "zh-CN-YunjianNeural",
+        pauseSec: undefined,
+      }),
     ).toBe(
       "sha256:f777874af3eceaf8fbe37d91623e95807fee37109ea04f2a3bf06a309e3b9770",
     );
   });
 
   it("changes the key when the provider revision moves", () => {
-    const before = ttsCacheKey("n", "v", 0.3, "voicebox", "zh-CN");
-    expect(before).not.toBe(
-      ttsCacheKey("n", "v", 0.3, "voicebox", "zh-CN", undefined, undefined, 0),
-    );
+    const before = key({ providerName: "voicebox" });
+    expect(before).not.toBe(key({ providerName: "voicebox", holdAfterSec: 0 }));
   });
 
   it("differs per provider for the same voice/language/narration", () => {
-    const edge = ttsCacheKey("n", "v", 0.3, "edge", "zh-CN");
-    const voicebox = ttsCacheKey("n", "v", 0.3, "voicebox", "zh-CN");
-    const fake = ttsCacheKey("n", "v", 0.3, "fake", "zh-CN");
+    const edge = key();
+    const voicebox = key({ providerName: "voicebox" });
+    const fake = key({ providerName: "fake" });
     // Set: dynamic membership — three providers must hash to three keys.
     expect(new Set([edge, voicebox, fake]).size).toBe(3);
   });
@@ -152,8 +167,12 @@ describe("ttsCacheKey — provider + language namespacing", () => {
   it("differs per language for the same custom voice id", () => {
     // "narrator-zh" through a clone backend carries no locale in its id —
     // zh-CN and en-US articles using it must not share cached audio.
-    expect(ttsCacheKey("n", "cloned-voice", 0.3, "voicebox", "zh-CN")).not.toBe(
-      ttsCacheKey("n", "cloned-voice", 0.3, "voicebox", "en-US"),
+    expect(key({ voice: "cloned-voice", providerName: "voicebox" })).not.toBe(
+      key({
+        voice: "cloned-voice",
+        providerName: "voicebox",
+        language: "en-US",
+      }),
     );
   });
 });
@@ -163,61 +182,15 @@ describe("ttsCacheKey — the opening beat (lead-in)", () => {
     // The lead-in silence changes the WAV's bytes, so it belongs in the
     // key — otherwise a scene that gained (or lost) its opening beat
     // would keep replaying the old audio.
-    const withoutLeadIn = ttsCacheKey("n", "v", 0.3, "edge", "zh-CN");
-    const withLeadIn = ttsCacheKey(
-      "n",
-      "v",
-      0.3,
-      "edge",
-      "zh-CN",
-      undefined,
-      undefined,
-      undefined,
-      1.2,
-    );
+    const withoutLeadIn = key();
+    const withLeadIn = key({ leadInSec: 1.2 });
     expect(withLeadIn).not.toBe(withoutLeadIn);
-    expect(
-      ttsCacheKey(
-        "n",
-        "v",
-        0.3,
-        "edge",
-        "zh-CN",
-        undefined,
-        undefined,
-        undefined,
-        1.2,
-      ),
-    ).not.toBe(
-      ttsCacheKey(
-        "n",
-        "v",
-        0.3,
-        "edge",
-        "zh-CN",
-        undefined,
-        undefined,
-        undefined,
-        2.4,
-      ),
-    );
+    expect(key({ leadInSec: 1.2 })).not.toBe(key({ leadInSec: 2.4 }));
   });
 
   it("leaves the key untouched when no lead-in is set", () => {
     // The pinned hash above is the regression guard: adding a term that
     // is always present would re-synthesize every scene in every project.
-    expect(ttsCacheKey("n", "v", 0.3, "edge", "zh-CN")).toBe(
-      ttsCacheKey(
-        "n",
-        "v",
-        0.3,
-        "edge",
-        "zh-CN",
-        undefined,
-        undefined,
-        undefined,
-        undefined,
-      ),
-    );
+    expect(key()).toBe(key({ leadInSec: undefined }));
   });
 });

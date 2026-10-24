@@ -27,8 +27,10 @@ import {
 } from "./visual-cache.js";
 import {
   effectiveTtsVoice,
+  ttsCacheInputsFor,
   ttsCacheKey,
   ttsCacheProviderName,
+  ttsScenesFromArticle,
 } from "./tts-cache.js";
 import { resolveImageProvider, workspaceRootFor } from "./index.js";
 
@@ -187,26 +189,31 @@ export function computeMakeImpact(
   const effectiveTtsProvider = ttsCacheProviderName(
     article.frontmatter.tts_provider,
   );
-  article.scenes.forEach((scene) => {
+  ttsScenesFromArticle(article).forEach((scene) => {
     const wav = path.join(audioDir, `${scene.id}.wav`);
     if (!existsSync(wav)) {
       ttsSynthesize.push(scene.id);
       return;
     }
     const meta = readTextSafe(`${wav}.json`);
+    // The SAME key the render computes — same inputs, same function. The
+    // table used to drop the scene's lead-in, so it reported a
+    // re-synthesis the render never made.
     const key = ttsCacheKey(
-      scene.narration,
-      effectiveVoice,
-      pauseSec,
-      effectiveTtsProvider,
-      article.frontmatter.language,
-      typeof article.frontmatter.tts_speed === "number"
-        ? article.frontmatter.tts_speed
-        : undefined,
-      typeof article.frontmatter.tts_sentence_pause_sec === "number"
-        ? article.frontmatter.tts_sentence_pause_sec
-        : undefined,
-      scene.hold_after_sec,
+      ttsCacheInputsFor(scene, {
+        voice: effectiveVoice,
+        pauseSec,
+        providerName: effectiveTtsProvider,
+        language: article.frontmatter.language,
+        voiceboxSpeed:
+          typeof article.frontmatter.tts_speed === "number"
+            ? article.frontmatter.tts_speed
+            : undefined,
+        voiceboxSentencePauseSec:
+          typeof article.frontmatter.tts_sentence_pause_sec === "number"
+            ? article.frontmatter.tts_sentence_pause_sec
+            : undefined,
+      }),
     );
     if (meta !== null) {
       try {
@@ -259,9 +266,9 @@ export function computeMakeImpact(
         ) {
           imageSrcs.set(s.id, src);
         }
-        const overlay =
-          (s.visual?.props as { textOverlaySrc?: unknown } | undefined)
-            ?.textOverlaySrc;
+        const overlay = (
+          s.visual?.props as { textOverlaySrc?: unknown } | undefined
+        )?.textOverlaySrc;
         if (s.id && typeof overlay === "string") {
           overlaySrcs.set(s.id, overlay);
         }
@@ -313,9 +320,7 @@ export function computeMakeImpact(
               sceneHash,
               rendererRevision: RENDERER_REVISION,
               ...(digest !== null ? { imageHash: digest } : {}),
-              ...(overlayDigest !== null
-                ? { overlayHash: overlayDigest }
-                : {}),
+              ...(overlayDigest !== null ? { overlayHash: overlayDigest } : {}),
             });
       if (fresh) scenesCached.push(scene.id);
       else scenesRender.push(scene.id);

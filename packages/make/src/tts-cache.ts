@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import type { ParsedArticle } from "@video/draft";
 
 /**
  * TTS cache key + default voices (v0.8 G2: extracted from index.ts so the
@@ -47,12 +48,34 @@ export function ttsCacheProviderName(
   return "edge";
 }
 
-export function ttsCacheKey(
-  narration: string,
-  voice: string,
-  pauseSec: number | undefined,
-  providerName = "edge",
-  language: string,
+/**
+ * One scene's narration, as the TTS step sees it.
+ *
+ * The hold and the lead-in are silence PADDED INTO the wav, so they change
+ * the bytes exactly as much as the voice does — they belong to the scene's
+ * identity, not to the render settings.
+ */
+export interface TtsScene {
+  id: string;
+  narration: string;
+  durationSec: number;
+  /** CS-03 hold: silence padded INTO the wav after the voice stops. */
+  holdAfterSec?: number | undefined;
+  /** The opening beat: silence padded into the FRONT of the wav, so
+   *  the voice enters after the picture has settled. */
+  leadInSec?: number | undefined;
+}
+
+/** The voice settings the cache key depends on. */
+export interface TtsSettings {
+  /** The voice id in use. */
+  voice: string;
+  /** Seconds of pause between sentences. */
+  pauseSec: number | undefined;
+  /** The serving provider's name — "edge", "minimax-tts", "voicebox". */
+  providerName: string;
+  /** The article's language. */
+  language: string;
   /**
    * Voicebox playback rate and its inter-sentence pause. Both change the
    * bytes that come back, so both belong in the key: a project that
@@ -62,15 +85,87 @@ export function ttsCacheKey(
    * every pre-existing sidecar valid, the same way the provider and
    * language tags above do it.
    */
-  voiceboxSpeed?: number,
-  voiceboxSentencePauseSec?: number,
-  /** CS-03: the scene's held silence. It is padded INTO the wav, so it
-   *  changes the bytes just as much as the speed does. */
-  holdAfterSec?: number,
-  /** Seconds of silence BEFORE the voice — the opening beat. Padded into
-   *  the front of the wav, so it changes the bytes too. */
-  leadInSec?: number,
-): string {
+  voiceboxSpeed: number | undefined;
+  voiceboxSentencePauseSec: number | undefined;
+}
+
+/**
+ * Everything the TTS cache key is computed from.
+ *
+ * Every field is REQUIRED, and may be undefined — a caller states every
+ * input, so an input one of them forgets is a compile error rather than a
+ * silent cache miss.
+ */
+export interface TtsCacheKeyInput {
+  narration: string;
+  voice: string;
+  pauseSec: number | undefined;
+  providerName: string;
+  language: string;
+  voiceboxSpeed: number | undefined;
+  voiceboxSentencePauseSec: number | undefined;
+  /** The scene's held silence. */
+  holdAfterSec: number | undefined;
+  /** Seconds of silence BEFORE the voice — the opening beat. */
+  leadInSec: number | undefined;
+}
+
+/**
+ * The TTS inputs for an article's scenes.
+ *
+ * The hold and the lead-in are silence padded INTO the wav, so they change
+ * the bytes exactly as much as the voice does — they are part of the
+ * scene's identity. The render and the dry-run read them through here, so
+ * one of them cannot pick up a field the other drops.
+ */
+export function ttsScenesFromArticle(article: ParsedArticle): TtsScene[] {
+  return article.scenes.map((s) => ({
+    id: s.id,
+    narration: s.narration,
+    durationSec: s.duration,
+    holdAfterSec: s.hold_after_sec,
+    leadInSec: s.lead_in_sec,
+  }));
+}
+
+/**
+ * Assemble the cache-key inputs for one scene.
+ *
+ * The render and the dry-run impact table both go through here, so they
+ * cannot disagree about what the key is made of. They can still disagree
+ * about the SETTINGS — the dry-run cannot probe whether Voicebox is up, so
+ * it states the provider the frontmatter asks for — and that difference is
+ * stated in one place instead of being spread across two call sites.
+ */
+export function ttsCacheInputsFor(
+  scene: TtsScene,
+  settings: TtsSettings,
+): TtsCacheKeyInput {
+  return {
+    narration: scene.narration,
+    voice: settings.voice,
+    pauseSec: settings.pauseSec,
+    providerName: settings.providerName,
+    language: settings.language,
+    voiceboxSpeed: settings.voiceboxSpeed,
+    voiceboxSentencePauseSec: settings.voiceboxSentencePauseSec,
+    holdAfterSec: scene.holdAfterSec,
+    leadInSec: scene.leadInSec,
+  };
+}
+
+export function ttsCacheKey(input: TtsCacheKeyInput): string {
+  const {
+    narration,
+    voice,
+    pauseSec,
+    providerName,
+    language,
+    voiceboxSpeed,
+    voiceboxSentencePauseSec,
+    holdAfterSec,
+    leadInSec,
+  } = input;
   // The provider must be part of the key: "narrator-zh" through Voicebox and
   // "zh-CN-YunjianNeural" through Edge are different audio, and a provider
   // switch with an unchanged (voice, pause, narration) triple would otherwise

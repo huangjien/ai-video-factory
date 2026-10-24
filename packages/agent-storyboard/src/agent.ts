@@ -1,5 +1,5 @@
 import type { ChatMessage, Provider } from "@video/llm";
-import { chatWithFallback, extractFencedYaml } from "@video/llm";
+import { callStructured, extractFencedYaml } from "@video/llm";
 import { validateStoryboard } from "@video/vdsl/validate.js";
 import type { Storyboard } from "@video/vdsl/schema.js";
 import { buildMessages, type AgentInput } from "./prompt.js";
@@ -54,6 +54,21 @@ function formatErrors(errors: ValidationError[]): string {
   return errors.map((e) => `- ${e.field}: ${e.message}`).join("\n");
 }
 
+/**
+ * A validation failure the repair pass can quote back to the model.
+ *
+ * It is a distinct type from a plain parse failure because the two call for
+ * different policies: a validation failure is worth one more call (the
+ * validator named exactly what is wrong), while "no YAML in the reply" is
+ * not — there is nothing to quote back.
+ */
+class StoryboardValidationError extends Error {
+  constructor(readonly errors: ValidationError[]) {
+    super(formatErrors(errors));
+    this.name = "StoryboardValidationError";
+  }
+}
+
 /** One repair request: the original messages plus the exact validator
  *  complaints. The model is told to change nothing but the listed fields, so a
  *  repair cannot silently rewrite the storyboard's content. */
@@ -89,51 +104,47 @@ export async function callAgent(
   fallback?: Provider | null,
 ): Promise<AgentResult> {
   const messages = buildMessages(input);
-  const baseReq = {
-    ...(opts.model !== undefined ? { model: opts.model } : {}),
-    ...(opts.temperature !== undefined
-      ? { temperature: opts.temperature }
-      : {}),
+  const r = await callStructured<Storyboard>({
+    messages,
+    provider,
+    fallback: fallback ?? null,
+    request: {
+      ...(opts.model !== undefined ? { model: opts.model } : {}),
+      ...(opts.temperature !== undefined
+        ? { temperature: opts.temperature }
+        : {}),
+    },
+    parse: (content) => {
+      const yamlText = extractYaml(content);
+      if (!yamlText) throw new Error("no YAML in response");
+      const result = validateStoryboard(yamlText, "storyboard.yaml");
+      if (!result.ok) throw new StoryboardValidationError(result.errors);
+      return result.data;
+    },
+    attempts: REPAIR_ATTEMPTS + 1,
+    nextAttempt: (error) =>
+      error instanceof StoryboardValidationError
+        ? { messages: buildRepairMessages(messages, error.errors) }
+        : null,
+    onFailure: (errors, providerName) => {
+      const last = errors[errors.length - 1]!;
+      if (last instanceof StoryboardValidationError) {
+        return new AgentError(
+          `VDSL validation failed after ${REPAIR_ATTEMPTS} repair attempt(s): ${formatErrors(last.errors)}`,
+          providerName,
+          last.errors,
+        );
+      }
+      return new AgentError(last.message, providerName, last);
+    },
+  });
+  return {
+    storyboard: r.data,
+    usage: r.usage,
+    providerName: r.providerName,
+    // Always the ORIGINAL messages: run-record prompt_hash must describe
+    // the prompt, not the repair scaffolding appended to it.
+    messages: r.messages,
+    repaired: r.attempts > 1,
   };
-  let attemptMessages = messages;
-  let usage = { input: 0, output: 0 };
-  let repaired = false;
-
-  for (let attempt = 0; attempt <= REPAIR_ATTEMPTS; attempt += 1) {
-    const out = await chatWithFallback(provider, fallback ?? null, {
-      messages: attemptMessages,
-      ...baseReq,
-    });
-    usage.input += out.response.usage.input;
-    usage.output += out.response.usage.output;
-
-    const yamlText = extractYaml(out.response.content);
-    if (!yamlText) {
-      throw new AgentError("no YAML in response", out.provider);
-    }
-    const result = validateStoryboard(yamlText, "storyboard.yaml");
-    if (result.ok) {
-      return {
-        storyboard: result.data,
-        usage,
-        providerName: out.provider,
-        // Always the ORIGINAL messages: run-record prompt_hash must describe
-        // the prompt, not the repair scaffolding appended to it.
-        messages,
-        repaired,
-      };
-    }
-    if (attempt === REPAIR_ATTEMPTS) {
-      throw new AgentError(
-        `VDSL validation failed after ${REPAIR_ATTEMPTS} repair attempt(s): ${formatErrors(result.errors)}`,
-        out.provider,
-        result.errors,
-      );
-    }
-    repaired = true;
-    attemptMessages = buildRepairMessages(messages, result.errors);
-  }
-
-  // Unreachable: the loop returns or throws on its final iteration.
-  throw new AgentError("unreachable", provider.name);
 }

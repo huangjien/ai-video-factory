@@ -1,6 +1,6 @@
 import { storyboardSchema, type TimelineAnimation } from "@video/vdsl";
-import type { ChatMessage, ChatResponse, Provider } from "@video/llm";
-import { chatWithFallback, extractFencedYaml } from "@video/llm";
+import type { ChatMessage, Provider } from "@video/llm";
+import { callStructured, extractFencedYaml } from "@video/llm";
 import { parse as parseYaml } from "yaml";
 import { validateMotionSpec, type MotionSpec } from "./plan.js";
 import { buildMotionMessages, type MotionAgentSceneInput } from "./prompt.js";
@@ -40,26 +40,26 @@ export async function callMotionAgent(
   opts: { model?: string; temperature?: number } = {},
   fallback?: Provider | null,
 ): Promise<MotionAgentResult> {
-  const messages = buildMotionMessages(input);
-  const out = await chatWithFallback(provider, fallback ?? null, {
-    messages,
-    ...(opts.model !== undefined ? { model: opts.model } : {}),
-    ...(opts.temperature !== undefined
-      ? { temperature: opts.temperature }
-      : {}),
+  const r = await callStructured<MotionSpec>({
+    messages: buildMotionMessages(input),
+    provider,
+    fallback: fallback ?? null,
+    request: {
+      ...(opts.model !== undefined ? { model: opts.model } : {}),
+      ...(opts.temperature !== undefined
+        ? { temperature: opts.temperature }
+        : {}),
+    },
+    parse: (content) => parseMotionSpec(content, input),
+    onFailure: (errors, providerName) =>
+      new MotionAgentError(errors[errors.length - 1]!.message, providerName),
   });
-  const res: ChatResponse = out.response;
-  try {
-    const spec = parseMotionSpec(res.content, input);
-    return {
-      spec,
-      usage: res.usage,
-      providerName: out.provider,
-      messages,
-    };
-  } catch (err) {
-    throw new MotionAgentError((err as Error).message, out.provider);
-  }
+  return {
+    spec: r.data,
+    usage: r.usage,
+    providerName: r.providerName,
+    messages: r.messages,
+  };
 }
 
 /** Parse + strictly validate model output into a MotionSpec. Throws with a

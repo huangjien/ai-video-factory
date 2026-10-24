@@ -19,9 +19,7 @@ describe("youtube manage scope", () => {
       clientId: "cid",
       redirectUri: "http://127.0.0.1:1234",
     });
-    expect(url).toContain(
-      `scope=${encodeURIComponent(YOUTUBE_UPLOAD_SCOPE)}`,
-    );
+    expect(url).toContain(`scope=${encodeURIComponent(YOUTUBE_UPLOAD_SCOPE)}`);
     expect(url).not.toContain(YOUTUBE_MANAGE_SCOPE);
   });
 

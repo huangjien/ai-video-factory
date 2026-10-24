@@ -1,8 +1,8 @@
-import type { ChatMessage, Provider } from "@video/llm";
+import type { Provider } from "@video/llm";
 import {
-  chatWithFallback,
+  callStructured,
   extractBalancedJson as extractBalancedJsonImpl,
-  stripReasoning,
+  extractJsonObject,
 } from "@video/llm";
 import { buildMessages, type DraftInput } from "./prompt.js";
 
@@ -56,88 +56,50 @@ export async function callDraft(
    * failing the run. */
   fallback?: Provider | null,
 ): Promise<CallDraftResult> {
-  let res = await chatWithFallback(provider, fallback ?? null, {
-    messages: buildMessages(input),
-  });
-  let parsed = tryParse(res.response.content);
-  let lastErr: unknown;
-  if (!parsed.ok) {
-    lastErr = parsed.error;
+  const messages = buildMessages(input);
+  const r = await callStructured<RawArticle>({
+    messages,
+    provider,
+    fallback: fallback ?? null,
+    // Tolerant parser — the shared extractor handles fenced JSON,
+    // surrounding prose, and a minor brace mismatch by taking the largest
+    // balanced object, with the reasoning stripped first. A reasoning
+    // model emits its thinking before the answer, and that thinking
+    // contains a JSON SKETCH: reading the whole response — or the largest
+    // balanced object in it — reads the sketch, not the answer.
+    parse: (content) => {
+      const body = extractJsonObject(content);
+      if (body === null) throw new Error("no JSON object in response");
+      try {
+        return JSON.parse(body) as RawArticle;
+      } catch (err) {
+        throw new Error((err as Error).message, { cause: err });
+      }
+    },
+    attempts: 2,
     // Retry once with a tight reminder; LLMs occasionally emit prose
     // around the JSON on the first pass.
-    const retryMessages: ChatMessage[] = [
-      ...buildMessages(input),
-      {
-        role: "user",
-        content:
-          "Your previous response was not valid JSON. Reply with ONLY a single JSON object — no prose, no code fence, no markdown.",
-      },
-    ];
-    const retry = await chatWithFallback(provider, fallback ?? null, {
-      messages: retryMessages,
-    });
-    res = retry;
-    parsed = tryParse(res.response.content);
-    if (!parsed.ok) {
-      throw new DraftError(
-        `JSON parse failed after retry: ${(parsed.error as Error).message}`,
-        res.provider,
-        lastErr,
+    nextAttempt: () => ({
+      messages: [
+        ...messages,
+        {
+          role: "user",
+          content:
+            "Your previous response was not valid JSON. Reply with ONLY a single JSON object — no prose, no code fence, no markdown.",
+        },
+      ],
+    }),
+    onFailure: (errors, providerName) => {
+      const last = errors[errors.length - 1]!;
+      return new DraftError(
+        `JSON parse failed after retry: ${last.message}`,
+        providerName,
+        errors[0] ?? last,
       );
-    }
-  }
-  const markdown = renderArticleMd(input, parsed.value);
-  return { markdown, usage: res.response.usage, providerName: res.provider };
-}
-
-/** Result of attempting to parse the LLM response into JSON. */
-type ParseResult =
-  { ok: true; value: RawArticle } | { ok: false; error: unknown };
-
-/** Tolerant parser — handles fenced JSON, surrounding prose, and minor
- * brace-mismatch errors by extracting the largest balanced JSON object. */
-function tryParse(content: string): ParseResult {
-  // CS-14: a reasoning model emits its thinking first, and that thinking
-  // contains a JSON SKETCH. Parsing the whole response — or the largest
-  // balanced object in it — reads the sketch, not the answer.
-  const trimmed = stripReasoning(content).trim();
-  if (!trimmed) return { ok: false, error: new Error("empty content") };
-
-  // 1) Try the strict path first — exactly the response, optionally after
-  //    stripping a code fence.
-  for (const candidate of candidates(trimmed)) {
-    try {
-      return { ok: true, value: JSON.parse(candidate) as RawArticle };
-    } catch (err) {
-      // fall through to next candidate
-      if (candidate === trimmed) {
-        // No fence to strip — try the balanced extractor on the next pass.
-        break;
-      }
-    }
-  }
-
-  // 2) Extract the largest balanced `{...}` substring and try that.
-  const balanced = extractBalancedJson(trimmed);
-  if (balanced) {
-    try {
-      return { ok: true, value: JSON.parse(balanced) as RawArticle };
-    } catch (err) {
-      return { ok: false, error: err };
-    }
-  }
-
-  return { ok: false, error: new Error("no balanced JSON object in response") };
-}
-
-/** Possible JSON bodies to try, in order — full string, then stripped of
- * a single wrapping fence (the LLM often wraps responses in ```json). */
-function candidates(text: string): string[] {
-  const out = [text];
-  const fence = /^```(?:json)?\s*\n?([\s\S]*?)\n?```\s*$/;
-  const m = text.match(fence);
-  if (m && m[1] !== undefined) out.push(m[1].trim());
-  return out;
+    },
+  });
+  const markdown = renderArticleMd(input, r.data);
+  return { markdown, usage: r.usage, providerName: r.providerName };
 }
 
 /** Compose article.md from a structured RawArticle — guaranteed shape; the

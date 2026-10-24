@@ -1,7 +1,7 @@
 import {
-  chatWithFallback,
+  callStructured,
   extractFencedYaml,
-  parseStructuredYaml,
+  structuredYamlParser,
   type ChatMessage,
   type Provider,
   type Usage,
@@ -76,32 +76,32 @@ export async function callBilibili(
     };
   };
 
-  let out;
   try {
-    out = await chatWithFallback(provider, fallbackProvider ?? null, {
+    const r = await callStructured<BilibiliPackage>({
       messages,
-    });
-  } catch (err) {
-    return degrade(`LLM call failed: ${(err as Error).message}`);
-  }
-
-  try {
-    const bilibili = parseStructuredYaml(out.response.content, out.provider, {
-      schema: BilibiliPackageSchema,
-      schemaLabel: "Bilibili package schema",
-      toError: (message, providerName, cause) =>
-        new BilibiliError(message, providerName, cause),
+      provider,
+      fallback: fallbackProvider ?? null,
+      parse: structuredYamlParser({
+        schema: BilibiliPackageSchema,
+        schemaLabel: "Bilibili package schema",
+        toError: (message, providerName, cause) =>
+          new BilibiliError(message, providerName, cause),
+      }),
     });
     return {
-      bilibili,
+      bilibili: r.data,
       source: "agent",
-      providerName: out.provider,
-      usage: out.response.usage,
-      messages,
+      providerName: r.providerName,
+      usage: r.usage,
+      messages: r.messages,
     };
   } catch (err) {
-    // no YAML / YAML parse failure / schema violation — all degrade, never
-    // throw (the policy that shipped a video when the model typoed).
-    return degrade((err as Error).message, out.provider);
+    // A provider outage, a content filter, malformed YAML, or a schema
+    // violation — all degrade, never throw (the policy that shipped a
+    // video when the model typoed).
+    if (err instanceof BilibiliError) {
+      return degrade(err.message, err.providerName);
+    }
+    return degrade(`LLM call failed: ${(err as Error).message}`);
   }
 }

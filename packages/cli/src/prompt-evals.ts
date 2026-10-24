@@ -23,6 +23,7 @@ import {
   buildScenePromptMessages,
   callDraft,
   expandSceneBrief,
+  resolveSceneIdentities,
   scoreArticle,
 } from "@video/draft";
 import { stringify as yamlStringify } from "yaml";
@@ -166,7 +167,8 @@ function pickMarkdown(input: Record<string, unknown>): string {
   return typeof m === "string" ? m : "";
 }
 
-/** The image-prompt fixture shape: { scene, style?, learned?, setting? }. */
+/** The image-prompt fixture shape: { scene, style?, learned?, setting?,
+ *  characterRoot? }. */
 function imagePromptScene(input: Record<string, unknown>): ScenePromptInput {
   return asAgentInput<ScenePromptInput>(
     input["scene"] as Record<string, unknown>,
@@ -176,6 +178,12 @@ function imagePromptScene(input: Record<string, unknown>): ScenePromptInput {
 function imagePromptContext(
   input: Record<string, unknown>,
 ): ScenePromptContext {
+  // The 关键视觉锚点 are resolved here, from the 角色圣经 the fixture points
+  // at — the same way `expandScenePrompt` resolves them for a real render.
+  // A fixture with no `characterRoot` resolves to no identities and the
+  // harness stays a pure path.
+  const characterRoot =
+    typeof input["characterRoot"] === "string" ? input["characterRoot"] : null;
   return {
     ...(typeof input["style"] === "string"
       ? { style: input["style"] as ImageStyle }
@@ -186,6 +194,10 @@ function imagePromptContext(
     ...(typeof input["setting"] === "string"
       ? { setting: input["setting"] as string }
       : {}),
+    identities: resolveSceneIdentities(
+      imagePromptScene(input).characters,
+      characterRoot,
+    ),
   };
 }
 

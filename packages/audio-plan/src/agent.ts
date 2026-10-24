@@ -1,5 +1,5 @@
 import type { Provider } from "@video/llm";
-import { chatWithFallback, stripReasoning } from "@video/llm";
+import { callStructured, extractReplyBody } from "@video/llm";
 import { parse as parseYaml } from "yaml";
 import { buildMessages, type AudioPlanInput } from "./prompt.js";
 import {
@@ -63,58 +63,52 @@ export async function callAudioPlan(
    * failing the run. */
   fallback?: Provider | null,
 ): Promise<CallAudioPlanResult> {
-  const messages = buildMessages(input);
-  const out = await chatWithFallback(provider, fallback ?? null, {
-    messages,
-    response_format: { type: "json_object" },
+  const r = await callStructured<AudioConfig>({
+    messages: buildMessages(input),
+    provider,
+    fallback: fallback ?? null,
+    request: { response_format: { type: "json_object" } },
+    parse: (content) => {
+      // The body, with the reasoning stripped and a wrapping ```json fence
+      // unwrapped — GLM-5.3 emits <think> tags despite JSON mode.
+      const body = extractReplyBody(content);
+      if (!body) throw new Error("empty response from provider");
+      let parsed: unknown;
+      try {
+        parsed = JSON.parse(body);
+      } catch (err) {
+        try {
+          parsed = parseYaml(body);
+        } catch {
+          throw new Error(`JSON/YAML parse failed: ${(err as Error).message}`, {
+            cause: err,
+          });
+        }
+      }
+      const merged: AudioConfig = {
+        ...DEFAULT_AUDIO_CONFIG,
+        ...(parsed as AudioConfig),
+      };
+      const validation = AudioConfigSchema.safeParse(merged);
+      if (!validation.success) {
+        throw new Error(
+          `audio-config invalid: ${validation.error.issues
+            .map((i) => `${i.path.join(".")}: ${i.message}`)
+            .join("; ")}`,
+          { cause: validation.error },
+        );
+      }
+      return validation.data;
+    },
+    onFailure: (errors, providerName) => {
+      const last = errors[errors.length - 1]!;
+      return new AudioPlanError(last.message, providerName, last.cause);
+    },
   });
-  const res = out.response;
-  const raw = res.content.trim();
-  if (!raw) {
-    throw new AudioPlanError("empty response from provider", out.provider);
-  }
-  const jsonText = unwrapJson(raw);
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(jsonText);
-  } catch (err) {
-    try {
-      parsed = parseYaml(jsonText);
-    } catch (err2) {
-      throw new AudioPlanError(
-        `JSON/YAML parse failed: ${(err as Error).message}`,
-        out.provider,
-        err,
-      );
-    }
-  }
-  const merged: AudioConfig = {
-    ...DEFAULT_AUDIO_CONFIG,
-    ...(parsed as AudioConfig),
-  };
-  const validation = AudioConfigSchema.safeParse(merged);
-  if (!validation.success) {
-    throw new AudioPlanError(
-      `audio-config invalid: ${validation.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; ")}`,
-      out.provider,
-      validation.error,
-    );
-  }
   return {
-    config: validation.data,
-    yaml: renderAudioConfig(validation.data),
-    usage: res.usage,
-    providerName: out.provider,
+    config: r.data,
+    yaml: renderAudioConfig(r.data),
+    usage: r.usage,
+    providerName: r.providerName,
   };
-}
-
-/** Strip <think> tags GLM-5.3 emits despite JSON mode + unwrap any
- * surrounding ```json``` fence. Tolerant to either order. The think-strip
- * is the shared `stripReasoning`; a model's sketch is never the answer. */
-function unwrapJson(text: string): string {
-  const out = stripReasoning(text).trim();
-  const fenced = /^```(?:json|yaml)?\s*\n?([\s\S]*?)\n?```\s*$/;
-  const fm = out.match(fenced);
-  if (fm && fm[1] !== undefined) return fm[1].trim();
-  return out;
 }

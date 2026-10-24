@@ -1,8 +1,8 @@
-import type { ChatMessage, ChatResponse, Provider } from "@video/llm";
+import type { ChatMessage, Provider } from "@video/llm";
 import {
-  chatWithFallback,
+  callStructured,
   extractFencedYaml,
-  parseStructuredYaml,
+  structuredYamlParser,
 } from "@video/llm";
 import {
   YouTubePackageSchema,
@@ -91,39 +91,50 @@ export async function callYouTube(
   fallback?: Provider | null,
 ): Promise<CallYouTubeResult> {
   const messages = buildYouTubeMessages(input);
-  const out = await chatWithFallback(provider, fallback ?? null, { messages });
-  try {
-    return buildPackage(out.response, out.provider, messages);
-  } catch (primaryErr) {
-    // The provider answered, but the answer is unusable: malformed YAML, a
-    // schema violation, unsorted chapters, a banned token. That is a
-    // CONTENT failure, not a provider outage, so `chatWithFallback` never
-    // engaged the fallback provider — the run died on one model's typo.
-    // Give the fallback a turn before failing: a different model rarely
-    // repeats the same YAML mistake. (Observed 2026-10-20: glm emitted a
-    // double-quoted description whose inner `"` closed the scalar early —
-    // "Unexpected scalar at node end" — and the whole publish hard-failed.)
-    if (!fallback || out.provider === fallback.name) throw primaryErr;
-    const retry = await chatWithFallback(fallback, null, { messages });
-    try {
-      return buildPackage(retry.response, retry.provider, messages);
-    } catch {
-      throw primaryErr;
-    }
-  }
+  const r = await callStructured<YouTubePackage>({
+    messages,
+    provider,
+    fallback: fallback ?? null,
+    parse: parsePackage,
+    attempts: 2,
+    nextAttempt: (_error, attempt, servedBy) => {
+      // The provider answered, but the answer is unusable: malformed YAML, a
+      // schema violation, unsorted chapters, a banned token. That is a
+      // CONTENT failure, not a provider outage, so `chatWithFallback` never
+      // engaged the fallback provider — the run died on one model's typo.
+      // Give the fallback a turn before failing: a different model rarely
+      // repeats the same YAML mistake. (Observed 2026-10-20: glm emitted a
+      // double-quoted description whose inner `"` closed the scalar early —
+      // "Unexpected scalar at node end" — and the whole publish hard-failed.)
+      if (attempt > 0) return null;
+      if (!fallback) return null;
+      // If the fallback already served the first attempt, asking it again
+      // would only repeat the same answer.
+      if (servedBy === fallback.name) return null;
+      return { messages, provider: fallback };
+    },
+    onFailure: (errors) =>
+      // The PRIMARY's error is what the caller sees: a fallback that also
+      // failed is a symptom, not the diagnosis.
+      errors[0]!,
+  });
+  return {
+    youtube: r.data,
+    usage: r.usage,
+    providerName: r.providerName,
+    messages: r.messages,
+  };
 }
 
-function buildPackage(
-  res: ChatResponse,
-  actualProvider: string,
-  messages: ChatMessage[],
-): CallYouTubeResult {
-  const data = parseStructuredYaml(res.content, actualProvider, {
+/** Read one reply into a package: the schema, then the domain checks the
+ *  schema cannot express. */
+function parsePackage(content: string, actualProvider: string): YouTubePackage {
+  const data = structuredYamlParser({
     schema: YouTubePackageSchema,
     schemaLabel: "YouTube package schema",
     toError: (message, providerName, cause) =>
       new YouTubeError(message, providerName, cause),
-  });
+  })(content, actualProvider);
   // Sanity: chapters must move FORWARD through the film. The model
   // names the scene each chapter starts at; the caller turns that into
   // a timestamp on the rendered timeline. Strictly increasing scene
@@ -144,12 +155,7 @@ function buildPackage(
       { thumbnail_prompt: data.thumbnail_prompt },
     );
   }
-  return {
-    youtube: data,
-    usage: res.usage,
-    providerName: actualProvider,
-    messages,
-  };
+  return data;
 }
 
 /** v0.4 (T4): banned tokens that indicate the LLM is describing a text

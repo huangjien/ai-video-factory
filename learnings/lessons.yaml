@@ -56,3 +56,14 @@ lessons:
     firstSeenAt: 2026-10-24T00:00:00.000Z
     lastSeenAt: 2026-10-24T00:00:00.000Z
     highConfidence: true
+    resolved: true
+    resolvedAt: 2026-10-24
+    resolution: >-
+      FIXED 2026-10-24. The scene-mp4 cache key now includes the scene image's
+      content digest (imageHash) and the Pillow text-overlay PNG's digest
+      (overlayHash) - packages/video-renderer/src/scene-cache.ts
+      (sceneImageDigest, sceneCacheIsFresh) and packages/make/src/impact.ts
+      (the dry-run computes the same digest through the same helper, so the two
+      sides cannot disagree). A regenerated image now invalidates its cached
+      mp4 automatically; the manual "rm scenes/*.mp4" workaround is no longer
+      needed. Kept as the record of the incident, not as active advice.

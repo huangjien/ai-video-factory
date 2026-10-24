@@ -78,6 +78,20 @@ export const LessonSchema = z.object({
   lastSeenAt: z.string().min(1),
   /** Reviewer marked at least one occurrence high-confidence. */
   highConfidence: z.boolean(),
+  /** Set when the underlying defect was FIXED.
+   *
+   *  A fixed lesson stays in the store as the record of the incident, but
+   *  it must stop steering prompts — the advice it carries ("delete
+   *  scenes/*.mp4 before re-rendering") is now wrong advice, and a
+   *  lesson that lies is worse than no lesson.
+   *
+   *  Optional, so a store written before this field existed still
+   *  parses; `isActiveLesson` treats an absent `resolved` as open. */
+  resolved: z.boolean().optional(),
+  /** When the fix landed. */
+  resolvedAt: z.string().min(1).optional(),
+  /** What fixed it, and where. */
+  resolution: z.string().min(1).optional(),
 });
 export type Lesson = z.infer<typeof LessonSchema>;
 
@@ -87,7 +101,11 @@ export const LessonStoreSchema = z.object({
 });
 export type LessonStore = z.infer<typeof LessonStoreSchema>;
 
-/** A lesson may steer a prompt once it is corroborated or trusted. */
+/** A lesson may steer a prompt once it is corroborated or trusted.
+ *
+ *  A RESOLVED lesson never steers a prompt, however corroborated it is:
+ *  its advice is stale by definition. */
 export function isActiveLesson(lesson: Lesson): boolean {
+  if (lesson.resolved === true) return false;
   return lesson.highConfidence || lesson.seenCount >= 2;
 }

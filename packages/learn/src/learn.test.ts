@@ -182,6 +182,63 @@ describe("mergeSession — the corroboration gate", () => {
   });
 });
 
+describe("a RESOLVED lesson stops steering prompts", () => {
+  // A lesson records a defect. Once the defect is FIXED, the advice the
+  // lesson carries is stale by definition — "delete scenes/*.mp4 before
+  // re-rendering" is now wrong advice. A lesson that lies is worse than
+  // no lesson, so a resolved one must not reach a prompt.
+  const answer = {
+    id: "image_match" as const,
+    answer: "scene 4 carried a stale render",
+  };
+
+  it("a corroborated lesson is active", () => {
+    let store = mergeSession(emptyLessonStore(), session([answer])).store;
+    store = mergeSession(store, session([answer], { project: "p2" })).store;
+    expect(isActiveLesson(store.lessons[0]!)).toBe(true);
+    expect(promptRules(store, "image-prompt")).toContain("stale render");
+  });
+
+  it("a resolved lesson is NOT active, however corroborated", () => {
+    let store = mergeSession(emptyLessonStore(), session([answer])).store;
+    store = mergeSession(store, session([answer], { project: "p2" })).store;
+    store.lessons[0]!.resolved = true;
+    store.lessons[0]!.resolvedAt = "2026-10-24";
+    store.lessons[0]!.resolution =
+      "the cache key now includes the image digest";
+    expect(isActiveLesson(store.lessons[0]!)).toBe(false);
+    expect(promptRules(store, "image-prompt")).toBe("");
+  });
+
+  it("a resolved lesson survives a merge — a later sighting does not revive it", () => {
+    let store = mergeSession(emptyLessonStore(), session([answer])).store;
+    store.lessons[0]!.resolved = true;
+    store.lessons[0]!.resolution = "fixed";
+    store = mergeSession(store, session([answer], { project: "p2" })).store;
+    expect(store.lessons[0]?.seenCount).toBe(2);
+    expect(store.lessons[0]?.resolved).toBe(true);
+    expect(isActiveLesson(store.lessons[0]!)).toBe(false);
+  });
+
+  it("the resolution fields survive a store round-trip", () => {
+    // The schema must accept them, or saveLessonStore would silently
+    // drop the record of the fix on the next write.
+    const root = mkdtempSync(path.join(tmpdir(), "learn-resolved-"));
+    let store = mergeSession(emptyLessonStore(), session([answer])).store;
+    store.lessons[0]!.resolved = true;
+    store.lessons[0]!.resolvedAt = "2026-10-24";
+    store.lessons[0]!.resolution =
+      "the cache key now includes the image digest";
+    saveLessonStore(root, store);
+    const reloaded = loadLessonStore(root);
+    expect(reloaded.lessons[0]?.resolved).toBe(true);
+    expect(reloaded.lessons[0]?.resolvedAt).toBe("2026-10-24");
+    expect(reloaded.lessons[0]?.resolution).toBe(
+      "the cache key now includes the image digest",
+    );
+  });
+});
+
 describe("persistence", () => {
   it("round-trips the store and session files", () => {
     const root = mkdtempSync(path.join(tmpdir(), "learn-"));

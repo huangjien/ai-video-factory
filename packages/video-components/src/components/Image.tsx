@@ -58,7 +58,8 @@ export const Image: FC<ImageProps> = ({
             maxHeight: caption !== undefined ? 840 : 980,
             objectFit: fit,
             borderRadius: 12,
-            boxShadow: "0 18px 40px rgba(0,0,0,0.20), 0 4px 12px rgba(0,0,0,0.10)",
+            boxShadow:
+              "0 18px 40px rgba(0,0,0,0.20), 0 4px 12px rgba(0,0,0,0.10)",
           }}
         />
         {caption !== undefined ? (

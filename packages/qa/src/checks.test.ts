@@ -242,17 +242,29 @@ describe("T6.1 extended QA checks — injected defects are caught with fixes", (
     const lowContrast = path.join(dir, "low-contrast.mp4");
     await execFileAsync("ffmpeg", [
       "-y",
-      "-f", "lavfi", "-i", "color=c=0x202020:size=320x180:rate=30:duration=1",
-      "-f", "lavfi", "-i", "color=c=0x202020:size=320x180:rate=30:duration=1,drawbox=x=280:y=140:w=40:h=40:color=white:t=fill",
-      "-filter_complex", "[0:v][1:v]concat=n=2:v=1:a=0[out]",
-      "-map", "[out]",
+      "-f",
+      "lavfi",
+      "-i",
+      "color=c=0x202020:size=320x180:rate=30:duration=1",
+      "-f",
+      "lavfi",
+      "-i",
+      "color=c=0x202020:size=320x180:rate=30:duration=1,drawbox=x=280:y=140:w=40:h=40:color=white:t=fill",
+      "-filter_complex",
+      "[0:v][1:v]concat=n=2:v=1:a=0[out]",
+      "-map",
+      "[out]",
       lowContrast,
     ]);
     // sanity: the cut genuinely scores below the OLD 0.4 calibration
     const probe = await execFileAsync("ffmpeg", [
-      "-i", lowContrast,
-      "-vf", "select='gte(scene,0.4)',showinfo",
-      "-f", "null", "-",
+      "-i",
+      lowContrast,
+      "-vf",
+      "select='gte(scene,0.4)',showinfo",
+      "-f",
+      "null",
+      "-",
     ]);
     expect(probe.stderr.match(/pts_time:[\d.]+/g)).toBeNull();
 

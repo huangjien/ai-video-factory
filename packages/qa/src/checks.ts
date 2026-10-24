@@ -280,7 +280,7 @@ export async function checkStaleSceneRenders(
     if (scene.component !== "ImageBackground") continue;
     const src =
       typeof (scene.props as { src?: unknown } | undefined)?.src === "string"
-        ? ((scene.props as { src: string }).src)
+        ? (scene.props as { src: string }).src
         : undefined;
     if (!src || !existsSync(src)) continue;
     const idNum = scene.id?.match(/scene[-_]?(\d+)/)?.[1];

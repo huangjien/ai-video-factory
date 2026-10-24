@@ -94,7 +94,10 @@ export const Timeline: FC<TimelineProps> = ({
         />
 
         {typed.map((ev, i) => {
-          const cx = typed.length > 1 ? STRIP_LEFT + step * i : (STRIP_LEFT + STRIP_RIGHT) / 2;
+          const cx =
+            typed.length > 1
+              ? STRIP_LEFT + step * i
+              : (STRIP_LEFT + STRIP_RIGHT) / 2;
           // Per-event animation: scale-up. Without it, all events render
           // at full opacity and the global fade handles entrance.
           const eventProgress = hasAnimations
@@ -166,9 +169,11 @@ export const Timeline: FC<TimelineProps> = ({
                   height={CARD_H}
                   rx={12}
                   fill={featured ? theme.colors.accent : theme.colors.surface}
-                  stroke={featured ? theme.colors.accent : theme.colors.secondary}
+                  stroke={
+                    featured ? theme.colors.accent : theme.colors.secondary
+                  }
                   strokeWidth={featured ? 0 : 1.5}
-                  opacity={featured ? 0.10 : 1}
+                  opacity={featured ? 0.1 : 1}
                 />
                 <text
                   x={16}
@@ -181,7 +186,12 @@ export const Timeline: FC<TimelineProps> = ({
                   {ev.label}
                 </text>
                 {ev.description !== undefined ? (
-                  <foreignObject x={16} y={50} width={CARD_W - 32} height={CARD_H - 60}>
+                  <foreignObject
+                    x={16}
+                    y={50}
+                    width={CARD_W - 32}
+                    height={CARD_H - 60}
+                  >
                     <div
                       style={{
                         color: theme.colors.secondary,
@@ -220,14 +230,18 @@ export const Timeline: FC<TimelineProps> = ({
 
               {/* Date label below the axis. Always under the dot so
                   the date+event pairing is unambiguous. */}
-              <g transform={`translate(0, ${(above ? 38 : -38) * (above ? 1 : -1)})`}>
+              <g
+                transform={`translate(0, ${(above ? 38 : -38) * (above ? 1 : -1)})`}
+              >
                 <rect
                   x={-50}
                   y={-14}
                   width={100}
                   height={28}
                   rx={14}
-                  fill={featured ? theme.colors.accent : theme.colors.background}
+                  fill={
+                    featured ? theme.colors.accent : theme.colors.background
+                  }
                   stroke={theme.colors.secondary}
                   strokeWidth={1}
                 />

@@ -48,7 +48,8 @@ export const BarChart: FC<BarChartProps> = ({
   const safeMax = maxV > 0 ? maxV : 1;
   const rowH = 80;
   const headerH = title !== undefined ? 110 : 0;
-  const innerTop = (1080 - (headerH + bars.length * rowH + (bars.length - 1) * 20)) / 2;
+  const innerTop =
+    (1080 - (headerH + bars.length * rowH + (bars.length - 1) * 20)) / 2;
   return (
     <AbsoluteFill
       style={{
@@ -60,8 +61,16 @@ export const BarChart: FC<BarChartProps> = ({
       <svg width="100%" height="100%" viewBox="0 0 1920 1080">
         <defs>
           <linearGradient id="bar-fill" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor={theme.colors.accent} stopOpacity="0.95" />
-            <stop offset="100%" stopColor={theme.colors.accent} stopOpacity="0.55" />
+            <stop
+              offset="0%"
+              stopColor={theme.colors.accent}
+              stopOpacity="0.95"
+            />
+            <stop
+              offset="100%"
+              stopColor={theme.colors.accent}
+              stopOpacity="0.55"
+            />
           </linearGradient>
           <filter id="bar-shadow" x="-20%" y="-20%" width="140%" height="140%">
             <feGaussianBlur in="SourceAlpha" stdDeviation="3" />
@@ -219,6 +228,7 @@ export const BarChart: FC<BarChartProps> = ({
  *  max 100 reads as "85%", 3.5 with max 5 reads as "70%", a tiny count
  *  reads as-is. */
 function formatValue(v: number, maxV: number): string {
-  if (maxV > 0 && v > 0 && v < maxV && maxV >= 10) return `${Math.round((v / maxV) * 100)}%`;
+  if (maxV > 0 && v > 0 && v < maxV && maxV >= 10)
+    return `${Math.round((v / maxV) * 100)}%`;
   return String(v);
 }

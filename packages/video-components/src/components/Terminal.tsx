@@ -30,8 +30,8 @@ const SHELL_W = 1400;
 const SHELL_H = 760;
 
 const STOP_TINT = "#ff5f57"; // close
-const MIN_TINT = "#febc2e";   // minimize
-const MAX_TINT = "#28c840";   // maximize (zoom)
+const MIN_TINT = "#febc2e"; // minimize
+const MAX_TINT = "#28c840"; // maximize (zoom)
 
 /** The default prompt that a line is compared against to decide if it
  *  represents a user-typed command line. */
@@ -61,7 +61,11 @@ export const Terminal: FC<TerminalProps> = ({
   //  global typewriter across the whole block.
   const perLine = lines.map((line, i) => {
     if (!hasAnimations) {
-      return { line, shown: line.length, isCommand: lineIsCommand(line, prompt) };
+      return {
+        line,
+        shown: line.length,
+        isCommand: lineIsCommand(line, prompt),
+      };
     }
     const p = progressFor(animations, `line-${i}`, sceneSec, 0.5);
     return {
@@ -221,7 +225,9 @@ export const Terminal: FC<TerminalProps> = ({
                 <span style={{ color: lineColor }}>{rest || " "}</span>
                 {/* Blinking caret — only on the last line, only while
                     its reveal is still in progress or just finished. */}
-                {i === perLine.length - 1 && p.shown >= p.line.length && cursorOn ? (
+                {i === perLine.length - 1 &&
+                p.shown >= p.line.length &&
+                cursorOn ? (
                   <span
                     style={{
                       display: "inline-block",

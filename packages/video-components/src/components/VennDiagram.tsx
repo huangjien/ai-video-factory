@@ -48,9 +48,9 @@ export const VennDiagram: FC<VennDiagramProps> = ({
   const hasAnimations = Array.isArray(animations) && animations.length > 0;
   const sceneSec = durationInFrames > 0 ? frame / 30 : 0;
   // Normalize legacy string[] to the new typed shape.
-  const typed: VennSet[] = sets.slice(0, 3).map((s) =>
-    typeof s === "string" ? { label: s } : s,
-  );
+  const typed: VennSet[] = sets
+    .slice(0, 3)
+    .map((s) => (typeof s === "string" ? { label: s } : s));
   // Circle positions on a 1920×1080 canvas. Center biased to leave the
   // upper third for the label and the lower third for breathing room.
   const CX = 960;
@@ -95,7 +95,11 @@ export const VennDiagram: FC<VennDiagramProps> = ({
             ? progressFor(animations, `set-${i}`, sceneSec, 0.5)
             : fade(frame - i * 6, 18);
           return (
-            <g key={`set-${i}`} opacity={setProgress} filter="url(#venn-shadow)">
+            <g
+              key={`set-${i}`}
+              opacity={setProgress}
+              filter="url(#venn-shadow)"
+            >
               <circle
                 cx={p.x}
                 cy={p.y}

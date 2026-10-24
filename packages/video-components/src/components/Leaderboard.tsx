@@ -131,7 +131,9 @@ export const Leaderboard: FC<LeaderboardProps> = ({
                   alignSelf: "center",
                   backgroundColor: isPodium ? accent : theme.colors.background,
                   color: isPodium ? "#FFFFFF" : theme.colors.primary,
-                  border: isPodium ? "none" : `1.5px solid ${theme.colors.secondary}66`,
+                  border: isPodium
+                    ? "none"
+                    : `1.5px solid ${theme.colors.secondary}66`,
                   fontSize: isPodium ? 26 : 22,
                   fontWeight: 700,
                   fontFamily: theme.typography.code.fontFamily,

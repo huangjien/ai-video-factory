@@ -110,9 +110,7 @@ const flowChartProps = z
           z.string().min(1),
           z.object({
             label: z.string().min(1),
-            kind: z
-              .enum(["start", "process", "decision", "end"])
-              .optional(),
+            kind: z.enum(["start", "process", "decision", "end"]).optional(),
           }),
         ]),
       )
@@ -517,11 +515,17 @@ export type RegistryPropsByName = {
       | string
       | { label: string; kind?: "start" | "process" | "decision" | "end" }
     )[];
-    edges?:
-      | ([number, number] | { from: number; to: number; label?: string })[];
+    edges?: ([number, number] | { from: number; to: number; label?: string })[];
     direction?: "left-to-right" | "top-down";
   };
-  Timeline: { events: { label: string; description?: string; date?: string; featured?: boolean }[] };
+  Timeline: {
+    events: {
+      label: string;
+      description?: string;
+      date?: string;
+      featured?: boolean;
+    }[];
+  };
   MapInsert: {
     landforms?: { d: string; kind?: "ridge" | "river" | "plain" }[];
     routes?: { d: string }[];
@@ -541,16 +545,59 @@ export type RegistryPropsByName = {
     kenBurnsScale?: number;
     textOverlaySrc?: string;
   };
-  QuoteBlock: { quote: string; author?: string; source?: string; kicker?: string };
-  StatGrid: { stats: { value: string; label: string; hint?: string; icon?: string }[]; caption?: string };
-  BarChart: { bars: { label: string; value: number; display?: string; icon?: string; caption?: string }[]; title?: string };
-  Leaderboard: { entries: { name: string; score?: string; subtitle?: string; color?: string }[]; title?: string };
-  Checklist: { items: (string | { text: string; description?: string; status?: "done" | "pending" | "skip"; group?: string })[]; title?: string };
+  QuoteBlock: {
+    quote: string;
+    author?: string;
+    source?: string;
+    kicker?: string;
+  };
+  StatGrid: {
+    stats: { value: string; label: string; hint?: string; icon?: string }[];
+    caption?: string;
+  };
+  BarChart: {
+    bars: {
+      label: string;
+      value: number;
+      display?: string;
+      icon?: string;
+      caption?: string;
+    }[];
+    title?: string;
+  };
+  Leaderboard: {
+    entries: {
+      name: string;
+      score?: string;
+      subtitle?: string;
+      color?: string;
+    }[];
+    title?: string;
+  };
+  Checklist: {
+    items: (
+      | string
+      | {
+          text: string;
+          description?: string;
+          status?: "done" | "pending" | "skip";
+          group?: string;
+        }
+    )[];
+    title?: string;
+  };
   BigIdea: { text: string; kicker?: string; attribution?: string };
   PyramidDiagram: {
     levels: (string | { label: string; role?: string; icon?: string })[];
     title?: string;
   };
-  VennDiagram: { sets: (string | { label: string; detail?: string })[]; center?: string };
-  CycleDiagram: { stages: (string | { label: string; detail?: string; icon?: string })[]; title?: string; caption?: string };
+  VennDiagram: {
+    sets: (string | { label: string; detail?: string })[];
+    center?: string;
+  };
+  CycleDiagram: {
+    stages: (string | { label: string; detail?: string; icon?: string })[];
+    title?: string;
+    caption?: string;
+  };
 };

@@ -87,11 +87,7 @@ export const MapInsert: FC<MapInsertProps> = ({
             {title}
           </div>
         ) : null}
-        <svg
-          width={W}
-          height={H}
-          viewBox={`0 0 ${VIEW} ${VIEW * H / W}`}
-        >
+        <svg width={W} height={H} viewBox={`0 0 ${VIEW} ${(VIEW * H) / W}`}>
           <defs>
             {/* Subtle paper texture — a soft tan gradient that the
                 landforms sit on. Keeps the map from looking like a
@@ -114,7 +110,13 @@ export const MapInsert: FC<MapInsertProps> = ({
                 strokeWidth={1}
               />
             </pattern>
-            <filter id="map-shadow" x="-10%" y="-10%" width="120%" height="120%">
+            <filter
+              id="map-shadow"
+              x="-10%"
+              y="-10%"
+              width="120%"
+              height="120%"
+            >
               <feGaussianBlur in="SourceAlpha" stdDeviation="3" />
               <feOffset dx="0" dy="2" result="offsetblur" />
               <feComponentTransfer>
@@ -132,7 +134,7 @@ export const MapInsert: FC<MapInsertProps> = ({
             x={0}
             y={0}
             width={VIEW}
-            height={VIEW * H / W}
+            height={(VIEW * H) / W}
             fill="url(#map-paper)"
             stroke={theme.colors.secondary}
             strokeOpacity={0.5}
@@ -144,7 +146,7 @@ export const MapInsert: FC<MapInsertProps> = ({
             x={0}
             y={0}
             width={VIEW}
-            height={VIEW * H / W}
+            height={(VIEW * H) / W}
             fill="url(#map-grid)"
             rx={8}
           />
@@ -185,10 +187,7 @@ export const MapInsert: FC<MapInsertProps> = ({
                     fontSize={18}
                     fontFamily={theme.typography.body.fontFamily}
                   >
-                    <textPath
-                      href={`#map-landform-${i}`}
-                      startOffset="5%"
-                    >
+                    <textPath href={`#map-landform-${i}`} startOffset="5%">
                       {l.label}
                     </textPath>
                   </text>

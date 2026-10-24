@@ -89,7 +89,13 @@ export const Checklist: FC<ChecklistProps> = ({
   const PROGRESS_H = 56;
   const ROW_H = 88;
   const innerLeft = (1920 - CARD_W) / 2;
-  const innerTop = (1080 - (HEADER_H + typed.length * ROW_H + (typed.length - 1) * ROW_GAP + PROGRESS_H)) / 2;
+  const innerTop =
+    (1080 -
+      (HEADER_H +
+        typed.length * ROW_H +
+        (typed.length - 1) * ROW_GAP +
+        PROGRESS_H)) /
+    2;
 
   return (
     <AbsoluteFill
@@ -101,7 +107,13 @@ export const Checklist: FC<ChecklistProps> = ({
     >
       <svg width="100%" height="100%" viewBox="0 0 1920 1080">
         <defs>
-          <filter id="checklist-shadow" x="-20%" y="-20%" width="140%" height="140%">
+          <filter
+            id="checklist-shadow"
+            x="-20%"
+            y="-20%"
+            width="140%"
+            height="140%"
+          >
             <feGaussianBlur in="SourceAlpha" stdDeviation="4" />
             <feOffset dx="0" dy="2" result="offsetblur" />
             <feComponentTransfer>
@@ -150,7 +162,11 @@ export const Checklist: FC<ChecklistProps> = ({
           // square — the checkmark draws on top.
           const showCheck = it.status === undefined || it.status === "done";
           return (
-            <g key={`item-${i}`} opacity={itemProgress} filter="url(#checklist-shadow)">
+            <g
+              key={`item-${i}`}
+              opacity={itemProgress}
+              filter="url(#checklist-shadow)"
+            >
               {/* Card — translucent surface with status-tinted left border
                   and a subtle drop shadow. The card stretches the full
                   ROW_H so even single-line descriptions read comfortably. */}
@@ -179,7 +195,9 @@ export const Checklist: FC<ChecklistProps> = ({
                   checkmark (for "done") or hollow ring (for "pending")
                   or dashed ring (for "skip"). Sized so it reads even at
                   the upper-third of a 1920×1080 frame. */}
-              <g transform={`translate(${innerLeft + 50}, ${rowY + ROW_H / 2})`}>
+              <g
+                transform={`translate(${innerLeft + 50}, ${rowY + ROW_H / 2})`}
+              >
                 <circle
                   r={22}
                   fill={c.fill}
@@ -191,7 +209,9 @@ export const Checklist: FC<ChecklistProps> = ({
                   <path
                     d="M -8 0 L -2 6 L 8 -6"
                     fill="none"
-                    stroke={c.mark === theme.colors.success ? "#FFFFFF" : c.mark}
+                    stroke={
+                      c.mark === theme.colors.success ? "#FFFFFF" : c.mark
+                    }
                     strokeWidth={3.5}
                     strokeLinecap="round"
                     strokeLinejoin="round"
@@ -257,7 +277,9 @@ export const Checklist: FC<ChecklistProps> = ({
         {/* Progress bar — a thin track across the full card width, with
             a colored fill that grows as more items are completed. */}
         {total > 0 ? (
-          <g transform={`translate(${innerLeft}, ${innerTop + HEADER_H + typed.length * (ROW_H + ROW_GAP) + 4})`}>
+          <g
+            transform={`translate(${innerLeft}, ${innerTop + HEADER_H + typed.length * (ROW_H + ROW_GAP) + 4})`}
+          >
             <text
               x={0}
               y={-4}

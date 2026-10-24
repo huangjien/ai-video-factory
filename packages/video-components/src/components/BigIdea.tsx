@@ -48,7 +48,10 @@ export const BigIdea: FC<BigIdeaProps> = ({
   const reveal = hasAnimations
     ? progressFor(animations, "__reveal__", sceneSec, 0.55)
     : Math.min(1, frame / Math.max(1, durationInFrames * 0.55));
-  const visibleCount = Math.max(0, Math.min(tokens.length, Math.ceil(reveal * tokens.length)));
+  const visibleCount = Math.max(
+    0,
+    Math.min(tokens.length, Math.ceil(reveal * tokens.length)),
+  );
   const visible = tokens.slice(0, visibleCount);
   // A breath on the whole statement keeps the still frame from looking
   // dead — the same 1% oscillation the Title component uses.

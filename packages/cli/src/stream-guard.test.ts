@@ -23,13 +23,21 @@ describe("isTransientStreamNoise", () => {
 
   it("absorbs a bare ECONNRESET cause", () => {
     const err = new TypeError("fetch failed");
-    Object.assign(err, { cause: Object.assign(new Error("x"), { code: "ECONNRESET" }) });
+    Object.assign(err, {
+      cause: Object.assign(new Error("x"), { code: "ECONNRESET" }),
+    });
     expect(isTransientStreamNoise(err)).toBe(true);
   });
 
   it("does NOT absorb real bugs (undefined variable, type errors)", () => {
-    expect(isTransientStreamNoise(new TypeError("Cannot read properties of undefined (reading 'map')"))).toBe(false);
-    expect(isTransientStreamNoise(new Error("storyboard is not approved"))).toBe(false);
+    expect(
+      isTransientStreamNoise(
+        new TypeError("Cannot read properties of undefined (reading 'map')"),
+      ),
+    ).toBe(false);
+    expect(
+      isTransientStreamNoise(new Error("storyboard is not approved")),
+    ).toBe(false);
     expect(isTransientStreamNoise("a string rejection")).toBe(false);
     expect(isTransientStreamNoise(null)).toBe(false);
   });
@@ -43,7 +51,9 @@ describe("isTransientStreamNoise", () => {
     expect(() => process.emit("unhandledRejection", noise)).not.toThrow();
     // …and MUST rethrow for real bugs (a handler-level throw surfaces to
     // the runtime's own fatal path).
-    const realBug = new TypeError("Cannot read properties of undefined (reading 'map')");
+    const realBug = new TypeError(
+      "Cannot read properties of undefined (reading 'map')",
+    );
     expect(() => process.emit("unhandledRejection", realBug)).toThrow();
   });
 });

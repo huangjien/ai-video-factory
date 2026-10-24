@@ -52,9 +52,9 @@ export const PyramidDiagram: FC<PyramidDiagramProps> = ({
   const hasAnimations = Array.isArray(animations) && animations.length > 0;
   const sceneSec = durationInFrames > 0 ? frame / 30 : 0;
   // Normalize legacy string[] to the new typed shape.
-  const typed: PyramidLevel[] = levels.slice(0, 6).map((l) =>
-    typeof l === "string" ? { label: l } : l,
-  );
+  const typed: PyramidLevel[] = levels
+    .slice(0, 6)
+    .map((l) => (typeof l === "string" ? { label: l } : l));
   const n = typed.length;
   // Each level has equal height; total stacked-height spans BASE_Y - APEX_Y
   // so the apex peak sits above the trapezoid stack, not overlapping.
@@ -78,7 +78,13 @@ export const PyramidDiagram: FC<PyramidDiagramProps> = ({
           {/* Soft drop shadow for the foundation tier — gives the
               widest layer a sense of weight without making it look
               heavy. */}
-          <filter id="pyramid-shadow" x="-20%" y="-20%" width="140%" height="140%">
+          <filter
+            id="pyramid-shadow"
+            x="-20%"
+            y="-20%"
+            width="140%"
+            height="140%"
+          >
             <feGaussianBlur in="SourceAlpha" stdDeviation="6" />
             <feOffset dx="0" dy="4" result="offsetblur" />
             <feComponentTransfer>
@@ -94,14 +100,36 @@ export const PyramidDiagram: FC<PyramidDiagramProps> = ({
               pyramid reads as rising. The gradient is on each level
               individually to keep the "growth" reading strong. */}
           <linearGradient id="pyramid-tier-grad" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor={theme.colors.accent} stopOpacity="0.85" />
-            <stop offset="100%" stopColor={theme.colors.accent} stopOpacity="0.45" />
+            <stop
+              offset="0%"
+              stopColor={theme.colors.accent}
+              stopOpacity="0.85"
+            />
+            <stop
+              offset="100%"
+              stopColor={theme.colors.accent}
+              stopOpacity="0.45"
+            />
           </linearGradient>
           {/* Slightly darker gradient for the foundation — a strong,
               saturated "rock" that everything else rests on. */}
-          <linearGradient id="pyramid-foundation-grad" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor={theme.colors.accent} stopOpacity="0.95" />
-            <stop offset="100%" stopColor={theme.colors.accent} stopOpacity="0.7" />
+          <linearGradient
+            id="pyramid-foundation-grad"
+            x1="0"
+            y1="0"
+            x2="0"
+            y2="1"
+          >
+            <stop
+              offset="0%"
+              stopColor={theme.colors.accent}
+              stopOpacity="0.95"
+            />
+            <stop
+              offset="100%"
+              stopColor={theme.colors.accent}
+              stopOpacity="0.7"
+            />
           </linearGradient>
         </defs>
 
@@ -139,7 +167,11 @@ export const PyramidDiagram: FC<PyramidDiagramProps> = ({
             focal point. */}
         {n > 0 ? (
           <g
-            opacity={hasAnimations ? progressFor(animations, "level-0", sceneSec, 0.5) : fade(frame, 20)}
+            opacity={
+              hasAnimations
+                ? progressFor(animations, "level-0", sceneSec, 0.5)
+                : fade(frame, 20)
+            }
             filter="url(#pyramid-shadow)"
           >
             <polygon
@@ -165,9 +197,11 @@ export const PyramidDiagram: FC<PyramidDiagramProps> = ({
             Only rendered when the base width is large enough. */}
         {n > 0 ? (
           <g
-            opacity={hasAnimations
-              ? progressFor(animations, "level-0", sceneSec, 0.5) * 0.7
-              : fade(frame, 30)}
+            opacity={
+              hasAnimations
+                ? progressFor(animations, "level-0", sceneSec, 0.5) * 0.7
+                : fade(frame, 30)
+            }
           >
             <rect
               x={CENTER_X - BASE_W / 2 - 30}
@@ -255,7 +289,9 @@ export const PyramidDiagram: FC<PyramidDiagramProps> = ({
               {/* Optional icon — small monogram on the right of the
                   tier. Falls back to a default dot if icon is omitted. */}
               {lvl.icon !== undefined ? (
-                <g transform={`translate(${CENTER_X + wTop / 2 + 30}, ${(yTop + yBot) / 2})`}>
+                <g
+                  transform={`translate(${CENTER_X + wTop / 2 + 30}, ${(yTop + yBot) / 2})`}
+                >
                   <circle
                     r={18}
                     fill={theme.colors.background}

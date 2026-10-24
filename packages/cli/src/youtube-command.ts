@@ -830,7 +830,9 @@ export function registerYouTube(program: Command): void {
         if (opts.videoId !== undefined) {
           process.exitCode = await runYouTubeManage({
             videoId: opts.videoId,
-            ...(opts.setPrivacy !== undefined ? { setPrivacy: opts.setPrivacy } : {}),
+            ...(opts.setPrivacy !== undefined
+              ? { setPrivacy: opts.setPrivacy }
+              : {}),
             ...(opts.delete === true ? { delete: true } : {}),
             ...(opts.clientSecret !== undefined
               ? { clientSecretPath: opts.clientSecret }

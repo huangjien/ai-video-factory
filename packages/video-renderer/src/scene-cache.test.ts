@@ -132,7 +132,11 @@ describe("scene-cache sidecar read/write round trip", () => {
 
 describe("overlay digest freshness (2026-10-24 — Pillow banner is a render input)", () => {
   it("a changed overlay PNG invalidates the scene", () => {
-    const meta = { ...legacy, imageHash: "sha256:aaa", overlayHash: "sha256:old" };
+    const meta = {
+      ...legacy,
+      imageHash: "sha256:aaa",
+      overlayHash: "sha256:old",
+    };
     expect(
       sceneCacheIsFresh(meta as never, {
         sceneHash: "h",
@@ -146,7 +150,11 @@ describe("overlay digest freshness (2026-10-24 — Pillow banner is a render inp
   });
 
   it("an unchanged overlay keeps the scene fresh", () => {
-    const meta = { ...legacy, imageHash: "sha256:aaa", overlayHash: "sha256:same" };
+    const meta = {
+      ...legacy,
+      imageHash: "sha256:aaa",
+      overlayHash: "sha256:same",
+    };
     expect(
       sceneCacheIsFresh(meta as never, {
         sceneHash: "h",

@@ -62,9 +62,7 @@ const NODE_RX = 14;
 // Pill dims for start/end (rounded fully)
 const PILL_H = 64;
 
-function isFlowEdgeObject(
-  e: [number, number] | FlowEdge,
-): e is FlowEdge {
+function isFlowEdgeObject(e: [number, number] | FlowEdge): e is FlowEdge {
   return typeof e === "object" && !Array.isArray(e);
 }
 
@@ -99,8 +97,7 @@ export const FlowChart: FC<FlowChartProps> = ({
   // direction=left-to-right, so the math below is the simple "place each
   // node on a grid" path. Override the X for "top-down" so the line
   // connecting two nodes is vertical.
-  const cols =
-    direction === "left-to-right" ? Math.max(1, nodes.length) : 1;
+  const cols = direction === "left-to-right" ? Math.max(1, nodes.length) : 1;
   const positions = nodes.map((_, i) => {
     const col = i % cols;
     const row = Math.floor(i / cols);
@@ -136,7 +133,7 @@ export const FlowChart: FC<FlowChartProps> = ({
   const onSurface = theme.colors.primary;
   const accent = theme.colors.accent;
   const accentAlt = "#E8A33D"; // amber, readable on both light and dark
-  const success = "#3FAA6B";   // green for start/end
+  const success = "#3FAA6B"; // green for start/end
   const onAccent = "#FFFFFF";
   const edge = theme.colors.primary;
   const labelBg = theme.colors.surface;
@@ -158,13 +155,7 @@ export const FlowChart: FC<FlowChartProps> = ({
         {/* Soft drop shadow on the node group — modern chart aesthetic.
             Cheap filter; the SVG renderer is happy with feGaussianBlur. */}
         <defs>
-          <filter
-            id="flow-shadow"
-            x="-20%"
-            y="-20%"
-            width="140%"
-            height="140%"
-          >
+          <filter id="flow-shadow" x="-20%" y="-20%" width="140%" height="140%">
             <feGaussianBlur in="SourceAlpha" stdDeviation="6" />
             <feOffset dx="0" dy="4" result="offsetblur" />
             <feComponentTransfer>
@@ -240,7 +231,8 @@ export const FlowChart: FC<FlowChartProps> = ({
           // edge has a label (typical "yes" / "no" branch). Otherwise
           // the theme's primary.
           const isDecisionBranch =
-            nodeKind(nodes[e.from] ?? "") === "decision" && e.label !== undefined;
+            nodeKind(nodes[e.from] ?? "") === "decision" &&
+            e.label !== undefined;
           const stroke = isDecisionBranch ? accentAlt : edge;
           // Stagger edge draw: each edge completes in turn.
           const totalEdges = Math.max(1, edges.length);
@@ -266,42 +258,44 @@ export const FlowChart: FC<FlowChartProps> = ({
               />
               {/* Edge label chip — sits at the midpoint, slight backdrop so
                   it reads against the curve and any background. */}
-              {e.label !== undefined ? (() => {
-                const mx = (aX + bX) / 2;
-                const my = (aY + bY) / 2;
-                const labelW = Math.max(
-                  e.label.length * (FONT_PX_LABEL * 0.55) + 28,
-                  64,
-                );
-                const labelH = FONT_PX_LABEL + 14;
-                return (
-                  <g
-                    transform={`translate(${mx - labelW / 2}, ${my - labelH / 2})`}
-                    opacity={Math.max(0, localProgress - 0.1) / 0.9}
-                  >
-                    <rect
-                      width={labelW}
-                      height={labelH}
-                      rx={labelH / 2}
-                      fill={labelBg}
-                      stroke={stroke}
-                      strokeWidth={1.5}
-                    />
-                    <text
-                      x={labelW / 2}
-                      y={labelH / 2}
-                      fill={labelText}
-                      fontSize={FONT_PX_LABEL}
-                      fontWeight={FONT_WEIGHT_LABEL}
-                      textAnchor="middle"
-                      dominantBaseline="middle"
-                      fontFamily={theme.typography.body.fontFamily}
-                    >
-                      {e.label}
-                    </text>
-                  </g>
-                );
-              })() : null}
+              {e.label !== undefined
+                ? (() => {
+                    const mx = (aX + bX) / 2;
+                    const my = (aY + bY) / 2;
+                    const labelW = Math.max(
+                      e.label.length * (FONT_PX_LABEL * 0.55) + 28,
+                      64,
+                    );
+                    const labelH = FONT_PX_LABEL + 14;
+                    return (
+                      <g
+                        transform={`translate(${mx - labelW / 2}, ${my - labelH / 2})`}
+                        opacity={Math.max(0, localProgress - 0.1) / 0.9}
+                      >
+                        <rect
+                          width={labelW}
+                          height={labelH}
+                          rx={labelH / 2}
+                          fill={labelBg}
+                          stroke={stroke}
+                          strokeWidth={1.5}
+                        />
+                        <text
+                          x={labelW / 2}
+                          y={labelH / 2}
+                          fill={labelText}
+                          fontSize={FONT_PX_LABEL}
+                          fontWeight={FONT_WEIGHT_LABEL}
+                          textAnchor="middle"
+                          dominantBaseline="middle"
+                          fontFamily={theme.typography.body.fontFamily}
+                        >
+                          {e.label}
+                        </text>
+                      </g>
+                    );
+                  })()
+                : null}
             </g>
           );
         })}
@@ -317,8 +311,7 @@ export const FlowChart: FC<FlowChartProps> = ({
             ? progressFor(animations, `node-${i}`, sceneSec, 0.5)
             : 1;
           const nodeScale = 0.92 + 0.08 * nodeProgress;
-          const fill =
-            kind === "start" || kind === "end" ? success : surface;
+          const fill = kind === "start" || kind === "end" ? success : surface;
           const stroke =
             kind === "decision"
               ? accentAlt

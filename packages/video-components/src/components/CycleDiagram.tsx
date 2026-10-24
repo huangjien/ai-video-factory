@@ -88,7 +88,13 @@ export const CycleDiagram: FC<CycleDiagramProps> = ({
           >
             <path d="M 0 0 L 10 5 L 0 10 z" fill={theme.colors.accent} />
           </marker>
-          <filter id="cycle-shadow" x="-20%" y="-20%" width="140%" height="140%">
+          <filter
+            id="cycle-shadow"
+            x="-20%"
+            y="-20%"
+            width="140%"
+            height="140%"
+          >
             <feGaussianBlur in="SourceAlpha" stdDeviation="4" />
             <feOffset dx="0" dy="3" result="offsetblur" />
             <feComponentTransfer>
@@ -106,7 +112,13 @@ export const CycleDiagram: FC<CycleDiagramProps> = ({
             the title stays readable while the ring spins around it. */}
         <g transform={`translate(${CX}, ${CY})`}>
           <circle r={120} fill={theme.colors.surface} opacity={0.92} />
-          <circle r={120} fill="none" stroke={theme.colors.accent} strokeWidth={2} opacity={0.4} />
+          <circle
+            r={120}
+            fill="none"
+            stroke={theme.colors.accent}
+            strokeWidth={2}
+            opacity={0.4}
+          />
           {title !== undefined ? (
             <text
               y={-4}
@@ -133,7 +145,9 @@ export const CycleDiagram: FC<CycleDiagramProps> = ({
         </g>
 
         {/* Rotating assembly — the orbit + nodes spin together. */}
-        <g transform={`translate(${CX}, ${CY}) rotate(${rot * (180 / Math.PI)})`}>
+        <g
+          transform={`translate(${CX}, ${CY}) rotate(${rot * (180 / Math.PI)})`}
+        >
           {/* Dashed orbit — drawn on entry via the standard `__ring__`
               animation when present, or as a static ring on frame 0. */}
           <circle
@@ -142,7 +156,11 @@ export const CycleDiagram: FC<CycleDiagramProps> = ({
             stroke={theme.colors.accent}
             strokeWidth={3}
             strokeDasharray="8 8"
-            opacity={hasAnimations ? progressFor(animations, "__ring__", sceneSec, 0.6) : fade(frame, 24)}
+            opacity={
+              hasAnimations
+                ? progressFor(animations, "__ring__", sceneSec, 0.6)
+                : fade(frame, 24)
+            }
           />
           {/* Inner guide ring — a faint full circle that anchors the
               orbit's shape even when the dashes are still animating on. */}

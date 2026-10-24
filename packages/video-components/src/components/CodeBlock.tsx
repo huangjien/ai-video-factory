@@ -19,11 +19,43 @@ export interface CodeBlockProps {
 }
 
 const KEYWORDS = new Set([
-  "const", "let", "var", "function", "return", "if", "else", "for", "while",
-  "import", "from", "export", "class", "new", "await", "async", "yield",
-  "def", "in", "with", "try", "except", "raise", "pass", "lambda",
-  "public", "private", "static", "void", "null", "true", "false", "None",
-  "True", "False", "self", "this",
+  "const",
+  "let",
+  "var",
+  "function",
+  "return",
+  "if",
+  "else",
+  "for",
+  "while",
+  "import",
+  "from",
+  "export",
+  "class",
+  "new",
+  "await",
+  "async",
+  "yield",
+  "def",
+  "in",
+  "with",
+  "try",
+  "except",
+  "raise",
+  "pass",
+  "lambda",
+  "public",
+  "private",
+  "static",
+  "void",
+  "null",
+  "true",
+  "false",
+  "None",
+  "True",
+  "False",
+  "self",
+  "this",
 ]);
 
 /** Cheap, language-agnostic tokenizer. Splits on whitespace, keeps
@@ -48,11 +80,11 @@ function tokenize(line: string): Array<{ text: string; kind: string }> {
 }
 
 const KIND_COLORS: Record<string, string> = {
-  kw: "#C586C0",   // keyword — soft purple
-  num: "#B5CEA8",  // number — sage
-  op: "#9CDCFE",   // operator / punctuation — light blue
-  id: "#D4D4D4",   // identifier — neutral
-  ws: "#1E1E1E",   // whitespace — invisible
+  kw: "#C586C0", // keyword — soft purple
+  num: "#B5CEA8", // number — sage
+  op: "#9CDCFE", // operator / punctuation — light blue
+  id: "#D4D4D4", // identifier — neutral
+  ws: "#1E1E1E", // whitespace — invisible
 };
 
 export const CodeBlock: FC<CodeBlockProps> = ({
@@ -80,7 +112,8 @@ export const CodeBlock: FC<CodeBlockProps> = ({
           backgroundColor: "#1E1E1E",
           borderRadius: 12,
           border: `1px solid ${theme.colors.secondary}33`,
-          boxShadow: "0 24px 56px rgba(0,0,0,0.32), 0 4px 12px rgba(0,0,0,0.18)",
+          boxShadow:
+            "0 24px 56px rgba(0,0,0,0.32), 0 4px 12px rgba(0,0,0,0.18)",
           overflow: "hidden",
         }}
       >
@@ -149,7 +182,9 @@ export const CodeBlock: FC<CodeBlockProps> = ({
                   display: "flex",
                   paddingLeft: 18,
                   paddingRight: 18,
-                  backgroundColor: isHighlighted ? `${theme.colors.accent}1A` : "transparent",
+                  backgroundColor: isHighlighted
+                    ? `${theme.colors.accent}1A`
+                    : "transparent",
                   borderLeft: isHighlighted
                     ? `3px solid ${theme.colors.accent}`
                     : "3px solid transparent",

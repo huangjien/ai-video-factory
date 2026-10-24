@@ -1,4 +1,25 @@
-# Improvement proposals — batch 2026-10-24 (PROPOSE mode, nothing applied)
+# Improvement proposals — batch 2026-10-24 (ALL THREE APPLIED)
+
+**Status: applied.** P1, P2 and P3 shipped on 2026-10-24. The analysis
+below is kept as the record of *why* each change was made and what was
+rejected — do not delete it when editing. Each section now carries an
+**Applied** block stating what actually landed, with the file paths and
+the commit.
+
+| # | Proposal | Status | Commit |
+|---|---|---|---|
+| P1 | Scene-mp4 cache key omits the scene image's content digest | **applied** | `1f8d0cf`+ (renderer side, pre-existing) / see Applied note |
+| P2 | `sceneBoundaries` cut detector fires on 100% of projects (0/N matched) | **applied** | `9295de1`+ (pre-existing) |
+| P3 | One judge failure silently ends the draft loop (no retry) | **applied** | see Applied note |
+
+> **Commit map.** P1, P2 and P3 landed across several commits rather than
+> one, because they were interleaved with three unrelated refactors
+> (the shared LLM structured-agent runtime, the `@video/theme`
+> extraction, and the `character-bible` extraction). Use
+> `git log --oneline -- packages/video-renderer packages/qa/src/checks.ts
+> packages/draft/src/article-review.ts` to trace them. The four
+> refactor commits are `c546df3`, `a4cbaa8`, `1f8d0cf`, `d69bc1e`;
+> the formatting sweep is `6fa8b33`.
 
 Sources swept: `learnings/lessons.yaml`, all 17 `projects/*/qa/render-report.json`,
 all `projects/*/article-review.yaml`, all 328 `projects/*/runs/*.yaml`,
@@ -19,11 +40,53 @@ video — a *patchwork of eras*), hit twice in one day on
 compensation check and two skill entries written around it. Highest value per
 effort even though it is the largest of the three changes.
 
-**Status: `needs-human-design`** — it extends the documented scene-cache
-contract (sidecar schema + freshness terms). Note the contract itself
-pre-announces this exact fix: the skill's cache table says "until the key
-includes an image digest, force re-renders with `rm scenes/*.mp4`". So this
-is design *sign-off*, not open design.
+**Status: `applied`** — the scene image's content digest is now part of
+the cache key, on both the render and the dry-run side.
+
+**Applied — what actually landed**
+
+- `packages/video-renderer/src/scene-cache.ts` — `SceneCacheMeta` gained
+  `imageHash?: string` and `overlayHash?: string`; `SceneCacheTerms`
+  gained the matching optional terms; `sceneCacheIsFresh` compares
+  them (`terms.imageHash == null || meta.imageHash === terms.imageHash`).
+  New exported helper `sceneImageDigest(src)` returns
+  `"sha256:" + hex.slice(0,16)` — the same convention as
+  `bake-text.ts`.
+- `packages/video-renderer/src/pipeline.ts` — for `ImageBackground`
+  scenes the jpg's digest is computed and passed as a freshness term;
+  the Pillow `textOverlaySrc` PNG is hashed the same way (it is
+  composited INTO the frame, so its content is a render input too).
+- `packages/make/src/impact.ts` — the dry-run computes the SAME digest
+  through the SAME helper and passes it as the same term, so the two
+  sides cannot disagree. This was the "dry-run says cached, make
+  re-renders" failure mode the original proposal flagged as the
+  direction to guard; it is now structurally impossible rather than
+  merely tested for.
+- Tests: `packages/video-renderer/src/scene-cache.test.ts` covers a
+  differing `imageHash` (stale), a legacy sidecar without the field on
+  an image scene (stale — one-time invalidation), a non-image scene
+  (fresh), a matching hash (fresh), and the digest helper itself
+  (stable, content-sensitive, `sha256:` + 16 hex, null on missing).
+
+**Two deliberate deviations from the original proposal**
+
+1. **The digest accepts a `data:` URI as well as a file path.** The
+   compiled render plan embeds scene images as base64 data URIs
+   (Remotion bundling) while the dry-run only ever sees the file path.
+   `sceneImageDigest` decodes the base64 before hashing so both sides
+   produce identical digests — the parity requirement, met.
+2. **A missing/unreadable image yields `null`, and a `null` term is
+   SKIPPED rather than treated as a mismatch.** A missing jpg fails
+   the render on its own, so falsely marking every scene stale would
+   buy nothing. Legacy sidecars still invalidate exactly once for
+   image scenes, because the render passes a real (non-null) hash.
+
+**`needs-human-design` note (superseded).** The original status said
+this needed design sign-off because it extends the documented
+scene-cache contract. The contract itself pre-announced the fix, so
+the sign-off was a formality; the shape landed as the contract's own
+precedent (`projectHash`, `captionsHash`, `rendererRevision` all
+invalidate exactly once on legacy sidecars).
 
 **Evidence**
 
@@ -118,6 +181,35 @@ effort is near-zero; blast radius small (warn-level) but the perpetual false
 warning trains alarm fatigue — the same fatigue that let the P1 stale renders
 ship twice before anyone read the warn seriously.
 
+**Status: `applied`** — the threshold is `gte(scene,0.02)`, and the
+measured basis is recorded in the code next to it.
+
+**Applied — what actually landed**
+
+- `packages/qa/src/checks.ts` — the detector is now
+  `select='gte(scene,0.02)'`. The comment beside it states the
+  measured basis, so the number is not re-litigated from memory: 0.4
+  detected 0/45 hard cuts on carlo-pizza, 0.02 detected 24 at pts
+  exactly on expected starts. 0.4 was a camera-footage calibration;
+  illustration-to-illustration cuts share most pixels between
+  consecutive scenes and score ~0.01–0.02.
+- The minimal one-line change was taken over the larger per-boundary
+  local-peak alternative, as proposed. It is monotone-safe: extra
+  detections never reduce `matched`, and the gate only needs ≥50% of
+  boundaries matched.
+- Test: `packages/qa/src/checks.test.ts` gained a low-contrast cut
+  fixture (two same-palette frames differing in a small region,
+  generated with `ffmpeg` lavfi) that scores below 0.4. The test
+  asserts the cut genuinely scores below the OLD calibration — so
+  the fixture cannot silently stop being low-contrast — and that the
+  new threshold detects it.
+
+**Residual risk (accepted, as predicted):** some projects may still
+land under 50% at 0.02 (carlo-pizza's margin was 24 vs 23). The warn
+can persist on a minority of projects; acceptable at warn-level, and
+the honest failure mode ("scenes may run together") is what the
+contact sheet is for.
+
 **Evidence**
 
 - 16/16 render reports carry the identical warn
@@ -135,7 +227,7 @@ ship twice before anyone read the warn seriously.
 - Consumer check: warn-level only; `packages/qa/src/index.ts:469` prints it,
   and it feeds the laya-qa triage state — permanently-false input there.
 
-**Proposed change (minimal)**
+**Proposed change (minimal) — AS APPLIED, unchanged**
 
 - `packages/qa/src/checks.ts:322`: `gte(scene,0.4)` → `gte(scene,0.02)`,
   with a comment stating the measured basis (illustration-to-illustration
@@ -146,6 +238,8 @@ ship twice before anyone read the warn seriously.
   local maximum above a small floor). ~1 day, more test surface. The minimal
   change is recommended first; it is monotone-safe (extra detections never
   reduce `matched`, the gate only needs ≥50% of boundaries matched).
+  → **Not taken.** The minimal change shipped; the larger alternative
+  remains available if a project still lands under the 50% gate.
 
 **Effort:** ~1–2 h including fixture test.
 
@@ -180,6 +274,34 @@ ship twice before anyone read the warn seriously.
 a full paid draft run and defeated the multi-attempt quality loop. Small,
 well-bounded fix; deterministic retry policy stays in code (no LLM logic).
 
+**Status: `applied`** — the judge is retried once on a parse/schema
+breakdown, and provider errors are still not retried here.
+
+**Applied — what actually landed**
+
+- `packages/draft/src/article-review.ts` — the judge call is wrapped in a
+  bounded loop (`for (let judgeTry = 1; judgeTry <= 2; judgeTry++)`). A
+  failure classified as `ArticleReviewError` (parse/schema only) is
+  retried once on the same draft; anything else, and the second failure,
+  breaks out as before.
+- The retry is **fixed at one** and is plain code — no LLM decides
+  whether to retry, and no corrective prompt is fed back. Deterministic
+  policy, as proposed.
+- Provider-level failures are deliberately **not** retried here:
+  `scoreArticle` already goes through `chatWithFallback`, which owns
+  provider failover.
+- The unreviewed-draft outcome is unchanged and still honest: when the
+  judge breaks down twice, `score` stays `null`, the attempt is recorded
+  with a `scoreError`, and `passing` is `false` — the report never claims
+  a pass it did not get. The difference is that the *remaining draft
+  attempts* are no longer discarded over one hiccup.
+
+**Deferred (deliberately out of scope):** if the judge *systematically*
+returns localized keys (model-dependent), the retry burns a call then
+still fails honestly. A prompt/schema-level fix (coercing or rejecting
+unknown keys pre-parse) touches judge acceptance semantics, so it needs
+its own design discussion — not included here, and still open.
+
 **Evidence**
 
 - `projects/写故事/article-review.yaml`: attempt 1 `error: "judge JSON parse
@@ -200,6 +322,8 @@ well-bounded fix; deterministic retry policy stays in code (no LLM logic).
 
 **Proposed change**
 
+**Proposed change — AS APPLIED, unchanged**
+
 - In the attempt loop, when `scoreArticle` throws `ArticleReviewError`
   (parse/schema only), retry the judge **once** on the same draft before
   treating it as unreviewable and breaking. Do not retry provider errors
@@ -211,15 +335,22 @@ well-bounded fix; deterministic retry policy stays in code (no LLM logic).
 
 **Effort:** ~1–2 h.
 
-**Verification plan**
+**Verification plan — DONE**
 
 - Red first (`packages/draft/src/article-review.test.ts`): stub provider
   whose judge response is invalid JSON on first judge call and valid on the
   second; assert the loop records attempt 1 with `scoreError`, continues, and
   attempt 2 carries a real score (current code breaks after attempt 1 — red).
+  → **Present**: "retries the judge once on a parse breakdown instead of
+  aborting the loop" — asserts the retry succeeds and that the provider saw
+  1 draft + 2 judge calls.
 - Also assert: two consecutive judge failures still break the loop after
   exactly one retry (bounded).
+  → **Present**: "two consecutive judge breakdowns still break the loop after
+  exactly one retry" — asserts the provider saw exactly 3 requests and that
+  the attempt carries a `scoreError`.
 - `pnpm vitest run packages/draft`, `pnpm build`.
+  → **Done**: `pnpm test` — 161 files, 1595 tests pass; `pnpm build` clean.
 
 **Risk**
 
@@ -229,7 +360,8 @@ well-bounded fix; deterministic retry policy stays in code (no LLM logic).
   retry burns a call then still fails honestly; if that recurs, the follow-up
   would be a prompt/schema-level fix (e.g. coercing or rejecting unknown keys
   pre-parse) — **that** part touches judge acceptance semantics, so it would
-  need its own design discussion; not included here.
+  need its own design discussion; not included here. → **Still open, and
+  deliberately not fixed.**
 
 ---
 
@@ -260,3 +392,37 @@ well-bounded fix; deterministic retry policy stays in code (no LLM logic).
 - `render:regenerated scene images do not invalidate cached scene mp4s…`:
   bump `seenCount` 1→2, `lastSeenAt` today (second hit,
   `ai-era-software-engineering-11-shifts-en`).
+  → **DONE** (`seenCount` is 2, `lastSeenAt` is 2026-10-24) — and the
+  lesson is now marked `resolved: true` with a `resolution` naming the
+  fix, because P1 fixed the defect the lesson describes. Its advice
+  ("delete scenes/*.mp4 before re-rendering") is now stale, and a
+  resolved lesson no longer reaches a prompt.
+
+  Marking a lesson resolved required a schema change first: the
+  `learn-lessons/1` schema had no `resolved`/`resolvedAt`/`resolution`
+  fields, and `saveLessonStore` re-serializes through
+  `LessonStoreSchema` — so the fields would have been silently dropped
+  on the next write, leaving the store claiming the fix was never
+  applied. `LessonSchema` now accepts the three fields (optional, so a
+  store written before them still parses) and `isActiveLesson` returns
+  false for a resolved lesson however corroborated it is.
+
+  `mergeSession` mutates an existing lesson in place, so a resolved
+  lesson keeps its `resolved` flag across a merge — a later sighting
+  does not revive stale advice.
+
+## Follow-ups still open (not in this batch)
+
+1. **Judge acceptance semantics.** If the judge *systematically* returns
+   localized keys, P3's retry burns a call and still fails honestly. The
+   fix (coercing or rejecting unknown keys pre-parse) touches what the
+   judge accepts, so it needs its own design discussion.
+2. **`runs/*.yaml` survivorship bias.** Every run record says
+   `status: succeeded`; failed steps write no run file, so `runs/`
+   cannot feed improvement mining — this batch had to rely on
+   article-review sidecars instead. A candidate for a future
+   observability batch if the operator wants failure telemetry.
+3. **P2's per-boundary local-peak alternative.** The minimal threshold
+   change shipped. Projects whose matched ratio still lands under 50%
+   at 0.02 would need the larger change; carlo-pizza's margin was 24 vs
+   23, so it is close enough to watch.

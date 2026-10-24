@@ -22,6 +22,7 @@
   "dependencies": {
     "@video/llm": "workspace:*",
     "@video/prompts": "workspace:*",
+    "@video/theme": "workspace:*",
     "yaml": "^2.7.0",
     "zod": "^3.25.0"
   },

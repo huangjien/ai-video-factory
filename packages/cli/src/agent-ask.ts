@@ -1,6 +1,6 @@
 import { BGM_DEFAULT_TAG, loadBgmCatalogue } from "@video/prompts";
 import { IMAGE_STYLES } from "@video/draft";
-import { THEME_NAMES, THEME_META } from "@video/video-components";
+import { DEFAULT_THEME_NAME, THEME_NAMES, THEME_META } from "@video/theme";
 import type { DraftOptions } from "./draft-command.js";
 
 /**
@@ -264,11 +264,11 @@ export const DRAFT_QUESTIONS: readonly AskQuestion[] = [
     type: "choice",
     question: "Storyboard visual theme?",
     choices: [...STYLE_CHOICES],
-    default: "paper-light",
-    recommended: "paper-light",
+    default: DEFAULT_THEME_NAME,
+    recommended: DEFAULT_THEME_NAME,
     why: "theme changes every scene",
     specified: (opts) => opts.style !== undefined,
-    resolved: (opts) => opts.style ?? "paper-light",
+    resolved: (opts) => opts.style ?? DEFAULT_THEME_NAME,
   },
   {
     id: "bgm",
@@ -406,7 +406,7 @@ export async function emitQuestionsDoc(
       audience: opts.audience ?? "developers",
       image_style: byId.get("image_style")?.resolved(opts) ?? "flat-vector",
       image_provider: byId.get("image_provider")?.resolved(opts) ?? "minimax",
-      style: byId.get("style")?.resolved(opts) ?? "paper-light",
+      style: byId.get("style")?.resolved(opts) ?? DEFAULT_THEME_NAME,
       bgm: byId.get("bgm")?.resolved(opts) ?? "calm",
       tts:
         opts.tts ??

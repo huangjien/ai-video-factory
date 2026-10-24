@@ -3,7 +3,8 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { probeAudioDuration } from "@video/media";
 import { formatErrors, parseYaml, validateProject } from "@video/vdsl";
-import { REGISTRY, THEME_NAMES } from "@video/video-components";
+import { REGISTRY } from "@video/video-components";
+import { DEFAULT_THEME_NAME, THEME_NAMES } from "@video/theme";
 import { MARK_OK, brandBannerLine, channelHeader } from "./ui.js";
 
 /** Best-effort unknown-theme warning. Runs ONLY after validate passes —
@@ -20,7 +21,7 @@ function warnUnknownTheme(text: string): void {
   // Surface to stderr so the hint shows up in pipelines that filter
   // stdout (validate is structured-data friendly via its exit code).
   console.error(
-    `  hint: style.theme "${themeName}" is not a known theme — the renderer will fall back to paper-light.`,
+    `  hint: style.theme "${themeName}" is not a known theme — the renderer will fall back to ${DEFAULT_THEME_NAME}.`,
   );
   console.error(
     `        known themes: ${THEME_NAMES.join(", ")}. Run \`video theme\` for the palette index.`,

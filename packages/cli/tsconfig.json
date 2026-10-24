@@ -28,6 +28,7 @@
     { "path": "../../packages/audio-assets" },
     { "path": "../../packages/audio-mix" },
     { "path": "../../packages/learn" },
-    { "path": "../../packages/prompts" }
+    { "path": "../../packages/prompts" },
+    { "path": "../../packages/theme" }
   ]
 }

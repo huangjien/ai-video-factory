@@ -319,6 +319,9 @@ importers:
       '@video/script':
         specifier: workspace:*
         version: link:../script
+      '@video/theme':
+        specifier: workspace:*
+        version: link:../theme
       '@video/tts':
         specifier: workspace:*
         version: link:../tts
@@ -352,6 +355,9 @@ importers:
       '@video/prompts':
         specifier: workspace:*
         version: link:../prompts
+      '@video/theme':
+        specifier: workspace:*
+        version: link:../theme
       yaml:
         specifier: ^2.7.0
         version: 2.9.1
@@ -522,6 +528,12 @@ importers:
         specifier: ^3.25.0
         version: 3.25.76
 
+  packages/theme:
+    dependencies:
+      zod:
+        specifier: ^3.25.0
+        version: 3.25.76
+
   packages/tts: {}
 
   packages/vdsl:
@@ -529,6 +541,9 @@ importers:
       '@video/media':
         specifier: workspace:*
         version: link:../media
+      '@video/theme':
+        specifier: workspace:*
+        version: link:../theme
       yaml:
         specifier: ^2.7.0
         version: 2.9.1
@@ -538,6 +553,9 @@ importers:
 
   packages/video-components:
     dependencies:
+      '@video/theme':
+        specifier: workspace:*
+        version: link:../theme
       '@video/vdsl':
         specifier: workspace:*
         version: link:../vdsl

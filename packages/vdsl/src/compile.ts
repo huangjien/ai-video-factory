@@ -1,4 +1,5 @@
 import { buildCaptionCues, type CaptionCue } from "@video/media";
+import { DEFAULT_THEME_NAME } from "@video/theme";
 import { stringify as yamlStringify } from "yaml";
 import type {
   Asset,
@@ -198,7 +199,7 @@ export function compileStoryboard(
   const renderPlan: RenderPlan = {
     project,
     style: {
-      theme: board.style?.theme ?? "paper-light",
+      theme: board.style?.theme ?? DEFAULT_THEME_NAME,
       ...(board.style?.channel_profile
         ? { channel_profile: board.style.channel_profile }
         : {}),

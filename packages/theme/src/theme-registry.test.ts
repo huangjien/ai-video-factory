@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
+  DEFAULT_THEME_NAME,
+  THEME_META,
   THEME_NAMES,
   THEMES,
   darkTechTheme,
@@ -89,5 +91,25 @@ describe("theme registry (v0.2 themes)", () => {
     expect(t!.colors.accent).toBe("#FF0000");
     expect(t!.colors.background).toBe("#0F0F0F");
     expect(t!.colors.primary).toBe("#FFFFFF");
+  });
+
+  it("names a default that is actually in the registry", () => {
+    // The default is what the schema, the compiler, the storyboard writer
+    // and the CLI all fall back to. If it were not a real theme, every one
+    // of them would resolve to nothing.
+    expect(THEMES[DEFAULT_THEME_NAME]).toBeDefined();
+    expect(resolveTheme(undefined)).toBe(THEMES[DEFAULT_THEME_NAME]);
+  });
+
+  it("describes every theme in the metadata table", () => {
+    // The CLI's theme index derives its labels from THEME_META. A theme
+    // without an entry would show a blank cell — and the table is the only
+    // place a theme's description lives, so it must not lag the registry.
+    for (const name of THEME_NAMES) {
+      const meta = THEME_META[name];
+      expect(meta, `${name} has no THEME_META entry`).toBeDefined();
+      expect(meta!.bg, `${name} has no background label`).not.toBe("");
+      expect(meta!.mood, `${name} has no mood label`).not.toBe("");
+    }
   });
 });

@@ -44,6 +44,7 @@
     "@video/research": "workspace:*",
     "@video/review": "workspace:*",
     "@video/script": "workspace:*",
+    "@video/theme": "workspace:*",
     "@video/tts": "workspace:*",
     "@video/vdsl": "workspace:*",
     "@video/video-components": "workspace:*",

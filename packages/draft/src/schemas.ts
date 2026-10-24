@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { parse as parseYaml } from "yaml";
+import { DEFAULT_THEME_NAME } from "@video/theme";
 import { pickVisualComponent } from "./visual-classifier.js";
 import { VISUAL_BUILDERS } from "./visual-builders.js";
 import type { VisualPropsBuilder } from "./visual-builders.js";
@@ -195,7 +196,7 @@ export function articleToStoryboardYaml(
   opts: { visualOverrides?: ReadonlyMap<number, string> } = {},
 ): string {
   const f = article.frontmatter;
-  const theme = f.theme ?? "paper-light";
+  const theme = f.theme ?? DEFAULT_THEME_NAME;
   const lines: string[] = [
     `schema_version: "0.2"`,
     ``,

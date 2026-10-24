@@ -7,6 +7,7 @@ import { execSync } from "node:child_process";
 import type { ChatMessage, Provider } from "@video/llm";
 import { GLMProvider, loadProviderConfig, MiniMaxProvider } from "@video/llm";
 import { callAgent } from "@video/agent-storyboard";
+import { DEFAULT_THEME_NAME } from "@video/theme";
 import { formatRunId } from "@video/workflow";
 import type { Storyboard } from "@video/vdsl/schema.js";
 import { stringify as yamlStringify } from "yaml";
@@ -64,7 +65,7 @@ export async function runStoryboard(opts: StoryboardOptions): Promise<number> {
   const lang = opts.lang ?? "zh-CN";
   const duration = opts.duration ?? 180;
   const audience = opts.audience ?? "developers";
-  const style = opts.style ?? "paper-light";
+  const style = opts.style ?? DEFAULT_THEME_NAME;
 
   // Scaffold the project (video new writes state.yaml + dirs)
   const code = await ensureProject(cwd, slug, projectRoot);
@@ -240,7 +241,7 @@ export function registerStoryboard(program: Command): void {
       parseInt(v, 10),
     )
     .option("--audience <text>", "target audience (default: developers)")
-    .option("--style <text>", "visual style (default: paper-light)")
+    .option("--style <text>", `visual style (default: ${DEFAULT_THEME_NAME})`)
     .option(
       "--from-research <dir>",
       "consume approved research from this directory",

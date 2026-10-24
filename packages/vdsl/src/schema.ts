@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { DEFAULT_THEME_NAME } from "@video/theme";
 
 /**
  * VDSL 0.1 schema — executable render input (doc §21.1, lines 889-932).
@@ -595,7 +596,7 @@ export type BrandConfig = z.infer<typeof brandSchema>;
 
 const styleSchema = z
   .object({
-    theme: z.string().min(1).default("paper-light"),
+    theme: z.string().min(1).default(DEFAULT_THEME_NAME),
     /** CS-01: optional channel grammar profile, carried through to
      *  RenderPlan.style. Omitted for every pre-CS-01 project, which is
      *  what keeps their behaviour unchanged. */

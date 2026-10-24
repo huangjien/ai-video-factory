@@ -3,11 +3,13 @@ import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { parse as parseYaml } from "yaml";
 import {
+  DEFAULT_THEME_NAME,
+  THEME_META,
   THEME_NAMES,
   THEMES,
   isValidTheme,
   resolveTheme,
-} from "@video/video-components";
+} from "@video/theme";
 import { brandBannerLine, channelHeader } from "./ui.js";
 
 /**
@@ -40,18 +42,14 @@ export function paint(hex: string, text = "  "): string {
   return `\x1b[48;2;${r};${g};${b}m${text}\x1b[0m`;
 }
 
-/** Short mood label per theme — used in the index for the "what's it for" column. */
-const MOOD: Record<string, string> = {
-  "dark-tech": "deep navy / tutorial",
-  "paper-light": "warm paper / hand-drawn",
-  "ocean-deep": "calm teal / monitoring",
-  "dusk-warm": "plum / story-led",
-  "forest-moss": "emerald / nature",
-  "sunset-pop": "magenta / lifestyle",
-  "terminal-vintage": "CRT phosphor / dev",
-  "paper-cream": "beige / friendly product",
-  "ai-red": "player dark / creator",
-};
+/** Short mood label per theme — used in the index for the "what's it for"
+ *  column. Derived from the registry's own metadata, so a theme added to
+ *  the registry gets a label instead of a blank cell. */
+function moodLabel(name: string): string {
+  const meta = THEME_META[name];
+  if (!meta) return "";
+  return `${meta.bg} / ${meta.mood}`;
+}
 
 /** Compact index: one row per theme with a swatch. */
 export function themeIndex(): string {
@@ -66,7 +64,7 @@ export function themeIndex(): string {
     if (!t) continue;
     const swatch =
       paint(t.colors.background, "  ") + paint(t.colors.accent, "  ");
-    const mood = MOOD[name] ?? "";
+    const mood = moodLabel(name);
     lines.push(
       `  ${swatch} ${name.padEnd(18)} ${t.colors.background} bg · ${t.colors.accent} accent${mood ? `  · ${mood}` : ""}`,
     );
@@ -79,7 +77,7 @@ export function themeIndex(): string {
 /** Full palette for one theme. Returns "" if the name is unknown. */
 export function themeDetail(name: string): string {
   const t = resolveTheme(name);
-  // resolveTheme falls back to paper-light on typos — for the inspector we
+  // resolveTheme falls back to the default on typos — for the inspector we
   // want to be honest about the unknown name instead of showing a fall-back.
   if (name && !THEMES[name]) {
     return `${brandBannerLine()}\n${channelHeader(name, "theme — unknown")}\n\n  Unknown theme. Available: ${THEME_NAMES.join(", ")}\n`;
@@ -95,7 +93,7 @@ function paletteRows(t: ReturnType<typeof resolveTheme>, name: string): string {
   const colorRow = (label: string, hex: string) =>
     `  ${paint(hex, "  ")} ${label.padEnd(11)} ${hex}`;
   return [
-    `  Mood · ${MOOD[name] ?? "—"}`,
+    `  Mood · ${moodLabel(name) || "—"}`,
     "",
     colorRow("background", t.colors.background),
     colorRow("surface", t.colors.surface),
@@ -124,10 +122,10 @@ export function themeFromProject(root: string): string {
     const parsed = parseYaml(raw) as { style?: { theme?: string } } | null;
     const themeName = parsed?.style?.theme;
     if (!themeName) {
-      // No theme → just say so (paper-light is the default but we don't
-      // need to dump the whole palette — the user can run `video theme
-      // paper-light` to see it).
-      return `${brandBannerLine()}\n${channelHeader(path.basename(root), "paper-light (default)")}\n\n  storyboard.yaml has no style.theme — defaulting to paper-light. Run \`video theme paper-light\` for the palette.\n`;
+      // No theme → just say so (the default is known, but we don't need to
+      // dump the whole palette — the user can run `video theme <name>` to
+      // see it).
+      return `${brandBannerLine()}\n${channelHeader(path.basename(root), `${DEFAULT_THEME_NAME} (default)`)}\n\n  storyboard.yaml has no style.theme — defaulting to ${DEFAULT_THEME_NAME}. Run \`video theme ${DEFAULT_THEME_NAME}\` for the palette.\n`;
     }
     return `${brandBannerLine()}\n${channelHeader(path.basename(root), themeName)}\n\n${paletteRows(resolveTheme(themeName), themeName)}`;
   } catch {

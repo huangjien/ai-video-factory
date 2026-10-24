@@ -26,6 +26,7 @@ import {
   renderAudioConfig,
   type AudioConfig,
 } from "@video/audio-plan";
+import { DEFAULT_THEME_NAME } from "@video/theme";
 import { resolveProjectDir } from "./project-path.js";
 import { withProgress } from "./ui.js";
 import {
@@ -709,7 +710,7 @@ export function registerDraft(program: Command): void {
     )
     .option(
       "--style <theme>",
-      "v0.4: visual theme written into storyboard.style.theme (default: paper-light)",
+      `v0.4: visual theme written into storyboard.style.theme (default: ${DEFAULT_THEME_NAME})`,
     )
     .option(
       "--no-captions",

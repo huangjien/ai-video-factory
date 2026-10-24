@@ -25,10 +25,6 @@ export {
   ANCHOR_BASIS,
   REFERENCE_STATUS,
   CharacterProfileSchema,
-  loadCharacterProfile,
-  loadCharacterById,
-  listCharacterIds,
-  characterRootFor,
   approveReference,
   anchorPromptLines,
   anchorsForVariant,
@@ -38,6 +34,26 @@ export {
   type CharacterReference,
   type CharacterVariant,
 } from "./character-profile.js";
+export {
+  approveCharacterReference,
+  buildSheetPrompt,
+  characterFilePath,
+  characterRootFor,
+  listCharacterIds,
+  loadCharacterById,
+  loadCharacterProfile,
+  nextVersionLabel,
+  referenceFilePath,
+  workspaceCharacterRoot,
+  writeCandidateReference,
+  type ApprovalOutcome,
+  type CandidateWrite,
+} from "./character-bible.js";
+export {
+  identityDigest,
+  resolveSceneIdentities,
+  type SceneIdentity,
+} from "./scene-identity.js";
 export { callDraft, DraftError, type CallDraftResult } from "./agent.js";
 export {
   PROFILE,
@@ -89,6 +105,7 @@ export {
   expandSceneBrief,
   expandScenePrompt,
   IMAGE_PROMPT_REVISION,
+  type ExpandSceneOptions,
   type ScenePromptContext,
   type ScenePromptInput,
   type ExpandedPrompt,

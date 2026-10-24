@@ -28,6 +28,7 @@ export default defineConfig({
       "@video/video-renderer": path.resolve("packages/video-renderer/src"),
       "@video/learn": path.resolve("packages/learn/src"),
       "@video/cli": path.resolve("packages/cli/src"),
+      "@video/theme": path.resolve("packages/theme/src"),
     },
   },
   test: {

@@ -8,6 +8,9 @@
   "references": [
     {
       "path": "../../packages/media"
+    },
+    {
+      "path": "../../packages/theme"
     }
   ]
 }

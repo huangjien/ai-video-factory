@@ -7,6 +7,23 @@ import { probeAudioDuration } from "@video/media";
 
 const execFileAsync = promisify(execFile);
 
+/**
+ * Hard ceiling on any ffmpeg call this module makes.
+ *
+ * The `sidechaincompress` filter can deadlock on some ffmpeg builds: the
+ * process sleeps at 0% CPU waiting for a frame that never arrives, and
+ * nothing ever kills it. Left alone, each hung run leaks one ffmpeg
+ * process that stays behind forever — a leak that outlives the test
+ * run that caused it and slows every later run.
+ *
+ * `execFile`'s `timeout` option kills the child (SIGTERM, then SIGKILL)
+ * when it expires, so a deadlocked filter fails the call instead of
+ * pinning a process. Generous, because a slow machine under a parallel
+ * test suite is not a deadlock: a 4-second mix is seconds of work, and
+ * the ceiling exists to catch a hang, not to police speed.
+ */
+const FFMPEG_TIMEOUT_MS = 120_000;
+
 export interface MixOptions {
   narrationPaths: string[];
   bgmPath: string;
@@ -80,20 +97,24 @@ export async function mixTracks(opts: MixOptions): Promise<MixResult> {
       .join("\n"),
     "utf8",
   );
-  await execFileAsync("ffmpeg", [
-    "-y",
-    "-f",
-    "concat",
-    "-safe",
-    "0",
-    "-i",
-    listFile,
-    "-ar",
-    "44100",
-    "-ac",
-    "1",
-    tmpNarration,
-  ]);
+  await execFileAsync(
+    "ffmpeg",
+    [
+      "-y",
+      "-f",
+      "concat",
+      "-safe",
+      "0",
+      "-i",
+      listFile,
+      "-ar",
+      "44100",
+      "-ac",
+      "1",
+      tmpNarration,
+    ],
+    { timeout: FFMPEG_TIMEOUT_MS },
+  );
 
   const filter = buildMixFilterGraph({
     bgmLinear,
@@ -114,15 +135,19 @@ export async function mixTracks(opts: MixOptions): Promise<MixResult> {
   // drops trailing options ("Trailing option(s) found … may be ignored"),
   // which is how -b:a 192k went missing for the entire life of this code.
   mapArgs.push("-movflags", "+faststart");
-  await execFileAsync("ffmpeg", [
-    "-y",
-    ...inputArgs,
-    "-filter_complex",
-    filter,
-    ...mapArgs,
-    ...codecArgs,
-    opts.outPath,
-  ]);
+  await execFileAsync(
+    "ffmpeg",
+    [
+      "-y",
+      ...inputArgs,
+      "-filter_complex",
+      filter,
+      ...mapArgs,
+      ...codecArgs,
+      opts.outPath,
+    ],
+    { timeout: FFMPEG_TIMEOUT_MS },
+  );
   await rm(tmpDir, { recursive: true, force: true }).catch(() => undefined);
   return { outPath: opts.outPath };
 }
@@ -265,20 +290,24 @@ export async function mixTracksWithSpec(
       .join("\n"),
     "utf8",
   );
-  await execFileAsync("ffmpeg", [
-    "-y",
-    "-f",
-    "concat",
-    "-safe",
-    "0",
-    "-i",
-    listFile,
-    "-ar",
-    "44100",
-    "-ac",
-    "1",
-    tmpNarration,
-  ]);
+  await execFileAsync(
+    "ffmpeg",
+    [
+      "-y",
+      "-f",
+      "concat",
+      "-safe",
+      "0",
+      "-i",
+      listFile,
+      "-ar",
+      "44100",
+      "-ac",
+      "1",
+      tmpNarration,
+    ],
+    { timeout: FFMPEG_TIMEOUT_MS },
+  );
   // Probe concatenated narration duration so we can place the fade-out
   // at a concrete timestamp (afade=out:st=N requires an absolute second,
   // not the symbolic "END-N"). Shared probe throws on NaN — a NaN here
@@ -343,15 +372,19 @@ export async function mixTracksWithSpec(
   }
   // Same ordering contract as mixTracks: output options before the file.
   mapArgs.push("-movflags", "+faststart");
-  await execFileAsync("ffmpeg", [
-    "-y",
-    ...inputs.flatMap((p) => ["-i", p]),
-    "-filter_complex",
-    filterParts.join(";"),
-    ...mapArgs,
-    ...codecArgs,
-    opts.outPath,
-  ]);
+  await execFileAsync(
+    "ffmpeg",
+    [
+      "-y",
+      ...inputs.flatMap((p) => ["-i", p]),
+      "-filter_complex",
+      filterParts.join(";"),
+      ...mapArgs,
+      ...codecArgs,
+      opts.outPath,
+    ],
+    { timeout: FFMPEG_TIMEOUT_MS },
+  );
   await rm(tmpDir, { recursive: true, force: true }).catch(() => undefined);
   return { outPath: opts.outPath };
 }

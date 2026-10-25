@@ -645,7 +645,8 @@ packages/
 ## 7. More reading
 
 - `README.md` — one-page overview
-- `docs/INSTALLATION_AND_USAGE.md` — full reference (commands, flags, troubleshooting)
+- `docs/INSTALLATION.md` — installation, verification, harness adapters
+- `docs/USAGE.md` — full usage reference (commands, flags, workflow, troubleshooting)
 - `docs/architecture.md` — package boundaries and design decisions
 - `docs/RELEASES.md` — version history
 - `docs/AI_Video_Factory_Design_and_Plan_v1.1.md` — the canonical design doc

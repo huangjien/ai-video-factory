@@ -13,7 +13,7 @@ const { THEMES, THEME_META, THEME_NAMES, DEFAULT_THEME_NAME } =
 
 const files = {
   readme: "README.md",
-  install: "docs/INSTALLATION_AND_USAGE.md",
+  usage: "docs/USAGE.md",
   schema: "docs/schema.md",
 };
 
@@ -118,10 +118,10 @@ await update(
   ),
 );
 
-const install = readFileSync(files.install, "utf8");
+const usage = readFileSync(files.usage, "utf8");
 await update(
-  files.install,
-  replaceSection(install, "theme-table", installThemeTable()),
+  files.usage,
+  replaceSection(usage, "theme-table", installThemeTable()),
 );
 
 await update(

@@ -51,6 +51,28 @@ The per-stage verbs (`video research`, `video script`, `video storyboard`,
 `video audio`, `video preview`, `video final`, …) still work and are
 documented below, but they are not the recommended path.
 
+### No API key? Render the committed demo
+
+The MCP Explainer demo is deterministic and needs no LLM key — just
+FFmpeg. It renders the SVG diagram draw-on plus hand-drawn canvas, with a
+real QA report:
+
+```bash
+node packages/cli/dist/index.js new mcp-explainer
+cp examples/mcp-explainer/storyboard.yaml projects/mcp-explainer/storyboard/
+cp examples/mcp-explainer/captions/zh-CN.srt projects/mcp-explainer/captions/
+# 9 s silent narration placeholder per scene
+for i in 01 02 03 04 05; do
+  ffmpeg -y -f lavfi -i anullsrc=r=44100:cl=mono -t 9 projects/mcp-explainer/assets/audio/scene-$i.wav
+done
+node packages/cli/dist/index.js approve storyboard --cwd projects/mcp-explainer   # 🚪 the one human gate
+node packages/cli/dist/index.js preview --cwd projects/mcp-explainer              # add --draft for a faster 960×540 pass
+# → projects/mcp-explainer/output/preview.mp4
+```
+
+With an LLM key, `video draft` + `video make` renders your own topic — see
+the Quickstart above.
+
 ### Remotion Studio — `video studio <project>`
 
 Opens the project's current composition in [Remotion Studio](https://www.remotion.dev/docs/studio) — a live, browser-based preview with a timeline and input-props editing:
@@ -177,6 +199,21 @@ values fall back to `paper-light` (the v0.4.3 default) at render time and
 | `npm run format`           | Prettier                                                          |
 | `npm run benchmark:verify` | render the benchmark twice and assert structural identity (§62.4) |
 | `pnpm run acceptance`      | full §62.4 audit (functional + video + engineering)               |
+
+## Documentation
+
+| Document                                       | What it covers                                                                 |
+| ---------------------------------------------- | ------------------------------------------------------------------------------ |
+| [`docs/INSTALLATION.md`](docs/INSTALLATION.md) | Requirements, installation, verification, agent-harness adapters               |
+| [`docs/USAGE.md`](docs/USAGE.md)               | The workflow, human gates, editing, audio, images, publishing, troubleshooting |
+| [`docs/architecture.md`](docs/architecture.md) | The system as built — packages, boundaries, design decisions                   |
+| [`docs/schema.md`](docs/schema.md)             | The storyboard / VDSL format reference                                         |
+| [`docs/workflow.md`](docs/workflow.md)         | The workflow state machine, gates, and invariants                              |
+| [`docs/RELEASES.md`](docs/RELEASES.md)         | What changed in each release                                                   |
+| [`docs/CONTRIBUTING.md`](docs/CONTRIBUTING.md) | Development workflow, prompts, tests                                           |
+| [`CONTEXT.md`](CONTEXT.md)                     | The channel's narrative language and visual rules                              |
+
+Chinese versions: `docs/INSTALLATION.zh-CN.md`, `docs/USAGE.zh-CN.md`.
 
 ## Architecture map
 

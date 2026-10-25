@@ -35,8 +35,8 @@ scenes:
     visual:
       component: FlowChart
       renderer: remotion # remotion (default) | canvas
-      background:      # optional; see "Scene background image" below
-        scrim: true    # dark gradient over the photo (default true)
+      background: # optional; see "Scene background image" below
+        scrim: true # dark gradient over the photo (default true)
       props: { … } # validated against the REGISTRY props schema
     animation: # legacy v0.1 entrance model (still honored)
       entrance: fade # none|fade|slide|scale|draw|typewriter (+synonyms)
@@ -86,10 +86,10 @@ validated by `isValidTheme` — see `theme.ts` for the contrast rules).
 validated against `REGISTRY`) and `renderer` (the scene family that draws
 it). Current pairings:
 
-| renderer     | component(s)                                                                                                                                                                                                                                                                      | look                                                                                                                                                                |
-| ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `remotion`   | Title, Paragraph, CodeBlock, Terminal, FlowChart, Timeline, Callout, EndCard, Character, Image, ImageBackground, AnimatedIllustration + v0.4.2: QuoteBlock, StatGrid (count-up), BarChart, Leaderboard, Checklist, BigIdea, PyramidDiagram, VennDiagram, CycleDiagram | classic motion graphics on the theme background                                                                                                                     |
-| `canvas`     | `DoodleScene`                                                                                                                                                                                                                                                                     | hand-drawn ink: procedural strokes (circle / star / zigzag / spiral) with seeded wobble, sequential pen-draw, optional `bpm` beat-sync, `background: paper \| dark` |
+| renderer   | component(s)                                                                                                                                                                                                                                                          | look                                                                                                                                                                |
+| ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `remotion` | Title, Paragraph, CodeBlock, Terminal, FlowChart, Timeline, Callout, EndCard, Character, Image, ImageBackground, AnimatedIllustration + v0.4.2: QuoteBlock, StatGrid (count-up), BarChart, Leaderboard, Checklist, BigIdea, PyramidDiagram, VennDiagram, CycleDiagram | classic motion graphics on the theme background                                                                                                                     |
+| `canvas`   | `DoodleScene`                                                                                                                                                                                                                                                         | hand-drawn ink: procedural strokes (circle / star / zigzag / spiral) with seeded wobble, sequential pen-draw, optional `bpm` beat-sync, `background: paper \| dark` |
 
 `props` are validated against the component's own registry schema, so each
 component documents its own shape — `FlowChart` wants `nodes[]` (strings)
@@ -121,7 +121,7 @@ the only control:
 ```yaml
 visual:
   component: FlowChart
-  background: {scrim: false} # no dark gradient over the photo
+  background: { scrim: false } # no dark gradient over the photo
 ```
 
 Scrim defaults on (`rgba(0,0,0,0.25→0.45)`) so overlaid text stays
@@ -233,16 +233,16 @@ keys:
 
 ```yaml
 ---
-voice: narrator-zh          # backend-specific voice id — see below
-tts_provider: voicebox      # or "minimax"; omit (or "edge") for Edge TTS
+voice: narrator-zh # backend-specific voice id — see below
+tts_provider: voicebox # or "minimax"; omit (or "edge") for Edge TTS
 ---
 ```
 
-| `tts_provider` | `voice:` means | Requirements | Speed |
-|---|---|---|---|
-| `voicebox` | Voicebox profile name or id | local voicebox-server (`VOICEBOX_URL`, default `127.0.0.1:17493`) | Qwen3-TTS ~7× slower than realtime (MLX) |
-| `minimax` | MiniMax `voice_setting.voice_id` (system voice or cloned voice_id) | `MINIMAX_API_KEY`; **voice cloning needs a pay-as-you-go key — Token Plan keys get error 2061** | ~2.5× faster than realtime |
-| omitted / `edge` | Edge TTS voice id (e.g. `zh-CN-YunjianNeural`) | none (free Edge endpoint) | ~realtime |
+| `tts_provider`   | `voice:` means                                                     | Requirements                                                                                    | Speed                                    |
+| ---------------- | ------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------- | ---------------------------------------- |
+| `voicebox`       | Voicebox profile name or id                                        | local voicebox-server (`VOICEBOX_URL`, default `127.0.0.1:17493`)                               | Qwen3-TTS ~7× slower than realtime (MLX) |
+| `minimax`        | MiniMax `voice_setting.voice_id` (system voice or cloned voice_id) | `MINIMAX_API_KEY`; **voice cloning needs a pay-as-you-go key — Token Plan keys get error 2061** | ~2.5× faster than realtime               |
+| omitted / `edge` | Edge TTS voice id (e.g. `zh-CN-YunjianNeural`)                     | none (free Edge endpoint)                                                                       | ~realtime                                |
 
 MiniMax cloning flow (verified 2026-10-18): `POST /v1/files/upload`
 (`purpose=voice_clone`, wav ≥10 s) → `POST /v1/voice_clone` → use the
@@ -277,10 +277,22 @@ beside the images:
 ```json
 {
   "scenes": {
-    "1":  { "style": "title", "text": "长安清晨，宫门马蹄", "subtext": "公元626年7月2日" },
-    "26": { "style": "quote", "text": "当规则无法约束野心……", "attribution": "玄武门之变" }
+    "1": {
+      "style": "title",
+      "text": "长安清晨，宫门马蹄",
+      "subtext": "公元626年7月2日"
+    },
+    "26": {
+      "style": "quote",
+      "text": "当规则无法约束野心……",
+      "attribution": "玄武门之变"
+    }
   },
-  "palette": { "color": [244,241,234,255], "accent": [181,83,60,255], "scrim": 125 }
+  "palette": {
+    "color": [244, 241, 234, 255],
+    "accent": [181, 83, 60, 255],
+    "scrim": 125
+  }
 }
 ```
 
@@ -297,10 +309,10 @@ as editorial illustration no longer ships a cinematic-35mm thumbnail.
 
 ## Renderer families (plan §9)
 
-| renderer     | component              | notes                                                      |
-| ------------ | ---------------------- | ---------------------------------------------------------- |
-| `remotion`   | any REGISTRY component | default                                                    |
-| `canvas`     | `DoodleScene`          | hand-drawn ink; `bpm` quantizes stroke onsets              |
+| renderer   | component              | notes                                         |
+| ---------- | ---------------------- | --------------------------------------------- |
+| `remotion` | any REGISTRY component | default                                       |
+| `canvas`   | `DoodleScene`          | hand-drawn ink; `bpm` quantizes stroke onsets |
 
 ## Compiler contract
 

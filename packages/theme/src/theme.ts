@@ -343,8 +343,8 @@ export const THEME_NAMES = Object.keys(THEMES);
 export const DEFAULT_THEME_NAME = "paper-light";
 
 /** Doc-facing metadata per theme — the single source for the CLI banner's
- * theme list, the README "Theme presets" table, the INSTALLATION_AND_USAGE
- * "Available themes" table, and the schema.md example comment. Regenerate
+ * theme list, the README "Theme presets" table, the USAGE "Available themes"
+ * table, and the schema.md example comment. Regenerate
  * those with `pnpm run docs:commands`. Colour hexes themselves are NOT
  * duplicated here — read them from `THEMES[name].colors`. */
 export const THEME_META: Record<

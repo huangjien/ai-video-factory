@@ -67,6 +67,15 @@ export interface RecordDecisionOptions {
   /** What today's deterministic path would have answered. `null` = no
    *  baseline, so no agreement is computed. */
   baseline?: DecisionBaseline | undefined;
+  /** For a NUMERIC baseline: how far the score may be from it and
+   *  still count as agreement.
+   *
+   *  Exact equality is the wrong relation for a score: a score rarely
+   *  lands on the baseline number, so equality would report "disagreed"
+   *  almost always and the §7 gate could never be passed. With a
+   *  tolerance, "the score says 85 and today's level maps to 85" is
+   *  agreement, and "the score says 20" is not. */
+  tolerance?: number | undefined;
   /** Where to write the row. Undefined = don't record (the caller only
    *  wants the answer). */
   sidecarPath?: string | undefined;
@@ -133,6 +142,21 @@ export function scoreWithin(
 ): boolean {
   const n = Number(answer.value);
   return Number.isFinite(n) && Math.abs(n - baseline) <= tolerance;
+}
+
+/** The agreement relation for one answer against one baseline.
+ *
+ *  With a tolerance, a NUMERIC baseline compares numerically; without
+ *  one, the comparison is exact. */
+export function agreementFor(
+  answer: LayaAnswer,
+  baseline: DecisionBaseline,
+  tolerance?: number | undefined,
+): boolean {
+  if (typeof baseline === "number" && tolerance !== undefined) {
+    return scoreWithin(answer, baseline, tolerance);
+  }
+  return decisionsAgree(answer, baseline);
 }
 
 /** Validate an answer against the question's type and criteria.
@@ -231,7 +255,7 @@ export async function recordDecision(
   const baseline = opts.baseline ?? null;
   const agreed =
     baseline !== null && opts.mode === "shadow"
-      ? decisionsAgree(answer, baseline)
+      ? agreementFor(answer, baseline, opts.tolerance)
       : undefined;
 
   await writeRow(opts, answer, decision, baseline, agreed);
@@ -267,6 +291,9 @@ export interface RecordLayaRowOptions {
   answer: LayaAnswer | null;
   /** What today's deterministic path would have answered. */
   baseline?: DecisionBaseline | undefined;
+  /** For a NUMERIC baseline: how far the score may be from it and
+   *  still count as agreement. See `RecordDecisionOptions.tolerance`. */
+  tolerance?: number | undefined;
 }
 
 /**
@@ -284,7 +311,7 @@ export async function recordLayaRow(opts: RecordLayaRowOptions): Promise<void> {
   const baseline = opts.baseline ?? null;
   const agreed =
     baseline !== null && opts.mode === "shadow" && opts.answer !== null
-      ? decisionsAgree(opts.answer, baseline)
+      ? agreementFor(opts.answer, baseline, opts.tolerance)
       : undefined;
   await writeRow(
     {

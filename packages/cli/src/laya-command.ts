@@ -28,6 +28,12 @@ const GATES: readonly { surface: string; threshold: number }[] = [
   { surface: "motion", threshold: 90 },
   { surface: "visual", threshold: 85 },
   { surface: "triage", threshold: 95 },
+  // The severity surface grades a finding's severity on a 0-100 scale,
+  // and the baseline is today's hand-picked level mapped onto that
+  // scale. A HIGH bar: a score surface can only RAISE a level, so a
+  // disagreement costs a false promotion, not a missed defect. The gate
+  // stays strict until the score tracks the human call closely.
+  { surface: "severity", threshold: 90 },
 ];
 
 async function readStdin(): Promise<string> {

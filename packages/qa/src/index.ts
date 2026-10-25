@@ -17,6 +17,24 @@ import {
   checkSceneBoundaries,
   checkStaleSceneRenders,
 } from "./checks.js";
+import { gradeFindings } from "./severity.js";
+export {
+  LAYA_SEVERITY_QID,
+  QA_SEVERITY_INSTRUCTIONS,
+  SEVERITY_AGREEMENT_TOLERANCE,
+  SEVERITY_ERROR_THRESHOLD,
+  SEVERITY_PROMOTE_THRESHOLD,
+  buildSeverityState,
+  gradeFindings,
+  gradeSeverity,
+  isGradedFinding,
+  levelForScore,
+  severityFactsFrom,
+  severityScaleFor,
+  type GradeSeveritiesOptions,
+  type SeverityFacts,
+  type SeverityOutcome,
+} from "./severity.js";
 
 const execFileAsync = promisify(execFile);
 
@@ -237,6 +255,9 @@ export interface RenderReportOptions {
   /** Root for resolving project-relative asset/audio paths. Defaults to
    * the standard layout's project root: the parent of the video's dir. */
   projectRoot?: string;
+  /** The Laya mode for severity grading. Defaults to the configured
+   *  mode; `off` skips grading entirely. */
+  layaMode?: LayaMode | undefined;
 }
 
 /** Build the render report for a rendered video against its RenderPlan. */
@@ -249,6 +270,12 @@ export async function buildRenderReport(
   const projectRoot = opts.projectRoot ?? path.dirname(path.dirname(videoPath));
   const findings: QaFinding[] = [];
   const info = await probeVideo(videoPath);
+  // Severity grading needs a client only when the mode is not off.
+  const layaMode = opts.layaMode ?? resolveLayaConfig().mode;
+  const layaClient =
+    layaMode === "off"
+      ? null
+      : new LayaClient({ resolvedConfig: resolveLayaConfig() });
 
   const expectedDuration = plan.totalFrames / plan.project.fps;
   const durationOk = Math.abs(info.duration - expectedDuration) <= tolerance;
@@ -336,11 +363,22 @@ export async function buildRenderReport(
   const staleRenders = await checkStaleSceneRenders(plan, projectRoot);
   findings.push(...staleRenders.findings);
 
+  // v0.6 D4: severity grading. A finding whose severity is a matter of
+  // DEGREE (not structurally wrong) may be graded by a `score` decision.
+  // The decision may RAISE a level; it may never lower one — a defect
+  // the deterministic check found does not become acceptable because a
+  // score said so. Off by default; shadow records, `on` promotes.
+  const gradedFindings = await gradeFindings(findings, {
+    mode: layaMode,
+    client: layaClient,
+    sidecarPath: path.join(projectRoot, "laya-decisions.jsonl"),
+  });
+
   return {
     video: videoPath,
     generatedAt: new Date().toISOString(),
-    ok: !findings.some((f) => f.level === "error"),
-    findings,
+    ok: !gradedFindings.some((f) => f.level === "error"),
+    findings: gradedFindings,
     checks: {
       duration: {
         expectedSec: Math.round(expectedDuration * 100) / 100,

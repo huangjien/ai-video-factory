@@ -58,6 +58,7 @@ export {
   type SurfaceAgreement,
 } from "./laya-shadow.js";
 export {
+  agreementFor,
   decisionsAgree,
   recordDecision,
   recordLayaRow,

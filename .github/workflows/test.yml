@@ -5,6 +5,13 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  workflow_dispatch:
+    inputs:
+      full_acceptance:
+        description: "Run the full §62.4 acceptance audit"
+        type: boolean
+        required: false
+        default: false
 
 # Superseded pushes cancel their in-flight runs — render jobs are
 # expensive; don't finish work for a commit that's already obsolete.
@@ -24,10 +31,11 @@ concurrency:
 #   unit-fast     — every non-cli test (most of the suite). ~1-2 min.
 #   unit-cli      — every cli test, including the heavy integration
 #                   ones that mock the LLM over local HTTP. ~5-8 min.
-#   render        — render real videos; the slow lane. ~30 min budget.
+#   render        — render real videos; the slow lane. ~25 min budget.
+#   acceptance    — full end-to-end audit; manual opt-in only.
 #
 # unit-fast and unit-cli run in parallel; total CI wall = install + max(
-# unit-fast, unit-cli) + render. The shared `setup-pnpm` step primes
+# unit-fast, unit-cli, render). The shared `setup-pnpm` step primes
 # the cache, and the per-job `Cache pnpm store` step reuses it.
 
 jobs:
@@ -164,11 +172,13 @@ jobs:
           --exclude 'packages/cli/src/pipeline-integration.test.ts'
           --exclude 'packages/cli/src/demo-*.test.ts'
 
-  # Slow lane: the tests and audits that render real video. Budgeted for
-  # re-bundling every render on 2-core runners.
+  # Slow lane: tests that render real video. Keep this on push / PR for
+  # coverage, but leave the full §62.4 audit to the manual opt-in job
+  # below; run 40130358216 spent ~16 min here, then was cancelled in the
+  # acceptance audit after another ~28 min.
   render:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 25
     needs: install
     steps:
       - uses: actions/checkout@v4
@@ -205,6 +215,42 @@ jobs:
           packages/cli/src/demo-mcp.test.ts
           packages/cli/src/demo-ai-concept.test.ts
           packages/cli/src/demo-devops.test.ts
+
+  # Full end-to-end audit. This is intentionally manual because it renders
+  # more video than the integration tests above and made normal push CI exceed
+  # the 45-minute render budget in run 40130358216.
+  acceptance-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    needs: install
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.full_acceptance }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with: {}
+
+      - name: Install ffmpeg
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg && ffmpeg -version | head -1
+
+      - name: Cache pnpm store
+        uses: actions/cache@v4
+        with:
+          path: ~/.local/share/pnpm/store
+          key: pnpm-store-${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: pnpm-store-${{ runner.os }}-
+
+      - name: Install dependencies
+        run: rm -rf node_modules && pnpm install
+
+      - name: Build
+        run: pnpm run build
 
       - name: §62.4 acceptance audit
         run: |

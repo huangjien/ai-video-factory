@@ -597,18 +597,6 @@ path.
 | `video qa`          | Rebuild the QA report for the current preview                |
 | `video validate`    | Validate a storyboard against the full rule set              |
 
-### 10.4 Local decision layer (Laya, optional)
-
-The Laya sidecar is a local decision model — bounded `choice`, `score`, and
-`noul` answers, not a chat model. It may pre-screen, annotate, and log, but
-it never replaces a human gate, never drives a workflow transition, and
-degrades to exactly the pre-Laya behavior on any failure. The mode is
-`off`, `shadow`, or `on`, and it defaults to `off`.
-
-`video laya health` probes the sidecar, `video laya ask` runs one bounded
-decision consult with raw probabilities, and `video laya eval` scores the
-project's recorded decisions against the promotion gates.
-
 ---
 
 ## 11. Publishing

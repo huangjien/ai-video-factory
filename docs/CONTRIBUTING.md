@@ -44,13 +44,13 @@ PR and push to `main`. See `.github/workflows/test.yml`.
 | `packages/vdsl/`                          | VDSL schema (zod) + validator + compiler. The video format's source of truth.   |
 | `packages/video-components/`              | 24 scene components in `REGISTRY` + chrome overlays (`CaptionsOverlay`, `BrandWatermark`, `BrandIntro`) + 7 animation primitives (`fade`, `slide`, `scale`, `draw`, `typewriter`, `entrance`, `fadeOut`) + 9 `style.theme` palettes (3 official + 6 v0.4.x additions) + 5 intro gradients (`aurora`, `sunset`, `ocean`, `citrus`, `channel-banner`). |
 | `packages/video-renderer/`                | Remotion composition that consumes `RenderPlan`. The renderer.                  |
-| `packages/llm/`                           | Provider abstraction: `MiniMaxProvider`, `GLMProvider`, `LayaClient` decision sidecar (v0.6). Used by every agent. |
-| `packages/prompts/`                       | Central prompt registry — every LLM/Laya prompt body is a file under `prompts/` (`.md` / `image-styles.yaml` / `music.json`), loaded via `loadPrompt()`; `video prompts` lists them. Edit prompts there, not in agent source. Holds the golden-set fixtures under `evals/` (v0.10). |
+| `packages/llm/`                           | Provider abstraction: `MiniMaxProvider`, `GLMProvider`. Used by every agent. |
+| `packages/prompts/`                       | Central prompt registry — every LLM prompt body is a file under `prompts/` (`.md` / `image-styles.yaml` / `music.json`), loaded via `loadPrompt()`; `video prompts` lists them. Edit prompts there, not in agent source. Holds the golden-set fixtures under `evals/` (v0.10). |
 | `packages/draft/`                         | Article drafter agent + quality judge + image-style presets + visual classifier (the `video draft` brain). |
 | `packages/make/`                          | End-to-end `video make`: TTS → audio assets → scene visuals → render → mix, with impact analysis + content-keyed caches. |
 | `packages/audio-plan/`                    | Audio Planner agent (audio-config.yaml proposals). |
 | `packages/media/`                         | Caption wrapping, audio probing, scene-timing sync. |
-| `packages/qa/`                            | Render QA checks (ffprobe) + Laya triage consult. |
+| `packages/qa/`                            | Render QA checks (ffprobe). |
 | `packages/motion/`                        | Motion agent + heuristics (per-scene animation timelines). |
 | `packages/learn/`                         | Human-review learning loop (lessons → prompt rules). |
 | `packages/agent-storyboard/`              | Storyboard Agent (system prompt + agent).                                       |
@@ -110,7 +110,7 @@ PR and push to `main`. See `.github/workflows/test.yml`.
 
 ### Prompts
 
-- Every LLM/Laya prompt body lives in `packages/prompts/prompts/` — one file per prompt (e.g. `storyboard.md`). Edit the file; the pipeline loads it on the next run. Never inline prompt text in agent source.
+- Every LLM prompt body lives in `packages/prompts/prompts/` — one file per prompt (e.g. `storyboard.md`). Edit the file; the pipeline loads it on the next run. Never inline prompt text in agent source.
 - Prompts with dynamic parts keep the static skeleton in the file with `{{placeholder}}` tokens and fill them via `fillPrompt()` (see `packages/script/src/prompt.ts`); message assembly (`buildMessages`) stays in code.
 - `loadPrompt()` strips one trailing newline, so file content stays byte-identical to the historical inline strings — `RunRecord.prompt_hash` lineage depends on this. Run `video prompts` to list/inspect the registry.
 - Registry hygiene is test-enforced: `packages/cli/src/prompt-registry.test.ts` imports every loader site and asserts the loader cache equals the files on disk, so an orphan prompt file (added, never loaded) or a dangling reference (deleted, still called) fails the suite. Rule: every prompt loads at module scope in its owning package.

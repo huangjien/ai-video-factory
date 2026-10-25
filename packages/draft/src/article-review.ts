@@ -651,6 +651,17 @@ export interface ScoredDraftOptions {
   minScore?: number;
   /** Total number of draft attempts (not retries). Default 3. */
   maxAttempts?: number;
+  /** Parallel best-of-N candidates per review round (2026-10-25 user
+   *  directive). Each round launches up to N generate+judge pipelines
+   *  concurrently and keeps the best; `maxAttempts` remains the TOTAL
+   *  candidate budget, so the last round shrinks. N > 1 spends N×
+   *  draft+judge tokens per round and caps wall time at one round's
+   *  generation.
+   *  Default (2026-10-25 user directive): 2 when duration ≥ 240 s,
+   *  else 1. First-try pass rate at the 90-bar degrades with duration
+   *  (measured: 300 s missed the bar 1/2 times, 90 s passed 2/2), and
+   *  a missed bar used to cost a full serial regen (~20 min). */
+  candidates?: number;
   /** Progress callback for CLI logging. */
   onAttempt?: (a: ScoredAttempt, total: number) => void;
 }
@@ -710,13 +721,27 @@ export async function runScoredDraft(
   // few drafts clear 90 early, so the loop usually spends the full budget
   // and the best-scoring candidate is kept regardless of passing.
   const maxAttempts = Math.max(1, opts.maxAttempts ?? 8);
+  // Parallel best-of-N: each round launches up to `candidates`
+  // generate+judge pipelines concurrently (see ScoredDraftOptions).
+  // Default: 2 for films of 240 s or longer, 1 otherwise — measured
+  // first-try miss rate at the bar concentrates on long articles.
+  const candidates = Math.max(
+    1,
+    opts.candidates ?? (input.duration >= 240 ? 2 : 1),
+  );
 
   const attempts: ScoredAttempt[] = [];
   const usage = { input: 0, output: 0 };
   let providerName = provider.name;
   let feedback: string | undefined;
+  let attemptNo = 0;
+  let round1Count = 0;
 
-  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+  /** One generate+judge pipeline. The attempt number is assigned
+   *  synchronously on entry, so parallel candidates number 1..N in
+   *  launch order while their awaits interleave. */
+  const produce = async (): Promise<ScoredAttempt> => {
+    const n = ++attemptNo;
     const draftInput: DraftInput =
       feedback !== undefined ? { ...input, feedback } : input;
     const draft = await callDraft(draftInput, provider, fallback ?? undefined);
@@ -758,8 +783,8 @@ export async function runScoredDraft(
       }
     }
 
-    const entry: ScoredAttempt = {
-      attempt,
+    return {
+      attempt: n,
       markdown: draft.markdown,
       score,
       ...(scoreError !== undefined ? { scoreError } : {}),
@@ -772,16 +797,44 @@ export async function runScoredDraft(
         score.computed.overall_score >= minScore,
       usage: draft.usage,
     };
-    attempts.push(entry);
-    opts.onAttempt?.(entry, maxAttempts);
+  };
 
-    // Judge broke down: no basis to iterate — accept this draft.
-    if (score === null) break;
-    if (entry.passing) break;
+  /** Strictly-higher replacement keeps the earlier candidate on ties —
+   *  same tie behavior as the historical serial loop. */
+  const betterScore = (a: ScoredAttempt, b: ScoredAttempt): ScoredAttempt => {
+    const as = a.score?.computed.overall_score ?? -1;
+    const bs = b.score?.computed.overall_score ?? -1;
+    return bs > as ? b : a;
+  };
 
-    // Last attempt: no point asking for another rewrite.
-    if (attempt === maxAttempts) break;
-    feedback = feedbackBlock(entry, minScore);
+  for (let round = 1; attempts.length < maxAttempts; round++) {
+    const size = Math.min(candidates, maxAttempts - attempts.length);
+    const settled = await Promise.allSettled(
+      Array.from({ length: size }, () => produce()),
+    );
+    const fulfilled = settled
+      .filter(
+        (s): s is PromiseFulfilledResult<ScoredAttempt> =>
+          s.status === "fulfilled",
+      )
+      .map((s) => s.value);
+    // Every candidate failed at the provider level — the historical serial
+    // loop propagated callDraft errors, so keep that when nothing survived.
+    if (fulfilled.length === 0)
+      throw (settled[0] as PromiseRejectedResult).reason;
+    attempts.push(...fulfilled);
+    if (round === 1) round1Count = fulfilled.length;
+    for (const e of fulfilled) opts.onAttempt?.(e, maxAttempts);
+
+    const roundBest = fulfilled.reduce(betterScore, fulfilled[0]!);
+
+    // Judge broke on every candidate: no basis to iterate — accept.
+    if (roundBest.score === null) break;
+    if (roundBest.passing) break;
+
+    // Budget spent: no point asking for another rewrite.
+    if (attempts.length >= maxAttempts) break;
+    feedback = feedbackBlock(roundBest, minScore);
   }
 
   // Best wins, period: after the final attempt the top-scoring candidate is
@@ -790,16 +843,16 @@ export async function runScoredDraft(
   // reported honestly alongside; selection itself is score-only.
   // maxAttempts ≥ 1 ⇒ the loop ran at least once.
   let best = attempts[0]!;
-  for (const a of attempts) {
-    const aScore = a.score?.computed.overall_score ?? -1;
-    const bScore = best.score?.computed.overall_score ?? -1;
-    if (aScore > bScore) best = a;
-  }
+  for (const a of attempts) best = betterScore(best, a);
+  // "Regenerated" means the shipped draft came from a feedback round —
+  // candidates within round 1 are siblings, not regenerations.
+  const regenerated =
+    attempts.length > 1 && attempts.indexOf(best) >= round1Count;
   return {
     markdown: best.markdown,
     score: best.score,
     attempts,
-    regenerated: best.attempt !== 1 && attempts.length > 1,
+    regenerated,
     passing: best.passing,
     usage,
     providerName,

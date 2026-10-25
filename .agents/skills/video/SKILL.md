@@ -57,7 +57,7 @@ video draft "<topic>"   # LLM writes article.md + audio-config.yaml + derived st
                         # even if nothing passed; a judge failure degrades to accepting the
                         # draft unreviewed) → article-review.yaml sidecar. Implementation:
                         # packages/draft/src/article-review.ts (runScoredDraft).
-                        # Flags: --no-review, --min-score <n>, --max-attempts <n>;
+                        # Flags: --no-review, --min-score <n>, --max-attempts <n>, --candidates <n> (parallel best-of-N; default auto: 2 for duration >= 240 s, else 1);
                         #         --ask/--no-ask (agent questions, §2.6), --bgm <tag|none>
 video make <project>    # TTS → audio assets → render scenes → mix → final-mixed.mp4
 ```
@@ -95,7 +95,6 @@ Full command set:
 | `video studio <project>` | Remotion Studio live-preview workspace |
 | `video theme [name]` | Palette inspector (list / one / resolve project) |
 | `video character [list \| approve <id> <style> <version> --by <name>]` | Character bible: list the characters and their per-style reference sheets, or promote a candidate to the official sheet (stamps the reviewer, supersedes the previous one) |
-| `video laya health/ask/eval` | Laya decision-sidecar diagnostics (advisory) |
 | `video learn <project>` | Human-review learning loop (`--ask`/`--answer`/`--status`/`--propose`) |
 | `video prompts [show <name>]` | Inspect the central prompt registry (`packages/prompts/prompts/`) |
 
@@ -584,7 +583,18 @@ Idempotent: `video make` skips a step when its output is newer than its inputs. 
   `MINIMAX_API_KEY`, and **voice CLONING is not on Token Plan keys
   (error 2061; pay-as-you-go only; clones deleted after 7 days idle)**;
   omitted/`edge` → Edge TTS voice id. Unknown values warn + fall back to
-  Edge. Pre-flight: `video make` probes voicebox (2 s) and degrades
+  Edge. **`tts_provider: f5tts` (2026-10-25)** — local F5-TTS (MLX)
+  zero-shot clone, default `steps=6 + rk4` quality-accepted by the
+  operator (RTF 2.16 measured; ~8 min per 20-scene film vs voicebox
+  ~17 min; steps=4 midpoint is faster but quality-REJECTED, steps=8
+  rk4 accepted but no faster than voicebox). Needs:
+  uv venv `~/.venvs/f5tts` (python 3.12, `f5-tts-mlx==0.2.6` PINNED with
+  `mlx==0.29.3` — mlx 0.32 breaks `mx.random.normal` inside cfm.sample),
+  reference clip `~/.f5tts/narrator-zh-ref.wav` (24 kHz, 10–15 s, cut
+  from a shipped voicebox scene so the timbre matches) + transcript
+  sidecar `.txt`; `voice:` may point at any other wav (its `.txt` is
+  the transcript). Fallback chain: f5tts → voicebox → minimax → edge.
+  Pre-flight: `video make` probes voicebox (2 s) and degrades
   loudly (voicebox down → minimax system voice → edge); `video draft`
   offers the conditional `tts` question only when voicebox answers with
   cloned profiles (answer via `--tts voicebox:<profile>|minimax-system`;
@@ -630,6 +640,10 @@ packages/
 - **`MINIMAX_API_KEY` missing**: needed for real image / video generation; not needed for `--fake`.
 - **`pnpm test` slow**: vitest runs across all packages with coverage. Use `pnpm vitest run packages/<name>` to scope.
 - **Render stuck on port**: Remotion needs a free port; check `output/` for crash logs.
+- **Render parallelism**: `RENDER_POOL` env (default 2, cap 4) runs scene
+  renders in a worker pool, one private Chrome per worker (2026-10-25;
+  28-scene benchmark: 419 s → 363 s). Set `RENDER_POOL=1` to restore the
+  serial shared-browser path on constrained machines.
 - **Storyboard schema mismatch**: `video validate projects/<id>/storyboard/storyboard.yaml --root projects/<id>`.
 - **Edge TTS fails**: try `--fake` to confirm pipeline; fall back to a different voice via `audio-config.yaml`.
 - **Style consistency across scenes**: sampling drifts ground dominance (warm cream vs cool teal) even inside a locked-palette style. Steer per-scene grounds in the `visual:` line ("on a warm cream ground") when the block must match; regenerate rejects by deleting `scene_N.jpg` + `scene_N.cache.json`. Sketch idioms (whiteboard) render poorly on minimax (thin pen ink, palette drift) — prefer painted styles there, or `--image-provider openai`.

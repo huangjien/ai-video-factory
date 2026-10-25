@@ -1,4 +1,5 @@
 import { openBrowser, type HeadlessBrowser } from "@remotion/renderer";
+export { openBrowser };
 
 /** One Chrome per process, reused by every scene render.
  *

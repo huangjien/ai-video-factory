@@ -92,7 +92,6 @@ review → approve review (GATE) → final
 | `excalidraw <project>`     | `.excalidraw` asset → animated SVG                 |
 | `studio <project>`         | Remotion Studio workspace for live preview         |
 | `theme [name]`             | palette inspector (list / one / resolve project)   |
-| `laya health/ask/eval`     | Laya decision-sidecar diagnostics (advisory)       |
 | `learn <project>`          | human-review learning loop (`--ask`/`--answer`/`--status`/`--propose`) |
 | `prompts [show <name>]`    | inspect the central prompt registry (`packages/prompts`) |
 

@@ -110,6 +110,10 @@ export interface DraftOptions {
   minScore?: number;
   /** Total draft attempts in the review loop (not extra retries). Default 3. */
   maxAttempts?: number;
+  /** Parallel best-of-N candidates per review round (default 1 = serial).
+   *  N > 1 spends N× draft+judge tokens per round and caps wall time at
+   *  one round's generation. */
+  candidates?: number;
 }
 
 function providerInstance(name: string): Provider {
@@ -372,6 +376,9 @@ export async function runDraft(opts: DraftOptions): Promise<number> {
         return await runScoredDraft(draftInput, provider, fallback, {
           minScore,
           maxAttempts,
+          ...(opts.candidates !== undefined
+            ? { candidates: opts.candidates }
+            : {}),
           onAttempt: (a, total) => {
             if (a.score) {
               const s = a.score;
@@ -716,6 +723,11 @@ export function registerDraft(program: Command): void {
     .option(
       "--max-attempts <n>",
       "total draft attempts in the quality loop (default: 8; the top-scoring candidate is kept regardless of passing)",
+      (v) => parseInt(v, 10),
+    )
+    .option(
+      "--candidates <n>",
+      "parallel best-of-N candidates per review round (default: 1 = serial; N>1 multiplies draft+judge token spend and caps wall time at one round)",
       (v) => parseInt(v, 10),
     )
     .option(

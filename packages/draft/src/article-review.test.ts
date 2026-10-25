@@ -471,6 +471,62 @@ describe("runScoredDraft", () => {
     expect(r.attempts).toHaveLength(1);
     expect(p.requests).toHaveLength(2);
   });
+
+  // Parallel best-of-N (2026-10-25): each round launches N generate+judge
+  // pipelines; the judge raws are article-independent, so FIFO pairing
+  // races between siblings never change the OUTCOME — only which sibling
+  // got which score. Assertions below are therefore pairing-proof.
+  it("runs two candidates in parallel and keeps the passing one", async () => {
+    const p = new FakeProvider([
+      GOOD_ARTICLE,
+      GOOD_ARTICLE,
+      buildPassingRaw(3), // 60 — below bar
+      buildPassingRaw(4), // 80 — above bar
+    ]);
+    const r = await runScoredDraft(INPUT, p, null, {
+      minScore: 70,
+      candidates: 2,
+    });
+    expect(r.attempts).toHaveLength(2);
+    expect(p.requests).toHaveLength(4); // 2 drafts + 2 judges
+    expect(r.passing).toBe(true);
+    expect(r.markdown).toContain("# t");
+    // Siblings are not regenerations — the shipped draft is a round-1 pick.
+    expect(r.regenerated).toBe(false);
+  });
+
+  it("defaults to 2 parallel candidates for films of 240 s or longer", async () => {
+    const long: typeof INPUT = { ...INPUT, duration: 300 };
+    const p = new FakeProvider([
+      GOOD_ARTICLE,
+      GOOD_ARTICLE,
+      buildPassingRaw(3), // 60
+      buildPassingRaw(4), // 80 - best
+    ]);
+    const r = await runScoredDraft(long, p, null, { minScore: 70 });
+    // no explicit candidates → duration >= 240 auto-enables best-of-2
+    expect(r.attempts).toHaveLength(2);
+    expect(r.passing).toBe(true);
+    expect(r.regenerated).toBe(false);
+  });
+
+  it("shrinks the round to the remaining attempt budget", async () => {
+    const p = new FakeProvider([
+      GOOD_ARTICLE,
+      GOOD_ARTICLE,
+      buildPassingRaw(4),
+      buildPassingRaw(5),
+    ]);
+    const r = await runScoredDraft(INPUT, p, null, {
+      minScore: 70,
+      maxAttempts: 2,
+      candidates: 3,
+    });
+    // 3 candidates requested, budget of 2 → exactly 2 pipelines launched.
+    expect(r.attempts).toHaveLength(2);
+    expect(p.requests).toHaveLength(4);
+    expect(r.passing).toBe(true);
+  });
 });
 
 // ---------------------------------------------------------------------------

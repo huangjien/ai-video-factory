@@ -15,7 +15,7 @@ import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
 import { bundle } from "@remotion/bundler";
 import { renderMedia, selectComposition } from "@remotion/renderer";
-import { sharedBrowser } from "./browser.js";
+import { sharedBrowser, type BrowserPool } from "./browser.js";
 import {
   slicePlanScene,
   type RenderPlan,
@@ -119,9 +119,10 @@ export async function renderSceneToVideo(
   renderPlan: RenderPlan,
   sceneId: string,
   outPath: string,
+  opts: { browserPool?: BrowserPool } = {},
 ): Promise<void> {
   const { plan } = slicePlanScene(renderPlan, sceneId);
-  await renderPlanToVideo(plan, outPath);
+  await renderPlanToVideo(plan, outPath, opts);
 }
 
 /** Concatenate per-scene MP4s (same codec/geometry) into one file via the
@@ -163,6 +164,7 @@ export async function concatScenes(
 export async function renderPlanToVideo(
   renderPlan: RenderPlan,
   outPath: string,
+  opts: { browserPool?: BrowserPool } = {},
 ): Promise<void> {
   assertPlanRenderable(renderPlan);
   void sweepRemotionTemp().catch(() => {});
@@ -183,7 +185,12 @@ export async function renderPlanToVideo(
       // enableCaching is the option that actually reaches the config.
       enableCaching: false,
     });
-    const browser = await sharedBrowser.get();
+    // Per-worker browser pool when called from the parallel scene pool;
+    // the module singleton (serial pipeline default) otherwise. Sharing
+    // one Chrome across concurrent renderMedia calls was never designed
+    // here — browser.ts assumes one scene at a time.
+    const pool = opts.browserPool ?? sharedBrowser;
+    const browser = await pool.get();
     try {
       const composition = await selectComposition({
         serveUrl,
@@ -204,7 +211,7 @@ export async function renderPlanToVideo(
       // The shared browser may be the cause — it died, or the connection
       // dropped. Drop it so the next render opens a fresh one instead of
       // inheriting a dead browser.
-      sharedBrowser.invalidate();
+      pool.invalidate();
       throw err;
     }
   } finally {

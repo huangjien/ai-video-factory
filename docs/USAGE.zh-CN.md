@@ -513,16 +513,6 @@ provider 会记录在 `runs/<run-id>.yaml` 里，方便你审计降级是否触�
 | `video qa` | 为当前预览重建 QA 报告 |
 | `video validate` | 按完整规则校验分镜 |
 
-### 10.4 本地决策层（Laya，可选）
-
-Laya sidecar 是一个本地决策模型——有界的 `choice`、`score`、`noul` 答案，
-不是聊天模型。它可以预筛、标注和记录，但绝不替代人工门、绝不驱动工作流状态
-流转，并且在任何失败时退回到与 Laya 之前完全相同的行为。模式有 `off`、
-`shadow`、`on`，默认 `off`。
-
-`video laya health` 探测 sidecar，`video laya ask` 跑一次有界决策并给出原始
-概率，`video laya eval` 按晋级门槛给项目记录的决策打分。
-
 ---
 
 ## 11. 发布

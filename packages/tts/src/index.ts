@@ -25,3 +25,10 @@ export {
   minimaxSystemVoice,
   parseTtsChoice,
 } from "./voicebox.js";
+export {
+  F5TTSProvider,
+  f5ttsStatus,
+  type F5GenConfig,
+  type F5Runner,
+  type F5TTSProviderOptions,
+} from "./f5tts.js";

@@ -30,13 +30,6 @@ registry; local diffusion provider removed).
    provider (`minimax`, `openai`, `gemini`), each selected with
    `--image-provider` and authenticated by its own env var. `mock`
    gives deterministic placeholders; `none` skips image generation.
-7. **Local decisions are advisory** (v0.6) — the Laya decision-model
-   sidecar (bounded `choice`/`score`/`noul` answers, NOT a chat
-   model) may pre-screen, annotate, and log, but never replaces a
-   human gate, never drives a workflow transition, and degrades to
-   exactly the pre-v0.6 behavior on any failure
-   (`LAYA_MODE=off|shadow|on`, default off; plan:
-   `docs/v0.6-laya-decision-integration-plan.md`).
 
 ## The pipeline
 
@@ -128,12 +121,12 @@ parentheses; v0.5.2 additions marked):
 
 | Package | §32 alias | Role |
 |---|---|---|
-| `@video/llm` | llm | chat providers (GLM, MiniMax) with per-role routing + bounded retry/fallback; v0.6 `LayaClient` (advisory bounded decisions from the local laya-serve sidecar, `LAYA_MODE=off\|shadow\|on`) + the `laya-decisions.jsonl` sidecar writer |
+| `@video/llm` | llm | chat providers (GLM, MiniMax) with per-role routing + bounded retry/fallback |
 | `@video/vdsl` | schema | VDSL 0.1/0.2 zod schema, validator (line-numbered errors), deterministic compiler → `vdsl/vdsl.yaml` + `RenderPlan` |
 | `@video/motion` | motion | IartSkillAdapter, motion heuristics, deterministic `planSceneMotion`, Motion Agent (`callMotionAgent`) |
-| `@video/prompts` | prompts | central prompt registry — every LLM/Laya prompt body is a file under `packages/prompts/prompts/` (`loadPrompt()`/`fillPrompt()`), so prompts are edited without touching agent code |
+| `@video/prompts` | prompts | central prompt registry — every LLM prompt body is a file under `packages/prompts/prompts/` (`loadPrompt()`/`fillPrompt()`), so prompts are edited without touching agent code |
 | `@video/theme` | theme | the 9 `style.theme` palettes, the default theme, the per-theme metadata, and `resolveTheme()`. Owns the vocabulary so the storyboard writer, the VDSL schema, the compiler, the CLI and the renderer cannot disagree on it — the theme is a cross-cutting invariant, so it lives BELOW all of them, not inside the rendering layer. |
-| `@video/draft` | draft | article drafter agent + scored quality judge + image-prompt expansion + image-style presets + regex visual classifier (+ Laya fall-through assist) |
+| `@video/draft` | draft | article drafter agent + scored quality judge + image-prompt expansion + image-style presets + regex visual classifier |
 | `@video/make` | make | `video make` pipeline: TTS → audio assets → scene visuals → scene-isolated render → mix; impact analysis, content-keyed caches |
 | `@video/audio-plan` | audio-plan | Audio Planner agent (audio-config.yaml proposals from a parsed article) |
 | `@video/agent-storyboard`, `@video/research`, `@video/script`, `@video/review`, `@video/youtube` | agent | LLM agents (per-role provider routing incl. `motion`, transient retry, quota fallback) |

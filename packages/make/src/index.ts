@@ -27,6 +27,7 @@ import {
   EdgeTTSProvider,
   VoiceboxTTSProvider,
   MinimaxTTSProvider,
+  f5ttsStatus,
   voiceboxStatus,
   type TTSProvider,
 } from "@video/tts";
@@ -1116,8 +1117,15 @@ async function runTts(
   // the MiniMax system voice when the local server is down, and to Edge
   // when the MiniMax key is missing too. --fake never probes localhost.
   let voiceboxHealthy = false;
-  if (!opts.fake && ttsProvider === "voicebox") {
+  // f5tts keeps voicebox as its backup, so probe BOTH when f5tts is
+  // selected — the narration chain needs voicebox health to degrade
+  // correctly (f5tts → voicebox → minimax → edge).
+  if (!opts.fake && (ttsProvider === "voicebox" || ttsProvider === "f5tts")) {
     voiceboxHealthy = (await voiceboxStatus()).healthy;
+  }
+  let f5ttsAvailable = false;
+  if (!opts.fake && ttsProvider === "f5tts") {
+    f5ttsAvailable = (await f5ttsStatus()).available;
   }
   const voiceboxSpeed =
     typeof article.frontmatter.tts_speed === "number"
@@ -1133,6 +1141,7 @@ async function runTts(
     voice: frontmatterVoice,
     language: article.frontmatter.language,
     voiceboxHealthy,
+    ...(ttsProvider === "f5tts" ? { f5ttsAvailable } : {}),
     minimaxKey: Boolean(process.env["MINIMAX_API_KEY"]),
     voiceboxSpeed,
     ttsSpeed: voiceboxSpeed,

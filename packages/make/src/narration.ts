@@ -1,6 +1,7 @@
 import {
   EdgeTTSProvider,
   FakeTTSProvider,
+  F5TTSProvider,
   MinimaxTTSProvider,
   VoiceboxTTSProvider,
   minimaxSystemVoice,
@@ -20,9 +21,11 @@ export interface NarrationDecision {
  * Decide the narration backend for `video make` (pure — no network here;
  * the caller probes Voicebox and passes the boolean).
  *
- * Policy (2026-10-18): the user's declared backend wins when its
- * dependencies are up; otherwise degrade loudly, never silently:
+ * Policy (2026-10-18, f5tts added 2026-10-25): the user's declared backend
+ * wins when its dependencies are up; otherwise degrade loudly, never
+ * silently:
  *
+ *   f5tts + install/ref missing → voicebox (the previous local clone)
  *   voicebox + server down  → MiniMax system voice (needs MINIMAX_API_KEY)
  *   voicebox + down + no key → Edge TTS default voice
  *   minimax + no key        → Edge TTS default voice
@@ -36,6 +39,8 @@ export function resolveNarration(input: {
   voice: string;
   language: string;
   voiceboxHealthy: boolean;
+  /** F5-TTS (MLX) install probe — interpreter + package + reference clip. */
+  f5ttsAvailable?: boolean;
   minimaxKey: boolean;
   /** The project's `tts_speed`. Passed to whichever provider is chosen —
    *  Voicebox and MiniMax both honour it, Edge does not. */
@@ -53,6 +58,23 @@ export function resolveNarration(input: {
   }
 
   const edgeDefault = input.language === "en-US" ? EN_VOICE : ZH_VOICE;
+
+  if (input.ttsProvider === "f5tts") {
+    if (input.f5ttsAvailable) {
+      return {
+        provider: new F5TTSProvider(),
+        voice: input.voice,
+        warnings,
+      };
+    }
+    warnings.push(
+      `f5tts install/reference unavailable — falling back to voicebox clone`,
+    );
+    // Fall through: the voicebox chain below IS the backup the operator
+    // asked to keep (voicebox → minimax → edge). Rebind the selector so
+    // the voicebox branch matches.
+    input = { ...input, ttsProvider: "voicebox" };
+  }
 
   if (input.ttsProvider === "voicebox") {
     if (input.voiceboxHealthy) {

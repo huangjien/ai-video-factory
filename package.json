@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "description": "AI Video Factory \u2014 structured-content-to-video production system (v0.1)",
-  "packageManager": "pnpm@12.14.0",
+  "packageManager": "pnpm@12.15.0",
   "engines": {
     "node": ">=22"
   },

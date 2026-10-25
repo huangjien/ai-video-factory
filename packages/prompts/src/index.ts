@@ -1,5 +1,5 @@
 /**
- * Central prompt registry — every LLM/Laya prompt lives as a file under
+ * Central prompt registry — every LLM prompt lives as a file under
  * `packages/prompts/prompts/` and is loaded through here. Source files keep
  * exporting the same `SYSTEM_PROMPT` constants they always did; only the
  * storage moved (inline TS template literal → managed file).

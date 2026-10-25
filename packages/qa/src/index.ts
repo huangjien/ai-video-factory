@@ -4,36 +4,22 @@ import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { promisify } from "node:util";
 import type { RenderPlan } from "@video/vdsl";
-import { loadPrompt } from "@video/prompts";
-import {
-  LayaClient,
-  recordDecision,
-  resolveLayaConfig,
-  type LayaMode,
-} from "@video/llm";
 import {
   checkCaptions,
   checkSceneAudioSync,
   checkSceneBoundaries,
   checkStaleSceneRenders,
 } from "./checks.js";
-import { gradeFindings } from "./severity.js";
 export {
-  LAYA_SEVERITY_QID,
-  QA_SEVERITY_INSTRUCTIONS,
   SEVERITY_AGREEMENT_TOLERANCE,
   SEVERITY_ERROR_THRESHOLD,
   SEVERITY_PROMOTE_THRESHOLD,
   buildSeverityState,
-  gradeFindings,
-  gradeSeverity,
   isGradedFinding,
   levelForScore,
   severityFactsFrom,
   severityScaleFor,
-  type GradeSeveritiesOptions,
   type SeverityFacts,
-  type SeverityOutcome,
 } from "./severity.js";
 
 const execFileAsync = promisify(execFile);
@@ -219,11 +205,6 @@ export interface RenderReport {
   generatedAt: string;
   ok: boolean;
   findings: QaFinding[];
-  /** v0.6 D3: Laya's advisory triage. Present ONLY in LAYA_MODE=on —
-   * shadow logs to the sidecar and never mutates the report, and the
-   * export gate NEVER reads this field (v0.6 plan §1 rule 1: advisory
-   * only, human gates stay human). */
-  advisory?: { laya?: QaLayaTriage };
   checks: {
     duration: { expectedSec: number; actualSec: number; ok: boolean };
     fps: { expected: number; actual: number; ok: boolean };
@@ -241,23 +222,12 @@ export interface RenderReport {
   };
 }
 
-/** Laya's "where should a human look first" hint for the QA report. */
-export interface QaLayaTriage {
-  verdict: "pass" | "review" | "block";
-  confidence: number;
-  routingModel: string;
-  latencyMs: number;
-}
-
 export interface RenderReportOptions {
   /** Duration tolerance in seconds (frame rounding at 30fps ≈ 0.03s/scene). */
   durationToleranceSec?: number;
   /** Root for resolving project-relative asset/audio paths. Defaults to
    * the standard layout's project root: the parent of the video's dir. */
   projectRoot?: string;
-  /** The Laya mode for severity grading. Defaults to the configured
-   *  mode; `off` skips grading entirely. */
-  layaMode?: LayaMode | undefined;
 }
 
 /** Build the render report for a rendered video against its RenderPlan. */
@@ -270,12 +240,6 @@ export async function buildRenderReport(
   const projectRoot = opts.projectRoot ?? path.dirname(path.dirname(videoPath));
   const findings: QaFinding[] = [];
   const info = await probeVideo(videoPath);
-  // Severity grading needs a client only when the mode is not off.
-  const layaMode = opts.layaMode ?? resolveLayaConfig().mode;
-  const layaClient =
-    layaMode === "off"
-      ? null
-      : new LayaClient({ resolvedConfig: resolveLayaConfig() });
 
   const expectedDuration = plan.totalFrames / plan.project.fps;
   const durationOk = Math.abs(info.duration - expectedDuration) <= tolerance;
@@ -363,22 +327,11 @@ export async function buildRenderReport(
   const staleRenders = await checkStaleSceneRenders(plan, projectRoot);
   findings.push(...staleRenders.findings);
 
-  // v0.6 D4: severity grading. A finding whose severity is a matter of
-  // DEGREE (not structurally wrong) may be graded by a `score` decision.
-  // The decision may RAISE a level; it may never lower one — a defect
-  // the deterministic check found does not become acceptable because a
-  // score said so. Off by default; shadow records, `on` promotes.
-  const gradedFindings = await gradeFindings(findings, {
-    mode: layaMode,
-    client: layaClient,
-    sidecarPath: path.join(projectRoot, "laya-decisions.jsonl"),
-  });
-
   return {
     video: videoPath,
     generatedAt: new Date().toISOString(),
-    ok: !gradedFindings.some((f) => f.level === "error"),
-    findings: gradedFindings,
+    ok: !findings.some((f) => f.level === "error"),
+    findings,
     checks: {
       duration: {
         expectedSec: Math.round(expectedDuration * 100) / 100,
@@ -406,57 +359,14 @@ export async function buildRenderReport(
 }
 
 /** Write qa/render-report.json + qa/contact-sheet.png under projectRoot.
- * Returns the report; throws on ffmpeg failure (callers decide loudly).
- *
- * v0.6 D3: when LAYA_MODE is on/shadow the finished report is ALSO
- * triaged by the Laya sidecar. shadow → one `laya-decisions.jsonl` row,
- * report untouched. on → the verdict rides along as
- * `report.advisory.laya` and is captioned on the contact sheet. The
- * export gate never reads the advisory (human gates stay human). */
+ * Returns the report; throws on ffmpeg failure (callers decide loudly). */
 export async function writeQaArtifacts(
   projectRoot: string,
   plan: RenderPlan,
   videoPath: string,
-  opts: { layaMode?: LayaMode } = {},
 ): Promise<RenderReport> {
   const qaDir = path.join(projectRoot, "qa");
   const report = await buildRenderReport(plan, videoPath);
-
-  const layaCfg = resolveLayaConfig();
-  const mode = opts.layaMode ?? layaCfg.mode;
-  if (mode !== "off") {
-    const client = new LayaClient({ resolvedConfig: layaCfg });
-    // The deterministic gate IS the baseline: it is what today's path
-    // would have said about this report.
-    const expected = deterministicTriageVerdict(report);
-    // ONE consult, one recorded row — the shared seam owns the consult,
-    // the answer validation, the row, and the expected/agreed pair.
-    const res = await recordDecision(client, {
-      surface: "triage",
-      state: buildTriageState(report),
-      question: {
-        id: "triage",
-        type: "choice",
-        instructions: QA_TRIAGE_INSTRUCTIONS,
-        criteria: ["pass", "review", "block"],
-      },
-      mode,
-      baseline: expected,
-      sidecarPath: path.join(projectRoot, "laya-decisions.jsonl"),
-    });
-    const triage: QaLayaTriage | null =
-      res.choice === null
-        ? null
-        : {
-            verdict: res.choice as QaLayaTriage["verdict"],
-            confidence: res.answer?.confidence ?? 0,
-            routingModel: res.answer?.routingModel ?? "unknown",
-            latencyMs: 0,
-          };
-    if (mode === "on" && triage) {
-      report.advisory = { laya: triage };
-    }
-  }
 
   await mkdir(qaDir, { recursive: true });
   await writeFile(
@@ -464,83 +374,8 @@ export async function writeQaArtifacts(
     JSON.stringify(report, null, 2),
     "utf8",
   );
-  const caption = report.advisory?.laya
-    ? `laya: ${report.advisory.laya.verdict} (conf ${report.advisory.laya.confidence.toFixed(2)})`
-    : undefined;
-  await makeContactSheet(videoPath, path.join(qaDir, "contact-sheet.png"), {
-    ...(caption !== undefined ? { caption } : {}),
-  });
+  await makeContactSheet(videoPath, path.join(qaDir, "contact-sheet.png"));
   return report;
-}
-
-/** Body lives in `packages/prompts/prompts/qa-triage.md` — edit it there. */
-export const QA_TRIAGE_INSTRUCTIONS = loadPrompt("qa-triage");
-
-/** Compact state string for the triage consult (≤ ~2k chars). */
-export function buildTriageState(report: RenderReport): string {
-  const c = report.checks;
-  const errorCount = report.findings.filter((f) => f.level === "error").length;
-  const warnCount = report.findings.filter((f) => f.level === "warn").length;
-  const worst = report.findings
-    .slice(0, 5)
-    .map((f) => `- [${f.level}] ${f.check}: ${f.message}`)
-    .join("\n");
-  return [
-    `QA verdict ok=${report.ok}`,
-    `errors=${errorCount} warnings=${warnCount}`,
-    `duration ${c.duration.actualSec}s vs plan ${c.duration.expectedSec}s ok=${c.duration.ok}`,
-    `fps ${c.fps.actual} ok=${c.fps.ok}`,
-    `resolution ${c.resolution.actual} ok=${c.resolution.ok}`,
-    `audio present=${c.audio.hasAudio} ok=${c.audio.ok}`,
-    `black frames: ${c.blackFrames.length} segment(s)`,
-    `missing assets: ${c.assets.missing.length}`,
-    `scene audio sync ok=${c.sceneAudioSync.ok}`,
-    `captions ok=${c.captions.ok}`,
-    `scene boundaries ok=${c.sceneBoundaries.ok}`,
-    worst ? `top findings:\n${worst}` : "no findings",
-  ].join("\n");
-}
-
-/** What today's deterministic gate logic would say (the shadow baseline):
- * error findings → block, warn-only → review, clean → pass. */
-export function deterministicTriageVerdict(
-  report: Pick<RenderReport, "ok" | "findings">,
-): "pass" | "review" | "block" {
-  if (report.findings.some((f) => f.level === "error")) return "block";
-  if (report.findings.some((f) => f.level === "warn")) return "review";
-  return "pass";
-}
-
-/** Ask Laya to triage a finished report. Null = no usable answer. */
-export async function triageReportWithLaya(
-  client: LayaClient,
-  report: RenderReport,
-): Promise<QaLayaTriage | null> {
-  let decision: Awaited<ReturnType<LayaClient["decide"]>>;
-  try {
-    decision = await client.decide(buildTriageState(report), {
-      triage: {
-        type: "choice",
-        instructions: QA_TRIAGE_INSTRUCTIONS,
-        criteria: ["pass", "review", "block"],
-      },
-    });
-  } catch {
-    return null; // decide() is never-throwing by contract; belt and braces
-  }
-  const answer = decision?.answers["triage"];
-  if (decision === null || decision === undefined || answer === undefined) {
-    return null;
-  }
-  const v = answer.value;
-  const verdict = v === "pass" || v === "review" || v === "block" ? v : null;
-  if (verdict === null) return null;
-  return {
-    verdict,
-    confidence: answer.confidence,
-    routingModel: answer.routingModel,
-    latencyMs: decision.latencyMs,
-  };
 }
 
 // Re-exports from the extended-checks module (T6.1) so consumers import

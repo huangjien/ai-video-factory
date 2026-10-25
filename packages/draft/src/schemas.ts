@@ -183,18 +183,8 @@ export interface ParsedArticle {
  *    unless `frontmatter.no_captions === true` (T1 --no-captions).
  *  - The visual component is chosen by `pickVisualComponent` (T2) so
  *    the LLM's "vary visuals" instructions actually take effect.
- *
- * v0.6: `opts.visualOverrides` (scene index → component) lets the Laya
- * assist (laya-assist.ts) replace FALL-THROUGH component choices. The
- * function itself stays pure and synchronous — overrides must be
- * resolved before calling. An override with no VISUAL_BUILDER is
- * ignored (defensive; laya-assist already validates against the
- * component list).
  */
-export function articleToStoryboardYaml(
-  article: ParsedArticle,
-  opts: { visualOverrides?: ReadonlyMap<number, string> } = {},
-): string {
+export function articleToStoryboardYaml(article: ParsedArticle): string {
   const f = article.frontmatter;
   const theme = f.theme ?? DEFAULT_THEME_NAME;
   const lines: string[] = [
@@ -238,13 +228,7 @@ export function articleToStoryboardYaml(
   article.scenes.forEach((s, i) => {
     const id = `scene-${String(i + 1).padStart(2, "0")}`;
     const isFirst = keepTitleCard && i === 0;
-    const overrideKey = opts.visualOverrides?.get(i);
-    const override =
-      overrideKey !== undefined && VISUAL_BUILDERS[overrideKey] !== undefined
-        ? overrideKey
-        : null;
-    const component =
-      override ?? pickVisualComponent(s.visual ?? "", isFirst).component;
+    const component = pickVisualComponent(s.visual ?? "", isFirst).component;
     const sectionIdx =
       sections.length === 0
         ? 0

@@ -54,14 +54,9 @@ export const MINIMAL_API_COMMANDS: readonly MinimalApiCommand[] = [
       "manage the 角色圣经 (character bible) shared across films at `<workspace>/assets/characters/` — `list` every character, `sheet <id> <style>` generate a candidate reference sheet (`--provider mock` for offline), `approve <id> <style> <version> --by <name>` promote a candidate to the 正式角色参考 for its art style",
   },
   {
-    invocation: "video laya health / ask / eval",
-    purpose:
-      "**v0.6** local decision-model diagnostics — probe the Laya sidecar (/health), run one bounded-decision consult with raw probabilities, and score the project's `laya-decisions.jsonl` against the §7 promotion gates; advisory only, `LAYA_MODE=off` by default",
-  },
-  {
     invocation: "video prompts / show <name> / path / eval",
     purpose:
-      "**v0.8** inspect the central prompt registry — every LLM/Laya prompt body lives as an editable file under `packages/prompts/prompts/`; list them, print one, or get the directory. **v0.10** `eval` runs the golden set in `packages/prompts/evals/` (structural by default, CI-safe; `--judge <provider>` adds the LLM rubric layer)",
+      "**v0.8** inspect the central prompt registry — every LLM prompt body lives as an editable file under `packages/prompts/prompts/`; list them, print one, or get the directory. **v0.10** `eval` runs the golden set in `packages/prompts/evals/` (structural by default, CI-safe; `--judge <provider>` adds the LLM rubric layer)",
   },
 ];
 
@@ -89,7 +84,6 @@ export const ADVANCED_VERBS: readonly string[] = [
   "scene",
   "learn",
   "prompts",
-  "laya",
   "character",
 ];
 

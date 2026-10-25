@@ -75,13 +75,13 @@ describe("withProgress", () => {
   it("prints a fail line and rethrows the wrapped error", async () => {
     const errSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     await expect(
-      withProgress("laya visual assist", async () => {
-        throw new Error("laya down");
+      withProgress("qa triage", async () => {
+        throw new Error("qa down");
       }),
-    ).rejects.toThrow("laya down");
+    ).rejects.toThrow("qa down");
     const lines = errSpy.mock.calls.map((c) => c[0] as string);
     expect(lines[lines.length - 1]).toMatch(
-      /^  ✗ laya visual assist  \d+s: laya down$/,
+      /^  ✗ qa triage  \d+s: qa down$/,
     );
   });
 });

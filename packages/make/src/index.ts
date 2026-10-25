@@ -15,7 +15,6 @@ import {
   articleToStoryboardYaml,
   expandScenePrompt,
   resolveImageStyle,
-  runLayaVisualAssist,
   stylePromptSuffix,
   characterRootFor,
   IMAGE_PROMPT_REVISION,
@@ -537,9 +536,6 @@ function failStep(report: MakeReport, name: string, message: string): void {
  * always sees the up-to-date scene list. Only rewrites when the
  * article's scene IDs differ from the storyboard's (preserves
  * hand-edited component/props on matching scenes).
- *
- * v0.6: when LAYA_MODE is on/shadow, fall-through visual components may
- * be consulted (runLayaVisualAssist; shadow logs only, on overrides).
  */
 /**
  * Carry the motion plan across a storyboard re-derivation.
@@ -634,21 +630,14 @@ export async function syncStoryboardFromArticle(
     ? readFileSync(hashPath, "utf8").trim()
     : null;
   if (!existsSync(storyboardPath)) {
-    const laya = await runLayaVisualAssist(article, projectRoot);
     await mkdir(path.dirname(storyboardPath), { recursive: true });
     await writeFile(
       storyboardPath,
-      articleToStoryboardYaml(
-        article,
-        laya.overrides ? { visualOverrides: laya.overrides } : undefined,
-      ),
+      articleToStoryboardYaml(article),
       "utf8",
     );
     await writeFile(hashPath, derivedHash, "utf8");
-    return [
-      "storyboard.yaml: created from article.md",
-      ...(laya.summary ? [laya.summary] : []),
-    ];
+    return ["storyboard.yaml: created from article.md"];
   }
 
   const yamlText = readFileSync(storyboardPath, "utf8");
@@ -678,11 +667,7 @@ export async function syncStoryboardFromArticle(
 
   if (idsMatch && storedHash === derivedHash) return [];
 
-  const laya = await runLayaVisualAssist(article, projectRoot);
-  const derived = articleToStoryboardYaml(
-    article,
-    laya.overrides ? { visualOverrides: laya.overrides } : undefined,
-  );
+  const derived = articleToStoryboardYaml(article);
   const nextDoc = parseYaml(derived) as {
     scenes?: Record<string, unknown>[];
   };
@@ -696,7 +681,6 @@ export async function syncStoryboardFromArticle(
     ...(kept > 0
       ? [`storyboard.yaml: kept the motion plan (${kept} field(s))`]
       : []),
-    ...(laya.summary ? [laya.summary] : []),
   ];
 }
 

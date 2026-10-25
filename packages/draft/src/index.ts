@@ -85,21 +85,9 @@ export {
 export {
   pickVisualComponent,
   DEFAULT_VISUAL_COMPONENT,
-  LAYA_VISUAL_COMPONENTS,
   type ComponentChoice,
   type ComponentName,
-  type VisualAssist,
-  type VisualAssistResult,
 } from "./visual-classifier.js";
-export {
-  askLayaVisual,
-  buildVisualAssistState,
-  resolveVisualOverrides,
-  runLayaVisualAssist,
-  LAYA_VISUAL_QID,
-  type LayaVisualAssistOutcome,
-  type VisualOverridesResult,
-} from "./laya-assist.js";
 export {
   buildScenePromptMessages,
   expandSceneBrief,

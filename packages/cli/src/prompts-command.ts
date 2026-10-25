@@ -11,7 +11,7 @@ import { runPromptEvals } from "./prompt-evals.js";
 /**
  * `video prompts` — inspect the central prompt registry (@video/prompts).
  *
- * Every LLM/Laya prompt body in the pipeline lives as a file under
+ * Every LLM prompt body in the pipeline lives as a file under
  * packages/prompts/prompts/. Edit a file there and the next run picks it
  * up — no code change needed (placeholders like {{script_sections}} are
  * filled by the owning package at load time).

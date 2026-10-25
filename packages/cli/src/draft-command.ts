@@ -17,7 +17,6 @@ import {
   parseArticleWithRecovery,
   renderArticleReviewYaml,
   resolveImageStyle,
-  runLayaVisualAssist,
   runScoredDraft,
   type ParsedArticle,
 } from "@video/draft";
@@ -506,20 +505,9 @@ export async function runDraft(opts: DraftOptions): Promise<number> {
         ...(opts.noCaptions === true ? { no_captions: true } : {}),
       };
     }
-    // v0.6 D2: when LAYA_MODE is on/shadow, consult Laya for fall-through
-    // visual components (shadow logs only; on may override the default).
-    const layaVisual = await withProgress("laya visual assist", () =>
-      runLayaVisualAssist(article, projectRoot),
-    );
-    if (layaVisual.summary) console.log(`  ${layaVisual.summary}`);
     await writeFile(
       storyboardPath,
-      articleToStoryboardYaml(
-        article,
-        layaVisual.overrides
-          ? { visualOverrides: layaVisual.overrides }
-          : undefined,
-      ),
+      articleToStoryboardYaml(article),
       "utf8",
     );
   } catch (err) {

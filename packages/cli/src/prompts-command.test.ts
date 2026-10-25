@@ -33,9 +33,9 @@ describe("video prompts", () => {
   });
 
   it("shows a prompt body by stem", async () => {
-    const out = await run(["show", "qa-triage"]);
+    const out = await run(["show", "retrospect"]);
     expect(out).toContain(
-      "pass — no reported errors or warnings; continue to the normal human review gate",
+      "You are the Retrospect Agent for the AI Video Factory.",
     );
   });
 

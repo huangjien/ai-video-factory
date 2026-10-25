@@ -5,6 +5,7 @@ import {
   mkdtempSync,
   readFileSync,
   rmSync,
+  statSync,
   utimesSync,
   writeFileSync,
 } from "node:fs";
@@ -211,6 +212,7 @@ describe("T6.1 extended QA checks — injected defects are caught with fixes", (
     mkdirSync(scenesDir, { recursive: true });
     const img = path.join(imgDir, "scene_1.jpg");
     writeFileSync(img, "jpg");
+    const imgStatMtime = statSync(img).mtimeMs;
     const mp4 = path.join(scenesDir, "01-scene-01.mp4");
     writeFileSync(mp4, "mp4");
     // mp4 rendered BEFORE the image was last regenerated → stale
@@ -229,8 +231,16 @@ describe("T6.1 extended QA checks — injected defects are caught with fixes", (
     expect(findings).toHaveLength(1);
     expect(findings[0]).toMatchObject({ level: "warn", check: "stale-render" });
 
-    // a fresh render (mp4 newer than the image) passes clean
-    utimesSync(mp4, new Date(), new Date());
+    // A fresh render (mp4 newer than the image) passes clean.
+    //
+    // The mtimes are set EXPLICITLY, a full second apart. Setting the
+    // mp4 to "now" is a coin flip: the image was written in the same
+    // millisecond, and filesystem timestamp resolution is coarse enough
+    // that "now" can land BEFORE the image — which reads as stale and
+    // fails the assertion at random. The check compares mtimes, so the
+    // test must control them exactly.
+    const freshMp4Time = new Date(imgStatMtime + 1000);
+    utimesSync(mp4, freshMp4Time, freshMp4Time);
     const fresh = await checkStaleSceneRenders(p, dir);
     expect(fresh.checks.ok).toBe(true);
     expect(fresh.findings).toHaveLength(0);

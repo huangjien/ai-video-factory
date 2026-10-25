@@ -15,6 +15,17 @@ const MOTION_TEMPLATE = loadPrompt("motion");
  *  asserts every file on disk is loaded by an import-time loader, and a
  *  lazy load inside buildMotionMessages would read as an orphan. */
 const MOTION_STILL_FIRST_BLOCK = loadPrompt("motion-channel-chinese-storybook");
+/** The Laya decision prompt: "is the deterministic baseline good enough,
+ *  or does this scene need the Motion Agent?" Also import-time, for the
+ *  same reason. */
+const MOTION_LAYA_INSTRUCTIONS = loadPrompt("motion-laya");
+
+/** The instructions for the Laya motion pre-screen decision.
+ *
+ *  Owned by @video/motion so the prompt lives beside the other motion
+ *  prompts — the decision is about motion, and the registry coverage
+ *  test loads this package. */
+export const MOTION_LAYA_PROMPT = MOTION_LAYA_INSTRUCTIONS;
 
 export interface MotionAgentSceneInput {
   sceneId: string;

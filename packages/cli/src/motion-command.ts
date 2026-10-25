@@ -9,9 +9,9 @@ import {
   LayaClient,
   loadProviderConfig,
   MiniMaxProvider,
-  appendLayaDecision,
+  recordDecision,
+  recordLayaRow,
   resolveLayaConfig,
-  stateSha256,
   type LayaMode,
   type Provider,
 } from "@video/llm";
@@ -23,6 +23,7 @@ import {
   planSceneMotion,
   isStillFirstProfile,
   IartSkillAdapter,
+  MOTION_LAYA_PROMPT,
   type MotionSpec,
 } from "@video/motion";
 import {
@@ -105,6 +106,11 @@ function specEquals(existing: unknown, planned: unknown): boolean {
 
 const LAYA_MOTION_QID = "needs_llm";
 
+/** The body lives in `packages/prompts/prompts/motion-laya.md` and is
+ *  loaded by @video/motion, which owns the motion prompts — like the
+ *  other two decision surfaces. */
+const LAYA_MOTION_INSTRUCTIONS = MOTION_LAYA_PROMPT;
+
 function buildMotionLayaState(input: {
   sceneId: string;
   component: string;
@@ -134,40 +140,35 @@ interface LayaMotionAnswer {
   state: string;
 }
 
+/** One consult, one recorded row.
+ *
+ *  The baseline (what today's deterministic heuristics would have
+ *  produced) is known only AFTER the agent call, so the row is written
+ *  by the caller — but the CONSULT and the answer validation live in
+ *  the shared seam, so this surface cannot forget the never-throwing
+ *  contract or the "the answer must be one of the two options" rule. */
 async function askLayaMotion(
   client: LayaClient,
   state: string,
 ): Promise<LayaMotionAnswer | null> {
-  let decision: Awaited<ReturnType<LayaClient["decide"]>>;
-  try {
-    decision = await client.decide(state, {
-      [LAYA_MOTION_QID]: {
-        type: "choice",
-        instructions:
-          "A scene's motion was planned by deterministic heuristics (the baseline). " +
-          "baseline_ok = the baseline is good enough for this scene, no LLM refinement needed. " +
-          "refine = the scene is complex enough to benefit from the LLM motion agent.",
-        criteria: ["baseline_ok", "refine"],
-      },
-    });
-  } catch {
-    return null; // decide() is never-throwing by contract; belt and braces
-  }
-  const answer = decision?.answers[LAYA_MOTION_QID];
-  const v = answer?.value;
-  if (
-    decision === undefined ||
-    decision === null ||
-    answer === undefined ||
-    (v !== "baseline_ok" && v !== "refine")
-  ) {
-    return null;
-  }
+  const res = await recordDecision(client, {
+    surface: "motion",
+    state,
+    question: {
+      id: LAYA_MOTION_QID,
+      type: "choice",
+      instructions: LAYA_MOTION_INSTRUCTIONS,
+      criteria: ["baseline_ok", "refine"],
+    },
+    mode: "shadow",
+    baseline: null,
+  });
+  if (res.choice !== "baseline_ok" && res.choice !== "refine") return null;
   return {
-    answer: v,
-    confidence: answer.confidence,
-    routingModel: answer.routingModel,
-    latencyMs: decision.latencyMs,
+    answer: res.choice,
+    confidence: res.answer?.confidence ?? 0,
+    routingModel: res.answer?.routingModel ?? "unknown",
+    latencyMs: 0,
     state,
   };
 }
@@ -368,42 +369,30 @@ export async function runMotion(opts: MotionOptions): Promise<number> {
           ? "baseline_ok"
           : "refine"
         : null;
-      try {
-        await appendLayaDecision(layaSidecar, {
-          ts: new Date().toISOString(),
-          surface: "motion",
-          mode: layaMode,
-          state_sha256: stateSha256(layaAsk?.state ?? scene.id),
-          questions: {
-            [LAYA_MOTION_QID]: {
+      // The row is written from the answer the consult ALREADY
+      // returned — the surface must not ask twice. The shared seam owns
+      // the row's shape, so all three surfaces record the same fields.
+      await recordLayaRow({
+        sidecarPath: layaSidecar,
+        surface: "motion",
+        mode: layaMode,
+        state: layaAsk?.state ?? scene.id,
+        question: {
+          id: LAYA_MOTION_QID,
+          type: "choice",
+          instructions: LAYA_MOTION_INSTRUCTIONS,
+          criteria: ["baseline_ok", "refine"],
+        },
+        answer: layaAsk
+          ? {
               type: "choice",
-              instructions: "baseline_ok or refine?",
-              criteria: ["baseline_ok", "refine"],
-            },
-          },
-          answers: layaAsk
-            ? {
-                [LAYA_MOTION_QID]: {
-                  type: "choice" as const,
-                  value: layaAsk.answer,
-                  confidence: layaAsk.confidence,
-                  routingModel: layaAsk.routingModel,
-                },
-              }
-            : null,
-          routing_model: layaAsk?.routingModel ?? null,
-          latency_ms: layaAsk?.latencyMs ?? null,
-          acted: layaMode === "on" && layaAsk !== null,
-          ...(expected !== null && layaAsk !== null
-            ? {
-                expected,
-                agreed: layaAsk.answer === expected,
-              }
-            : {}),
-        });
-      } catch {
-        // Telemetry must never break the motion pass.
-      }
+              value: layaAsk.answer,
+              confidence: layaAsk.confidence,
+              routingModel: layaAsk.routingModel,
+            }
+          : null,
+        baseline: expected,
+      });
     }
 
     const frag = extractSceneFragment(storyboardText, scene.id);

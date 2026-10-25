@@ -25,7 +25,11 @@ describe("video prompts", () => {
     expect(out).toContain("storyboard.md");
     expect(out).toContain("draft-article.md");
     expect(out).toContain("music.json");
-    expect(out).toMatch(/2[01] prompts — edit under/);
+    // The count grows whenever a prompt is added, so assert the SHAPE
+    // ("N prompts — edit under …") rather than a number that has to be
+    // bumped on every new prompt. The registry-coverage test in
+    // prompt-registry.test.ts is what pins the exact set.
+    expect(out).toMatch(/\d+ prompts — edit under/);
   });
 
   it("shows a prompt body by stem", async () => {

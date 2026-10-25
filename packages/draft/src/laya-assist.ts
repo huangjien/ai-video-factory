@@ -2,9 +2,8 @@ import path from "node:path";
 import { loadPrompt } from "@video/prompts";
 import {
   LayaClient,
-  appendLayaDecision,
+  recordDecision,
   resolveLayaConfig,
-  stateSha256,
   type LayaMode,
 } from "@video/llm";
 import type { ParsedArticle } from "./schemas.js";
@@ -59,35 +58,26 @@ export async function askLayaVisual(
   sceneIndex: number,
 ): Promise<VisualAssistResult | null> {
   const state = buildVisualAssistState(visual, narrationExcerpt, sceneIndex);
-  let decision: Awaited<ReturnType<LayaClient["decide"]>>;
-  try {
-    decision = await client.decide(state, {
-      [LAYA_VISUAL_QID]: {
-        type: "choice",
-        instructions: LAYA_VISUAL_INSTRUCTIONS,
-        criteria: [...LAYA_VISUAL_COMPONENTS],
-      },
-    });
-  } catch {
-    // LayaClient.decide is contractually never-throwing; this is
-    // defense-in-depth so a faulty client can't break the draft.
-    return null;
-  }
-  const answer = decision?.answers[LAYA_VISUAL_QID];
-  const component = answer?.value;
-  if (
-    decision === null ||
-    answer === undefined ||
-    component === undefined ||
-    !(LAYA_VISUAL_COMPONENTS as readonly string[]).includes(component)
-  ) {
-    return null;
-  }
+  const res = await recordDecision(client, {
+    surface: "visual",
+    state,
+    question: {
+      id: LAYA_VISUAL_QID,
+      type: "choice",
+      instructions: LAYA_VISUAL_INSTRUCTIONS,
+      criteria: [...LAYA_VISUAL_COMPONENTS],
+    },
+    // No sidecar path here: the caller records the row, because the
+    // baseline (the deterministic component) is only known there.
+    mode: "shadow",
+    baseline: null,
+  });
+  if (res.choice === null) return null;
   return {
-    component: component as VisualAssistResult["component"],
-    latencyMs: decision.latencyMs,
-    routingModel: decision.routingModel,
-    confidence: answer.confidence,
+    component: res.choice as VisualAssistResult["component"],
+    latencyMs: 0,
+    routingModel: res.answer?.routingModel ?? "unknown",
+    confidence: res.answer?.confidence ?? 0,
   };
 }
 
@@ -123,46 +113,29 @@ export async function resolveVisualOverrides(
       NARRATION_EXCERPT_CHARS,
     );
     const state = buildVisualAssistState(visual, narrationExcerpt, i);
-    const res = await askLayaVisual(client, visual, narrationExcerpt, i);
-    if (opts.sidecarPath) {
-      try {
-        await appendLayaDecision(opts.sidecarPath, {
-          ts: new Date().toISOString(),
-          surface: "visual",
-          mode: opts.mode,
-          state_sha256: stateSha256(state),
-          questions: {
-            [LAYA_VISUAL_QID]: {
-              type: "choice",
-              instructions: "pick VDSL scene component",
-              criteria: [...LAYA_VISUAL_COMPONENTS],
-            },
-          },
-          answers: res
-            ? {
-                [LAYA_VISUAL_QID]: {
-                  type: "choice",
-                  value: res.component,
-                  confidence: res.confidence ?? 0,
-                  routingModel: res.routingModel ?? "unknown",
-                },
-              }
-            : null,
-          routing_model: res?.routingModel ?? null,
-          latency_ms: res?.latencyMs ?? null,
-          acted: opts.mode === "on" && res !== null,
-          expected: DEFAULT_VISUAL_COMPONENT,
-          ...(res
-            ? { agreed: res.component === DEFAULT_VISUAL_COMPONENT }
-            : {}),
-        });
-      } catch {
-        // Telemetry must never break the pipeline.
-      }
-    }
-    if (res && opts.mode === "on") {
+    // ONE consult, one recorded row. The shared seam owns the consult,
+    // the answer validation, the row, and the expected/agreed pair — so
+    // this surface cannot forget the shadow-safety rules.
+    const res = await recordDecision(client, {
+      surface: "visual",
+      state,
+      question: {
+        id: LAYA_VISUAL_QID,
+        type: "choice",
+        instructions: LAYA_VISUAL_INSTRUCTIONS,
+        criteria: [...LAYA_VISUAL_COMPONENTS],
+      },
+      mode: opts.mode,
+      // The deterministic classifier's fall-through IS the baseline: it
+      // is what today's path would have produced for this scene.
+      baseline: DEFAULT_VISUAL_COMPONENT,
+      ...(opts.sidecarPath !== undefined
+        ? { sidecarPath: opts.sidecarPath }
+        : {}),
+    });
+    if (res.choice !== null && opts.mode === "on") {
       answered += 1;
-      overrides.set(i, res.component);
+      overrides.set(i, res.choice);
     }
   }
   return { overrides, asked, answered };

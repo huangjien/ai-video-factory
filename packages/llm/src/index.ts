@@ -57,3 +57,15 @@ export {
   type LayaDecisionRecord,
   type SurfaceAgreement,
 } from "./laya-shadow.js";
+export {
+  decisionsAgree,
+  recordDecision,
+  recordLayaRow,
+  scoreWithin,
+  validateAnswer,
+  type DecisionBaseline,
+  type DecisionQuestion,
+  type RecordDecisionOptions,
+  type RecordDecisionResult,
+  type RecordLayaRowOptions,
+} from "./laya-decide.js";

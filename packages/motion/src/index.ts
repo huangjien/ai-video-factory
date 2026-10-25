@@ -1,5 +1,6 @@
 export { IartSkillAdapter, type SkillGuidance } from "./adapter.js";
 export {
+  MOTION_LAYA_PROMPT,
   MOTION_SKILLS,
   buildMotionMessages,
   type MotionAgentSceneInput,

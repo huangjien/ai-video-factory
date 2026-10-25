@@ -6,10 +6,9 @@ import { promisify } from "node:util";
 import type { RenderPlan } from "@video/vdsl";
 import { loadPrompt } from "@video/prompts";
 import {
-  appendLayaDecision,
   LayaClient,
+  recordDecision,
   resolveLayaConfig,
-  stateSha256,
   type LayaMode,
 } from "@video/llm";
 import {
@@ -389,40 +388,33 @@ export async function writeQaArtifacts(
   const mode = opts.layaMode ?? layaCfg.mode;
   if (mode !== "off") {
     const client = new LayaClient({ resolvedConfig: layaCfg });
-    const triage = await triageReportWithLaya(client, report);
+    // The deterministic gate IS the baseline: it is what today's path
+    // would have said about this report.
     const expected = deterministicTriageVerdict(report);
-    try {
-      await appendLayaDecision(path.join(projectRoot, "laya-decisions.jsonl"), {
-        ts: new Date().toISOString(),
-        surface: "triage",
-        mode,
-        state_sha256: stateSha256(buildTriageState(report)),
-        questions: {
-          triage: {
-            type: "choice",
-            instructions: QA_TRIAGE_INSTRUCTIONS,
-            criteria: ["pass", "review", "block"],
-          },
-        },
-        answers: triage
-          ? {
-              triage: {
-                type: "choice" as const,
-                value: triage.verdict,
-                confidence: triage.confidence,
-                routingModel: triage.routingModel,
-              },
-            }
-          : null,
-        routing_model: triage?.routingModel ?? null,
-        latency_ms: triage?.latencyMs ?? null,
-        acted: mode === "on" && triage !== null,
-        expected,
-        ...(triage ? { agreed: triage.verdict === expected } : {}),
-      });
-    } catch {
-      // Telemetry must never break the QA write.
-    }
+    // ONE consult, one recorded row — the shared seam owns the consult,
+    // the answer validation, the row, and the expected/agreed pair.
+    const res = await recordDecision(client, {
+      surface: "triage",
+      state: buildTriageState(report),
+      question: {
+        id: "triage",
+        type: "choice",
+        instructions: QA_TRIAGE_INSTRUCTIONS,
+        criteria: ["pass", "review", "block"],
+      },
+      mode,
+      baseline: expected,
+      sidecarPath: path.join(projectRoot, "laya-decisions.jsonl"),
+    });
+    const triage: QaLayaTriage | null =
+      res.choice === null
+        ? null
+        : {
+            verdict: res.choice as QaLayaTriage["verdict"],
+            confidence: res.answer?.confidence ?? 0,
+            routingModel: res.answer?.routingModel ?? "unknown",
+            latencyMs: 0,
+          };
     if (mode === "on" && triage) {
       report.advisory = { laya: triage };
     }

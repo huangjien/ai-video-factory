@@ -70,11 +70,36 @@ describe("profile blocks", () => {
     }
   });
 
+  it("carry the seven plot engines and the commitment rule", () => {
+    const draft = channelDraftBlock("chinese-storybook") ?? "";
+    for (const engine of [
+      "斩妖除魔",
+      "从穷困到富有",
+      "探寻",
+      "远行与回归",
+      "喜剧",
+      "悲剧",
+      "重生",
+    ]) {
+      expect(draft).toContain(engine);
+    }
+    expect(draft).toMatch(/pick ONE primary engine/i);
+    expect(draft).toContain("Where is the dip");
+  });
+
   it("give the judge the pacing and dialogue checks", () => {
     const review = channelReviewBlock("chinese-storybook") ?? "";
     expect(review).toMatch(/delivery rate/i);
     expect(review).toMatch(/narration share/i);
     expect(review).toMatch(/stagey dialogue/i);
+  });
+
+  it("give the judge the uncommitted-engine check", () => {
+    const review = channelReviewBlock("chinese-storybook") ?? "";
+    expect(review).toMatch(/uncommitted engine/i);
+    for (const engine of ["斩妖除魔", "重生", "悲剧"]) {
+      expect(review).toContain(engine);
+    }
   });
 });
 

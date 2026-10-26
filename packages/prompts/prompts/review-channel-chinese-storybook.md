@@ -25,6 +25,13 @@ style opinion.
 
 - **Arc.** The film must show 悬念 → 背景 → 局势 → 选择/转折 → 回扣开场
   once through. A missing stage, or stages out of order, is a finding.
+- **Uncommitted engine.** Identify which of the seven basic plots
+  (斩妖除魔, 从穷困到富有, 探寻, 远行与回归, 喜剧, 悲剧, 重生) the film
+  actually runs on. If no single engine owns the turning point, or the
+  ending contradicts the engine (a 悲剧 curve rescued in the last scene,
+  a 重生 that ends still frozen, a 从穷困到富有 whose middle loss is one
+  sentence), that is a finding. Name the engine you identified and the
+  beat that betrays it.
 - **Filler.** A scene that only restates the previous one, or narration
   written to fill a scene's duration, is a finding.
 - **Channel violations.** Calls to action, subscribe prompts or a channel

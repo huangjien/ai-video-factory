@@ -16,13 +16,12 @@ const DEFAULT_MODEL = "MiniMax-Hailuo-2.3";
 
 type TaskStatus = "Preparing" | "Queueing" | "Processing" | "Success" | "Fail";
 
-/** Map width/height to a supported MiniMax resolution string.
- * MiniMax-Hailuo-2.3 supports common sizes; we keep a small mapping and
- * fall back to the closest round-number pair. */
-function pickResolution(width: number, height: number): string {
-  const pair = `${width}x${height}`;
-  if (pair === "1080x1920" || pair === "1920x1080") return pair;
-  return `${width}x${height}`;
+/** Map the request to a supported MiniMax resolution tier.
+ * Hailuo-2.3 (re-verified against platform.minimax.io 2026-10-26) only
+ * accepts tier enums "768P" / "1080P" — WxH strings fail with envelope
+ * error 2013. 1080P supports 6s only; 10s clips must use 768P. */
+function pickResolution(_width: number, _height: number, durationSec: number): string {
+  return durationSec > 6 ? "768P" : "1080P";
 }
 
 /** Real MiniMax AI video provider (platform.minimax.io context7-verified).
@@ -69,7 +68,7 @@ export class MiniMaxVideoProvider implements VideoProvider {
       prompt: req.prompt,
       first_frame_image: req.firstFrameImageUrl,
       duration: req.durationSec,
-      resolution: pickResolution(req.width, req.height),
+      resolution: pickResolution(req.width, req.height, req.durationSec),
     };
     const res = await fetch(`${this.apiHost}/v1/video_generation`, {
       method: "POST",
@@ -148,17 +147,40 @@ export class MiniMaxVideoProvider implements VideoProvider {
   }
 
   private async downloadFile(fileId: string): Promise<Uint8Array> {
-    const res = await fetch(`${this.apiHost}/v1/files/${fileId}`, {
-      headers: { Authorization: `Bearer ${this.apiKey}` },
-    });
-    if (!res.ok) {
+    // Verified 2026-10-26 against platform.minimax.io (video-generation-download):
+    // generated-video bytes come from the signed download_url returned by
+    // GET /v1/files/retrieve?file_id=... . The old path-segment
+    // GET /v1/files/{file_id} 404s, and /v1/files/retrieve_content rejects
+    // purpose=video_generation with a 200-wrapped envelope error 2013.
+    const id = encodeURIComponent(fileId);
+    const meta = await fetch(
+      `${this.apiHost}/v1/files/retrieve?file_id=${id}`,
+      { headers: { Authorization: `Bearer ${this.apiKey}` } },
+    );
+    if (!meta.ok) {
       throw new ImageGenerationError(
-        `MiniMax file download ${res.status}`,
+        `MiniMax file retrieve ${meta.status}`,
         this.name,
       );
     }
-    const ab = await res.arrayBuffer();
-    return new Uint8Array(ab);
+    const parsed = JSON.parse(await meta.text()) as {
+      file?: { download_url?: string };
+    };
+    const url = parsed.file?.download_url;
+    if (!url) {
+      throw new ImageGenerationError(
+        `MiniMax file retrieve returned no download_url`,
+        this.name,
+      );
+    }
+    const res = await fetch(url);
+    if (!res.ok) {
+      throw new ImageGenerationError(
+        `MiniMax download_url fetch ${res.status}`,
+        this.name,
+      );
+    }
+    return new Uint8Array(await res.arrayBuffer());
   }
 
   async generate(req: VideoRequest): Promise<VideoResult> {

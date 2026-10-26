@@ -37,6 +37,7 @@ import { registerFinal } from "./render-command.js";
 import { registerRetrospect } from "./retrospect-command.js";
 import { registerLearn } from "./learn-command.js";
 import { registerPrompts } from "./prompts-command.js";
+import { registerTranslate } from "./translate-command.js";
 import { buildBanner } from "./minimal-api.js";
 import { VERSION } from "./version.js";
 
@@ -87,6 +88,7 @@ for (const register of [
   registerRetrospect,
   registerLearn,
   registerPrompts,
+  registerTranslate,
 ]) {
   register(program);
 }

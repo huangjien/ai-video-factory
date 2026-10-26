@@ -238,9 +238,18 @@ def render_overlay(
     height: int,
     text: str,
     out_path: Path,
+    subline: str = "",
 ) -> None:
-    """Render `text` centered horizontally, top-anchored, on a transparent
-    RGBA canvas the same size as the underlying scene image."""
+    """Render a two-tier banner on a transparent RGBA canvas the same size
+    as the underlying scene image:
+
+    tier 1 (big):   `text` — the scene's key-info headline
+    tier 2 (small): `subline` — the narration's first sentence, ~45% of
+                    the headline size, slightly translucent so the
+                    hierarchy reads. Skipped when empty.
+
+    Both centered horizontally, anchored at the top, 4-way dark outline
+    so they read on any image background."""
     if not text.strip():
         return
     canvas = Image.new("RGBA", (width, height), (0, 0, 0, 0))
@@ -254,6 +263,41 @@ def render_overlay(
 
     font, lines = _fit_size(draw, text, max_w, max_h)
 
+    # Subline tier: ~45% of the headline size, its own width/height budget
+    # (2 wrapped lines max via the same auto-shrink).
+    sub_font = None
+    sub_lines: list[str] = []
+    if subline.strip():
+        sub_start = max(28, int(font.size * 0.45))
+        sub_min = max(20, int(font.size * 0.3))
+        sub_size = sub_start
+        while sub_size >= sub_min:
+            fp = pick_font_path(subline)
+            candidate = (
+                ImageFont.truetype(fp, size=sub_size)
+                if fp
+                else ImageFont.load_default()
+            )
+            cand_lines = _wrap_to_width(draw, subline, candidate, max_w)
+            widths = []
+            heights = []
+            for line in cand_lines:
+                bb = draw.textbbox((0, 0), line, font=candidate)
+                widths.append(bb[2] - bb[0])
+                heights.append(bb[3] - bb[1])
+            if max(widths) <= max_w and sum(heights) <= int(height * 0.09):
+                sub_font, sub_lines = candidate, cand_lines
+                break
+            sub_size -= 2
+        if sub_font is None:
+            fp = pick_font_path(subline)
+            sub_font = (
+                ImageFont.truetype(fp, size=sub_min)
+                if fp
+                else ImageFont.load_default()
+            )
+            sub_lines = _wrap_to_width(draw, subline, sub_font, max_w)[:2]
+
     # Top-center anchor with 6% margin from the top edge.
     top_margin = int(height * 0.06)
     line_spacing = max(2, font.size // 4)
@@ -265,24 +309,38 @@ def render_overlay(
         total_h += bb[3] - bb[1]
     total_h += line_spacing * max(0, len(lines) - 1)
     y = top_margin
-    for line, line_h in block_lines:
-        bb = draw.textbbox((0, 0), line, font=font)
+
+    def draw_centered(
+        line: str,
+        fnt: ImageFont.FreeTypeFont | ImageFont.ImageFont,
+        y: int,
+        fill: tuple[int, int, int, int],
+    ) -> int:
+        """Draw one outlined centered line; returns the line's height."""
+        bb = draw.textbbox((0, 0), line, font=fnt)
         line_w = bb[2] - bb[0]
+        line_h = bb[3] - bb[1]
         x = (width - line_w) // 2
-        # 4-way outline so the text reads on any image. Outline drawn
-        # in a darker shadow color at offsets {±stroke, 0} / {0, ±stroke},
-        # then the white fill on top.
-        stroke = max(2, font.size // 14)
+        stroke = max(2, getattr(fnt, "size", 24) // 14)
         shadow = (0, 0, 0, 200)
-        fill = (255, 255, 255, 255)
         for dx, dy in (
             (-stroke, 0), (stroke, 0), (0, -stroke), (0, stroke),
             (-stroke, -stroke), (stroke, -stroke),
             (-stroke, stroke), (stroke, stroke),
         ):
-            draw.text((x + dx, y + dy), line, font=font, fill=shadow)
-        draw.text((x, y), line, font=font, fill=fill)
-        y += line_h + line_spacing
+            draw.text((x + dx, y + dy), line, font=fnt, fill=shadow)
+        draw.text((x, y), line, font=fnt, fill=fill)
+        return line_h
+
+    for line, _line_h in block_lines:
+        y += draw_centered(line, font, y, (255, 255, 255, 255))
+        y += line_spacing
+
+    if sub_font is not None and sub_lines:
+        y += int(font.size * 0.25)  # gap between tiers
+        for line in sub_lines:
+            y += draw_centered(line, sub_font, y, (255, 255, 255, 230))
+            y += max(2, sub_font.size // 5)
 
     out_path.parent.mkdir(parents=True, exist_ok=True)
     canvas.save(out_path, "PNG", optimize=True)
@@ -341,6 +399,86 @@ def scene_text(s: dict) -> str:
     return ""
 
 
+def _first_sentence(narration: str) -> str:
+    """First sentence of the narration, whitespace-normalized."""
+    text = re.sub(r"\s+", " ", narration or "").strip()
+    if not text:
+        return ""
+    m = re.match(r"^(.+?[。！？!?\.\u2026])(?=\s|$)", text)
+    return (m.group(1) if m else text).strip()
+
+
+def scene_texts(s: dict, headline_override: str = "") -> tuple[str, str]:
+    """(headline, subline) for the two-tier banner.
+
+    headline: `headline_override` (e.g. the article's caption in
+    no_captions mode) or the scene_text() priority chain.
+    subline: the narration's first sentence — the scene's key point —
+    truncated so it never becomes a paragraph. Dropped when it would just
+    repeat the headline.
+    """
+    headline = (headline_override or scene_text(s)).strip()
+    if not headline:
+        return "", ""
+    narration = ""
+    narr = s.get("narration") or {}
+    if isinstance(narr, dict):
+        narration = narr.get("text") or ""
+    elif isinstance(narr, str):
+        narration = narr
+    subline = _first_sentence(narration)
+    # Cap: one line's worth of info, not a paragraph (~64 units; CJK chars
+    # count double next to Latin, mirroring the caption safe-area rule).
+    max_units = 64
+    units = 0
+    kept: list[str] = []
+    truncated = False
+    for ch in subline:
+        units += 2 if has_cjk(ch) else 1
+        if units > max_units:
+            truncated = True
+            break
+        kept.append(ch)
+    subline = "".join(kept).rstrip()
+    if truncated:
+        # Never end mid-word: back off to the last word boundary, then mark
+        # the elision. CJK has no spaces — the ellipsis alone is fine.
+        sp = subline.rfind(" ")
+        if sp > 0:
+            subline = subline[:sp].rstrip()
+        subline += "…"
+    if not subline or subline == headline:
+        return headline, ""
+    return headline, subline
+
+
+def parse_article_captions(path: Path) -> dict[int, str]:
+    """Scene index -> caption from article.md (the `## Scenes` yaml block).
+
+    With `no_captions: true` the storyboard carries no caption text at all
+    (the bottom label is deliberately gone), so the key-info banner falls
+    back to the ARTICLE's caption field — the durable source of truth that
+    survives storyboard re-derivations and language workdirs."""
+    try:
+        import yaml  # type: ignore
+    except ImportError:
+        return {}
+    text = path.read_text(encoding="utf-8")
+    m = re.search(r"## Scenes\s*\n+```yaml\n([\s\S]*?)\n```", text)
+    if not m:
+        return {}
+    try:
+        doc = yaml.safe_load(m.group(1)) or {}
+    except yaml.YAMLError:
+        return {}
+    out: dict[int, str] = {}
+    for i, s in enumerate(doc.get("scenes") or [], start=1):
+        c = s.get("caption") if isinstance(s, dict) else None
+        if isinstance(c, str) and c.strip():
+            out[i] = c.strip()
+    return out
+
+
 def scene_id_to_index(scene_id: str) -> int:
     """`scene-04` / `scene_4` -> 4. Used to name the output PNG."""
     m = re.search(r"scene[-_]?(\d+)", scene_id)
@@ -354,14 +492,29 @@ def scene_id_to_index(scene_id: str) -> int:
 
 def main(argv: Iterable[str]) -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("project", help="project slug (under projects/)")
+    ap.add_argument(
+        "project",
+        help="project root PATH (preferred, works for nested workdirs like projects/<id>/l10n/<lang>) or a slug under projects/",
+    )
     ap.add_argument("--out-dir", default=None)
     ap.add_argument("--storyboard", default=None)
     ap.add_argument("--images-dir", default=None)
+    ap.add_argument(
+        "--article",
+        default=None,
+        help="article.md path — caption fallback when the storyboard has no caption text (no_captions mode)",
+    )
     ap.add_argument("--overwrite", action="store_true")
     args = ap.parse_args(list(argv))
 
-    project_root = Path("projects") / args.project
+    candidate = Path(args.project)
+    # A real directory wins (absolute or cwd-relative) — this is how `video
+    # make` invokes us for language workdirs (projects/<id>/l10n/<lang>/),
+    # whose basename is the LANG, not a slug under projects/.
+    if candidate.is_dir():
+        project_root = candidate
+    else:
+        project_root = Path("projects") / args.project
     storyboard = (
         Path(args.storyboard)
         if args.storyboard
@@ -372,6 +525,11 @@ def main(argv: Iterable[str]) -> int:
     )
     out_dir = (
         Path(args.out_dir) if args.out_dir else project_root / "assets" / "images" / "text"
+    )
+    article_captions = (
+        parse_article_captions(Path(args.article))
+        if args.article
+        else parse_article_captions(project_root / "article.md")
     )
 
     doc = parse_storyboard(storyboard)
@@ -387,10 +545,15 @@ def main(argv: Iterable[str]) -> int:
         n = scene_id_to_index(sid)
         if n < 0:
             continue
-        text = scene_text(s).strip()
-        if not text:
-            skipped += 1
-            continue
+        headline, subline = scene_texts(s)
+        if not headline:
+            # no_captions storyboards carry no caption text — fall back to
+            # the article's own caption for this scene index.
+            headline = article_captions.get(n, "")
+            if not headline:
+                skipped += 1
+                continue
+            headline, subline = scene_texts(s, headline)
         # Size source: the underlying scene image. If absent, skip.
         img_path = images_dir / f"scene_{n}.jpg"
         if not img_path.exists():
@@ -407,7 +570,7 @@ def main(argv: Iterable[str]) -> int:
             continue
         with Image.open(img_path) as img:
             w, h = img.size
-        render_overlay(w, h, text, out_path)
+        render_overlay(w, h, headline, out_path, subline=subline)
         made += 1
     print(f"made {made} overlay(s)  skipped {skipped}  → {out_dir}")
     return 0

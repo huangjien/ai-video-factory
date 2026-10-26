@@ -32,7 +32,9 @@ export const ArticleFrontmatterSchema = z
     theme: z.string().min(1).optional(),
     /** v0.4: when true, articleToStoryboardYaml omits the
      *  `captions: { source: narration }` block so the renderer skips
-     *  the caption overlay. Default false (captions on). */
+     *  the caption overlay, and (2026-10-26) drops the bottom caption
+     *  prop on image scenes — no burned caption text anywhere; the
+     *  Pillow key-info banner is unaffected. Default false (captions on). */
     no_captions: z.boolean().optional(),
     /** What the caption overlay burns in. `narration` (default) mirrors the
      *  spoken paragraph — right for a talking-head or plain-background scene,
@@ -241,6 +243,16 @@ export function articleToStoryboardYaml(article: ParsedArticle): string {
       language: f.language,
       ...(article.title !== undefined ? { title: article.title } : {}),
     });
+    // no_captions: true means NO burned caption text anywhere. The track
+    // is already omitted (captionsOn); without this, image components
+    // still draw the scene's caption label at the bottom (captionWiring:
+    // component caption wins), duplicating the Pillow key-info banner.
+    // Image scenes derive as AnimatedIllustration and are swapped to
+    // ImageBackground by make's switch step, which keeps props — so the
+    // deleted caption stays deleted.
+    if (!captionsOn && component === "AnimatedIllustration") {
+      delete (props as Record<string, unknown>)["caption"];
+    }
     const propsLines = propsToYamlLines(props, "        ");
     lines.push(`  - id: ${id}`);
     lines.push(`    duration: ${s.duration ?? 0}`);

@@ -84,6 +84,27 @@ describe("MiniMaxVideoProvider (v0.3 phase 2) — /v1/video_generation async flo
           base_resp: { status_code: 0, status_msg: "ok" },
         };
         res.end(JSON.stringify(body));
+      } else if (url.includes("/v1/files/retrieve")) {
+        res.end(
+          JSON.stringify({
+            file: {
+              file_id: "file-456",
+              filename: "output_aigc.mp4",
+              purpose: "video_generation",
+              download_url: `${baseUrl}/signed-download`,
+            },
+            base_resp: { status_code: 0, status_msg: "success" },
+          }),
+        );
+      } else if (url.includes("/signed-download")) {
+        downloadCalls += 1;
+        res.statusCode = downloadStatus;
+        if (downloadStatus === 200) {
+          res.setHeader("Content-Type", "video/mp4");
+          res.end(Buffer.from("FAKE-MP4-BYTES"));
+        } else {
+          res.end(JSON.stringify({ error: "not found" }));
+        }
       } else if (url.includes("/v1/files/")) {
         downloadCalls += 1;
         res.statusCode = downloadStatus;
@@ -156,7 +177,15 @@ describe("MiniMaxVideoProvider (v0.3 phase 2) — /v1/video_generation async flo
     expect(body.model).toBe("MiniMax-Hailuo-2.3");
     expect(body.first_frame_image).toBe("data:image/jpeg;base64,XYZ");
     expect(body.duration).toBe(5);
-    expect(body.resolution).toBe("1080x1920");
+    expect(body.resolution).toBe("1080P");
+    // 10s clips must downgrade to 768P (1080P supports 6s only).
+    await p.generate({
+      prompt: "x",
+      width: 1080,
+      height: 1920,
+      durationSec: 10,
+    });
+    expect(JSON.parse(captured.lastBody).resolution).toBe("768P");
   });
 
   it("throws when envelope error in create response", async () => {

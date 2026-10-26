@@ -182,16 +182,37 @@ async function runTextOverlayPass(projectRoot: string): Promise<string[]> {
       `text-overlay: skipped — no python with Pillow + PyYAML found (tried ${pythonCandidates.join(", ")})`,
     ];
   }
-  const projectSlug = path.basename(projectRoot);
-  const proc = spawnSync(python, [scriptPath, projectSlug], {
-    encoding: "utf8",
-    stdio: ["ignore", "pipe", "pipe"],
-  });
+  // Pass the RESOLVED ROOT PATH, not a slug: the script used to resolve
+  // `projects/<basename>/`, which broke for nested workdirs
+  // (projects/<id>/l10n/<lang>/ — basename is the LANG). Language variants
+  // also get --overwrite: the shared text/ dir holds whichever language
+  // rendered last, so each make must regenerate its own banners before
+  // the render step reads them.
+  const proc = spawnSync(
+    python,
+    [
+      scriptPath,
+      projectRoot,
+      "--overwrite",
+      // Caption fallback: with no_captions the storyboard carries no
+      // caption text, so the banner pulls from the article's own captions.
+      "--article",
+      path.join(projectRoot, "article.md"),
+    ],
+    {
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"],
+    },
+  );
   if (proc.status !== 0) {
     const stderr = (proc.stderr ?? "").split("\n").slice(-3).join(" | ");
-    return [
-      `text-overlay: Pillow script failed (exit ${proc.status}) — ${stderr}`,
-    ];
+    // Key-info overlays are a default product feature (2026-10-26): a
+    // script failure is a step failure, not a silent degradation — the
+    // en-US variant once shipped with NO overlays because this was a
+    // swallowed warning.
+    throw new Error(
+      `Pillow text-overlay failed (exit ${proc.status}) — ${stderr}`,
+    );
   }
   // Stamp textOverlaySrc into the storyboard's ImageBackground scenes.
   // The make run is the only place that knows both the project root
@@ -955,7 +976,11 @@ export async function generateSceneVisuals(
   }
 
   if (generatedImages.length > 0) {
-    const switched = updateStoryboardForImages(projectRoot, generatedImages);
+    const switched = updateStoryboardForImages(
+      projectRoot,
+      generatedImages,
+      article.frontmatter.no_captions === true,
+    );
     outputs.push(
       `storyboard.yaml: ${switched}/${generatedImages.length} scenes switched to ImageBackground`,
     );
@@ -974,6 +999,7 @@ export async function generateSceneVisuals(
 function updateStoryboardForImages(
   projectRoot: string,
   imagePaths: string[],
+  noCaptions = false,
 ): number {
   const storyboardPath = path.join(
     projectRoot,
@@ -1024,7 +1050,11 @@ function updateStoryboardForImages(
     scene.visual.component = "ImageBackground";
     scene.visual.props = {
       src: imagePath,
-      ...(prevText !== undefined ? { caption: prevText } : {}),
+      // no_captions: true → the Pillow key-info banner is the only burned
+      // text; do NOT resurrect the bottom caption label here (2026-10-26).
+      ...(prevText !== undefined && !noCaptions
+        ? { caption: prevText }
+        : {}),
       ...(prevKenBurns !== undefined ? { kenBurnsScale: prevKenBurns } : {}),
     };
     switched++;
@@ -1649,9 +1679,15 @@ function isTrackPath(track: string): boolean {
  * branding resources (brand.yaml, assets/brand/) live at the workspace
  * root and every project references them. */
 export function workspaceRootFor(projectRoot: string): string | null {
-  const parentDir = path.dirname(projectRoot);
-  if (path.basename(parentDir) === "projects") {
-    return path.dirname(parentDir);
+  // Walk up to the dir that CONTAINS `projects/`. Depth-tolerant on
+  // purpose: derived workdirs (projects/<id>/l10n/<lang>/ — see
+  // `video translate`) must resolve to the same workspace root as their
+  // canonical project, or shared inputs (learn lessons, brand.yaml, BGM
+  // library) silently vanish and cache keys shift.
+  let dir = path.dirname(projectRoot);
+  for (let hops = 0; hops < 8 && dir !== path.dirname(dir); hops++) {
+    if (path.basename(dir) === "projects") return path.dirname(dir);
+    dir = path.dirname(dir);
   }
   return null;
 }

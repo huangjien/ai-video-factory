@@ -2,6 +2,7 @@ import type { Command } from "commander";
 import path from "node:path";
 import { computeMakeImpact, formatImpact, runMake } from "@video/make";
 import { resolveProjectDir } from "./project-path.js";
+import { l10nRootOrThrow } from "./translate-command.js";
 import {
   MARK_FAIL,
   MARK_OK,
@@ -16,6 +17,8 @@ export interface MakeOptions {
   cwd?: string;
   fake?: boolean;
   dryRun?: boolean;
+  /** Render the translated variant in l10n/<lang>/ (see video translate). */
+  lang?: string;
   /** Image provider for scene visuals: minimax (real AI), openai, gemini,
    *  mock, or none. */
   imageProvider?: "minimax" | "openai" | "gemini" | "mock" | "none";
@@ -32,7 +35,19 @@ export async function runMakeCli(opts: MakeOptions): Promise<number> {
     console.error(resolvedProject.message);
     return 1;
   }
-  const projectRoot = resolvedProject.root;
+  // Multi-language (2026-10-26): `--lang en-US` runs make against the
+  // language workdir l10n/<lang>/ (created by `video translate`), which is
+  // itself a full project root sharing the canonical image set — so image
+  // caches hit and only TTS/render re-spend per language.
+  let projectRoot = resolvedProject.root;
+  if (opts.lang !== undefined) {
+    try {
+      projectRoot = l10nRootOrThrow(resolvedProject.root, opts.lang);
+    } catch (err) {
+      console.error((err as Error).message);
+      return 1;
+    }
+  }
 
   // Banner BEFORE the run: the first live progress lines arrive with
   // project context, and watchers (agents polling output) know which
@@ -123,6 +138,10 @@ export function registerMake(program: Command): void {
       "local SFX library dir — sfx cue tags resolve to {tag}.wav inside it (default: mock silent placeholder)",
     )
     .option("--dry-run", "log which steps would run without executing them")
+    .option(
+      "--lang <lang>",
+      "render a translated language variant from l10n/<lang>/ (created by `video translate`) — same shared images, per-language narration/captions/output",
+    )
     .action(
       async (
         project: string,
@@ -133,6 +152,7 @@ export function registerMake(program: Command): void {
           bgmDir?: string;
           sfxDir?: string;
           dryRun?: boolean;
+          lang?: string;
         },
       ) => {
         process.exitCode = await runMakeCli({
@@ -142,9 +162,14 @@ export function registerMake(program: Command): void {
           ...(opts.imageProvider !== undefined
             ? { imageProvider: opts.imageProvider }
             : {}),
-          ...(opts.bgmDir !== undefined ? { bgmDir: opts.bgmDir } : {}),
-          ...(opts.sfxDir !== undefined ? { sfxDir: opts.sfxDir } : {}),
+          ...(opts.bgmDir !== undefined
+            ? { bgmDir: opts.bgmDir }
+            : {}),
+          ...(opts.sfxDir !== undefined
+            ? { sfxDir: opts.sfxDir }
+            : {}),
           ...(opts.dryRun !== undefined ? { dryRun: opts.dryRun } : {}),
+          ...(opts.lang !== undefined ? { lang: opts.lang } : {}),
         });
       },
     );

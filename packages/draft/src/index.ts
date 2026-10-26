@@ -56,6 +56,16 @@ export {
 } from "./scene-identity.js";
 export { callDraft, DraftError, type CallDraftResult } from "./agent.js";
 export {
+  translateArticle,
+  canonicalLanguage,
+  hasL10n,
+  l10nArticlePath,
+  captionsSourceFor,
+  TranslateArticleError,
+  type TranslateArticleOptions,
+  type TranslateArticleResult,
+} from "./translate-article.js";
+export {
   PROFILE,
   PROFILE_ID,
   DEFAULT_MIN_SCORE,

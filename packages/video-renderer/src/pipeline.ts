@@ -153,11 +153,14 @@ export async function mergeBrandConfig(
   renderPlan.style.brand = parsed.data;
 }
 
-/** `<anywhere>/projects/<slug>` → `<anywhere>`; null otherwise. */
+/** `<anywhere>/projects/<slug>` → `<anywhere>`; also works for nested
+ *  workdirs (`projects/<slug>/l10n/<lang>/`) — same walk-up contract as
+ *  make's copy, so brand.yaml applies to translated renders too. */
 function workspaceRootFor(projectRoot: string): string | null {
-  const parentDir = path.dirname(projectRoot);
-  if (path.basename(parentDir) === "projects") {
-    return path.dirname(parentDir);
+  let dir = path.dirname(projectRoot);
+  for (let hops = 0; hops < 8 && dir !== path.dirname(dir); hops++) {
+    if (path.basename(dir) === "projects") return path.dirname(dir);
+    dir = path.dirname(dir);
   }
   return null;
 }

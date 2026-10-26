@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { chatWithFallback, loadProviderConfig, withRetry } from "./index.js";
+import {
+  chatWithFallback,
+  judgePickForName,
+  loadProviderConfig,
+  pickJudgeProvider,
+  withRetry,
+} from "./index.js";
 import type {
   ChatError,
   ChatMessage,
@@ -125,6 +131,55 @@ describe("loadProviderConfig (todo 1) — §6 per-role primary/fallback", () => 
     expect(cfg.storyboard.primary).toBe("glm");
     expect(cfg.storyboard.fallback).toBe("minimax");
     await fs.unlink(tmp);
+  });
+});
+
+describe("pickJudgeProvider — cross-model judging pairing rule", () => {
+  it("keeps the review-role fallback even when it equals the generator — outage judging beats shipping unreviewed", () => {
+    const pick = pickJudgeProvider(loadProviderConfig(), "minimax");
+    expect(pick.name).toBe("glm");
+    expect(pick.flipped).toBe(false);
+    expect(pick.fallback).toBe("minimax");
+  });
+
+  it("flips to the review fallback when the review primary IS the generator (article case: glm drafts, glm judges by default)", () => {
+    const pick = pickJudgeProvider(loadProviderConfig(), "glm");
+    expect(pick.name).toBe("minimax");
+    expect(pick.flipped).toBe(true);
+    expect(pick.fallback).toBe("glm");
+  });
+
+  it("keeps the primary and reports no flip when BOTH review slots collide with the generator", () => {
+    const cfg = loadProviderConfig();
+    const single = { ...cfg, review: { primary: "glm", fallback: "glm" } };
+    const pick = pickJudgeProvider(single, "glm");
+    expect(pick.name).toBe("glm");
+    expect(pick.flipped).toBe(false);
+    expect(pick.fallback).toBeUndefined();
+  });
+
+  it("honors a custom review role from an overridden config", () => {
+    const cfg = loadProviderConfig();
+    const custom = { ...cfg, review: { primary: "minimax", fallback: "glm" } };
+    const pick = pickJudgeProvider(custom, "minimax");
+    expect(pick.name).toBe("glm");
+    expect(pick.flipped).toBe(true);
+  });
+});
+
+describe("judgePickForName — explicit --judge-model override", () => {
+  it("derives the fallback from the other review slot", () => {
+    const pick = judgePickForName("minimax", loadProviderConfig());
+    expect(pick.name).toBe("minimax");
+    expect(pick.fallback).toBe("glm");
+    expect(pick.flipped).toBe(false);
+  });
+
+  it("returns no fallback when both review slots are the chosen name", () => {
+    const cfg = loadProviderConfig();
+    const single = { ...cfg, review: { primary: "glm", fallback: "glm" } };
+    const pick = judgePickForName("glm", single);
+    expect(pick.fallback).toBeUndefined();
   });
 });
 

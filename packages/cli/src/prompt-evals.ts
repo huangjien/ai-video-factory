@@ -62,6 +62,9 @@ import {
  *     fails any case scoring below its axis `min`. Reuses the article-review
  *     judge pattern: anchored 0-10 axes, JSON-only reply, values coerced and
  *     clamped here, `total` computed by us and never read off the LLM.
+ *     `--gen <provider>` (2026-10-26 cross-model design) generates on a
+ *     DIFFERENT provider so the judge is independent — unset keeps the
+ *     historical self-judge behavior that recorded baselines assume.
  *
  * Report rows carry `prompt_hash` — the same lineage key a run record stamps —
  * so two runs can be diffed and a score delta attributed to an exact prompt edit.
@@ -424,6 +427,11 @@ export interface JudgedResult {
   total: number;
   comment: string;
   error?: string;
+  /** Provider that generated the sample (may equal `judgeModel` when
+   *  `--gen` is unset — self-judge mode). */
+  generationModel: string;
+  /** Provider that scored the sample. */
+  judgeModel: string;
   /** Pre-formatted console line, so a concurrent batch can still log in
    *  fixture order instead of in whatever order the calls settled. */
   line: string;
@@ -529,25 +537,42 @@ function chunk<T>(items: T[], size: number): T[][] {
  * Judge one case: generate with the real agent, then score the output against
  * the case's rubric. Never throws — a provider failure becomes an `error` row,
  * because a broken judge call must not read as a pass.
+ *
+ * Provider split (2026-10-26 cross-model design): `genProvider` runs agent
+ * calls for generator agents; `judgeProvider` runs the rubric scoring AND
+ * judge-prompt agents (article-review — the agent under test IS the judge).
+ * With `genProvider === judgeProvider` this is exactly the historical
+ * self-judge behavior.
  */
 async function judgeCase(
   ref: EvalCaseRef,
   adapter: EvalAgent,
-  provider: Provider,
-  fallback: Provider | null,
+  genProvider: Provider,
+  genFallback: Provider | null,
+  judgeProvider: Provider,
+  judgeFallback: Provider | null,
 ): Promise<JudgedResult> {
   const promptHash = sha256OfMessages(adapter.build(ref.fixture.input));
   const axes = ref.fixture.expects.map((e) => e.axis);
   const startedAt = Date.now();
+  const isJudgeAgent = ref.agent === "article-review";
+  const callProvider = isJudgeAgent ? judgeProvider : genProvider;
+  const callFallback = isJudgeAgent ? judgeFallback : genFallback;
   try {
     const generated = await withTimeout(
-      adapter.call(ref.fixture.input, provider, fallback),
+      adapter.call(ref.fixture.input, callProvider, callFallback),
       JUDGE_CASE_TIMEOUT_MS,
       `${ref.agent}/${ref.fixture.id} generation`,
     );
     const afterGeneration = Date.now();
     const parsed = await withTimeout(
-      scoreAgainstRubric(ref.agent, axes, generated.output, provider, fallback),
+      scoreAgainstRubric(
+        ref.agent,
+        axes,
+        generated.output,
+        judgeProvider,
+        judgeFallback,
+      ),
       JUDGE_CASE_TIMEOUT_MS,
       `${ref.agent}/${ref.fixture.id} judge`,
     );
@@ -564,6 +589,8 @@ async function judgeCase(
       promptHash,
       scores: parsed.scores,
       total: parsed.total,
+      generationModel: callProvider.name,
+      judgeModel: judgeProvider.name,
       comment: parsed.comment,
       timing,
       line: `${mark} ${ref.agent}/${ref.fixture.id}  layer2 ${verdict.status} — ${verdict.detail}  [gen ${(timing.generationMs / 1000).toFixed(1)}s + judge ${(timing.judgeMs / 1000).toFixed(1)}s]`,
@@ -578,6 +605,8 @@ async function judgeCase(
       scores: {},
       total: 0,
       comment: "",
+      generationModel: callProvider.name,
+      judgeModel: judgeProvider.name,
       error: message,
       line: `FAIL ${ref.agent}/${ref.fixture.id}  layer2 error — ${message}`,
     };
@@ -607,6 +636,8 @@ export function renderReportYaml(
               judged: j.status,
               scores: j.scores,
               total: j.total,
+              generation_model: j.generationModel,
+              judge_model: j.judgeModel,
               ...(j.comment ? { comment: j.comment } : {}),
               ...(j.error ? { error: j.error } : {}),
             }
@@ -698,6 +729,14 @@ export interface RunPromptEvalsOptions {
   caseId?: string | undefined;
   /** Judge provider name. Omitted ⇒ layer 2 does not run. */
   judge?: string | undefined;
+  /** Generation provider for layer 2 (2026-10-26 cross-model judging
+   *  design). When set, agents generate with it and the rubric judge
+   *  runs on `judge` — an independent judge instead of self-judging.
+   *  Default: the `--judge` provider itself (historical behavior, so
+   *  recorded baselines stay comparable). Judge-prompt cases (e.g.
+   *  article-review) always run on `judge`: the agent under test IS the
+   *  judge there. */
+  gen?: string | undefined;
   /** Force layer-1-only even when a judge is named. */
   offline?: boolean | undefined;
   updateRecorded?: boolean | undefined;
@@ -771,12 +810,33 @@ export async function runPromptEvals(
     log("\nlayer 2 not run — pass --judge glm to score against the rubric");
   } else {
     const judgeName = opts.judge;
-    const provider = providerInstance(judgeName);
-    const fallback = providerInstance(judgeName === "glm" ? "minimax" : "glm");
+    const judgeProvider = providerInstance(judgeName);
+    const judgeFallback = providerInstance(
+      judgeName === "glm" ? "minimax" : "glm",
+    );
+    // Cross-model mode (2026-10-26 design): --gen splits generation from
+    // judging. Unset ⇒ generate on the judge provider, exactly the
+    // historical self-judge behavior recorded baselines were built on.
+    const genProvider = opts.gen ? providerInstance(opts.gen) : judgeProvider;
+    const genFallback = opts.gen
+      ? providerInstance(opts.gen === "glm" ? "minimax" : "glm")
+      : judgeFallback;
+    if (opts.gen && opts.gen !== opts.judge) {
+      log(`cross-model eval: generate on ${opts.gen}, judge on ${opts.judge}`);
+    }
     const byRef = new Map(refs.map((r) => [r, agentAdapter(r)]));
     for (const batch of chunk([...refs], JUDGE_CONCURRENCY)) {
       const settled = await Promise.all(
-        batch.map((ref) => judgeCase(ref, byRef.get(ref)!, provider, fallback)),
+        batch.map((ref) =>
+          judgeCase(
+            ref,
+            byRef.get(ref)!,
+            genProvider,
+            genFallback,
+            judgeProvider,
+            judgeFallback,
+          ),
+        ),
       );
       // Logged after the batch settles so output stays in fixture order
       // instead of in whatever order the provider calls happened to return.

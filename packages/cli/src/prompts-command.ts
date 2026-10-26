@@ -82,6 +82,10 @@ export function registerPrompts(program: Command): void {
       "--judge <provider>",
       "run layer 2: generate + score against the rubric with this provider (glm|minimax)",
     )
+    .option(
+      "--gen <provider>",
+      "generation provider for layer 2 (glm|minimax; default: the --judge provider — set it to judge cross-model, e.g. --judge glm --gen minimax)",
+    )
     .option("--offline", "structural layer only — never call a provider")
     .option(
       "--update-snapshots",
@@ -102,6 +106,7 @@ export function registerPrompts(program: Command): void {
         ...(typeof options["judge"] === "string"
           ? { judge: options["judge"] }
           : {}),
+        ...(typeof options["gen"] === "string" ? { gen: options["gen"] } : {}),
         offline: options["offline"] === true,
         updateRecorded: options["updateRecorded"] === true,
         updateSnapshots: options["updateSnapshots"] === true,

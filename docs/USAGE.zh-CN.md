@@ -479,6 +479,18 @@ provider 会记录在 `runs/<run-id>.yaml` 里，方便你审计降级是否触�
 按命令用 `--model <provider>` 覆盖路由，或全局通过 `LL_CONFIG` YAML 文件
 配置。
 
+### 10.1.1 跨模型评审
+
+评分者不能给自己的作品打分。自 2026-10-26 起，评审 slot 来自 `review`
+角色，并有一条配对规则：当评审 provider 与生成 provider 撞车时自动换到
+`review` 的 fallback（只有两个 provider 时必然可能撞车）。默认行为：
+`video draft` 用 glm 生成、minimax 评审；`video review` 永远不会用
+storyboard 的生成 provider 来评分。`video draft` 可用 `--judge-model
+<provider>` 覆盖评审模型。评审来源全程留痕：`article-review.yaml` 里的
+`judge_model:`、每条 review 运行记录里的 `provider:`、`evals/report.yaml`
+里的 `generation_model:` / `judge_model:`（`video prompts eval` 加 `--gen`
+可把生成与评审拆开）。
+
 ### 10.2 编程代理问题协议
 
 `video-ask/1` 是让 agent harness 向人提问的协议。当 harness 能弹窗提问时

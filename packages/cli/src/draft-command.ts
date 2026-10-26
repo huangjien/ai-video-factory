@@ -5,7 +5,9 @@ import { existsSync } from "node:fs";
 import {
   GLMProvider,
   MiniMaxProvider,
+  judgePickForName,
   loadProviderConfig,
+  pickJudgeProvider,
   providerForRole,
   type Provider,
 } from "@video/llm";
@@ -40,6 +42,10 @@ export interface DraftOptions {
   topic: string;
   cwd?: string;
   model?: "minimax" | "glm";
+  /** Judge provider for the article review loop (2026-10-26 cross-model
+   *  design). Default: the review role, flipped off the generator when
+   *  they collide — see `pickJudgeProvider`. */
+  judgeModel?: "minimax" | "glm";
   lang?: "zh-CN" | "en-US";
   duration?: number;
   audience?: string;
@@ -328,6 +334,27 @@ export async function runDraft(opts: DraftOptions): Promise<number> {
         ? cfg.research.primary
         : undefined;
   const fallback = fallbackName ? providerInstance(fallbackName) : null;
+  // 2026-10-26 cross-model judging: the judge must grade with a different
+  // provider than the generator. Judge slots come from the `review` role;
+  // a collision flips to the role's fallback (pickJudgeProvider). An
+  // explicit --judge-model override wins and never flips.
+  const judgePick = opts.judgeModel
+    ? judgePickForName(opts.judgeModel, cfg)
+    : pickJudgeProvider(cfg, chosenName);
+  if (judgePick.flipped) {
+    console.error(
+      `  ! judge flipped to ${judgePick.name} — ${chosenName} generated the draft; scoring must be cross-model`,
+    );
+  }
+  if (judgePick.name === chosenName) {
+    console.error(
+      `  ! WARNING: judge = generator = ${chosenName} — self-judged scores (fix review: in llm config or pass --judge-model)`,
+    );
+  }
+  const judgeProvider = providerInstance(judgePick.name);
+  const judgeFallback = judgePick.fallback
+    ? providerInstance(judgePick.fallback)
+    : null;
   const language = opts.lang ?? "zh-CN";
   const duration = opts.duration ?? 180;
   const audience = opts.audience ?? "developers";
@@ -359,6 +386,8 @@ export async function runDraft(opts: DraftOptions): Promise<number> {
   let markdown: string;
   let usage: { input: number; output: number };
   let servedBy: string;
+  let judgeModelName: string | null = null;
+  let judgeSpend: { input: number; output: number } | null = null;
   if (opts.noReview === true) {
     ({
       markdown,
@@ -371,7 +400,7 @@ export async function runDraft(opts: DraftOptions): Promise<number> {
     const minScore = opts.minScore ?? DEFAULT_MIN_SCORE;
     const maxAttempts = opts.maxAttempts ?? 8;
     const result = await withProgress(
-      `drafting article (${chosenName}, judged)`,
+      `drafting article (${chosenName}, judged by ${judgePick.name})`,
       async () => {
         return await runScoredDraft(draftInput, provider, fallback, {
           minScore,
@@ -379,6 +408,8 @@ export async function runDraft(opts: DraftOptions): Promise<number> {
           ...(opts.candidates !== undefined
             ? { candidates: opts.candidates }
             : {}),
+          judgeProvider,
+          judgeFallback,
           onAttempt: (a, total) => {
             if (a.score) {
               const s = a.score;
@@ -410,6 +441,8 @@ export async function runDraft(opts: DraftOptions): Promise<number> {
     markdown = result.markdown;
     usage = result.usage;
     servedBy = result.providerName;
+    judgeModelName = result.judgeProviderName;
+    judgeSpend = result.judgeUsage;
     if (result.regenerated && result.score) {
       console.log(
         `  kept attempt ${result.attempts.findIndex((a) => a.markdown === result.markdown) + 1} — best of ${result.attempts.length}`,
@@ -512,11 +545,7 @@ export async function runDraft(opts: DraftOptions): Promise<number> {
         ...(opts.noCaptions === true ? { no_captions: true } : {}),
       };
     }
-    await writeFile(
-      storyboardPath,
-      articleToStoryboardYaml(article),
-      "utf8",
-    );
+    await writeFile(storyboardPath, articleToStoryboardYaml(article), "utf8");
   } catch (err) {
     console.error(
       `  ! could not refresh storyboard.yaml from article.md: ${(err as Error).message}`,
@@ -528,6 +557,11 @@ export async function runDraft(opts: DraftOptions): Promise<number> {
 
   console.log(`✓ drafted ${articlePath}`);
   console.log(`  model=${servedBy}  tokens=${usage.input}+${usage.output}`);
+  if (judgeModelName !== null && judgeSpend !== null) {
+    console.log(
+      `  judge=${judgeModelName}  judge_tokens=${judgeSpend.input}+${judgeSpend.output}`,
+    );
+  }
 
   let audioPlanHint: string;
   if (parsedArticle === null) {
@@ -582,6 +616,7 @@ export async function runDraft(opts: DraftOptions): Promise<number> {
 export interface DraftCliOpts {
   cwd?: string;
   model?: "minimax" | "glm";
+  judgeModel?: "minimax" | "glm";
   web?: boolean;
   lang?: "zh-CN" | "en-US";
   duration?: number;
@@ -613,6 +648,7 @@ export function draftCliOptsToDraftOptions(
   return {
     ...(opts.cwd !== undefined ? { cwd: opts.cwd } : {}),
     ...(opts.model !== undefined ? { model: opts.model } : {}),
+    ...(opts.judgeModel !== undefined ? { judgeModel: opts.judgeModel } : {}),
     noWeb: opts.web === false,
     ...(opts.lang !== undefined ? { lang: opts.lang } : {}),
     ...(opts.duration !== undefined ? { duration: opts.duration } : {}),
@@ -654,6 +690,10 @@ export function registerDraft(program: Command): void {
     )
     .option("--cwd <dir>", "base directory for the project")
     .option("--model <provider>", "model provider: minimax|glm (default: glm)")
+    .option(
+      "--judge-model <provider>",
+      "judge provider: minimax|glm (default: review role, flipped off the generator so scoring is cross-model)",
+    )
     .option("--no-web", "disable MiniMax web search (use LLM knowledge only)")
     .option("--lang <lang>", "language: zh-CN|en-US (default zh-CN)")
     .option(

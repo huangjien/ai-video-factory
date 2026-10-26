@@ -556,6 +556,19 @@ fallback fired.
 Override the routing per command with `--model <provider>`, or globally via
 the `LL_CONFIG` YAML file.
 
+### 10.1.1 Cross-model judging
+
+A scorer must not grade its own work. Since 2026-10-26 the judge slots come
+from the `review` role and a pairing rule flips the judge off the generator
+when the two collide (with two providers they always can): `video draft`
+generates on glm and judges on minimax by default; `video review` grades the
+storyboard on the `review` role, never on the storyboard generator. Override
+the judge with `--judge-model <provider>` on `video draft`. Judge provenance
+is recorded everywhere: `judge_model:` in `article-review.yaml`, `provider:`
+in every review run record, and `generation_model:` / `judge_model:` in
+`evals/report.yaml` (set `--gen` on `video prompts eval` to split generation
+from judging there).
+
 ### 10.2 The agent question protocol
 
 `video-ask/1` is the protocol for asking a human a question from inside an

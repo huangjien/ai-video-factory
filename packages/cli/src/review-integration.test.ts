@@ -139,6 +139,60 @@ describe("video review end-to-end (todo 2) — mock MiniMax", () => {
     expect(record).toMatch(/input: 400/);
   });
 
+  it("default pick reads the REVIEW role (not research) and flips off the storyboard generator — cross-model judging", async () => {
+    // Discriminating config: research → minimax, review → glm. The old
+    // code read cfg["research"] and would have served minimax (the same
+    // provider that generated the storyboard); the fixed code serves glm.
+    const cwd = mkdtempSync(path.join(tmpdir(), "video-rv-"));
+    const project = "role-pick";
+    const root = path.join(cwd, "projects", project);
+    mkdirSync(path.join(root, "storyboard"), { recursive: true });
+    mkdirSync(path.join(root, "script"), { recursive: true });
+    mkdirSync(path.join(root, "research"), { recursive: true });
+    writeFileSync(path.join(root, "storyboard", "storyboard.yaml"), STORYBOARD);
+    writeFileSync(path.join(root, "script", "script.zh-CN.md"), SCRIPT);
+    writeFileSync(path.join(root, "research", "claims.yaml"), CLAIMS);
+
+    const { mkdtempSync: mkdtemp, writeFileSync: wfs } =
+      await import("node:fs");
+    const cfgDir = mkdtemp(path.join(tmpdir(), "video-cfg-"));
+    const cfgPath = path.join(cfgDir, "llm.config.yaml");
+    wfs(
+      cfgPath,
+      [
+        "research:",
+        "  primary: minimax",
+        "  fallback: glm",
+        "review:",
+        "  primary: glm",
+        "  fallback: minimax",
+      ].join("\n"),
+      "utf8",
+    );
+    const prevLlConfig = process.env["LL_CONFIG"];
+    const prevGlmBase = process.env["GLM_BASE_URL"];
+    process.env["LL_CONFIG"] = cfgPath;
+    process.env["GLM_BASE_URL"] = baseUrl;
+    process.env["GLM_API_KEY"] = "test-key-do-not-leak";
+    try {
+      const code = await runReview({ project, cwd }); // no model override
+      expect(code).toBe(0);
+      const runsDir = path.join(root, "runs");
+      const files = execFileSync("ls", [runsDir], { encoding: "utf8" })
+        .trim()
+        .split("\n");
+      const record = readFileSync(path.join(runsDir, files[0] ?? ""), "utf8");
+      expect(record).toContain("provider: glm");
+      expect(record).toContain("model: glm-5.3");
+    } finally {
+      if (prevLlConfig === undefined) delete process.env["LL_CONFIG"];
+      else process.env["LL_CONFIG"] = prevLlConfig;
+      if (prevGlmBase === undefined) delete process.env["GLM_BASE_URL"];
+      else process.env["GLM_BASE_URL"] = prevGlmBase;
+      delete process.env["GLM_API_KEY"];
+    }
+  });
+
   it("exits 1 with helpful error when storyboard missing", async () => {
     const cwd = mkdtempSync(path.join(tmpdir(), "video-rv-"));
     mkdirSync(path.join(cwd, "projects", "missing", "script"), {

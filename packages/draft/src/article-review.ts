@@ -403,6 +403,10 @@ export interface ArticleScore {
   suggestions: string[];
   /** Total computed overall_score (0-100). Convenience field — same as `computed.overall_score`. */
   total: number;
+  /** Serving judge provider + token spend, stamped by `scoreArticle`
+   *  (2026-10-26 cross-model design: judge spend was previously dropped
+   *  on the floor, so loop totals under-counted the review cost). */
+  judge?: { providerName: string; usage: { input: number; output: number } };
 }
 
 // ---------------------------------------------------------------------------
@@ -609,6 +613,7 @@ export async function scoreArticle(
     comment: rawScore.comment,
     suggestions: rawScore.suggestions,
     total: computed.overall_score,
+    judge: { providerName: out.provider, usage: out.response.usage },
   };
 }
 
@@ -644,6 +649,12 @@ export interface ScoredDraftResult {
   passing: boolean;
   usage: { input: number; output: number };
   providerName: string;
+  /** Provider the winning attempt's judge call was served by — may differ
+   *  from `judgeProvider.name` after failover. */
+  judgeProviderName: string;
+  /** Judge token spend across ALL attempts (draft + judge now both
+   *  visible; judge spend was previously untracked). */
+  judgeUsage: { input: number; output: number };
 }
 
 export interface ScoredDraftOptions {
@@ -662,6 +673,13 @@ export interface ScoredDraftOptions {
    *  (measured: 300 s missed the bar 1/2 times, 90 s passed 2/2), and
    *  a missed bar used to cost a full serial regen (~20 min). */
   candidates?: number;
+  /** Judge provider — SHOULD differ from `provider` so scoring is
+   *  cross-model (2026-10-26 design). Default: the generator provider
+   *  itself, preserving the historical self-judge behavior for library
+   *  callers; the CLI always passes a cross-model pick. */
+  judgeProvider?: Provider;
+  /** Fallback for the judge call. Default: the generator `fallback`. */
+  judgeFallback?: Provider | null;
   /** Progress callback for CLI logging. */
   onAttempt?: (a: ScoredAttempt, total: number) => void;
 }
@@ -729,10 +747,15 @@ export async function runScoredDraft(
     1,
     opts.candidates ?? (input.duration >= 240 ? 2 : 1),
   );
+  const judgeProvider = opts.judgeProvider ?? provider;
+  const judgeFallback =
+    opts.judgeFallback !== undefined ? opts.judgeFallback : fallback;
 
   const attempts: ScoredAttempt[] = [];
   const usage = { input: 0, output: 0 };
+  const judgeUsage = { input: 0, output: 0 };
   let providerName = provider.name;
+  let judgeProviderName = judgeProvider.name;
   let feedback: string | undefined;
   let attemptNo = 0;
   let round1Count = 0;
@@ -762,8 +785,8 @@ export async function runScoredDraft(
       try {
         score = await scoreArticle(
           draft.markdown,
-          provider,
-          fallback,
+          judgeProvider,
+          judgeFallback,
           input.channelProfile,
           // Dimension H needs the commission, not just the article —
           // see ReviewTaskSpec.
@@ -781,6 +804,11 @@ export async function runScoredDraft(
         const isJudgeError = err instanceof ArticleReviewError;
         if (!isJudgeError || judgeTry === 2) break;
       }
+    }
+    if (score?.judge) {
+      judgeUsage.input += score.judge.usage.input;
+      judgeUsage.output += score.judge.usage.output;
+      judgeProviderName = score.judge.providerName;
     }
 
     return {
@@ -856,6 +884,10 @@ export async function runScoredDraft(
     passing: best.passing,
     usage,
     providerName,
+    // The winning attempt's judge provenance; fall back to the last
+    // attempt's (or the configured name when the judge never scored).
+    judgeProviderName: best.score?.judge?.providerName ?? judgeProviderName,
+    judgeUsage,
   };
 }
 
@@ -877,6 +909,7 @@ export function renderArticleReviewYaml(
     `project: ${esc(meta.project)}`,
     `language: ${meta.language}`,
     `profile: ${PROFILE_ID}`,
+    `judge_model: ${esc(result.judgeProviderName)}`,
     `threshold: ${meta.threshold}`,
     `attempts_used: ${result.attempts.length}`,
     `passing: ${result.passing}`,

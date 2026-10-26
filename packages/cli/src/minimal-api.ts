@@ -128,8 +128,8 @@ const BANNER_CORE_STEPS: readonly {
     cmd: "video draft <topic>",
     desc: "write article.md + audio-config.yaml",
     cont: [
-      "(--no-web, --style, --no-captions, --file,",
-      " --no-review, --min-score, --max-attempts)",
+      "(--no-web, --style, --file, --no-review,",
+      " --min-score, --max-attempts, --judge-model)",
     ],
   },
   {

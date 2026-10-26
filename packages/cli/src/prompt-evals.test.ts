@@ -440,6 +440,8 @@ describe("renderReportYaml", () => {
           scores: { "hook-tension": 5 },
           total: 5,
           comment: "",
+          generationModel: "glm",
+          judgeModel: "glm",
           error: "judge omitted axis",
           line: "FAIL c1 layer2 error",
         },
@@ -449,6 +451,8 @@ describe("renderReportYaml", () => {
         judged: string;
         scores: Record<string, number>;
         total: number;
+        generation_model?: string;
+        judge_model?: string;
         error?: string;
       }[];
     };
@@ -457,6 +461,9 @@ describe("renderReportYaml", () => {
     expect(row.scores).toEqual({ "hook-tension": 5 });
     expect(row.total).toBe(5);
     expect(row.error).toBe("judge omitted axis");
+    // Cross-model provenance (2026-10-26 design) is stamped on every row.
+    expect(row.generation_model).toBe("glm");
+    expect(row.judge_model).toBe("glm");
   });
 });
 
@@ -606,6 +613,8 @@ describe("runPromptEvals default options", () => {
           scores: { a: 3 },
           total: 3,
           comment: "",
+          generationModel: "glm",
+          judgeModel: "glm",
           line: "",
         },
       ],
@@ -624,6 +633,8 @@ describe("runPromptEvals default options", () => {
           scores: {},
           total: 0,
           comment: "",
+          generationModel: "glm",
+          judgeModel: "glm",
           error: "generation timed out after 180000ms",
           line: "",
         },
@@ -643,6 +654,8 @@ describe("runPromptEvals default options", () => {
           scores: { a: 3 },
           total: 3,
           comment: "",
+          generationModel: "glm",
+          judgeModel: "glm",
           line: "",
         },
         {
@@ -653,6 +666,8 @@ describe("runPromptEvals default options", () => {
           scores: {},
           total: 0,
           comment: "",
+          generationModel: "glm",
+          judgeModel: "glm",
           error: "provider outage",
           line: "",
         },

@@ -1,6 +1,9 @@
 export {
+  judgePickForName,
   loadProviderConfig,
+  pickJudgeProvider,
   providerForRole,
+  type JudgePick,
   type ProviderConfig,
   type ProviderRef,
   type Role,

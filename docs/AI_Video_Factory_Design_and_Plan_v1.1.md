@@ -258,6 +258,11 @@ Gemini
 
 自由替换。
 
+> **2026-10-26 补充（跨模型评审）**：评分者不得给同一模型生成的作品打分。
+> 所有 judge slot 取自 `review` 角色；当它与生成角色的 provider 撞车时，
+> 代码层配对规则（`pickJudgeProvider`，`@video/llm`）自动翻转到 fallback 并
+> 告警。实现见 `docs/plans/2026-10-26-cross-model-judging-design.md`。
+
 ---
 
 # 7. 总体架构

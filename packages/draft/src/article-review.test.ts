@@ -19,9 +19,11 @@ import {
 /** Fake provider: pops one canned response per chat() call, in order.
  *  Call sequence in the loop is draft, judge, draft, judge, … */
 class FakeProvider implements Provider {
-  readonly name = "fake";
   public requests: ChatRequest[] = [];
-  constructor(private responses: string[]) {}
+  constructor(
+    private responses: string[],
+    public readonly name: string = "fake",
+  ) {}
   async chat(req: ChatRequest): Promise<ChatResponse> {
     this.requests.push(req);
     const content =
@@ -376,6 +378,32 @@ describe("runScoredDraft", () => {
     expect(p.requests).toHaveLength(2);
   });
 
+  it("judges with a DIFFERENT provider when judgeProvider is passed (cross-model design)", async () => {
+    const gen = new FakeProvider([GOOD_ARTICLE], "fake-gen");
+    const judge = new FakeProvider([buildPassingRaw(4)], "fake-judge");
+    const r = await runScoredDraft(INPUT, gen, null, {
+      minScore: 70,
+      judgeProvider: judge,
+      judgeFallback: null,
+    });
+    expect(r.passing).toBe(true);
+    // The judge provider received the scoring call, not the generator.
+    expect(judge.requests).toHaveLength(1);
+    expect(gen.requests).toHaveLength(1);
+    expect(r.judgeProviderName).toBe("fake-judge");
+    expect(r.providerName).toBe("fake-gen");
+    // Judge token spend is now tracked (previously dropped).
+    expect(r.judgeUsage).toEqual({ input: 10, output: 20 });
+    expect(r.usage).toEqual({ input: 10, output: 20 }); // draft-only, unchanged
+  });
+
+  it("defaults to self-judge (generator provider) when judgeProvider is absent — library back-compat", async () => {
+    const p = new FakeProvider([GOOD_ARTICLE, buildPassingRaw(4)]);
+    const r = await runScoredDraft(INPUT, p, null, { minScore: 70 });
+    expect(r.judgeProviderName).toBe("fake");
+    expect(r.judgeUsage).toEqual({ input: 10, output: 20 });
+  });
+
   it("retries the judge once on a parse breakdown instead of aborting the loop", async () => {
     const p = new FakeProvider([
       GOOD_ARTICLE, // attempt 1 draft
@@ -548,6 +576,7 @@ describe("renderArticleReviewYaml", () => {
       language: "zh-CN",
     });
     expect(yaml).toContain("profile: general_article_v1");
+    expect(yaml).toContain("judge_model: fake");
     expect(yaml).toContain("threshold: 70");
     expect(yaml).toContain("passing: true");
     expect(yaml).toContain("attempts_used: 2");

@@ -5,7 +5,13 @@ import { execSync } from "node:child_process";
 import path from "node:path";
 import { resolveProjectDir } from "./project-path.js";
 import { existsSync } from "node:fs";
-import { GLMProvider, loadProviderConfig, MiniMaxProvider } from "@video/llm";
+import {
+  GLMProvider,
+  judgePickForName,
+  loadProviderConfig,
+  MiniMaxProvider,
+  pickJudgeProvider,
+} from "@video/llm";
 import { callReview, ReviewPackageSchema } from "@video/review";
 import { parse as parseYaml, stringify as yamlStringify } from "yaml";
 import type { ChatMessage, Provider } from "@video/llm";
@@ -73,16 +79,29 @@ export async function runReview(opts: ReviewOptions): Promise<number> {
   const claims = await readFile(claimsPath, "utf8");
 
   const cfg = loadProviderConfig();
-  const researchCfg = cfg["research"];
-  const chosenName = opts.model ?? researchCfg.primary;
+  // 2026-10-26: read the REVIEW role for judge slots — this used to read
+  // cfg["research"], a latent bug that silently ignored `review:`
+  // overrides in llm.config.yaml (defaults coincided, so behavior looked
+  // right). Cross-model guard: flip off the storyboard role's provider,
+  // the pipeline's generator for the artifact being reviewed.
+  const judgePick = opts.model
+    ? judgePickForName(opts.model, cfg)
+    : pickJudgeProvider(cfg, cfg["storyboard"].primary);
+  const chosenName = judgePick.name;
+  if (judgePick.flipped) {
+    console.error(
+      `  ! review flipped to ${chosenName} — it must not run on the storyboard generator's provider (${cfg["storyboard"].primary})`,
+    );
+  }
+  if (chosenName === cfg["storyboard"].primary) {
+    console.error(
+      `  ! WARNING: review = storyboard generator = ${chosenName} — self-judged (fix review: in llm config or pass --model)`,
+    );
+  }
   const provider = providerInstance(chosenName);
-  const fallbackName =
-    chosenName === researchCfg.primary
-      ? researchCfg.fallback
-      : chosenName === researchCfg.fallback
-        ? researchCfg.primary
-        : undefined;
-  const fallback = fallbackName ? providerInstance(fallbackName) : null;
+  const fallback = judgePick.fallback
+    ? providerInstance(judgePick.fallback)
+    : null;
 
   let result;
   try {

@@ -440,6 +440,12 @@ describe("parseTtsChoice", () => {
     });
   });
 
+  it("f5tts -> {ttsProvider: f5tts} with no voice key (exactOptionalPropertyTypes)", () => {
+    const out = parseTtsChoice("f5tts", "zh-CN");
+    expect(out).toEqual({ ttsProvider: "f5tts" });
+    expect("voice" in out).toBe(false);
+  });
+
   it("minimax-system maps to the platform voice for the matched language", () => {
     expect(parseTtsChoice("minimax-system", "zh-CN")).toEqual({
       ttsProvider: "minimax",

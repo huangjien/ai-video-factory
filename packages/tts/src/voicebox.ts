@@ -93,7 +93,7 @@ export function minimaxSystemVoice(language: string): string {
 }
 
 /** Parse a `--tts` / video-ask `tts` answer into frontmatter values.
- * Shapes: "voicebox:<profile>", "minimax-system", "edge". */
+ * Shapes: "voicebox:<profile>", "minimax-system", "f5tts", "edge". */
 export function parseTtsChoice(
   choice: string,
   language: string,
@@ -101,6 +101,12 @@ export function parseTtsChoice(
   if (choice.startsWith("voicebox:")) {
     const profile = choice.slice("voicebox:".length).trim();
     return { ttsProvider: "voicebox", ...(profile ? { voice: profile } : {}) };
+  }
+  if (choice === "f5tts") {
+    // No voice stamp: F5TTSProvider defaults to the narrator-zh
+    // reference clip; a frontmatter `voice:` pointing at another wav
+    // (with its .txt transcript) overrides it at make time.
+    return { ttsProvider: "f5tts" };
   }
   if (choice === "minimax-system") {
     return { ttsProvider: "minimax", voice: minimaxSystemVoice(language) };

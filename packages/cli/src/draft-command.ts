@@ -88,9 +88,10 @@ export interface DraftOptions {
   channelProfile?: string;
   /** Narration backend — written into article.md frontmatter
    *  (`tts_provider:` + `voice:`) so `video make` picks it up.
-   *  voicebox:<profile> | minimax-system | edge. Also a video-ask/1
-   *  knob (conditional: only offered when the local voicebox server
-   *  answers with cloned profiles). */
+   *  voicebox:<profile> | minimax-system | f5tts | edge. Also a
+   *  video-ask/1 knob (conditional: only offered when the local
+   *  voicebox server answers with cloned profiles). Unspecified zh
+   *  drafts default to f5tts (en drafts stay unstamped → Edge). */
   tts?: string;
   /** v0.7 (video-ask/1): force the agent-ask gate — emit the
    *  video-ask/1 question envelope and exit 2 even when no agent
@@ -143,6 +144,16 @@ export function stampFrontmatterKey(
   const re = new RegExp(`^${key}:.*$`, "m");
   if (re.test(head)) return head.replace(re, `${key}: ${value}`) + rest;
   return `${head}\n${key}: ${value}${rest}`;
+}
+
+/** True when the article's frontmatter already declares `key`. Default
+ *  stamps check this so an explicit flag, a carried key, or a hand-set
+ *  value always wins over the baked default. */
+export function frontmatterHasKey(markdown: string, key: string): boolean {
+  if (!markdown.startsWith("---")) return false;
+  const end = markdown.indexOf("\n---", 3);
+  if (end === -1) return false;
+  return new RegExp(`^${key}:.*$`, "m").test(markdown.slice(0, end));
 }
 
 /** Frontmatter keys the drafter owns: they describe THIS run and must always
@@ -513,6 +524,18 @@ export async function runDraft(opts: DraftOptions): Promise<number> {
     if (voice !== undefined) {
       stamped = stampFrontmatterKey(stamped, "voice", voice);
     }
+  } else if (
+    language.startsWith("zh") &&
+    !frontmatterHasKey(stamped, "tts_provider")
+  ) {
+    // Default narration backend (2026-10-26): zh drafts bake f5tts so
+    // `video make` runs the local F5-TTS clone out of the box.
+    // Absent-only: a carried key (preserveFrontmatterKeys) or a
+    // hand-set one always wins, and make degrades loudly when the
+    // install is missing (f5tts → voicebox → minimax → edge), so the
+    // stamp is safe to bake. zh-only because the F5 reference clip is
+    // the narrator-zh voice; en films keep the Edge runtime default.
+    stamped = stampFrontmatterKey(stamped, "tts_provider", "f5tts");
   }
   await writeFile(articlePath, stamped, "utf8");
 
@@ -698,7 +721,7 @@ export function registerDraft(program: Command): void {
     .option("--lang <lang>", "language: zh-CN|en-US (default zh-CN)")
     .option(
       "--tts <choice>",
-      "narration backend stamped into article.md: voicebox:<profile> | minimax-system | edge (voice-ask knob; offered automatically when the local voicebox server is up)",
+      "narration backend stamped into article.md: voicebox:<profile> | minimax-system | f5tts | edge (voice-ask knob; offered automatically when the local voicebox server is up; zh drafts default to f5tts)",
     )
     .option(
       "--duration <seconds>",

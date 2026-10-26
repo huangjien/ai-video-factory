@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { stampFrontmatterKey } from "./draft-command.js";
+import { frontmatterHasKey, stampFrontmatterKey } from "./draft-command.js";
 
 describe("stampFrontmatterKey", () => {
   it("inserts into an existing frontmatter block", () => {
@@ -20,6 +20,30 @@ describe("stampFrontmatterKey", () => {
   it("no-op without frontmatter", () => {
     expect(stampFrontmatterKey("# just body", "image_style", "editorial")).toBe(
       "# just body",
+    );
+  });
+});
+
+describe("frontmatterHasKey", () => {
+  it("true when the key is declared in the frontmatter block", () => {
+    expect(
+      frontmatterHasKey(
+        "---\nproject: t\ntts_provider: voicebox\n---\nbody",
+        "tts_provider",
+      ),
+    ).toBe(true);
+  });
+
+  it("false when the key is absent (only in the body)", () => {
+    expect(
+      frontmatterHasKey("---\nproject: t\n---\ntts_provider: body-text", "tts_provider"),
+    ).toBe(false);
+  });
+
+  it("false without frontmatter or without a closing fence", () => {
+    expect(frontmatterHasKey("# body", "tts_provider")).toBe(false);
+    expect(frontmatterHasKey("---\ntts_provider: x", "tts_provider")).toBe(
+      false,
     );
   });
 });

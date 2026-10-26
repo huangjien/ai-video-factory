@@ -153,6 +153,8 @@ describe("runDraft — end to end against a fake LLM", () => {
     expect(article).toContain("# 演示文章");
     expect(article).toContain("language: zh-CN");
     expect(article).toContain("voice: zh-CN-YunjianNeural");
+    // zh drafts bake the f5tts default (2026-10-26) unless a value won
+    expect(article).toContain("tts_provider: f5tts");
 
     const storyboard = await readFile(
       path.join(proj, "storyboard", "storyboard.yaml"),
@@ -160,6 +162,52 @@ describe("runDraft — end to end against a fake LLM", () => {
     );
     expect(storyboard).toContain("schema_version");
     expect(storyboard).toContain("scene-01");
+  });
+
+  it("keeps a hand-set tts_provider across a re-draft (default is absent-only)", async () => {
+    const articlePath = path.join(
+      projectsRoot,
+      "projects",
+      "dr-demo",
+      "article.md",
+    );
+    const before = await readFile(articlePath, "utf8");
+    expect(before).toContain("tts_provider: f5tts");
+    await writeFile(
+      articlePath,
+      before.replace("tts_provider: f5tts", "tts_provider: voicebox"),
+      "utf8",
+    );
+    const code = await runDraft({
+      topic: "dr-demo",
+      cwd: projectsRoot,
+      model: "glm",
+      noWeb: true,
+      noReview: true,
+      noAudioPlan: true,
+    });
+    expect(code).toBe(0);
+    const after = await readFile(articlePath, "utf8");
+    expect(after).toContain("tts_provider: voicebox");
+    expect(after).not.toContain("tts_provider: f5tts");
+  });
+
+  it("leaves en-US drafts unstamped (Edge stays the runtime default)", async () => {
+    const proj = path.join(projectsRoot, "projects", "dr-en");
+    await mkdir(path.join(proj, "storyboard"), { recursive: true });
+    await writeProjectState(proj, initState("dr-en"));
+    const code = await runDraft({
+      topic: "dr-en",
+      cwd: projectsRoot,
+      model: "glm",
+      noWeb: true,
+      noReview: true,
+      noAudioPlan: true,
+      lang: "en-US",
+    });
+    expect(code).toBe(0);
+    const article = await readFile(path.join(proj, "article.md"), "utf8");
+    expect(article).not.toContain("tts_provider:");
   });
 
   it("stamps --style into the derived storyboard theme", async () => {

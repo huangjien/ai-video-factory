@@ -594,7 +594,12 @@ Idempotent: `video make` skips a step when its output is newer than its inputs. 
   from a shipped voicebox scene so the timbre matches) + transcript
   sidecar `.txt`; `voice:` may point at any other wav (its `.txt` is
   the transcript). Fallback chain: f5tts → voicebox → minimax → edge.
-  Pre-flight: `video make` probes voicebox (2 s) and degrades
+  **Draft-time default (2026-10-26): zh drafts stamp `tts_provider:
+  f5tts` into article.md unless a value already won (`--tts`, a
+  hand-set key, or one carried from the previous article); en drafts
+  stay unstamped (Edge runtime default) because the reference clip is
+  the narrator-zh voice.** Pre-flight: `video make` probes voicebox
+  (2 s) and degrades
   loudly (voicebox down → minimax system voice → edge); `video draft`
   offers the conditional `tts` question only when voicebox answers with
   cloned profiles (answer via `--tts voicebox:<profile>|minimax-system`;

@@ -47,6 +47,12 @@ export interface YouTubeOptions {
   privacy?: PrivacyStatus;
   /** Path to client_secret.json for --upload / --auth. */
   clientSecretPath?: string | undefined;
+  /** Image provider for the thumbnail that `--upload` generates. Default
+   *  `minimax` — a real thumbnail needs a real image model. `mock` keeps the
+   *  offline path (deterministic placeholder). */
+  thumbnailProvider?: "mock" | "minimax" | "openai" | "gemini" | undefined;
+  /** Skip thumbnail generation entirely (upload without one). */
+  noThumbnail?: boolean;
 }
 
 function providerInstance(name: string): Provider {
@@ -458,6 +464,35 @@ export async function runYouTube(opts: YouTubeOptions): Promise<number> {
     throw err;
   }
   const privacy = opts.privacy ?? "private";
+  // v0.9.2: the thumbnail is part of publishing, not a separate step. If
+  // `youtube/thumbnail.{jpg,png}` is missing, generate it here so
+  // `--upload` publishes a finished video. A hand-made thumbnail on disk
+  // always wins — the operator's file is never overwritten.
+  if (!opts.noThumbnail) {
+    const existing = ["png", "jpg"]
+      .map((ext) => path.join(projectRoot, "youtube", `thumbnail.${ext}`))
+      .find((p) => existsSync(p));
+    if (existing) {
+      console.log(
+        `  thumbnail: using ${path.relative(projectRoot, existing)} (on disk)`,
+      );
+    } else {
+      console.log(
+        `  thumbnail: generating (${opts.thumbnailProvider ?? "minimax"})…`,
+      );
+      const { generateThumbnailImage } = await import("./thumbnail-command.js");
+      const generated = await generateThumbnailImage({
+        projectRoot,
+        projectLabel: opts.project,
+        providerName: opts.thumbnailProvider ?? "minimax",
+      });
+      if (generated === null) {
+        console.log(
+          `  note: thumbnail generation failed — uploading without one`,
+        );
+      }
+    }
+  }
   console.log(`  uploading final-mixed.mp4 (${privacy})…`);
   try {
     const uploaded = await uploadPreparedProject({
@@ -469,7 +504,7 @@ export async function runYouTube(opts: YouTubeOptions): Promise<number> {
     console.log(
       uploaded.thumbnailSet
         ? `  thumbnail set from youtube/thumbnail.png|jpg`
-        : `  note: no youtube/thumbnail.png|jpg — run \`video thumbnail ${opts.project}\` and set it in Studio`,
+        : `  note: no thumbnail was set — the video is published without one`,
     );
     if (privacy === "private") {
       console.log(
@@ -772,7 +807,15 @@ export function registerYouTube(program: Command): void {
     )
     .option(
       "--upload",
-      "after packaging, upload output/final-mixed.mp4 + thumbnail to YouTube (needs `video youtube --auth` once)",
+      "after packaging, upload output/final-mixed.mp4 + thumbnail to YouTube (generates the thumbnail if missing; needs `video youtube --auth` once)",
+    )
+    .option(
+      "--thumbnail-provider <name>",
+      "image provider for the --upload thumbnail: minimax|openai|gemini|mock (default minimax)",
+    )
+    .option(
+      "--no-thumbnail",
+      "skip thumbnail generation when uploading (publish without a thumbnail)",
     )
     .option(
       "--privacy <status>",
@@ -818,6 +861,8 @@ export function registerYouTube(program: Command): void {
           videoId?: string;
           setPrivacy?: string;
           delete?: boolean;
+          thumbnailProvider?: string;
+          thumbnail?: boolean;
         },
       ) => {
         if (opts.auth) {
@@ -868,6 +913,16 @@ export function registerYouTube(program: Command): void {
           ...(opts.clientSecret !== undefined
             ? { clientSecretPath: opts.clientSecret }
             : {}),
+          ...(opts.thumbnailProvider !== undefined
+            ? {
+                thumbnailProvider: opts.thumbnailProvider as
+                  | "mock"
+                  | "minimax"
+                  | "openai"
+                  | "gemini",
+              }
+            : {}),
+          ...(opts.thumbnail === false ? { noThumbnail: true } : {}),
         });
       },
     );

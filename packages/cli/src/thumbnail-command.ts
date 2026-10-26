@@ -71,25 +71,35 @@ function safeGitHead(cwd: string): string {
   }
 }
 
-export async function runThumbnail(opts: ThumbnailOptions): Promise<number> {
-  const cwd = path.resolve(opts.cwd ?? ".");
-  const resolvedProject = resolveProjectDir(opts.project, opts.cwd);
-  if (!resolvedProject.ok) {
-    console.error(resolvedProject.message);
-    return 1;
-  }
-  const projectRoot = resolvedProject.root;
+/**
+ * Generate the thumbnail image for a project into `youtube/thumbnail.{jpg,png}`.
+ *
+ * Split out of `runThumbnail` so `video youtube --upload` can call it
+ * directly: the upload path needs a thumbnail on disk, and making the
+ * operator run a second command between "package" and "publish" is a step
+ * that gets forgotten. Returns the written path, or null when generation
+ * failed (the caller decides whether that is fatal — an upload without a
+ * thumbnail still succeeds, it just looks unfinished in Studio).
+ */
+export async function generateThumbnailImage(opts: {
+  projectRoot: string;
+  providerName?: "mock" | "minimax" | "openai" | "gemini" | undefined;
+  width?: number | undefined;
+  height?: number | undefined;
+  /** Project label for log lines. */
+  projectLabel: string;
+}): Promise<string | null> {
+  const projectRoot = opts.projectRoot;
   const promptPath = path.join(projectRoot, "youtube", "thumbnail-prompt.txt");
   if (!existsSync(promptPath)) {
     console.error(`missing thumbnail prompt: ${promptPath}`);
-    console.error(`  run video youtube first`);
-    return 1;
+    return null;
   }
   const { readFile } = await import("node:fs/promises");
   const basePrompt = (await readFile(promptPath, "utf8")).trim();
   if (!basePrompt) {
     console.error(`empty thumbnail prompt: ${promptPath}`);
-    return 1;
+    return null;
   }
   // v0.10.3: match the thumbnail to the video's content style. article.md is
   // the human-editable source of truth for both keys; absent (or unparseable)
@@ -139,7 +149,7 @@ export async function runThumbnail(opts: ThumbnailOptions): Promise<number> {
       `\u2717 ${provider.name} thumbnail generation failed:`,
       (err as Error).message,
     );
-    return 1;
+    return null;
   }
 
   await mkdir(path.join(projectRoot, "youtube"), { recursive: true });
@@ -179,11 +189,38 @@ export async function runThumbnail(opts: ThumbnailOptions): Promise<number> {
   await writeRun(projectRoot, record);
 
   console.log(
-    `\u2713 generated ${opts.project}/youtube/${path.basename(thumbPath)}`,
+    `\u2713 generated ${opts.projectLabel}/youtube/${path.basename(thumbPath)}`,
   );
   console.log(
     `  provider=${provider.name}  size=${width}x${height}  prompt_hash=${promptHash.slice(0, 16)}…`,
   );
+  return thumbPath;
+}
+
+/**
+ * `video thumbnail <project>` — generate the thumbnail image on its own.
+ *
+ * Kept as a standalone verb for re-generating a thumbnail after an edit
+ * (the image is content-independent, so a re-run always overwrites), but the
+ * upload path no longer requires it: `video youtube --upload` calls
+ * `generateThumbnailImage` itself when no thumbnail exists yet.
+ */
+export async function runThumbnail(opts: ThumbnailOptions): Promise<number> {
+  const resolvedProject = resolveProjectDir(opts.project, opts.cwd);
+  if (!resolvedProject.ok) {
+    console.error(resolvedProject.message);
+    return 1;
+  }
+  const thumbPath = await generateThumbnailImage({
+    projectRoot: resolvedProject.root,
+    projectLabel: opts.project,
+    ...(opts.providerName !== undefined
+      ? { providerName: opts.providerName }
+      : {}),
+    ...(opts.width !== undefined ? { width: opts.width } : {}),
+    ...(opts.height !== undefined ? { height: opts.height } : {}),
+  });
+  if (thumbPath === null) return 1;
   console.log(`  next: upload ${path.basename(thumbPath)} to YouTube Studio`);
   return 0;
 }

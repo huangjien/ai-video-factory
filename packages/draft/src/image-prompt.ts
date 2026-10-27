@@ -77,7 +77,11 @@ const MAX_BRIEF_CHARS = 1400;
 // viewer-readable sign or title does not. The rule text is injected into
 // the expander's system message, so briefs written under the old wording
 // would keep asking for the old thing.
-export const IMAGE_PROMPT_REVISION = "11";
+// v12 — whiteboard preset rewritten: one focal diagram per frame, accent
+// discipline (blue only on the narration's element), connector grammar,
+// anti-thin-ink wording. Same failure the suffix-storage rule covers: a
+// preset change must invalidate the brief cache.
+export const IMAGE_PROMPT_REVISION = "12";
 
 /** Remove the reasoning scaffold that reasoning-enabled chat models emit
  *  ahead of their answer (`<think>…</think>`, an unterminated `<think>`,

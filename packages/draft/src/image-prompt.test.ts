@@ -322,9 +322,11 @@ describe("setting participates in the brief cache identity", () => {
     // assembled-prompt ceiling, v6 = the flat-vector contract merge,
     // v7 = the visual direction is now a vivid art-direction line, not a
     // thin category hint, v8 = the no-text rule draws the line at
-    // READABILITY rather than at the presence of marks. Without each bump,
-    // briefs cached by the previous expander wording outlive the change.
-    expect(IMAGE_PROMPT_REVISION).toBe("11");
+    // READABILITY rather than at the presence of marks, v12 = the
+    // whiteboard preset rewrite (focal diagram, accent discipline,
+    // connector grammar). Without each bump, briefs cached by the
+    // previous expander wording outlive the change.
+    expect(IMAGE_PROMPT_REVISION).toBe("12");
   });
 });
 

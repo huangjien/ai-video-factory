@@ -22,39 +22,38 @@ editorial:
   promptSuffix: editorial illustration, single visual metaphor, stylized simplified human figures, muted low-saturation palette of ink blue and warm paper cream with a single rust accent, subtle paper texture and visible brushwork, calm sophisticated mood, storybook composition, layered depth, quiet lower third, no text, no letters, no handwriting
 whiteboard:
   systemBlock: |-
-    Style: MODERN WHITEBOARD DIAGRAM (strategy / teaching mode).
-    - Composition reference: the look of a hand-drawn marker diagram on a
-      contemporary office whiteboard — a TED-talk sketch, a strategy-
-      consulting "how it works" diagram, or a UX wireframe. The model has
-      good priors for that visual idiom; lean on it.
-    - Marker physics: a thick chisel-tip whiteboard marker (think Expo or
-      Sharpie-style), even stroke weight along the line, slight rounded
-      end-caps, one blue accent drawn ON TOP of the black lines (not next
-      to them) for emphasis. No calligraphic taper, no brush stroke, no
-      ink quill, no fine-tip pen.
-    - Locked palette: pure black marker #1A1A1A on board white #FFFFFF,
-      with mid-blue #2F6FB5 as the only accent. No other color in any
-      scene — reuse these three in every scene of the video.
-    - Hard exclusions: NOT a medieval manuscript, NOT a parchment
-      page, NOT a chalkboard (no chalk dust, no smudges, no matte
-      texture), NOT an ink wash, NOT a watercolor, NOT a vintage
-      textbook illustration, NOT an old engraving. The lines must
-      read as drawn in the last ten years.
-    - Doodle-level simplification: arrows, boxes, circles, simple
-      stick-ish figures, circled highlights, dotted lines, callout
-      brackets. Imperfect linework that reads as a real marker drawn
-      by a hand — slightly wobbly, pressure varies along a stroke.
-    - No shading, no gradients, no color fills, no photorealism, no
-      texture, no paper grain.
-    - Lighting is irrelevant by design; do not describe a light source.
-      Read the board as evenly lit paper under fluorescent office
-      light.
-    - Generous white space. This is a BACKGROUND for draw-on
-      animations, so keep elements sparse and spatially separated so
-      animated overlays have somewhere to land.
+    Style: WHITEBOARD SKETCH (live-teaching mode).
+    - Reference idiom: the strategy whiteboard — a live-teaching sketch or
+      a consulting "how it works" board, drawn while an audience watches.
+    - Compose ONE diagram per frame: a single focal shape — a circled
+      node, a boxed stage, a stick figure — with connectors radiating
+      outward. Hierarchy through scale and position: the key shape is
+      the largest and nearest the centre; supporting shapes sit smaller
+      and further out. Never a collage of unrelated doodles.
+    - Marker physics: a thick chisel-tip dry-erase marker. Confident
+      single-pass strokes, even weight along the line, slightly rounded
+      end-caps. The hand stays visible: lines waver a degree off true,
+      spacing is uneven, a circle closes imperfectly. Never fine-tip
+      pen, calligraphic taper, brush, or quill — thin ink is a defect.
+    - Accent discipline: mid-blue #2F6FB5 marks ONLY the element the
+      narration is about — the answer path, the highlighted node, the
+      winning branch — drawn ON TOP of the black structure, never
+      beside it. Everything else stays black marker #1A1A1A on board
+      white #FFFFFF. Three colors total, reused in every scene; no
+      fourth color, no grey, no shading.
+    - Diagram grammar: solid arrows for flow, dotted lines for
+      tentative links, circles and underline swooshes for emphasis,
+      callout brackets to lift a detail. People appear as consistent
+      sticks-and-circle figures with clear gesture.
+    - Board hygiene: clean dry-erase white under even office light — no
+      light source to describe, no shadows, no gradients, no fills, no
+      paper grain or texture. Not chalk, not manuscript, not ink wash:
+      the marks must read as drawn this decade.
+    - Sparse by design: this board hosts draw-on animation, so separate
+      elements widely and keep the frame mostly white.
     - Leave breathing room — the lower third and the outer edges
       stay quiet because caption and title overlays land there.
-  promptSuffix: modern whiteboard diagram, hand-drawn marker sketch with thick chisel-tip stroke, black marker with one blue accent line on top, doodle arrows boxes circles and stick figures, contemporary office whiteboard aesthetic like a strategy-consulting or TED-talk sketch, clean white background, slightly wobbly hand-drawn linework, large white space, no shading, no fills, no chalk dust, no smudges, no parchment, no manuscript, no ink wash, no watercolor, quiet lower third, no text, no readable letters, no words, no labels, no signs, no captions
+  promptSuffix: hand-drawn whiteboard diagram in thick chisel-tip dry-erase marker, one focal circled or boxed shape with solid arrows and dotted connectors radiating outward, confident single-pass slightly wobbly strokes, black ink on clean board white with one mid-blue accent drawn on top of the key path, sticks-and-circle figures, strategy-consulting live-teaching sketch aesthetic, sparse composition, generous white space, no shading, no fills, no chalk dust, no smudges, no parchment, no manuscript, no ink wash, no watercolor, quiet lower third, no text, no readable letters, no words, no labels, no signs, no captions
 isometric:
   systemBlock: |-
     Style: ISOMETRIC ILLUSTRATION (systems mode).

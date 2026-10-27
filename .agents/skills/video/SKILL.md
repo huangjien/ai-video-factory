@@ -5,7 +5,7 @@ metadata:
   author: local
   source: internal://~/workspace/ai-video-factory
   version: "0.9.1"  # mirrors packages/cli/src/version.ts — the doc reflects the BINARY version, the git/release tag is in docs/RELEASES.md
-  last_reviewed: 2026-10-17
+  last_reviewed: 2026-10-26
   local_only: true
   shipped_versions: [v0.4, v0.5, v0.5.1, v0.5.2, v0.5.3, v0.6, v0.6.0, v0.7, v0.7.1, v0.8, v0.8.1, v0.9, v0.9.1]  # mirrors docs/RELEASES.md tag table
 ---
@@ -99,6 +99,22 @@ Full command set:
 | `video prompts [show <name>]` | Inspect the central prompt registry (`packages/prompts/prompts/`) |
 
 Every command accepts `--cwd <dir>` (default `projects/`). Every step writes `runs/<id>.yaml` and updates `state.yaml`.
+
+### Channel profiles are the narrative-grammar extension point (zero code)
+
+Cross-video story grammar — narrator voice, pacing, arc, plot engine —
+extends via channel-profile prompt block PAIRS in `packages/prompts/prompts/`:
+`draft-<profile>.md` (drafter rules) + `review-<profile>.md` (judge
+criteria), appended only when the article declares the profile. Zero
+TypeScript. Rules: judge criteria live in the profile's review block, never
+the global judge prompt (findings cost regeneration cycles — scope them);
+story-shape changes never touch storyboard generation (`article.md` is the
+source of truth, the storyboard re-derives); keep vocabulary consistent
+with published films (the seven plot engines in `chinese-storybook` reuse
+the naming from `projects/故事的7种基本情节`). Workflow: edit the pair → pin
+new content with `toContain` tests in
+`packages/draft/src/channel-profile.test.ts` → `pnpm build` → smoke
+`video prompts show <block>`.
 
 ### Visual components (registry — 24 components)
 

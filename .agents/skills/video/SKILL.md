@@ -591,13 +591,12 @@ Idempotent: `video make` skips a step when its output is newer than its inputs. 
   - `--fake` always resolves to `none` — scenes stay
     `AnimatedIllustration` (caption + animated SVG).
 - TTS: `--fake` (offline placeholder). Real narration backends select per
-  project via `article.md` frontmatter: `tts_provider: voicebox` + `voice:`
-  = Voicebox profile name/id (local voicebox-server, `VOICEBOX_URL`,
-  default `127.0.0.1:17493`; Qwen3-TTS ~7× slower than realtime on MLX);
-  `tts_provider: minimax` + `voice:` = MiniMax voice_id — T2A v2
-  `speech-2.8-turbo`, ~2.5× faster than realtime, needs
-  `MINIMAX_API_KEY`, and **voice CLONING is not on Token Plan keys
-  (error 2061; pay-as-you-go only; clones deleted after 7 days idle)**;
+  project via `article.md` frontmatter: `tts_provider: minimax` + `voice:` =
+  MiniMax voice_id — T2A v2, needs `MINIMAX_API_KEY`, and **voice CLONING
+  is not on Token Plan keys (error 2061; pay-as-you-go only; clones deleted
+  after 7 days idle)**; `tts_provider: voicebox` + `voice:` = Voicebox
+  profile name/id (local voicebox-server, `VOICEBOX_URL`, default
+  `127.0.0.1:17493`; Qwen3-TTS ~7× slower than realtime on MLX);
   omitted/`edge` → Edge TTS voice id. Unknown values warn + fall back to
   Edge. **`tts_provider: f5tts` (2026-10-25)** — local F5-TTS (MLX)
   zero-shot clone, default `steps=6 + rk4` quality-accepted by the
@@ -610,17 +609,28 @@ Idempotent: `video make` skips a step when its output is newer than its inputs. 
   from a shipped voicebox scene so the timbre matches) + transcript
   sidecar `.txt`; `voice:` may point at any other wav (its `.txt` is
   the transcript). Fallback chain: f5tts → voicebox → minimax → edge.
-  **Draft-time default (2026-10-26): zh drafts stamp `tts_provider:
-  f5tts` into article.md unless a value already won (`--tts`, a
-  hand-set key, or one carried from the previous article); en drafts
-  stay unstamped (Edge runtime default) because the reference clip is
-  the narrator-zh voice.** Pre-flight: `video make` probes voicebox
-  (2 s) and degrades
-  loudly (voicebox down → minimax system voice → edge); `video draft`
-  offers the conditional `tts` question only when voicebox answers with
-  cloned profiles (answer via `--tts voicebox:<profile>|minimax-system`;
-  server down ⇒ no question, default minimax-system). Cache key is
-  provider-namespaced; re-drafts reset `voice:` (drafter-owned) but
+  **Default backend (2026-10-28): MiniMax `speech-2.8-hd`** — the
+  quality tier, ~0.2× realtime. An A/B of seven backends on one Chinese
+  script ranked it first on both quality and speed; the local F5-TTS
+  clone came LAST (a 10–15 s reference cannot carry sentence-level
+  intonation, which is what "the voice sounds bad" usually means).
+  `MINIMAX_DEFAULT_MODEL` in `packages/tts/src/minimax-tts.ts` is the
+  single source; the model joins the TTS cache key, so a tier change
+  re-synthesizes instead of replaying the old audio.
+  **The backend and the voice id are ONE decision** — a voice id only
+  means something to the backend that owns it, and an Edge id handed to
+  MiniMax fails at synthesis, not at config time. `resolveNarrationConfig`
+  (`packages/cli/src/draft-command.ts`) resolves the pair together:
+  `--tts` wins; then a carried `tts_provider:`; then a hand-pinned Edge
+  voice id (which implies the Edge backend); then the default
+  (`minimax` + `Chinese (Mandarin)_Male_Announcer` for zh-CN /
+  `English_expressive_narrator` for en-US). Pre-flight: `video make`
+  probes voicebox (2 s) and degrades loudly (voicebox down → minimax
+  system voice → edge); `video draft` offers the conditional `tts`
+  question only when voicebox answers with cloned profiles (answer via
+  `--tts voicebox:<profile>|minimax-system|f5tts|edge`; server down ⇒ no
+  question, default minimax-system). Cache key is provider- AND
+  model-namespaced; re-drafts reset `voice:` (drafter-owned) but
   preserve `tts_provider:`.
 - Web search in research: `--no-web` (LLM knowledge only)
 

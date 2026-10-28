@@ -47,7 +47,7 @@ describe("MinimaxTTSProvider", () => {
     expect(result.durationMs).toBe(2345);
     expect(result.words).toEqual([]);
     expect(bodies[0]).toMatchObject({
-      model: "speech-2.8-turbo",
+      model: "speech-2.8-hd",
       stream: false,
       output_format: "hex",
       language_boost: "Chinese",

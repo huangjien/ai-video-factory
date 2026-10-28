@@ -92,8 +92,46 @@ export function minimaxSystemVoice(language: string): string {
   return MINIMAX_SYSTEM_VOICE[language] ?? MINIMAX_SYSTEM_VOICE["en-US"]!;
 }
 
+/** Edge TTS system voices — the fallback backend and the only backend
+ * whose voice ids encode their own locale. Male narration by default;
+ * the female alternatives live in the audio-plan prompt. */
+export const EDGE_SYSTEM_VOICE: Record<string, string> = {
+  "zh-CN": "zh-CN-YunjianNeural",
+  "en-US": "en-US-ChristopherNeural",
+};
+
+export function edgeSystemVoice(language: string): string {
+  return EDGE_SYSTEM_VOICE[language] ?? EDGE_SYSTEM_VOICE["en-US"]!;
+}
+
+/** True when a voice id belongs to Edge TTS. Edge ids are the only ones
+ * that encode their locale, so they are also the only ones a reader can
+ * check by eye — and the one way to tell "a human pinned the Edge
+ * backend" from "the default voice happened to be written down". */
+export function isEdgeVoiceId(voice: string): boolean {
+  return /^[a-z]{2}-[A-Z]{2}-[A-Za-z0-9]+Neural$/.test(voice.trim());
+}
+
+/** The default voice id for a narration backend.
+ *
+ * The provider and the voice id must agree: an Edge id handed to MiniMax
+ * (or a MiniMax id handed to Edge) fails at synthesis, not at config
+ * time — so the two are always resolved together, never independently.
+ */
+export function defaultVoiceForProvider(
+  provider: string,
+  language: string,
+): string {
+  if (provider === "edge") return edgeSystemVoice(language);
+  // voicebox takes a PROFILE NAME, not a voice id; there is no sensible
+  // default, so the caller must supply one.
+  if (provider === "voicebox") return "";
+  return minimaxSystemVoice(language);
+}
+
 /** Parse a `--tts` / video-ask `tts` answer into frontmatter values.
- * Shapes: "voicebox:<profile>", "minimax-system", "f5tts", "edge". */
+ * Shapes: "voicebox:<profile>", "minimax-system", "minimax-hd", "f5tts",
+ * "edge". */
 export function parseTtsChoice(
   choice: string,
   language: string,
@@ -108,7 +146,7 @@ export function parseTtsChoice(
     // (with its .txt transcript) overrides it at make time.
     return { ttsProvider: "f5tts" };
   }
-  if (choice === "minimax-system") {
+  if (choice === "minimax-system" || choice === "minimax-hd") {
     return { ttsProvider: "minimax", voice: minimaxSystemVoice(language) };
   }
   return { ttsProvider: "edge" };

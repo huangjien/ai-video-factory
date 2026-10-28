@@ -36,7 +36,14 @@ import {
   detectAgentEnv,
   type AskCtx,
 } from "./agent-ask.js";
-import { voiceboxStatus, parseTtsChoice } from "@video/tts";
+import {
+  voiceboxStatus,
+  parseTtsChoice,
+  isEdgeVoiceId,
+  defaultVoiceForProvider,
+  edgeSystemVoice,
+  minimaxSystemVoice,
+} from "@video/tts";
 
 export interface DraftOptions {
   topic: string;
@@ -88,10 +95,12 @@ export interface DraftOptions {
   channelProfile?: string;
   /** Narration backend — written into article.md frontmatter
    *  (`tts_provider:` + `voice:`) so `video make` picks it up.
-   *  voicebox:<profile> | minimax-system | f5tts | edge. Also a
+   *  minimax-system | voicebox:<profile> | f5tts | edge. Also a
    *  video-ask/1 knob (conditional: only offered when the local
-   *  voicebox server answers with cloned profiles). Unspecified zh
-   *  drafts default to f5tts (en drafts stay unstamped → Edge). */
+   *  voicebox server answers with cloned profiles). Unspecified
+   *  drafts default to minimax-system (speech-2.8-hd) unless a
+   *  carried `tts_provider` or a hand-pinned Edge voice says
+   *  otherwise — see resolveNarrationConfig. */
   tts?: string;
   /** v0.7 (video-ask/1): force the agent-ask gate — emit the
    *  video-ask/1 question envelope and exit 2 even when no agent
@@ -156,6 +165,21 @@ export function frontmatterHasKey(markdown: string, key: string): boolean {
   return new RegExp(`^${key}:.*$`, "m").test(markdown.slice(0, end));
 }
 
+/** The article's frontmatter value for `key`, or undefined. */
+export function frontmatterValue(
+  markdown: string,
+  key: string,
+): string | undefined {
+  if (!markdown.startsWith("---")) return undefined;
+  const end = markdown.indexOf("\n---", 3);
+  if (end === -1) return undefined;
+  const m = new RegExp(`^${key}:[ \\t]*(.*)$`, "m").exec(
+    markdown.slice(0, end),
+  );
+  if (m?.[1] === undefined) return undefined;
+  return m[1].trim().replace(/^["']|["']$/g, "");
+}
+
 /** Frontmatter keys the drafter owns: they describe THIS run and must always
  *  reflect the new draft, never be carried over from the old one. */
 const DRAFT_OWNED_FRONTMATTER = [
@@ -210,6 +234,82 @@ export function preserveFrontmatterKeys(
   return `${nextHead}\n${carried.join("\n")}${next.slice(nextEnd)}`;
 }
 
+/** The narration backend a new draft gets when nothing else decides it.
+ *
+ * MiniMax `speech-2.8-hd` with the language's system narrator. Chosen
+ * over the local F5-TTS clone on 2026-10-28 after an A/B of seven
+ * backends on the same Chinese script: F5-TTS cannot carry sentence
+ * intonation from a 10-15 s reference clip, and the cloud tiers are
+ * both faster and better. `video make` still degrades loudly to Edge
+ * when MINIMAX_API_KEY is missing.
+ */
+export const DEFAULT_TTS_PROVIDER = "minimax";
+
+/** The voice id that goes with a narration backend.
+ *
+ * The backend and the voice are ONE decision: a voice id only means
+ * something to the backend that owns it, so an Edge id under a MiniMax
+ * provider (or the reverse) fails at synthesis, not at config time.
+ *
+ * Precedence:
+ *   1. `--tts <choice>` — the explicit answer always wins.
+ *   2. A carried `tts_provider` — a previous article's backend is
+ *      durable project config and outranks the default.
+ *   3. An Edge voice id — it implies the Edge backend, so a human who
+ *      pinned `zh-CN-XiaoxiaoNeural` keeps that voice (and gets the
+ *      backend that can speak it).
+ *   4. The default: MiniMax speech-2.8-hd with the system narrator.
+ */
+export function resolveNarrationConfig(input: {
+  ttsChoice?: string | undefined;
+  language: string;
+  /** The provider carried forward from the previous article, if any. */
+  carriedProvider?: string | undefined;
+  /** The voice the drafter wrote into the new article. */
+  draftVoice?: string | undefined;
+}): { provider: string; voice: string } {
+  const voiceFor = (provider: string): string => {
+    const draft = input.draftVoice;
+    if (provider === "edge") {
+      return draft !== undefined && isEdgeVoiceId(draft)
+        ? draft
+        : edgeSystemVoice(input.language);
+    }
+    if (provider === "minimax") {
+      return draft !== undefined && !isEdgeVoiceId(draft)
+        ? draft
+        : minimaxSystemVoice(input.language);
+    }
+    // voicebox takes a PROFILE NAME and f5tts ignores the id entirely —
+    // neither can be defaulted, so whatever the draft carries stands.
+    return draft ?? "";
+  };
+
+  if (input.ttsChoice !== undefined) {
+    const { ttsProvider, voice } = parseTtsChoice(
+      input.ttsChoice,
+      input.language,
+    );
+    return {
+      provider: ttsProvider,
+      voice: voice !== undefined ? voice : voiceFor(ttsProvider),
+    };
+  }
+  if (input.carriedProvider !== undefined) {
+    return {
+      provider: input.carriedProvider,
+      voice: voiceFor(input.carriedProvider),
+    };
+  }
+  if (input.draftVoice !== undefined && isEdgeVoiceId(input.draftVoice)) {
+    return { provider: "edge", voice: input.draftVoice };
+  }
+  return {
+    provider: DEFAULT_TTS_PROVIDER,
+    voice: defaultVoiceForProvider(DEFAULT_TTS_PROVIDER, input.language),
+  };
+}
+
 export type AudioPlanStep =
   | {
       status: "written";
@@ -229,7 +329,7 @@ export async function writeAudioConfigIfAbsent(
   article: ParsedArticle,
   provider: Provider,
   fallback: Provider | null,
-  opts: { skip?: boolean; bgm?: string } = {},
+  opts: { skip?: boolean; bgm?: string; voice?: string } = {},
 ): Promise<AudioPlanStep> {
   const outPath = path.join(projectRoot, "audio-config.yaml");
   if (opts.skip) {
@@ -254,6 +354,16 @@ export async function writeAudioConfigIfAbsent(
     let outConfig = config;
     if (opts.bgm !== undefined) {
       outConfig = { ...config, bgm: opts.bgm === "none" ? null : opts.bgm };
+      outYaml = renderAudioConfig(outConfig);
+    }
+    // The voice is NOT the planner's to choose: the backend and the
+    // voice id are one decision, and the backend is already settled in
+    // article.md's frontmatter. Stamp the same id there so the two
+    // files cannot disagree — a disagreement reads as "the plan says one
+    // narrator, the article says another", and the make path follows
+    // the article.
+    if (opts.voice !== undefined) {
+      outConfig = { ...outConfig, voice: opts.voice };
       outYaml = renderAudioConfig(outConfig);
     }
     await writeFile(outPath, outYaml, "utf8");
@@ -518,24 +628,21 @@ export async function runDraft(opts: DraftOptions): Promise<number> {
   // Same contract as image_provider: the narration backend is durable
   // project config (tts_provider + voice), and --tts / the video-ask
   // answer is the explicit value that always wins.
-  if (opts.tts !== undefined) {
-    const { ttsProvider, voice } = parseTtsChoice(opts.tts, language);
-    stamped = stampFrontmatterKey(stamped, "tts_provider", ttsProvider);
-    if (voice !== undefined) {
-      stamped = stampFrontmatterKey(stamped, "voice", voice);
-    }
-  } else if (
-    language.startsWith("zh") &&
-    !frontmatterHasKey(stamped, "tts_provider")
-  ) {
-    // Default narration backend (2026-10-26): zh drafts bake f5tts so
-    // `video make` runs the local F5-TTS clone out of the box.
-    // Absent-only: a carried key (preserveFrontmatterKeys) or a
-    // hand-set one always wins, and make degrades loudly when the
-    // install is missing (f5tts → voicebox → minimax → edge), so the
-    // stamp is safe to bake. zh-only because the F5 reference clip is
-    // the narrator-zh voice; en films keep the Edge runtime default.
-    stamped = stampFrontmatterKey(stamped, "tts_provider", "f5tts");
+  //
+  // The backend and the voice are resolved together (see
+  // resolveNarrationConfig): a voice id only means something to the
+  // backend that owns it, and the default is MiniMax speech-2.8-hd
+  // unless a carried key, an explicit flag, or a hand-pinned Edge voice
+  // says otherwise.
+  const narration = resolveNarrationConfig({
+    ttsChoice: opts.tts,
+    language,
+    carriedProvider: frontmatterValue(stamped, "tts_provider"),
+    draftVoice: frontmatterValue(stamped, "voice"),
+  });
+  stamped = stampFrontmatterKey(stamped, "tts_provider", narration.provider);
+  if (narration.voice !== "") {
+    stamped = stampFrontmatterKey(stamped, "voice", narration.voice);
   }
   await writeFile(articlePath, stamped, "utf8");
 
@@ -598,6 +705,7 @@ export async function runDraft(opts: DraftOptions): Promise<number> {
       {
         skip: opts.noAudioPlan === true,
         ...(opts.bgm !== undefined ? { bgm: opts.bgm } : {}),
+        ...(narration.voice !== "" ? { voice: narration.voice } : {}),
       },
     );
     if (step.status === "written") {
@@ -721,7 +829,7 @@ export function registerDraft(program: Command): void {
     .option("--lang <lang>", "language: zh-CN|en-US (default zh-CN)")
     .option(
       "--tts <choice>",
-      "narration backend stamped into article.md: voicebox:<profile> | minimax-system | f5tts | edge (voice-ask knob; offered automatically when the local voicebox server is up; zh drafts default to f5tts)",
+      "narration backend stamped into article.md: minimax-system (default, speech-2.8-hd) | voicebox:<profile> | f5tts | edge (voice-ask knob; offered automatically when the local voicebox server is up)",
     )
     .option(
       "--duration <seconds>",

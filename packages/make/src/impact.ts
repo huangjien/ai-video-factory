@@ -29,6 +29,7 @@ import {
   effectiveTtsVoice,
   ttsCacheInputsFor,
   ttsCacheKey,
+  ttsCacheModelFor,
   ttsCacheProviderName,
   ttsScenesFromArticle,
 } from "./tts-cache.js";
@@ -183,6 +184,7 @@ export function computeMakeImpact(
   const effectiveVoice = effectiveTtsVoice(
     article.frontmatter.voice,
     article.frontmatter.language,
+    article.frontmatter.tts_provider,
   );
   // --fake runs synthesize under the "fake" provider namespace; the impact
   // report has no fake flag, so it can over-report resynthesis there.
@@ -213,6 +215,7 @@ export function computeMakeImpact(
           typeof article.frontmatter.tts_sentence_pause_sec === "number"
             ? article.frontmatter.tts_sentence_pause_sec
             : undefined,
+        model: ttsCacheModelFor(effectiveTtsProvider),
       }),
     );
     if (meta !== null) {

@@ -10,7 +10,7 @@ changes. Output valid JSON only, with no markdown or code fences.
 Shape:
 
 {
-  "voice": "<Edge TTS voice ID, e.g. zh-CN-YunjianNeural (male, default) or en-US-ChristopherNeural (male, default); female alternatives zh-CN-XiaoxiaoNeural, en-US-AriaNeural>",
+  "voice": "<voice id for the article's narration backend — MiniMax (default): Chinese (Mandarin)_Male_Announcer for zh-CN, English_expressive_narrator for en-US; Edge only when the article pins tts_provider: edge — zh-CN-YunjianNeural / en-US-ChristopherNeural>",
   "bgm": "<tag from the BGM LIBRARY below, or null to disable>",
   "bgm_fade_in_sec": <number 0..10>,
   "bgm_fade_out_sec": <number 0..10>,
@@ -25,6 +25,11 @@ Rules:
 - Choose a voice that matches the article language; use the default unless
   a different voice is clearly appropriate. Do not infer a speaker identity
   from the topic.
+- The voice id must belong to the article's narration backend. The default
+  backend is MiniMax (`speech-2.8-hd`), so the default voice is a MiniMax
+  system voice. Emit an Edge voice id ONLY when the article's frontmatter
+  sets `tts_provider: edge` — an Edge id handed to MiniMax fails at
+  synthesis, not at config time.
 - Music comes ONLY from the local BGM library. There is no music-generation
   service: never invent a tag, never describe a track instead of naming one,
   and never emit a path. If nothing in the library fits, use `null`.
@@ -39,8 +44,10 @@ Rules:
 - Use 0-3 SFX cues total. Most videos need only 1-2.
 - Use SFX only when they reinforce a meaningful transition or event. Do not
   add decorative sounds just to fill silence.
-- Default voice: zh-CN-YunjianNeural (zh-CN) or en-US-ChristopherNeural (en-US).
-  Female alternatives: zh-CN-XiaoxiaoNeural, en-US-AriaNeural.
+- Default voice (MiniMax backend): Chinese (Mandarin)_Male_Announcer (zh-CN)
+  or English_expressive_narrator (en-US). Edge backend only
+  (tts_provider: edge): zh-CN-YunjianNeural / en-US-ChristopherNeural;
+  female alternatives zh-CN-XiaoxiaoNeural, en-US-AriaNeural.
 - Pick the track by MATCHING the article's register against each entry's
   `use_when` / `avoid_when`, then apply these tie-breakers in order:
   1. Prefer a track whose `use_when` names this exact kind of content.

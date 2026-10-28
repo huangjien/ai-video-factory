@@ -74,6 +74,7 @@ import {
   ttsCacheInputsFor,
   ttsScenesFromArticle,
   effectiveTtsVoice,
+  ttsCacheModelFor,
   type TtsScene,
 } from "./tts-cache.js";
 
@@ -1142,6 +1143,7 @@ async function runTts(
   const frontmatterVoice = effectiveTtsVoice(
     article.frontmatter.voice,
     article.frontmatter.language,
+    ttsProvider,
   );
   // Pre-flight (2026-10-18 policy): a voicebox article degrades loudly to
   // the MiniMax system voice when the local server is down, and to Edge
@@ -1255,6 +1257,7 @@ export async function synthesizeSceneAudio(params: {
         language: params.language,
         voiceboxSpeed: params.voiceboxSpeed,
         voiceboxSentencePauseSec: params.voiceboxSentencePauseSec,
+        model: ttsCacheModelFor(params.provider.name),
       }),
     );
     const meta = await readTtsMeta(wavPath);

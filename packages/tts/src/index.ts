@@ -17,12 +17,17 @@ export {
 } from "./voicebox.js";
 export {
   MinimaxTTSProvider,
+  MINIMAX_DEFAULT_MODEL,
   type MinimaxTTSProviderOptions,
 } from "./minimax-tts.js";
 export {
   voiceboxStatus,
   MINIMAX_SYSTEM_VOICE,
   minimaxSystemVoice,
+  EDGE_SYSTEM_VOICE,
+  edgeSystemVoice,
+  isEdgeVoiceId,
+  defaultVoiceForProvider,
   parseTtsChoice,
 } from "./voicebox.js";
 export {

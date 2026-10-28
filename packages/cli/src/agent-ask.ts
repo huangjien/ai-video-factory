@@ -303,19 +303,21 @@ export function ttsQuestion(profiles: readonly string[]): AskQuestion {
     type: "choice",
     question: "Narration voice backend?",
     choices: [
+      {
+        value: "minimax-system",
+        note: "MiniMax system voice, speech-2.8-hd — best quality, ~0.2× realtime, billed per char",
+      },
       ...profiles.map((p) => ({
         value: `voicebox:${p}`,
         note: `local clone "${p}" — free, ~7× slower than realtime`,
       })),
-      {
-        value: "minimax-system",
-        note: "MiniMax system voice — ~2.5× realtime, billed per char",
-      },
     ],
     default: "minimax-system",
-    recommended:
-      profiles.length > 0 ? `voicebox:${profiles[0] ?? ""}` : "minimax-system",
-    why: "your clone is free but slow; MiniMax is fast but a system timbre — switching later re-synthesizes every scene",
+    // MiniMax is the recommended default everywhere (2026-10-28): an
+    // A/B of seven backends on the same script put speech-2.8-hd ahead
+    // on both quality and speed, and the local clone's prosody came last.
+    recommended: "minimax-system",
+    why: "switching later re-synthesizes every scene; the clone is free but slower and measurably flatter",
     specified: (opts) => opts.tts !== undefined,
     resolved: (opts) => opts.tts ?? "minimax-system",
   };
@@ -410,9 +412,7 @@ export async function emitQuestionsDoc(
       bgm: byId.get("bgm")?.resolved(opts) ?? "calm",
       tts:
         opts.tts ??
-        (ctx?.voiceboxProfiles.length
-          ? `voicebox:${ctx.voiceboxProfiles[0] ?? ""}`
-          : "minimax-system"),
+        "minimax-system",
     },
   };
   console.log(JSON.stringify(envelope, null, 2));

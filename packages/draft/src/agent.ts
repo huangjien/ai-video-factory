@@ -4,6 +4,7 @@ import {
   extractBalancedJson as extractBalancedJsonImpl,
   extractJsonObject,
 } from "@video/llm";
+import { minimaxSystemVoice } from "@video/tts";
 import { buildMessages, type DraftInput } from "./prompt.js";
 
 /** Shared balanced-JSON extractor (@video/llm) — re-exported because the
@@ -165,11 +166,13 @@ function yamlScalar(s: string): string {
   return s;
 }
 
-// Default: male narration. Female alternatives: zh-CN-YunjianNeural,
-// en-US-ChristopherNeural.
+// Default: the MiniMax system narrator (speech-2.8-hd), the backend the
+// draft pipeline now defaults to. The voice id and the backend are two
+// halves of one choice — an Edge id under a MiniMax provider fails at
+// synthesis, not at config time — so the draft command re-resolves the
+// pair after it settles the provider (see resolveNarrationConfig).
 function pickVoice(lang: string): string {
-  if (lang === "en-US") return "en-US-ChristopherNeural";
-  return "zh-CN-YunjianNeural";
+  return minimaxSystemVoice(lang);
 }
 
 function slugifyProjectName(s: string): string {

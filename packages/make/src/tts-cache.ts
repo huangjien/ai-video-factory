@@ -1,13 +1,19 @@
 import { createHash } from "node:crypto";
 import type { ParsedArticle } from "@video/draft";
+import {
+  MINIMAX_DEFAULT_MODEL,
+  defaultVoiceForProvider,
+  edgeSystemVoice,
+} from "@video/tts";
 
 /**
  * TTS cache key + default voices (v0.8 G2: extracted from index.ts so the
  * read-only impact report can import them without an import cycle —
  * index → impact → tts-cache is acyclic).
  *
- * Default: male narration voices. Female alternatives:
- * zh-CN-XiaoxiaoNeural, en-US-AriaNeural.
+ * Default: the MiniMax system narrator (speech-2.8-hd). The Edge system
+ * voices live in EDGE_SYSTEM_VOICE (@video/tts) and are used only when the
+ * project pins the Edge backend.
  */
 /**
  * Bumped when the TTS provider's OUTPUT changes for the same inputs.
@@ -20,19 +26,42 @@ import type { ParsedArticle } from "@video/draft";
  */
 export const TTS_PROVIDER_REVISION = "3";
 
-export const ZH_VOICE = "zh-CN-YunjianNeural";
-export const EN_VOICE = "en-US-ChristopherNeural";
+export const ZH_VOICE = edgeSystemVoice("zh-CN");
+export const EN_VOICE = edgeSystemVoice("en-US");
 
 /** Effective narration voice for an article: frontmatter `voice:` wins,
- *  else the language default. The one resolution rule shared by runTts and
- *  the dry-run impact table — two copies of this `||` already diverged
- *  once (the impact table used to read audio-config.yaml's `voice:`,
- *  which make ignores on the synthesis path, so the table lied). */
+ *  else the default voice for the article's BACKEND. The one resolution
+ *  rule shared by runTts and the dry-run impact table — two copies of
+ *  this `||` already diverged once (the impact table used to read
+ *  audio-config.yaml's `voice:`, which make ignores on the synthesis
+ *  path, so the table lied).
+ *
+ *  The fallback follows the provider, because a voice id only means
+ *  anything to the backend that owns it: an Edge id handed to MiniMax
+ *  (or the reverse) fails at synthesis, not at config time. */
 export function effectiveTtsVoice(
   frontmatterVoice: string | undefined,
   language: string,
+  ttsProvider?: string | undefined,
 ): string {
-  return frontmatterVoice || (language === "en-US" ? EN_VOICE : ZH_VOICE);
+  if (frontmatterVoice) return frontmatterVoice;
+  if (ttsProvider === undefined) return edgeSystemVoice(language);
+  return defaultVoiceForProvider(ttsProvider, language);
+}
+
+/** The model a provider serves, for the cache key.
+ *
+ * MiniMax has more than one T2A tier and the tiers are different audio:
+ * `speech-2.8-hd` and `speech-2.8-turbo` produce different bytes for
+ * the same (text, voice). The provider NAME alone cannot tell them
+ * apart, so the model joins the key — otherwise switching the default
+ * tier would silently replay the old audio forever.
+ *
+ * Both the render and the dry-run table call this with their provider
+ * name, so the two cannot disagree about which tier they mean. */
+export function ttsCacheModelFor(providerName: string): string | undefined {
+  if (providerName === "minimax-tts") return MINIMAX_DEFAULT_MODEL;
+  return undefined;
 }
 
 /** Cache provider-name for a frontmatter `tts_provider` value — mirrors
@@ -87,6 +116,11 @@ export interface TtsSettings {
    */
   voiceboxSpeed: number | undefined;
   voiceboxSentencePauseSec: number | undefined;
+  /**
+   * The model the provider serves — undefined for backends with a single
+   * output. See `ttsCacheModelFor`.
+   */
+  model: string | undefined;
 }
 
 /**
@@ -108,6 +142,12 @@ export interface TtsCacheKeyInput {
   holdAfterSec: number | undefined;
   /** Seconds of silence BEFORE the voice — the opening beat. */
   leadInSec: number | undefined;
+  /**
+   * The model the provider serves — undefined for backends with a single
+   * output. Different tiers are different audio, so they cannot share a
+   * cache slot.
+   */
+  model: string | undefined;
 }
 
 /**
@@ -151,6 +191,7 @@ export function ttsCacheInputsFor(
     voiceboxSentencePauseSec: settings.voiceboxSentencePauseSec,
     holdAfterSec: scene.holdAfterSec,
     leadInSec: scene.leadInSec,
+    model: settings.model,
   };
 }
 
@@ -165,6 +206,7 @@ export function ttsCacheKey(input: TtsCacheKeyInput): string {
     voiceboxSentencePauseSec,
     holdAfterSec,
     leadInSec,
+    model,
   } = input;
   // The provider must be part of the key: "narrator-zh" through Voicebox and
   // "zh-CN-YunjianNeural" through Edge are different audio, and a provider
@@ -197,11 +239,15 @@ export function ttsCacheKey(input: TtsCacheKeyInput): string {
     voiceboxSentencePauseSec === undefined
       ? ""
       : `${voiceboxSentencePauseSec}\u0000`;
+  // The model tag sits next to the provider tag: two MiniMax tiers are
+  // two different voices' worth of audio. Omitted when the backend has a
+  // single output, so every pinned Edge / Voicebox key stays put.
+  const modelTag = model === undefined ? "" : `model${model}\u0000`;
   return (
     "sha256:" +
     createHash("sha256")
       .update(
-        `${core}\u0000${pauseSec ?? "-"}\u0000${speedTag}${sentencePauseTag}${holdTag}${leadInTag}${revisionTag}${narration.trim()}`,
+        `${core}\u0000${modelTag}${pauseSec ?? "-"}\u0000${speedTag}${sentencePauseTag}${holdTag}${leadInTag}${revisionTag}${narration.trim()}`,
       )
       .digest("hex")
   );

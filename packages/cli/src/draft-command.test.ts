@@ -8,6 +8,7 @@ import { initState, writeProjectState } from "@video/workflow";
 import type { Provider } from "@video/llm";
 import {
   preserveFrontmatterKeys,
+  resolveNarrationConfig,
   runDraft,
   writeAudioConfigIfAbsent,
 } from "./draft-command.js";
@@ -152,9 +153,9 @@ describe("runDraft — end to end against a fake LLM", () => {
     const article = await readFile(path.join(proj, "article.md"), "utf8");
     expect(article).toContain("# 演示文章");
     expect(article).toContain("language: zh-CN");
-    expect(article).toContain("voice: zh-CN-YunjianNeural");
-    // zh drafts bake the f5tts default (2026-10-26) unless a value won
-    expect(article).toContain("tts_provider: f5tts");
+    expect(article).toContain("voice: Chinese (Mandarin)_Male_Announcer");
+    // drafts bake the minimax default (2026-10-28) unless a value won
+    expect(article).toContain("tts_provider: minimax");
 
     const storyboard = await readFile(
       path.join(proj, "storyboard", "storyboard.yaml"),
@@ -172,10 +173,10 @@ describe("runDraft — end to end against a fake LLM", () => {
       "article.md",
     );
     const before = await readFile(articlePath, "utf8");
-    expect(before).toContain("tts_provider: f5tts");
+    expect(before).toContain("tts_provider: minimax");
     await writeFile(
       articlePath,
-      before.replace("tts_provider: f5tts", "tts_provider: voicebox"),
+      before.replace("tts_provider: minimax", "tts_provider: voicebox"),
       "utf8",
     );
     const code = await runDraft({
@@ -189,10 +190,10 @@ describe("runDraft — end to end against a fake LLM", () => {
     expect(code).toBe(0);
     const after = await readFile(articlePath, "utf8");
     expect(after).toContain("tts_provider: voicebox");
-    expect(after).not.toContain("tts_provider: f5tts");
+    expect(after).not.toContain("tts_provider: minimax");
   });
 
-  it("leaves en-US drafts unstamped (Edge stays the runtime default)", async () => {
+  it("stamps en-US drafts with the minimax default too", async () => {
     const proj = path.join(projectsRoot, "projects", "dr-en");
     await mkdir(path.join(proj, "storyboard"), { recursive: true });
     await writeProjectState(proj, initState("dr-en"));
@@ -207,7 +208,8 @@ describe("runDraft — end to end against a fake LLM", () => {
     });
     expect(code).toBe(0);
     const article = await readFile(path.join(proj, "article.md"), "utf8");
-    expect(article).not.toContain("tts_provider:");
+    expect(article).toContain("tts_provider: minimax");
+    expect(article).toContain("voice: English_expressive_narrator");
   });
 
   it("stamps --style into the derived storyboard theme", async () => {
@@ -447,5 +449,86 @@ describe("preserveFrontmatterKeys", () => {
     const out = preserveFrontmatterKeys(fresh, prev);
     expect(out).toContain("# body");
     expect(out).not.toContain("# very old body");
+  });
+});
+
+/**
+ * The narration backend and the voice id are ONE decision — a voice id
+ * only means something to the backend that owns it. These tests pin the
+ * precedence between the explicit answer, a carried key, a hand-pinned
+ * Edge voice, and the default (MiniMax speech-2.8-hd).
+ */
+describe("resolveNarrationConfig", () => {
+  it("defaults to MiniMax with the language's system narrator", () => {
+    expect(
+      resolveNarrationConfig({ language: "zh-CN" }),
+    ).toEqual({
+      provider: "minimax",
+      voice: "Chinese (Mandarin)_Male_Announcer",
+    });
+    expect(resolveNarrationConfig({ language: "en-US" })).toEqual({
+      provider: "minimax",
+      voice: "English_expressive_narrator",
+    });
+  });
+
+  it("lets --tts win over everything", () => {
+    expect(
+      resolveNarrationConfig({
+        ttsChoice: "minimax-system",
+        language: "zh-CN",
+        carriedProvider: "edge",
+      }),
+    ).toEqual({
+      provider: "minimax",
+      voice: "Chinese (Mandarin)_Male_Announcer",
+    });
+    expect(
+      resolveNarrationConfig({ ttsChoice: "edge", language: "zh-CN" }),
+    ).toEqual({ provider: "edge", voice: "zh-CN-YunjianNeural" });
+  });
+
+  it("keeps a carried provider, and repairs a voice that belongs elsewhere", () => {
+    // The carried provider is durable project config — it outranks the
+    // default. But the carried EDGE voice id cannot be spoken by
+    // MiniMax, so it is replaced by the MiniMax narrator.
+    expect(
+      resolveNarrationConfig({
+        language: "zh-CN",
+        carriedProvider: "minimax",
+        draftVoice: "zh-CN-XiaoxiaoNeural",
+      }),
+    ).toEqual({
+      provider: "minimax",
+      voice: "Chinese (Mandarin)_Male_Announcer",
+    });
+    expect(
+      resolveNarrationConfig({
+        language: "zh-CN",
+        carriedProvider: "edge",
+        draftVoice: "Chinese (Mandarin)_Male_Announcer",
+      }),
+    ).toEqual({ provider: "edge", voice: "zh-CN-YunjianNeural" });
+  });
+
+  it("reads a hand-pinned Edge voice as a request for the Edge backend", () => {
+    // A human who wrote zh-CN-XiaoxiaoNeural meant that narrator — the
+    // Edge backend is the only one that can speak it.
+    expect(
+      resolveNarrationConfig({
+        language: "zh-CN",
+        draftVoice: "zh-CN-XiaoxiaoNeural",
+      }),
+    ).toEqual({ provider: "edge", voice: "zh-CN-XiaoxiaoNeural" });
+  });
+
+  it("leaves a voicebox profile name alone", () => {
+    expect(
+      resolveNarrationConfig({
+        language: "zh-CN",
+        carriedProvider: "voicebox",
+        draftVoice: "narrator-zh",
+      }),
+    ).toEqual({ provider: "voicebox", voice: "narrator-zh" });
   });
 });

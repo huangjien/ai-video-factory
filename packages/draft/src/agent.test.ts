@@ -81,7 +81,7 @@ describe("callDraft (JSON-mode assembly)", () => {
     );
     expect(markdown.startsWith("---\n")).toBe(true);
     expect(markdown).toContain("language: zh-CN");
-    expect(markdown).toContain("voice: zh-CN-YunjianNeural");
+    expect(markdown).toContain("voice: Chinese (Mandarin)_Male_Announcer");
     expect(markdown).toContain("# AI 思维链");
     expect(markdown).toContain("> **Hook**");
     expect(markdown).toContain("## 1. 问题");
@@ -91,7 +91,7 @@ describe("callDraft (JSON-mode assembly)", () => {
     expect(markdown).toContain("在 AI 时代");
   });
 
-  it("uses English voice for en-US projects", async () => {
+  it("uses the English MiniMax system voice for en-US projects", async () => {
     responseBody = JSON.stringify({
       choices: [{ message: { content: JSON.stringify(validJson) } }],
       usage: { prompt_tokens: 10, completion_tokens: 20 },
@@ -106,7 +106,7 @@ describe("callDraft (JSON-mode assembly)", () => {
       },
       p,
     );
-    expect(markdown).toContain("voice: en-US-ChristopherNeural");
+    expect(markdown).toContain("voice: English_expressive_narrator");
   });
 
   it("falls back to defaults when LLM omits fields", async () => {

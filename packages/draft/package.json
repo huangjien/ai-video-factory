@@ -23,6 +23,7 @@
     "@video/llm": "workspace:*",
     "@video/prompts": "workspace:*",
     "@video/theme": "workspace:*",
+    "@video/tts": "workspace:*",
     "yaml": "^2.7.0",
     "zod": "^3.25.0"
   },

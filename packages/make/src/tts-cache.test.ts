@@ -4,6 +4,10 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 
 import { runMake, ttsCacheKey } from "./index.js";
+import {
+  effectiveTtsVoice,
+  ttsCacheModelFor,
+} from "./tts-cache.js";
 import type { TtsCacheKeyInput } from "./tts-cache.js";
 
 /** The cache key for a scene, with only the inputs a test cares about
@@ -20,6 +24,7 @@ function key(overrides: Partial<TtsCacheKeyInput> = {}): string {
     voiceboxSentencePauseSec: undefined,
     holdAfterSec: undefined,
     leadInSec: undefined,
+    model: undefined,
     ...overrides,
   });
 }
@@ -192,5 +197,53 @@ describe("ttsCacheKey — the opening beat (lead-in)", () => {
     // The pinned hash above is the regression guard: adding a term that
     // is always present would re-synthesize every scene in every project.
     expect(key()).toBe(key({ leadInSec: undefined }));
+  });
+});
+
+describe("ttsCacheKey — the model tier", () => {
+  it("changes the key when the model changes", () => {
+    // MiniMax has more than one T2A tier and the tiers are different
+    // audio: speech-2.8-hd and speech-2.8-turbo produce different bytes
+    // for the same (text, voice). Without the model in the key, a
+    // default-tier change would silently replay the old audio forever.
+    const hd = key({ providerName: "minimax-tts", model: "speech-2.8-hd" });
+    const turbo = key({
+      providerName: "minimax-tts",
+      model: "speech-2.8-turbo",
+    });
+    expect(hd).not.toBe(turbo);
+  });
+
+  it("leaves the key untouched for a backend with one output", () => {
+    // The pinned key above is the regression guard: a term that is
+    // always present would re-synthesize every scene in every project.
+    expect(key()).toBe(key({ model: undefined }));
+  });
+
+  it("names the default MiniMax tier for the minimax provider", () => {
+    expect(ttsCacheModelFor("minimax-tts")).toBe("speech-2.8-hd");
+    expect(ttsCacheModelFor("edge")).toBeUndefined();
+    expect(ttsCacheModelFor("voicebox")).toBeUndefined();
+  });
+});
+
+describe("effectiveTtsVoice — the fallback follows the backend", () => {
+  it("uses the frontmatter voice when there is one", () => {
+    expect(
+      effectiveTtsVoice("narrator-zh", "zh-CN", "voicebox"),
+    ).toBe("narrator-zh");
+  });
+
+  it("falls back to the voice the backend can speak", () => {
+    // A voice id only means something to the backend that owns it, so
+    // the fallback cannot be language-only.
+    expect(effectiveTtsVoice(undefined, "zh-CN", "minimax")).toBe(
+      "Chinese (Mandarin)_Male_Announcer",
+    );
+    expect(effectiveTtsVoice(undefined, "zh-CN", "edge")).toBe(
+      "zh-CN-YunjianNeural",
+    );
+    // No provider stated at all → the historical Edge default.
+    expect(effectiveTtsVoice(undefined, "zh-CN")).toBe("zh-CN-YunjianNeural");
   });
 });

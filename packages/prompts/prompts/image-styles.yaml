@@ -35,12 +35,13 @@ whiteboard:
       end-caps. The hand stays visible: lines waver a degree off true,
       spacing is uneven, a circle closes imperfectly. Never fine-tip
       pen, calligraphic taper, brush, or quill — thin ink is a defect.
+    - Locked palette: black marker #1A1A1A, board white #FFFFFF, and
+      mid-blue #2F6FB5 as the only accent. Reuse these three in every
+      scene; no fourth color, no grey, no shading.
     - Accent discipline: mid-blue #2F6FB5 marks ONLY the element the
       narration is about — the answer path, the highlighted node, the
       winning branch — drawn ON TOP of the black structure, never
-      beside it. Everything else stays black marker #1A1A1A on board
-      white #FFFFFF. Three colors total, reused in every scene; no
-      fourth color, no grey, no shading.
+      beside it.
     - Diagram grammar: solid arrows for flow, dotted lines for
       tentative links, circles and underline swooshes for emphasis,
       callout brackets to lift a detail. People appear as consistent

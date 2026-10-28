@@ -81,7 +81,14 @@ const MAX_BRIEF_CHARS = 1400;
 // discipline (blue only on the narration's element), connector grammar,
 // anti-thin-ink wording. Same failure the suffix-storage rule covers: a
 // preset change must invalidate the brief cache.
-export const IMAGE_PROMPT_REVISION = "12";
+// v13 — whiteboard preset states its palette lock again. The v12 rewrite
+// folded the palette into the accent bullet and dropped the literal
+// "Locked palette:" contract the prompts contract test enforces on every
+// preset; the colors are unchanged (same three hex values, same
+// reuse-in-every-scene rule), but the preset text feeds the expander's
+// system message, so the brief cache must invalidate as it does for any
+// other preset edit.
+export const IMAGE_PROMPT_REVISION = "13";
 
 /** Remove the reasoning scaffold that reasoning-enabled chat models emit
  *  ahead of their answer (`<think>…</think>`, an unterminated `<think>`,

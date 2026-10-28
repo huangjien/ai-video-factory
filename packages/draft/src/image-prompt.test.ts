@@ -324,9 +324,10 @@ describe("setting participates in the brief cache identity", () => {
     // thin category hint, v8 = the no-text rule draws the line at
     // READABILITY rather than at the presence of marks, v12 = the
     // whiteboard preset rewrite (focal diagram, accent discipline,
-    // connector grammar). Without each bump, briefs cached by the
+    // connector grammar), v13 = the whiteboard preset states its palette
+    // lock again. Without each bump, briefs cached by the
     // previous expander wording outlive the change.
-    expect(IMAGE_PROMPT_REVISION).toBe("12");
+    expect(IMAGE_PROMPT_REVISION).toBe("13");
   });
 });
 

@@ -249,6 +249,10 @@ browser-based preview with a timeline and input-props editing. The Studio
 workspace is regenerated from the storyboard on each launch, so re-run it
 after editing the storyboard to refresh the composition.
 
+The Studio server prints its URL (`Server ready - Local: http://localhost:3000`)
+and does **not** open a browser on its own — the Remotion CLI would otherwise
+open a tab in your default browser. Pass `--open` to auto-open it.
+
 The generated workspace is a real Remotion project, so anything Studio can
 do (props editing, frame scrubbing) works against the pipeline's exact
 render implementation. It is the fastest way to iterate on visuals before

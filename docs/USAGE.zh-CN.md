@@ -230,6 +230,10 @@ flowchart LR
 预览，带时间轴和输入 props 编辑。Studio 的工作区每次启动都从分镜重新生成，
 所以改过分镜后要重跑一次来刷新合成。
 
+Studio 服务会打印自己的地址（`Server ready - Local: http://localhost:3000`），
+但**默认不会打开浏览器**——Remotion CLI 否则会在你的默认浏览器里开一个标签页。
+需要自动打开时加 `--open`。
+
 生成出来的工作区是一个真正的 Remotion 项目，因此 Studio 能做的（改 props、
 拖帧）都作用于流水线真正的渲染实现。这是渲染任何 MP4 之前迭代画面最快
 的办法。

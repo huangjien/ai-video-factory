@@ -105,7 +105,12 @@ describe("runStudio — launching the Remotion CLI", () => {
     });
     await runStudio({ project: "st-port", cwd: root, port: 4321 });
     const args = await readFile(path.join(workdir, "args.txt"), "utf8");
-    expect(args.trim().split(/\s+/)).toEqual(["studio", "--port", "4321"]);
+    expect(args.trim().split(/\s+/)).toEqual([
+      "studio",
+      "--port",
+      "4321",
+      "--no-open",
+    ]);
   });
 
   it("omits the port flag when no port is requested", async () => {
@@ -118,7 +123,33 @@ describe("runStudio — launching the Remotion CLI", () => {
     });
     await runStudio({ project: "st-noport", cwd: root });
     const args = await readFile(path.join(workdir, "args.txt"), "utf8");
-    expect(args.trim()).toBe("studio");
+    expect(args.trim()).toBe("studio --no-open");
+  });
+
+  it("passes --no-open by default so the CLI never opens a browser tab", async () => {
+    await makeProject("st-noopen");
+    const bin = await fakeCli(0);
+    prepareStudioWorkspace.mockResolvedValue({
+      bin,
+      cwd: workdir,
+      workspaceDir: workdir,
+    });
+    await runStudio({ project: "st-noopen", cwd: root });
+    const args = await readFile(path.join(workdir, "args.txt"), "utf8");
+    expect(args).toContain("--no-open");
+  });
+
+  it("drops --no-open when the caller asks for the browser to open", async () => {
+    await makeProject("st-open");
+    const bin = await fakeCli(0);
+    prepareStudioWorkspace.mockResolvedValue({
+      bin,
+      cwd: workdir,
+      workspaceDir: workdir,
+    });
+    await runStudio({ project: "st-open", cwd: root, open: true });
+    const args = await readFile(path.join(workdir, "args.txt"), "utf8");
+    expect(args).not.toContain("--no-open");
   });
 
   it("propagates the CLI exit code", async () => {
@@ -155,6 +186,7 @@ describe("registerStudio", () => {
     const longs = (cmd?.options ?? []).map((o) => o.long);
     expect(longs).toContain("--cwd");
     expect(longs).toContain("--port");
+    expect(longs).toContain("--open");
   });
 
   it("runs the studio command through the commander wiring", async () => {

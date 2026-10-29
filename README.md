@@ -83,6 +83,10 @@ node packages/cli/dist/index.js studio demo
 #   and starts the Studio web server; Ctrl-C stops it
 ```
 
+The Studio server prints its URL (`Server ready - Local: http://localhost:3000`).
+It does **not** open a browser by default — the Remotion CLI would otherwise
+open a tab in your default browser. Pass `--open` to auto-open it.
+
 Re-run `video studio` after editing the storyboard to refresh the composition.
 The generated workspace is a real Remotion project — anything Studio can do
 (props editing, frame scrubbing) works against the pipeline's exact render

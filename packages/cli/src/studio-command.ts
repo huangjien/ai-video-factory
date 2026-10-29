@@ -7,6 +7,10 @@ export interface StudioOptions {
   project?: string | undefined;
   cwd?: string | undefined;
   port?: number | undefined;
+  /** Open the Studio UI in the default browser. Off by default: the
+   *  Remotion CLI opens a tab in the user's browser on its own, which
+   *  hijacks whatever they were doing. */
+  open?: boolean | undefined;
 }
 
 /** Launch Remotion Studio against the project's current composition
@@ -38,6 +42,13 @@ export async function runStudio(opts: StudioOptions): Promise<number> {
 
   console.log(`Studio workspace: ${workspace.workspaceDir}`);
   console.log(`Starting Remotion Studio (Ctrl-C to stop)…`);
+  if (opts.open) {
+    console.log("Opening the Studio in your default browser…");
+  } else {
+    console.log(
+      "Not opening a browser — open the URL Remotion prints. Pass --open to auto-open.",
+    );
+  }
 
   return new Promise<number>((resolve) => {
     const child = spawn(
@@ -45,6 +56,10 @@ export async function runStudio(opts: StudioOptions): Promise<number> {
       [
         "studio",
         ...(opts.port !== undefined ? ["--port", String(opts.port)] : []),
+        // Remotion Studio opens the default browser unless --no-open is
+        // passed. Default to NOT opening it: a Studio launch must never
+        // hijack the user's browser session.
+        ...(opts.open ? [] : ["--no-open"]),
       ],
       { cwd: workspace.cwd, stdio: "inherit" },
     );
@@ -70,15 +85,20 @@ export function registerStudio(program: Command): void {
     .option("--port <n>", "port for the Studio web server", (v) =>
       parseInt(v, 10),
     )
+    .option(
+      "--open",
+      "open the Studio in your default browser (off by default — the Remotion CLI would otherwise open a tab)",
+    )
     .action(
       async (
         project: string | undefined,
-        opts: { cwd?: string; port?: number },
+        opts: { cwd?: string; port?: number; open?: boolean },
       ) => {
         process.exitCode = await runStudio({
           ...(project !== undefined ? { project } : {}),
           ...(opts.cwd !== undefined ? { cwd: opts.cwd } : {}),
           ...(opts.port !== undefined ? { port: opts.port } : {}),
+          ...(opts.open !== undefined ? { open: opts.open } : {}),
         });
       },
     );

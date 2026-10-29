@@ -57,13 +57,11 @@ export default defineConfig({
     // appears and every ask-envelope assertion becomes machine-dependent.
     // Port 9 (discard) refuses instantly.
     env: { VOICEBOX_URL: "http://127.0.0.1:9" },
-    poolOptions: {
-      forks: {
-        // One fork per CPU by default; cap at 4 to avoid resource spikes
-        // on small CI runners.
-        maxForks: 4,
-      },
-    },
+    // One fork per CPU by default; cap at 4 to avoid resource spikes
+    // on small CI runners. Vitest 5 removed `poolOptions` — the fork cap
+    // is the top-level `maxWorkers` now. (The old `poolOptions.forks.
+    // maxForks` key was silently ignored, so the cap never applied.)
+    maxWorkers: 4,
     // Enabled in config (not just via `pnpm test`'s --coverage flag) so
     // scoped runs — `pnpm vitest run packages/<name>` — end with the
     // coverage table too. Scoped runs only execute one package, so every

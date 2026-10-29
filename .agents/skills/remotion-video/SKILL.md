@@ -131,7 +131,7 @@ For batch/data-driven pipelines, render in Node with `@remotion/renderer` (bundl
 
 ## Deliver & verify (rendered stills → MP4)
 
-> **Packaged helper** (`scripts/`): tile your stills with `scripts/contact-sheet.sh sheet.png f-hook.png f-mid.png f-end.png`, then assert the encode with `scripts/probe-mp4.sh out.mp4 [WxH] [fps]`. See `scripts/README.md`.
+> **Review shortcut**: tile your stills into one contact sheet for a single-glance review, then assert the encode with `ffprobe` (width, height, fps). This skill ships no helper scripts — tile the frames and probe the file yourself.
 
 Remotion is frame-deterministic by construction — every frame is a pure function of `useCurrentFrame()`, so you can render any exact frame headlessly with **no seek harness** (this is the heavy-tier counterpart to a web scene's `?t=N`). Use this tier when the output must be an MP4/GIF, must carry exact numbers/text, or batches from data; for a lightweight web animation, deliver standalone HTML instead.
 

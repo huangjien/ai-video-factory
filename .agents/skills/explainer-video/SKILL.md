@@ -140,7 +140,7 @@ Lock one type scale, one color grammar (color = meaning, never reassigned), and 
 
 ## Deliver & verify (rendered stills → MP4)
 
-> **Packaged helper** (`scripts/`): tile your stills with `scripts/contact-sheet.sh sheet.png f-hook.png f-mid.png f-end.png`, then assert the encode with `scripts/probe-mp4.sh out.mp4 [WxH] [fps]`. See `scripts/README.md`.
+> **Review shortcut**: tile your stills into one contact sheet for a single-glance review, then assert the encode with `ffprobe` (width, height, fps). This skill ships no helper scripts — tile the frames and probe the file yourself.
 
 The assembled explainer is a Remotion composition — frame-deterministic, so any exact frame renders headlessly with no seek harness. Use this tier when the deliverable is an MP4/GIF that carries baked narration and burned captions; for a single web scene, deliver standalone HTML instead.
 

@@ -117,7 +117,7 @@ See `references/color-management.md` for the full diagnosis decision tree, exact
 
 ## Deliver & verify (standalone HTML)
 
-> **Packaged helper** (`scripts/`): `scripts/seek-shot.sh anim.html 0 1.5 3` freezes the `?t=N` harness and screenshots each moment; `scripts/contact-sheet.sh sheet.png frame-*.png` tiles them for one-glance review. See `scripts/README.md`.
+> **Review shortcut**: freeze the `?t=N` harness at each key moment, screenshot every frozen frame, then tile the frames into one contact sheet for a single-glance review. This skill ships no helper scripts — capture and tile the frames yourself.
 
 For a web palette/gradient/color-transition deliverable, ship **one `.html` file that opens directly in a browser** — no build step. CSS handles the color work; the file is self-contained.
 

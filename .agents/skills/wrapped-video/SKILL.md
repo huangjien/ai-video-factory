@@ -165,7 +165,7 @@ For thousands of rows, fan out across machines/Lambda and dedupe identical prop 
 
 ## Deliver & verify (rendered stills → MP4)
 
-> **Packaged helper** (`scripts/`): tile your stills with `scripts/contact-sheet.sh sheet.png f-hook.png f-mid.png f-end.png`, then assert the encode with `scripts/probe-mp4.sh out.mp4 [WxH] [fps]`. See `scripts/README.md`.
+> **Review shortcut**: tile your stills into one contact sheet for a single-glance review, then assert the encode with `ffprobe` (width, height, fps). This skill ships no helper scripts — tile the frames and probe the file yourself.
 
 A Wrapped is a Remotion composition rendered per data row — frame-deterministic, so any exact frame renders headlessly with no seek harness. The deliverable is an MP4 (often many) carrying each person's exact numbers; verify one representative row by stills before you batch.
 

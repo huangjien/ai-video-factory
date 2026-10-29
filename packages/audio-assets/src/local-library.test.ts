@@ -7,6 +7,7 @@ import {
   listMoods,
   loadLocalBgmLibrary,
   pickByMood,
+  probeLibrary,
   resolveBgmTag,
 } from "./index.js";
 
@@ -61,6 +62,17 @@ describe("local-library", () => {
     ]);
   });
 
+  it("skips the silent placeholder and keeps one entry per tag", () => {
+    const dupes = mkdtempSync(path.join(tmpdir(), "video-bgm-dupes-"));
+    writeFileSync(path.join(dupes, "calm.mp3"), Buffer.from([0xff]));
+    writeFileSync(path.join(dupes, "calm.silent.wav"), Buffer.from([0x00]));
+    writeFileSync(path.join(dupes, "calm.wav"), Buffer.from([0x52]));
+    const entries = loadLocalBgmLibrary(dupes);
+    expect(entries.map((e) => e.tag)).toEqual(["calm"]);
+    expect(entries[0]?.path.endsWith("calm.mp3")).toBe(true);
+    rmSync(dupes, { recursive: true, force: true });
+  });
+
   it("entries expose the mood inferred from the tag prefix", () => {
     const entries = loadLocalBgmLibrary(dir);
     const ambient = entries.find((e) => e.tag === "ambient-take-your-pick");
@@ -71,6 +83,15 @@ describe("local-library", () => {
 
   it("returns an empty list for a missing directory", () => {
     expect(loadLocalBgmLibrary(path.join(dir, "nope"))).toEqual([]);
+  });
+
+  it("probeLibrary keeps a null duration when ffprobe cannot read a file", async () => {
+    const entries = loadLocalBgmLibrary(dir);
+    const probed = await probeLibrary(entries);
+    expect(probed).toHaveLength(entries.length);
+    // The fixtures are 1-2 byte stubs, not real audio — the probe fails
+    // and every entry keeps durationSec: null instead of a wrong number.
+    expect(probed.every((e) => e.durationSec === null)).toBe(true);
   });
 
   it("listMoods deduplicates and sorts the mood labels", () => {
@@ -137,6 +158,31 @@ describe("local-library", () => {
       const r = resolveBgmTag({ tag: "calm", projectDir: multi });
       expect(r.path.endsWith("calm.wav")).toBe(true);
       rmSync(multi, { recursive: true, force: true });
+    });
+
+    it("skips a project dir that does not exist and searches the curated dir", () => {
+      const r = resolveBgmTag({
+        tag: "calm",
+        projectDir: path.join(dir, "does-not-exist"),
+        curatedDir: dir,
+      });
+      expect(r.source).toBe("curated");
+      expect(r.path).toContain(dir);
+    });
+
+    it("falls back to a fuzzy filename match inside a directory", () => {
+      const fuzzy = mkdtempSync(path.join(tmpdir(), "video-resolve-fuzzy-"));
+      writeFileSync(
+        path.join(fuzzy, "ambient-take-your-pick.mp3"),
+        Buffer.from([0x52]),
+      );
+      // Placeholders and non-audio siblings must not win the fuzzy match.
+      writeFileSync(path.join(fuzzy, "take-your.silent.wav"), Buffer.from([0]));
+      writeFileSync(path.join(fuzzy, "take-your-notes.txt"), "notes");
+      const r = resolveBgmTag({ tag: "take-your", projectDir: fuzzy });
+      expect(r.source).toBe("project");
+      expect(r.path).toContain("ambient-take-your-pick.mp3");
+      rmSync(fuzzy, { recursive: true, force: true });
     });
 
     it("throws when neither directory has the tag", () => {

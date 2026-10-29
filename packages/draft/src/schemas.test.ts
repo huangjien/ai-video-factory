@@ -4,6 +4,9 @@ import {
   ArticleFrontmatterSchema,
   SceneBlockSchema,
   parseArticle,
+  parseArticleLenient,
+  parseArticleWithRecovery,
+  recoverEmptyNarrations,
   articleToStoryboardYaml,
   type ParsedArticle,
 } from "./schemas.js";
@@ -444,22 +447,16 @@ scenes:
 `;
 
   it("strict parseArticle rejects empty narrations", () => {
-    const { parseArticle } = require("@video/draft");
     expect(() => parseArticle(MALFORMED_ARTICLE)).toThrow(/too_small/);
   });
 
   it("parseArticleLenient accepts the malformed draft", () => {
-    const { parseArticleLenient } = require("@video/draft");
     const parsed = parseArticleLenient(MALFORMED_ARTICLE);
     expect(parsed.scenes).toHaveLength(4);
     expect(parsed.scenes[0]?.narration).toBe("");
   });
 
   it("recoverEmptyNarrations back-fills each scene from the matching section body", () => {
-    const {
-      parseArticleLenient,
-      recoverEmptyNarrations,
-    } = require("@video/draft");
     const parsed = parseArticleLenient(MALFORMED_ARTICLE);
     const { article, recoveredCount } = recoverEmptyNarrations(parsed);
     expect(recoveredCount).toBe(4);
@@ -470,10 +467,6 @@ scenes:
   });
 
   it("does not touch scenes that already have narration", () => {
-    const {
-      parseArticleLenient,
-      recoverEmptyNarrations,
-    } = require("@video/draft");
     const md = MALFORMED_ARTICLE.replace(
       'caption: D\n    visual: ""\n    narration: ""',
       'caption: D\n    visual: ""\n    narration: "kept verbatim"',
@@ -485,7 +478,6 @@ scenes:
   });
 
   it("parseArticleWithRecovery accepts good drafts unchanged and recovers malformed ones", () => {
-    const { parseArticleWithRecovery } = require("@video/draft");
     const good = parseArticleWithRecovery(SAMPLE_MD);
     expect(good.recoveredCount).toBe(0);
     expect(good.article.scenes).toHaveLength(2);
@@ -496,7 +488,6 @@ scenes:
   });
 
   it("parseArticleWithRecovery rethrows non-narration parse errors", () => {
-    const { parseArticleWithRecovery } = require("@video/draft");
     expect(() => parseArticleWithRecovery("# title\n\nfoo\n")).toThrow(
       /frontmatter/,
     );
@@ -689,5 +680,190 @@ describe("scene text overlay (CS-06)", () => {
       expect(typeof s.visual.props).toBe("object");
       expect(s.visual.props).not.toBeNull();
     }
+  });
+});
+
+describe("articleToStoryboardYaml — scene fields and prop shapes", () => {
+  /** Build an article whose single scene carries the given YAML lines. */
+  function articleWithScene(sceneLines: string[]): ParsedArticle {
+    const md = `---
+project: shapes
+language: zh-CN
+duration_target_sec: 30
+voice: zh-CN-YunjianNeural
+---
+
+# Shapes
+
+## Scenes
+
+\`\`\`yaml
+scenes:
+${sceneLines.map((l) => `  ${l}`).join("\n")}
+\`\`\`
+`;
+    return parseArticle(md);
+  }
+
+  it("carries a scene's hold_after_sec into the storyboard yaml", () => {
+    const yaml = articleToStoryboardYaml(
+      articleWithScene([
+        "- id: scene_1",
+        "  duration: 8",
+        "  caption: 留白",
+        "  visual: 图标",
+        "  narration: 旁白",
+        "  hold_after_sec: 2.5",
+      ]),
+    );
+    expect(yaml).toContain("hold_after_sec: 2.5");
+  });
+
+  it("writes a block sequence for a list-of-strings prop", () => {
+    // The FIRST scene always becomes the Title card, so the pyramid
+    // scene has to be the second one.
+    const yaml = articleToStoryboardYaml(
+      articleWithScene([
+        "- id: scene_1",
+        "  duration: 8",
+        "  caption: 开场",
+        "  visual: 图标",
+        "  narration: 旁白",
+        "- id: scene_2",
+        "  duration: 8",
+        "  caption: 层级结构",
+        "  visual: 层级关系图",
+        "  narration: 旁白",
+      ]),
+    );
+    expect(yaml).toContain("levels:");
+    expect(yaml).toMatch(/^\s+- /m);
+  });
+
+  it("writes an empty props object for a scene with no props", () => {
+    const yaml = articleToStoryboardYaml(
+      articleWithScene([
+        "- id: scene_1",
+        "  duration: 8",
+        "  caption: 开场",
+        "  visual: 图标",
+        "  narration: 旁白",
+        "- id: scene_2",
+        "  duration: 8",
+        "  caption: 战役地图",
+        "  visual: 地图",
+        "  narration: 旁白",
+      ]),
+    );
+    expect(yaml).toContain("props: {}");
+  });
+});
+
+describe("article parsing — recovery and malformed input", () => {
+  it("reports no recovery when the prose body has no sections", () => {
+    const md = `---
+project: no-sections
+language: zh-CN
+duration_target_sec: 30
+voice: zh-CN-YunjianNeural
+---
+
+## Scenes
+
+\`\`\`yaml
+scenes:
+  - id: scene_1
+    duration: 8
+    caption: 标题
+    visual: 图标
+    narration: ""
+\`\`\`
+`;
+    const parsed = parseArticleLenient(md);
+    const { article, recoveredCount } = recoverEmptyNarrations(parsed);
+    expect(recoveredCount).toBe(0);
+    expect(article.scenes[0]?.narration).toBe("");
+  });
+
+  it("splits a section body evenly when it has fewer sentences than scenes", () => {
+    // One section, one sentence, two scenes — the sentence-per-slot rule
+    // cannot apply, so the body is divided by length instead.
+    const md = `---
+project: even-split
+language: zh-CN
+duration_target_sec: 30
+voice: zh-CN-YunjianNeural
+---
+
+# Even split
+
+## 1. 唯一小节
+
+只有一句话但有两个场景需要旁白。
+
+## Scenes
+
+\`\`\`yaml
+scenes:
+  - id: scene_1
+    duration: 8
+    caption: 一
+    visual: 图标
+    narration: ""
+  - id: scene_2
+    duration: 8
+    caption: 二
+    visual: 图标
+    narration: ""
+\`\`\`
+`;
+    const parsed = parseArticleLenient(md);
+    const { article, recoveredCount } = recoverEmptyNarrations(parsed);
+    expect(recoveredCount).toBe(2);
+    expect(article.scenes[0]?.narration.length).toBeGreaterThan(0);
+    expect(article.scenes[1]?.narration.length).toBeGreaterThan(0);
+  });
+
+  it("rejects frontmatter that is not valid YAML", () => {
+    const md = `---
+project: [unclosed
+---
+
+# Title
+
+## Scenes
+
+\`\`\`yaml
+scenes:
+  - id: scene_1
+    duration: 8
+    caption: 标题
+    visual: 图标
+    narration: 旁白
+\`\`\`
+`;
+    expect(() => parseArticle(md)).toThrow(/frontmatter YAML parse failed/);
+  });
+
+  it("leaves the title undefined when the body has no H1", () => {
+    const md = `---
+project: no-title
+language: zh-CN
+duration_target_sec: 30
+voice: zh-CN-YunjianNeural
+---
+
+## Scenes
+
+\`\`\`yaml
+scenes:
+  - id: scene_1
+    duration: 8
+    caption: 标题
+    visual: 图标
+    narration: 旁白
+\`\`\`
+`;
+    expect(parseArticle(md).title).toBeUndefined();
   });
 });

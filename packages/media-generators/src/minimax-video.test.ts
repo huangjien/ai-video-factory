@@ -266,3 +266,224 @@ describe("MiniMaxVideoProvider (v0.3 phase 2) — /v1/video_generation async flo
     expect(String(err).includes("test-key")).toBe(false);
   });
 });
+
+describe("MiniMaxVideoProvider — error paths", () => {
+  /** Set by the test body so the handler can point at its own server. */
+  let urlBase = "";
+
+  /** Start a one-off server that answers every path with `handler`. */
+  async function withServer(
+    handler: (req: IncomingMessage, res: ServerResponse) => void,
+    run: (baseUrl: string) => Promise<void>,
+  ): Promise<void> {
+    const s = createServer(handler);
+    const url = await listen(s);
+    try {
+      await run(url);
+    } finally {
+      await new Promise<void>((r) => s.close(() => r()));
+    }
+  }
+
+  const request = {
+    prompt: "x",
+    width: 1080,
+    height: 1920,
+    durationSec: 5,
+  };
+
+  it("surfaces the status and body excerpt when create fails", async () => {
+    process.env["MINIMAX_API_KEY"] = "test-key";
+    await withServer(
+      (_req, res) => {
+        res.statusCode = 401;
+        res.end("unauthorized: bad token");
+      },
+      async (url) => {
+        const p = new MiniMaxVideoProvider({
+          apiHost: url,
+          pollIntervalMs: 1,
+          timeoutMs: 500,
+        });
+        const err = await p
+          .generate(request)
+          .then(() => undefined)
+          .catch((e: unknown) => e as Error & { status?: number });
+        expect(err?.message).toMatch(/MiniMax video API 401/);
+        expect(err?.status).toBe(401);
+      },
+    );
+  });
+
+  it("throws when create returns no task_id", async () => {
+    process.env["MINIMAX_API_KEY"] = "test-key";
+    await withServer(
+      (_req, res) => {
+        res.end(JSON.stringify({ base_resp: { status_code: 0 } }));
+      },
+      async (url) => {
+        const p = new MiniMaxVideoProvider({
+          apiHost: url,
+          pollIntervalMs: 1,
+          timeoutMs: 500,
+        });
+        await expect(p.generate(request)).rejects.toThrow(
+          /did not return task_id/,
+        );
+      },
+    );
+  });
+
+  it("throws when the poll query fails", async () => {
+    process.env["MINIMAX_API_KEY"] = "test-key";
+    await withServer(
+      (req, res) => {
+        if (req.url?.includes("/v1/video_generation")) {
+          res.end(JSON.stringify({ task_id: "task-123" }));
+          return;
+        }
+        res.statusCode = 500;
+        res.end("query blew up");
+      },
+      async (url) => {
+        const p = new MiniMaxVideoProvider({
+          apiHost: url,
+          pollIntervalMs: 1,
+          timeoutMs: 500,
+        });
+        await expect(p.generate(request)).rejects.toThrow(
+          /MiniMax video query 500/,
+        );
+      },
+    );
+  });
+
+  it("times out when the task never finishes", async () => {
+    process.env["MINIMAX_API_KEY"] = "test-key";
+    await withServer(
+      (req, res) => {
+        if (req.url?.includes("/v1/video_generation")) {
+          res.end(JSON.stringify({ task_id: "task-123" }));
+          return;
+        }
+        res.end(JSON.stringify({ status: "Processing", task_id: "task-123" }));
+      },
+      async (url) => {
+        const p = new MiniMaxVideoProvider({
+          apiHost: url,
+          pollIntervalMs: 1,
+          timeoutMs: 30,
+        });
+        await expect(p.generate(request)).rejects.toThrow(/timed out/i);
+      },
+    );
+  });
+
+  it("throws when the file metadata lookup fails", async () => {
+    process.env["MINIMAX_API_KEY"] = "test-key";
+    await withServer(
+      (req, res) => {
+        if (req.url?.includes("/v1/video_generation")) {
+          res.end(JSON.stringify({ task_id: "task-123" }));
+          return;
+        }
+        if (req.url?.includes("/v1/query/")) {
+          res.end(
+            JSON.stringify({
+              status: "Success",
+              file_id: "file-456",
+              task_id: "task-123",
+            }),
+          );
+          return;
+        }
+        res.statusCode = 404;
+        res.end("no such file");
+      },
+      async (url) => {
+        const p = new MiniMaxVideoProvider({
+          apiHost: url,
+          pollIntervalMs: 1,
+          timeoutMs: 500,
+        });
+        await expect(p.generate(request)).rejects.toThrow(
+          /MiniMax file retrieve 404/,
+        );
+      },
+    );
+  });
+
+  it("throws when the file metadata carries no download_url", async () => {
+    process.env["MINIMAX_API_KEY"] = "test-key";
+    await withServer(
+      (req, res) => {
+        if (req.url?.includes("/v1/video_generation")) {
+          res.end(JSON.stringify({ task_id: "task-123" }));
+          return;
+        }
+        if (req.url?.includes("/v1/query/")) {
+          res.end(
+            JSON.stringify({
+              status: "Success",
+              file_id: "file-456",
+              task_id: "task-123",
+            }),
+          );
+          return;
+        }
+        res.end(JSON.stringify({ file: { file_id: "file-456" } }));
+      },
+      async (url) => {
+        const p = new MiniMaxVideoProvider({
+          apiHost: url,
+          pollIntervalMs: 1,
+          timeoutMs: 500,
+        });
+        await expect(p.generate(request)).rejects.toThrow(/no download_url/);
+      },
+    );
+  });
+
+  it("throws when the signed download_url fetch fails", async () => {
+    process.env["MINIMAX_API_KEY"] = "test-key";
+    await withServer(
+      (req, res) => {
+        if (req.url?.includes("/v1/video_generation")) {
+          res.end(JSON.stringify({ task_id: "task-123" }));
+          return;
+        }
+        if (req.url?.includes("/v1/query/")) {
+          res.end(
+            JSON.stringify({
+              status: "Success",
+              file_id: "file-456",
+              task_id: "task-123",
+            }),
+          );
+          return;
+        }
+        if (req.url?.includes("/v1/files/retrieve")) {
+          res.end(
+            JSON.stringify({
+              file: { download_url: `${urlBase}/signed-download` },
+            }),
+          );
+          return;
+        }
+        res.statusCode = 403;
+        res.end("expired signature");
+      },
+      async (url) => {
+        urlBase = url;
+        const p = new MiniMaxVideoProvider({
+          apiHost: url,
+          pollIntervalMs: 1,
+          timeoutMs: 500,
+        });
+        await expect(p.generate(request)).rejects.toThrow(
+          /download_url fetch 403/,
+        );
+      },
+    );
+  });
+});

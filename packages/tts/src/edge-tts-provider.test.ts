@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { execFileSync } from "node:child_process";
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -253,4 +254,75 @@ describe("EdgeTTSProvider.synthesize (fake python worker)", () => {
 afterEach(() => {
   delete process.env["CAPTURE_FILE"];
   rmSync(tempDir, { recursive: true, force: true });
+});
+
+describe("EdgeTTSProvider — spawn failure and the ffmpeg concat path", () => {
+  it("reports a worker binary that cannot be spawned", async () => {
+    const p = new EdgeTTSProvider({
+      pythonBin: path.join(tempDir, "no-such-binary"),
+      pythonArgs: [],
+    });
+    await expect(
+      p.synthesize({ text: "x", voice: "v", language: "en-US" }),
+    ).rejects.toThrow(/failed to spawn/);
+  });
+
+  it("merges the per-sentence audio with silence gaps and offsets the words", async () => {
+    // Real MP3 bytes so ffmpeg can decode them — the concat path only
+    // runs end-to-end with decodable audio.
+    const mp3 = path.join(tempDir, "sample.mp3");
+    execFileSync("ffmpeg", [
+      "-y",
+      "-loglevel",
+      "error",
+      "-f",
+      "lavfi",
+      "-i",
+      "sine=frequency=440:duration=0.2",
+      "-q:a",
+      "9",
+      mp3,
+    ]);
+    const worker = path.join(tempDir, "mp3-worker.cjs");
+    writeFileSync(
+      worker,
+      [
+        "const chunks = [];",
+        "process.stdin.on('data', (d) => chunks.push(d));",
+        "process.stdin.on('end', () => {",
+        "  const req = JSON.parse(Buffer.concat(chunks).toString());",
+        "  require('node:fs').copyFileSync(process.env.SOURCE_MP3, req.output);",
+        "  console.log(JSON.stringify({",
+        "    ok: true,",
+        "    durationMs: 900,",
+        "    words: [",
+        "      { text: '你好', startMs: 0, endMs: 500 },",
+        "      { text: '世界', startMs: 500, endMs: 900 },",
+        "    ],",
+        "  }));",
+        "});",
+      ].join("\n"),
+    );
+    process.env["SOURCE_MP3"] = mp3;
+    const p = new EdgeTTSProvider({
+      pythonBin: process.execPath,
+      pythonArgs: [worker],
+    });
+    const result = await p.synthesize({
+      text: "今天天气好。我们去公园。",
+      voice: "zh-CN-XiaoxiaoNeural",
+      language: "zh-CN",
+      pauseBetweenSentencesSec: 0.5,
+    });
+    delete process.env["SOURCE_MP3"];
+    expect(result.audio.byteLength).toBeGreaterThan(0);
+    // Two parts of 900 ms plus one 500 ms gap.
+    expect(result.durationMs).toBe(2300);
+    // The second part's words are shifted past the first part + the gap.
+    expect(result.words[2]).toEqual({
+      text: "你好",
+      startMs: 1400,
+      endMs: 1900,
+    });
+  });
 });

@@ -1,6 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { execFileSync } from "node:child_process";
+import {
+  chmodSync,
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  writeFileSync,
+} from "node:fs";
 import { join } from "node:path";
+import { tmpdir } from "node:os";
 import { F5TTSProvider, f5ttsStatus, type F5GenConfig } from "./f5tts.js";
 
 // Minimal 24kHz WAV stub — the provider only counts bytes and trusts the
@@ -148,3 +156,159 @@ describe("f5ttsStatus", () => {
 function workDirOf(config: F5GenConfig): string {
   return join(config.out_wav, "..");
 }
+
+/**
+ * The default (non-injected) code paths: the provider really spawns the
+ * interpreter and really calls ffmpeg. The tests below point those
+ * spawns at local stand-ins so the branch logic — argument passing,
+ * stdin contract, exit-code handling — is verified offline.
+ */
+describe("F5TTSProvider — default python runner", () => {
+  // A temp dir, not the package directory: the fixtures must not
+  // litter the source tree.
+  const dir = join(tmpdir(), `vf-f5-default-${process.pid}`);
+
+  /** A stand-in for the F5 interpreter: reads the config JSON on stdin
+   *  and writes the two files the driver promises. */
+  function writeFakePython(): string {
+    mkdirSync(dir, { recursive: true });
+    const worker = join(dir, "worker.cjs");
+    writeFileSync(
+      worker,
+      [
+        "const chunks = [];",
+        "process.stdin.on('data', (d) => chunks.push(d));",
+        "process.stdin.on('end', () => {",
+        "  const cfg = JSON.parse(Buffer.concat(chunks).toString());",
+        "  require('node:fs').writeFileSync(cfg.out_wav, Buffer.alloc(64, 1));",
+        "  require('node:fs').writeFileSync(cfg.out_json, JSON.stringify({ duration_sec: 2.5, sample_rate: 24000 }));",
+        "});",
+      ].join("\n"),
+      "utf8",
+    );
+    const shim = join(dir, "fake-python.sh");
+    writeFileSync(
+      shim,
+      `#!/bin/sh\nexec ${process.execPath} ${worker}\n`,
+      "utf8",
+    );
+    chmodSync(shim, 0o755);
+    return shim;
+  }
+
+  /** A real 24 kHz WAV — the default resample runs ffmpeg on it. */
+  function writeRealWav(target: string): void {
+    mkdirSync(dir, { recursive: true });
+    execFileSync("ffmpeg", [
+      "-y",
+      "-loglevel",
+      "error",
+      "-f",
+      "lavfi",
+      "-i",
+      "sine=frequency=440:duration=0.2",
+      "-ar",
+      "24000",
+      "-ac",
+      "1",
+      target,
+    ]);
+    writeFileSync(target.replace(/\.wav$/, ".txt"), "参考转写。", "utf8");
+  }
+
+  it("synthesizes through the real python runner and the real ffmpeg resample", async () => {
+    const pythonPath = writeFakePython();
+    const ref = join(dir, "ref.wav");
+    writeRealWav(ref);
+    const p = new F5TTSProvider({ pythonPath, refAudioPath: ref });
+    const r = await p.synthesize({
+      text: "你好世界。",
+      voice: "narrator-zh",
+      language: "zh-CN",
+    });
+    expect(r.audio.byteLength).toBe(64);
+    expect(r.durationMs).toBe(2500);
+    expect(r.words).toEqual([]);
+  });
+
+  it("reports a reference clip ffmpeg cannot decode", async () => {
+    const pythonPath = writeFakePython();
+    const ref = join(dir, "broken.wav");
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(ref, "not a wav at all");
+    writeFileSync(ref.replace(/\.wav$/, ".txt"), "参考转写。", "utf8");
+    const p = new F5TTSProvider({ pythonPath, refAudioPath: ref });
+    await expect(
+      p.synthesize({ text: "x", voice: "narrator-zh", language: "zh-CN" }),
+    ).rejects.toThrow(/reference resample failed/);
+  });
+
+  it("rejects empty narration text before spawning anything", async () => {
+    const p = new F5TTSProvider({
+      pythonPath: "/tmp/fake-python",
+      refAudioPath: join(dir, "ref.wav"),
+    });
+    await expect(
+      p.synthesize({ text: "   ", voice: "narrator-zh", language: "zh-CN" }),
+    ).rejects.toThrow(/empty narration text/);
+  });
+
+  it("reports a missing reference clip", async () => {
+    const p = new F5TTSProvider({
+      pythonPath: "/tmp/fake-python",
+      refAudioPath: join(dir, "no-such-ref.wav"),
+    });
+    await expect(
+      p.synthesize({ text: "x", voice: "narrator-zh", language: "zh-CN" }),
+    ).rejects.toThrow(/reference clip missing/);
+  });
+});
+
+describe("f5ttsStatus — default probe runner", () => {
+  it("reports unavailable when the reference transcript is missing", async () => {
+    const dir = join(tmpdir(), `vf-f5-status-2-${process.pid}`);
+    mkdirSync(dir, { recursive: true });
+    const ref = join(dir, "ref.wav");
+    writeFileSync(ref, "stub"); // no .txt sidecar
+    const s = await f5ttsStatus({
+      pythonPath: process.execPath,
+      refAudioPath: ref,
+    });
+    expect(s.available).toBe(false);
+    expect(s.reason).toContain("reference clip/transcript missing");
+  });
+
+  it("reports available when the interpreter imports the package", async () => {
+    const dir = join(tmpdir(), `vf-f5-status-3-${process.pid}`);
+    mkdirSync(dir, { recursive: true });
+    const ref = join(dir, "ref.wav");
+    writeFileSync(ref, "stub");
+    writeFileSync(ref.replace(/\.wav$/, ".txt"), "参考转写。", "utf8");
+    // A stand-in interpreter that exits 0 — the import probe passes.
+    const shim = join(dir, "probe-python.sh");
+    writeFileSync(shim, "#!/bin/sh\nexit 0\n", "utf8");
+    chmodSync(shim, 0o755);
+    const s = await f5ttsStatus({ pythonPath: shim, refAudioPath: ref });
+    expect(s.available).toBe(true);
+    expect(s.refAudio).toBe(ref);
+    expect(s.refText).toBe(ref.replace(/\.wav$/, ".txt"));
+  });
+
+  it("reports the import failure when the probe exits non-zero", async () => {
+    const dir = join(tmpdir(), `vf-f5-status-4-${process.pid}`);
+    mkdirSync(dir, { recursive: true });
+    const ref = join(dir, "ref.wav");
+    writeFileSync(ref, "stub");
+    writeFileSync(ref.replace(/\.wav$/, ".txt"), "参考转写。", "utf8");
+    const shim = join(dir, "broken-python.sh");
+    writeFileSync(
+      shim,
+      "#!/bin/sh\necho 'ModuleNotFoundError' >&2\nexit 1\n",
+      "utf8",
+    );
+    chmodSync(shim, 0o755);
+    const s = await f5ttsStatus({ pythonPath: shim, refAudioPath: ref });
+    expect(s.available).toBe(false);
+    expect(s.reason).toContain("import probe exit 1");
+  });
+});

@@ -1,4 +1,4 @@
-import { describe, expect, it, beforeAll, afterAll } from "vitest";
+import { describe, expect, it, beforeAll, afterAll, vi } from "vitest";
 import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import { mkdtemp, mkdir, rm, writeFile, readFile } from "node:fs/promises";
@@ -7,9 +7,11 @@ import path from "node:path";
 import { initState, writeProjectState } from "@video/workflow";
 import type { Provider } from "@video/llm";
 import {
+  frontmatterValue,
   preserveFrontmatterKeys,
   resolveNarrationConfig,
   runDraft,
+  stampFrontmatterKey,
   writeAudioConfigIfAbsent,
 } from "./draft-command.js";
 import { parseArticle } from "@video/draft";
@@ -531,4 +533,112 @@ describe("resolveNarrationConfig", () => {
       }),
     ).toEqual({ provider: "voicebox", voice: "narrator-zh" });
   });
+});
+
+describe("draft frontmatter helpers — malformed input", () => {
+  it("frontmatterValue returns undefined without frontmatter", () => {
+    expect(frontmatterValue("no frontmatter here", "voice")).toBeUndefined();
+  });
+
+  it("frontmatterValue returns undefined when the block never closes", () => {
+    expect(
+      frontmatterValue("---\nvoice: narrator-zh\n", "voice"),
+    ).toBeUndefined();
+  });
+
+  it("stampFrontmatterKey leaves a document without a closed block alone", () => {
+    const md = "---\nvoice: narrator-zh\n";
+    expect(stampFrontmatterKey(md, "style", "dark-tech")).toBe(md);
+  });
+});
+
+describe("runDraft — the --from path and the provider guard", () => {
+  async function scaffold(name: string): Promise<void> {
+    const proj = path.join(projectsRoot, "projects", name);
+    await mkdir(proj, { recursive: true });
+    await writeProjectState(proj, initState(name));
+  }
+
+  it("revises an existing file when --from points at one", async () => {
+    await scaffold("dr-from-demo");
+    const from = path.join(projectsRoot, "previous.md");
+    await writeFile(from, "# 旧文章\n\n旧正文。\n", "utf8");
+    const code = await runDraft({
+      topic: "dr-from-demo",
+      cwd: projectsRoot,
+      from,
+      model: "glm",
+      noWeb: true,
+      noReview: true,
+      noAudioPlan: true,
+    });
+    expect(code).toBe(0);
+    const article = await readFile(
+      path.join(projectsRoot, "projects", "dr-from-demo", "article.md"),
+      "utf8",
+    );
+    expect(article).toContain("演示文章");
+  }, 20_000);
+
+  it("rejects an unknown model provider", async () => {
+    await scaffold("dr-bad-provider");
+    await expect(
+      runDraft({
+        topic: "dr-bad-provider",
+        cwd: projectsRoot,
+        model: "bogus" as "glm",
+        noWeb: true,
+      }),
+    ).rejects.toThrow(/unsupported provider/);
+  });
+});
+
+describe("runDraft — the judge/generator collision warning", () => {
+  it("warns when the judge is the same provider as the generator", async () => {
+    const proj = path.join(projectsRoot, "projects", "dr-self-judge");
+    await mkdir(proj, { recursive: true });
+    await writeProjectState(proj, initState("dr-self-judge"));
+    const errors: string[] = [];
+    const spy = vi.spyOn(console, "error").mockImplementation((m?: unknown) => {
+      errors.push(String(m));
+    });
+    try {
+      const code = await runDraft({
+        topic: "dr-self-judge",
+        cwd: projectsRoot,
+        model: "glm",
+        judgeModel: "glm",
+        noWeb: true,
+        noReview: true,
+        noAudioPlan: true,
+      });
+      expect(code).toBe(0);
+    } finally {
+      spy.mockRestore();
+    }
+    expect(errors.join("\n")).toContain("self-judged scores");
+  }, 20_000);
+});
+
+describe("runDraft — the channel profile stamp", () => {
+  it("stamps the channel profile into the article frontmatter", async () => {
+    const proj = path.join(projectsRoot, "projects", "dr-profile");
+    await mkdir(proj, { recursive: true });
+    await writeProjectState(proj, initState("dr-profile"));
+    const code = await runDraft({
+      topic: "dr-profile",
+      cwd: projectsRoot,
+      model: "glm",
+      channelProfile: "chinese-storybook",
+      noWeb: true,
+      noReview: true,
+      noAudioPlan: true,
+    });
+    expect(code).toBe(0);
+    const article = await readFile(
+      path.join(proj, "article.md"),
+      "utf8",
+    );
+    expect(article).toContain("channel_profile: chinese-storybook");
+  }, 20_000);
 });

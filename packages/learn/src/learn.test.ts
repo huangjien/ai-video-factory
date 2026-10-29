@@ -6,6 +6,7 @@ import path from "node:path";
 import {
   REVIEW_QUESTIONS,
   emptyLessonStore,
+  reviewQuestion,
   isActiveLesson,
   lessonId,
   listReviewSessions,
@@ -39,6 +40,18 @@ function session(
     ...overrides,
   };
 }
+
+describe("reviewQuestion", () => {
+  it("returns the question with the requested id", () => {
+    const q = reviewQuestion("image_text");
+    expect(q?.id).toBe("image_text");
+    expect(q?.options.length).toBeGreaterThan(0);
+  });
+
+  it("returns undefined for an unknown id", () => {
+    expect(reviewQuestion("not-a-question")).toBeUndefined();
+  });
+});
 
 describe("REVIEW_QUESTIONS", () => {
   it("asks at least five open questions, every one with options", () => {

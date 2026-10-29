@@ -5,6 +5,7 @@ import {
   BILIBILI_TAG_MAX,
   BILIBILI_TITLE_MAX,
   BilibiliPackageSchema,
+  buildBilibiliMessages,
   buildFallbackPackage,
   clampChars,
   deriveCategory,
@@ -250,5 +251,53 @@ describe("renderChecklist", () => {
       videoPath: "/tmp/final-mixed.mp4",
     });
     expect(out).toContain("无法可靠推断分区");
+  });
+});
+
+describe("buildBilibiliMessages", () => {
+  it("puts the visual identity first so the cover inherits the video's style", () => {
+    const messages = buildBilibiliMessages({
+      article: ARTICLE,
+      imageStyle: "editorial",
+      topic: "提示词工程师正在消失",
+      durationSec: 300,
+      hook: "2023年最风光的岗位，2026年从招聘页面成批消失。",
+    });
+    expect(messages).toHaveLength(2);
+    expect(messages[0]?.role).toBe("system");
+    expect(messages[0]?.content.length).toBeGreaterThan(0);
+    const user = messages[1]?.content ?? "";
+    expect(user.indexOf("## Visual identity")).toBeGreaterThanOrEqual(0);
+    expect(user.indexOf("## Visual identity")).toBeLessThan(
+      user.indexOf("## Topic"),
+    );
+    expect(user).toContain("Style preset: editorial");
+    expect(user).toContain("## Topic: 提示词工程师正在消失");
+    expect(user).toContain("## Runtime: 300 seconds");
+    expect(user).toContain("## Hook");
+    expect(user).toContain("2023年最风光的岗位");
+  });
+
+  it("rounds the runtime to whole seconds", () => {
+    const user =
+      buildBilibiliMessages({ article: ARTICLE, durationSec: 42.4 })[1]
+        ?.content ?? "";
+    expect(user).toContain("## Runtime: 42 seconds");
+  });
+
+  it("omits every optional block when only the article is given", () => {
+    const user = buildBilibiliMessages({ article: ARTICLE })[1]?.content ?? "";
+    expect(user).toContain("## Article (Markdown");
+    expect(user).not.toContain("## Visual identity");
+    expect(user).not.toContain("## Topic:");
+    expect(user).not.toContain("## Runtime:");
+    expect(user).not.toContain("## Hook");
+  });
+
+  it("truncates a very long article to 8000 characters", () => {
+    const user =
+      buildBilibiliMessages({ article: "x".repeat(9000) })[1]?.content ?? "";
+    expect(user).toContain("x".repeat(8000));
+    expect(user).not.toContain("x".repeat(8001));
   });
 });

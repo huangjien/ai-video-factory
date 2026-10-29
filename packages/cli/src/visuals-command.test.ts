@@ -2,9 +2,11 @@ import { describe, expect, it } from "vitest";
 import { mkdtemp, mkdir, rm, writeFile, readFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
+import { Command } from "commander";
 import { runMake, writeVisualsCheckpoint } from "@video/make";
 import {
   approveVisualsCheckpointCli,
+  registerVisuals,
   runVisualsCli,
 } from "./visuals-command.js";
 
@@ -171,5 +173,103 @@ describe("G4: visuals CLI verbs", () => {
     } finally {
       await rm(dir, { recursive: true, force: true });
     }
+  });
+});
+
+describe("visuals CLI — argument guards and the contact sheet", () => {
+  it("fails when the project cannot be resolved", async () => {
+    const dir = await mkdtemp(path.join(tmpdir(), "visuals-guard-"));
+    try {
+      expect(await runVisualsCli({ project: "ghost", cwd: dir })).toBe(1);
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("fails when the project has no article.md", async () => {
+    const dir = await mkdtemp(path.join(tmpdir(), "visuals-guard-"));
+    try {
+      await writeFile(path.join(dir, "state.yaml"), "status: DRAFT\n", "utf8");
+      expect(await runVisualsCli({ project: dir })).toBe(1);
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("refuses a rejection without a reason", async () => {
+    const dir = await mkProject(true);
+    try {
+      expect(
+        await runVisualsCli({
+          project: dir,
+          imageProvider: "mock",
+          rejectScene: 1,
+          pythonBin: "/usr/bin/false",
+        }),
+      ).toBe(1);
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("refuses a rejection with no approved checkpoint to reject against", async () => {
+    const dir = await mkProject(true);
+    try {
+      expect(
+        await runVisualsCli({
+          project: dir,
+          imageProvider: "mock",
+          rejectScene: 1,
+          reason: "太暗",
+          pythonBin: "/usr/bin/false",
+        }),
+      ).toBe(1);
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("skips the generation pass when no provider is configured", async () => {
+    const dir = await mkProject(true);
+    try {
+      const code = await runVisualsCli({
+        project: dir,
+        imageProvider: "none",
+        pythonBin: "/usr/bin/false",
+      });
+      expect(code).toBe(0);
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("fails the approve helper when the project cannot be resolved", async () => {
+    const dir = await mkdtemp(path.join(tmpdir(), "visuals-guard-"));
+    try {
+      expect(await approveVisualsCheckpointCli("ghost", dir)).toBe(1);
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+});
+
+describe("registerVisuals", () => {
+  it("registers the visuals command with its flags", () => {
+    const program = new Command();
+    registerVisuals(program);
+    const cmd = program.commands.find((c) => c.name() === "visuals");
+    expect(cmd).toBeDefined();
+    const longs = (cmd?.options ?? []).map((o) => o.long);
+    expect(longs).toContain("--reject");
+    expect(longs).toContain("--reason");
+  });
+
+  it("rejects a --reject value that is not a scene number", () => {
+    const program = new Command();
+    program.exitOverride();
+    registerVisuals(program);
+    expect(() =>
+      program.parse(["visuals", "demo", "--reject", "abc"], { from: "user" }),
+    ).toThrow();
   });
 });

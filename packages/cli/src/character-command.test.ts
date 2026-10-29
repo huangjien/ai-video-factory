@@ -222,3 +222,70 @@ describe("video character — generating a reference sheet (CS-13)", () => {
     ).toBe(1);
   });
 });
+
+describe("video character — argument and environment guards", () => {
+  it("says so when there is no character bible at the root", async () => {
+    // A root that does not exist at all — the bible was never created.
+    const root = path.join(
+      mkdtempSync(path.join(tmpdir(), "video-char-empty-")),
+      "assets",
+      "characters",
+    );
+    expect(await runCharacter(["list"], { root })).toBe(1);
+  });
+
+  it("says so when the bible holds no characters", async () => {
+    const root = mkdtempSync(path.join(tmpdir(), "video-char-none-"));
+    expect(await runCharacter(["list"], { root })).toBe(0);
+  });
+
+  it("refuses an approve without id, style and version", async () => {
+    const root = bibleWith("");
+    expect(await runCharacter(["approve"], { root, by: "me" })).toBe(1);
+    expect(
+      await runCharacter(["approve", "testchar"], { root, by: "me" }),
+    ).toBe(1);
+  });
+
+  it("refuses an approve for a profile that does not exist", async () => {
+    const root = bibleWith("");
+    expect(
+      await runCharacter(["approve", "ghost", "gongbi", "v1"], {
+        root,
+        by: "me",
+      }),
+    ).toBe(1);
+  });
+
+  it("refuses a sheet without id and style", async () => {
+    const root = bibleWith("");
+    expect(await runCharacter(["sheet"], { root })).toBe(1);
+    expect(await runCharacter(["sheet", "testchar"], { root })).toBe(1);
+  });
+
+  it("refuses a sheet for a profile that does not exist", async () => {
+    const root = bibleWith("");
+    expect(await runCharacter(["sheet", "ghost", "gongbi"], { root })).toBe(1);
+  });
+
+  it("reports a failed sheet generation instead of writing a file", async () => {
+    const root = bibleWith("");
+    const savedKey = process.env["MINIMAX_API_KEY"];
+    delete process.env["MINIMAX_API_KEY"];
+    try {
+      // The default provider needs an API key — without one the
+      // generation fails and the command must say so.
+      const code = await runCharacter(["sheet", "testchar", "gongbi"], {
+        root,
+      });
+      expect(code).toBe(1);
+    } finally {
+      if (savedKey !== undefined) process.env["MINIMAX_API_KEY"] = savedKey;
+    }
+  });
+
+  it("rejects an unknown subcommand", async () => {
+    const root = bibleWith("");
+    expect(await runCharacter(["frobnicate"], { root })).toBe(1);
+  });
+});

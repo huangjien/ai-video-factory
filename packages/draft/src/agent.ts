@@ -30,13 +30,17 @@ export class DraftError extends Error {
 export interface CallDraftResult {
   /** Assembled article.md (frontmatter + title + hook + sections + scenes). */
   markdown: string;
+  /** The structured article the LLM emitted — kept (not just re-parsed
+   * from markdown) so the surgical reviser receives the exact same
+   * object shape the drafter produced. */
+  raw: RawArticle;
   usage: { input: number; output: number };
   /** Name of the provider that actually served the request
    * (primary or its fallback, per `chatWithFallback`). */
   providerName: string;
 }
 
-interface RawArticle {
+export interface RawArticle {
   title?: string;
   hook?: string;
   sections?: { heading?: string; body?: string }[];
@@ -100,13 +104,15 @@ export async function callDraft(
     },
   });
   const markdown = renderArticleMd(input, r.data);
-  return { markdown, usage: r.usage, providerName: r.providerName };
+  return { markdown, raw: r.data, usage: r.usage, providerName: r.providerName };
 }
 
 /** Compose article.md from a structured RawArticle — guaranteed shape; the
  * LLM is responsible for content quality, our code is responsible for the
- * markdown structure humans see. */
-function renderArticleMd(input: DraftInput, r: RawArticle): string {
+ * markdown structure humans see. Exported: the surgical reviser
+ * (revise.ts) re-renders its verified JSON through the same path so a
+ * revised article and a fresh draft can never disagree on format. */
+export function renderArticleMd(input: DraftInput, r: RawArticle): string {
   const project = slugifyProjectName(input.topic);
   const language = input.language;
   const duration = input.duration;

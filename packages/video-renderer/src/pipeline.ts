@@ -12,7 +12,11 @@ import {
   type RenderPlan,
 } from "@video/vdsl";
 import { syncSceneDurations, probeAudioDuration } from "@video/media";
-import { createBrowserPool, openBrowser, sharedBrowser } from "./browser.js";
+import {
+  createBrowserPool,
+  openHeadlessBrowser,
+  sharedBrowser,
+} from "./browser.js";
 import {
   readSceneCacheMeta,
   sceneCacheFile,
@@ -333,7 +337,7 @@ async function renderScenesIncrementally(
     // browser.
     const ownBrowser = concurrency > 1;
     const browserPool = ownBrowser
-      ? createBrowserPool(() => openBrowser("chrome"))
+      ? createBrowserPool(() => openHeadlessBrowser())
       : null;
     try {
       for (;;) {

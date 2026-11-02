@@ -30,6 +30,12 @@
  *   paper-cut   — layered tactile collage for narrative scenes.
  *   gongbi      — restrained fine ink linework with low-saturation
  *                  layered washes; historical dress, one full-frame scene.
+ *   terminal    — dark CRT console with phosphor-green and cyan glow.
+ *   ghibli      — hand-painted cel animation: painted backgrounds,
+ *                  inked characters, warm diffused light.
+ *   woodcut     — carved relief print: bold key lines, flat color areas,
+ *                  shading from hatching.
+ *   sketch      — graphite drawing: loose contour, hatching, paper white.
  *
  * Cross-scene consistency comes from these shared contracts — reusing
  * the same palette and camera vocabulary across scenes — not from any
@@ -52,6 +58,9 @@ export const IMAGE_STYLES = [
   "paper-cut",
   "gongbi",
   "terminal",
+  "ghibli",
+  "woodcut",
+  "sketch",
 ] as const;
 
 export type ImageStyle = (typeof IMAGE_STYLES)[number];

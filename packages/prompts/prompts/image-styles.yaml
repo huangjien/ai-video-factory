@@ -158,6 +158,39 @@ gongbi:
     - Do not render writing. No written characters, calligraphy, inscriptions, seals, signatures or labels anywhere in the image.
     - Leave breathing room — the lower third and the outer edges stay quiet because caption and title overlays land there.
   promptSuffix: gongbi light-colour wash illustration, restrained fine ink linework, low-saturation layered washes, one full-frame scene, aged paper and ink palette with slate blue-green or ochre and a little cinnabar red, credible period dress, simplified distance, quiet lower third, no panel layout, no collage, no calligraphy, no seals, no signature, no text, no letters
+ghibli:
+  systemBlock: |-
+    Style: HAND-PAINTED ANIMATION (warm painterly mode).
+    - The frame is a cel-animation still: characters drawn with clean inked linework and simple flat cel shading, backgrounds painted with soft gouache and watercolor texture — clouds, foliage, interiors and props rendered as loose painting, not as flat vector shapes.
+    - Locked palette: sky blue #7FB3D5, meadow green #86A85B, warm cream #F6EEDC, and terracotta #C4623F as the single accent. Reuse these colors in every scene; terracotta marks the one thing that matters.
+    - Give the character a readable face, clear silhouette and open posture. Keep the painted background rich but subordinate to the figure: the environment supports the person, it never shrinks them into a distant speck.
+    - Light is warm and diffused, like late-afternoon sun through leaves — soft shadow edges, gentle bounce light, and an occasional shaft of light through foliage or a window. No harsh contrast, no metallic highlights.
+    - Keep recurring people consistent in hair, clothing, proportions and color accents across scenes.
+    - Airy, generous negative space around the subject. No photographic texture, no lens flare, no 3D render, no speed lines, no film grain.
+    - Leave breathing room — the lower third and the outer edges stay quiet because caption and title overlays land there.
+  promptSuffix: hand-painted cel animation still, painterly gouache and watercolor background painting with soft pigment texture, clean inked character linework, simple cel shading, warm diffused daylight, locked palette of sky blue meadow green warm cream with a terracotta accent, readable foreground character with clear face and silhouette, airy negative space, quiet lower third, no text, no letters, no labels, no signature, no watermark, no lens flare, no 3D render
+woodcut:
+  systemBlock: |-
+    Style: WOODBLOCK RELIEF PRINT (carved-line mode).
+    - The frame reads as a carved relief print: bold black key lines cut into the block, flat unmodulated color shapes, and visible chisel and gouge texture inside the strokes. Ink sits slightly uneven at the edges of a carved line.
+    - Locked palette: ink black #1C1A17, paper cream #EFE6D2, block red #B23A2E, and indigo #2E4A63. Reuse these colors in every scene; block red marks the one thing that matters.
+    - Separate forms with the carved outline, never with a gradient or a soft blend. Shade only with visible carved hatching — parallel cuts for light shadow, cross-hatched cuts for the deepest darks.
+    - Reduce the scene to a few strong silhouettes. Depth comes from layered overlap and scale in a deliberately flat composition, not from realistic perspective.
+    - Figures are stylized with simplified anatomy and carved contours, in period or generic dress appropriate to the supplied setting.
+    - Paper is slightly uneven with a warm tone and a faint fiber; ink is flat, never photographic. No gray gradients, no airbrush, no 3D shading, no gloss.
+    - Leave breathing room — the lower third and the outer edges stay quiet because caption and title overlays land there.
+  promptSuffix: woodblock relief print illustration, bold carved black key lines, flat unmodulated color areas, visible chisel and gouge texture, slight ink unevenness along carved edges, locked palette of ink black paper cream block red and indigo, shading only from carved parallel and cross hatching, flat layered composition with bold simplified silhouettes, warm slightly uneven paper, quiet lower third, no text, no letters, no labels, no calligraphy, no seal, no signature
+sketch:
+  systemBlock: |-
+    Style: PENCIL SKETCH (graphite-drawing mode).
+    - The frame reads as a graphite drawing on paper: loose confident contour lines, hatching and cross-hatching for the shadows, visible paper tooth, and bright eraser highlights where the artist lifted a value.
+    - Locked palette: graphite black #2B2A28, silver gray #8C8A85, warm paper #EFE9DC, and a single muted indigo #3D5A80 accent. Reuse these colors in every scene; indigo marks the one thing that matters.
+    - Build the value structure first — strong darks, mid tones, and large untouched areas of paper. Do not fill the frame with tone; the white paper is a shape in the composition.
+    - Leave the construction visible: gesture lines, searching contour strokes and a few corrections read as authentic drawing. Do not over-clean the line work.
+    - Keep the subject readable with a clear silhouette and, when a person carries the scene, a legible face, pose and hands. A sketch still has to read at a glance.
+    - The paper stays monochrome apart from the one accent. No smooth airbrush gradients, no photorealism, no 3D render, no heavy texture overlays.
+    - Leave breathing room — the lower third and the outer edges stay quiet because caption and title overlays land there.
+  promptSuffix: graphite pencil sketch on textured paper, loose confident contour lines, parallel and cross hatching for shadow, visible paper tooth and eraser highlights, locked palette of graphite black silver gray and warm paper with a single muted indigo accent, strong darks mid tones and large untouched paper areas, visible construction strokes, readable subject with clear silhouette, quiet lower third, no text, no letters, no labels, no signature, no color fills
 terminal:
   systemBlock: |-
     Style: TERMINAL CONSOLE ILLUSTRATION (code-environment mode).

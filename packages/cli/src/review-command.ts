@@ -4,7 +4,7 @@ import { createHash } from "node:crypto";
 import { execSync } from "node:child_process";
 import path from "node:path";
 import { resolveProjectDir } from "./project-path.js";
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import {
   GLMProvider,
   judgePickForName,
@@ -38,6 +38,69 @@ function modelFor(name: string): string {
   return name === "glm" ? "glm-5.3" : "MiniMax-M3";
 }
 
+/** The project's narration language.
+ *
+ *  `video script` names its output by language (`script.en-US.md` /
+ *  `script.zh-CN.md`), so anything that has to FIND that file must know
+ *  the language too — a hardcoded `script.zh-CN.md` made every en-US
+ *  project unreviewable.
+ *
+ *  Order: the storyboard's `project.language` (derived from article.md,
+ *  the source of truth) → article.md frontmatter → project.yaml → zh-CN.
+ *  project.yaml alone is not enough: `video new` writes the scaffold
+ *  default there and never updates it, so an en-US project still says
+ *  zh-CN. */
+function projectLanguage(projectRoot: string, storyboardYaml: string): string {
+  try {
+    const parsed = parseYaml(storyboardYaml) as {
+      project?: { language?: unknown };
+    };
+    const lang = parsed.project?.language;
+    if (typeof lang === "string" && lang.trim() !== "") return lang.trim();
+  } catch {
+    /* unparseable storyboard → fall through to the other sources */
+  }
+  try {
+    const md = readFileSync(path.join(projectRoot, "article.md"), "utf8");
+    const m = md.match(/^language:\s*(.+)$/m);
+    const lang = m?.[1]?.trim().replace(/^["']|["']$/g, "");
+    if (lang !== undefined && lang !== "") return lang;
+  } catch {
+    /* no article.md → fall through */
+  }
+  try {
+    const meta = parseYaml(
+      readFileSync(path.join(projectRoot, "project.yaml"), "utf8"),
+    ) as { language?: unknown };
+    if (typeof meta.language === "string" && meta.language.trim() !== "") {
+      return meta.language.trim();
+    }
+  } catch {
+    /* no project.yaml → fall through */
+  }
+  return "zh-CN";
+}
+
+/** Candidate script filenames for a language, most specific first.
+ *  `video script` writes exactly `script.en-US.md` for en-US and
+ *  `script.zh-CN.md` for everything else. */
+function scriptFileCandidates(lang: string): string[] {
+  return lang === "en-US"
+    ? ["script.en-US.md"]
+    : [`script.${lang}.md`, "script.zh-CN.md"];
+}
+
+/** Provenance note sent to the judge when the script slot is filled by
+ *  article.md — the judge must know it is reading the article, not a
+ *  missing file, or it may report the substitution as a defect. */
+const ARTICLE_AS_SCRIPT_NOTE =
+  "The script artifact for this project is `article.md` — this project was produced by `video draft`, which writes no separate script file. It carries the narration, captions and prose for every scene.";
+
+/** Sent to the judge when the project has no claims artifact, so it
+ *  reports unverifiable claims as unverifiable instead of as errors. */
+const NO_CLAIMS_NOTE =
+  "This project has no claims artifact (no `video research` run). Do not assert independent factual verification — report material claims as unverifiable rather than as errors.";
+
 function sha256OfMessages(messages: ChatMessage[]): string {
   const canon = JSON.stringify(
     messages.map((m) => ({ role: m.role, content: m.content })),
@@ -63,20 +126,48 @@ export async function runReview(opts: ReviewOptions): Promise<number> {
   const projectRoot = resolvedProject.root;
   const { readFile } = await import("node:fs/promises");
   const sbPath = path.join(projectRoot, "storyboard", "storyboard.yaml");
-  const scriptPath = path.join(projectRoot, "script", "script.zh-CN.md");
   const claimsPath = path.join(projectRoot, "research", "claims.yaml");
-  for (const f of [sbPath, scriptPath, claimsPath]) {
-    if (!existsSync(f)) {
-      console.error(`missing input: ${f}`);
-      console.error(
-        `  run video storyboard / video script / video research first`,
-      );
-      return 1;
-    }
+  const articlePath = path.join(projectRoot, "article.md");
+  // The storyboard is the only REQUIRED input: it is the film itself.
+  // The script and the claims file belong to the script/research
+  // pipeline; `video draft` writes neither, so demanding them made the
+  // command unusable on every drafted project.
+  if (!existsSync(sbPath)) {
+    console.error(`missing input: ${sbPath}`);
+    console.error(`  run video draft / video storyboard first`);
+    return 1;
   }
   const storyboard = await readFile(sbPath, "utf8");
-  const script = await readFile(scriptPath, "utf8");
-  const claims = await readFile(claimsPath, "utf8");
+  const lang = projectLanguage(projectRoot, storyboard);
+
+  // Script: the script-pipeline's file if it exists, else article.md
+  // (which carries the same narration for a drafted project), else a
+  // note that says so.
+  const scriptPath = scriptFileCandidates(lang)
+    .map((f) => path.join(projectRoot, "script", f))
+    .find((p) => existsSync(p));
+  let script: string;
+  let scriptFile: string;
+  if (scriptPath !== undefined) {
+    script = await readFile(scriptPath, "utf8");
+    scriptFile = path.relative(projectRoot, scriptPath);
+  } else if (existsSync(articlePath)) {
+    script = `${ARTICLE_AS_SCRIPT_NOTE}\n\n${await readFile(articlePath, "utf8")}`;
+    scriptFile = "article.md";
+  } else {
+    script = "(no script artifact for this project)";
+    scriptFile = "";
+  }
+
+  // Claims: optional. Absent, the judge is told to report claims as
+  // unverifiable rather than as errors.
+  const hasClaims = existsSync(claimsPath);
+  const claims = hasClaims
+    ? await readFile(claimsPath, "utf8")
+    : NO_CLAIMS_NOTE;
+  const claimsFile = hasClaims
+    ? path.relative(projectRoot, claimsPath)
+    : "";
 
   const cfg = loadProviderConfig();
   // 2026-10-26: read the REVIEW role for judge slots — this used to read
@@ -149,8 +240,8 @@ export async function runReview(opts: ReviewOptions): Promise<number> {
     input_commit: safeGitHead(projectRoot),
     input_files: [
       "storyboard/storyboard.yaml",
-      "script/script.zh-CN.md",
-      "research/claims.yaml",
+      ...(scriptFile !== "" ? [scriptFile] : []),
+      ...(claimsFile !== "" ? [claimsFile] : []),
     ],
     output_files: [
       "review/content-review.yaml",

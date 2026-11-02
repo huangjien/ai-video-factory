@@ -382,11 +382,15 @@ describe("youtube command branches", () => {
       buildAuthUrlMock.mockImplementation((opts: { redirectUri: string }) => {
         return `${opts.redirectUri}/authorize?client_id=cid`;
       });
-      const run = runYouTubeAuth(secret);
+      // openBrowser:false — the consent step must NOT spawn the OS
+      // opener. It used to, so running the suite put a Chrome window on
+      // the user's screen; the URL is printed instead and the test plays
+      // the browser itself.
+      const run = runYouTubeAuth(secret, "upload", { openBrowser: false });
       // The CLI prints the URL it wants the browser to open — the test
       // plays the browser and hits the loopback callback with a code.
       await vi.waitFor(() => {
-        expect(logs.join("\n")).toContain("visit:");
+        expect(logs.join("\n")).toMatch(/http:\/\/127\.0\.0\.1:\d+/);
       });
       const url = logs.join("\n").match(/http:\/\/127\.0\.0\.1:\d+/)?.[0];
       expect(url).toBeTruthy();
@@ -398,6 +402,48 @@ describe("youtube command branches", () => {
       expect(out).toContain("YouTube OAuth authorized");
       expect(out).toContain("YOUTUBE_REFRESH_TOKEN=new-refresh-token");
       await rm(dir, { recursive: true, force: true }).catch(() => {});
+    });
+
+    it("never opens a browser in headless mode, even without the opt-out flag", async () => {
+      // The regression: the consent step spawned the OS opener for real,
+      // so running the suite put a Chrome window on the user's screen.
+      // VIDEO_HEADLESS=1 must suppress it on its own — the URL is printed
+      // and the flow still completes.
+      const dir = await mkdtemp(path.join(tmpdir(), "vf-yt-auth-headless-"));
+      const secret = path.join(dir, "client_secret.json");
+      await writeFile(
+        secret,
+        JSON.stringify({
+          installed: { client_id: "cid", client_secret: "csec" },
+        }),
+        "utf8",
+      );
+      exchangeCodeForTokensMock.mockResolvedValue({
+        refreshToken: "headless-refresh-token",
+        accessToken: "headless-access-token",
+      });
+      buildAuthUrlMock.mockImplementation((opts: { redirectUri: string }) => {
+        return `${opts.redirectUri}/authorize?client_id=cid`;
+      });
+      const previous = process.env.VIDEO_HEADLESS;
+      process.env.VIDEO_HEADLESS = "1";
+      try {
+        const run = runYouTubeAuth(secret);
+        await vi.waitFor(() => {
+          expect(logs.join("\n")).toMatch(/http:\/\/127\.0\.0\.1:\d+/);
+        });
+        const out = logs.join("\n");
+        expect(out).toContain("headless mode: no browser opened");
+        expect(out).not.toContain("opening browser for Google consent");
+        const url = out.match(/http:\/\/127\.0\.0\.1:\d+/)?.[0];
+        const res = await fetch(`${url}/authorize?code=auth-code`);
+        expect(res.status).toBe(200);
+        expect(await run).toBe(0);
+      } finally {
+        if (previous === undefined) delete process.env.VIDEO_HEADLESS;
+        else process.env.VIDEO_HEADLESS = previous;
+        await rm(dir, { recursive: true, force: true }).catch(() => {});
+      }
     });
   });
 

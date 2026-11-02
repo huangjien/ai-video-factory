@@ -75,7 +75,7 @@ export interface SceneCacheMeta {
  * Same contract as `IMAGE_PROMPT_REVISION` in @video/draft, and deliberately
  * manual: hashing the source tree would re-render on every comment edit.
  */
-export const RENDERER_REVISION = "10";
+export const RENDERER_REVISION = "11";
 // 2: caption type + halo + no-plate overlay
 // 3: the title card preserves inter-word spaces — each glyph is its own flex
 // item, so a bare space collapsed to zero width and headlines rendered run-on.
@@ -97,6 +97,10 @@ export const RENDERER_REVISION = "10";
 // 10: the edge fade belongs to the FILM, not to every scene — a sliced
 // per-scene render carried no film context, so every scene faded to
 // black at its own edges.
+// 11: caption precedence flipped — the narration cue track owns the
+// bottom line whenever cues exist; ImageBackground's short `caption`
+// label is now a no-track fallback instead of the winner. Image scenes
+// burn the full narration (same cues as the exported SRT).
 
 /** Cache directory for a project — final renders in `scenes/`, draft-mode
  *  (960x540@15) renders in `scenes-draft/`. */

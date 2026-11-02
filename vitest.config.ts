@@ -56,7 +56,16 @@ export default defineConfig({
     // developer's live local server, or the conditional tts question
     // appears and every ask-envelope assertion becomes machine-dependent.
     // Port 9 (discard) refuses instantly.
-    env: { VOICEBOX_URL: "http://127.0.0.1:9" },
+    //
+    // VIDEO_HEADLESS=1 keeps the whole suite headless: no code path may
+    // open a desktop browser. The YouTube OAuth consent flow used to
+    // spawn the OS opener for real, so `pnpm test` put a Chrome window
+    // on the user's screen. With this set, every browser launch is a
+    // no-op and the URL is printed instead.
+    env: {
+      VOICEBOX_URL: "http://127.0.0.1:9",
+      VIDEO_HEADLESS: "1",
+    },
     // One fork per CPU by default; cap at 4 to avoid resource spikes
     // on small CI runners. Vitest 5 removed `poolOptions` — the fork cap
     // is the top-level `maxWorkers` now. (The old `poolOptions.forks.

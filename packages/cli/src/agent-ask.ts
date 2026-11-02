@@ -146,6 +146,10 @@ const IMAGE_STYLE_NOTES: Record<string, string> = {
   gongbi: "restrained ink linework, low-saturation washes; historical scenes",
   terminal:
     "dark CRT console with phosphor-green and cyan glow; code/CLI environments",
+  ghibli:
+    "hand-painted cel animation; painted backgrounds, warm diffused light",
+  woodcut: "carved relief print; bold key lines and flat color areas",
+  sketch: "graphite pencil drawing; loose contour, hatching, paper white",
 };
 
 const IMAGE_STYLE_CHOICES: readonly { value: string; note: string }[] =

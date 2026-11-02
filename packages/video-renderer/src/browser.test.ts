@@ -1,5 +1,11 @@
-import { describe, expect, it } from "vitest";
-import { createBrowserPool } from "./browser.js";
+import { describe, expect, it, vi } from "vitest";
+
+const openBrowserMock = vi.hoisted(() => vi.fn());
+vi.mock("@remotion/renderer", () => ({
+  openBrowser: openBrowserMock,
+}));
+
+const { createBrowserPool, openHeadlessBrowser } = await import("./browser.js");
 
 /** A stand-in for Remotion's HeadlessBrowser — the pool only ever
  *  calls `close()` on it. */
@@ -15,6 +21,20 @@ function fakeBrowser() {
     },
   };
 }
+
+describe("openHeadlessBrowser", () => {
+  it("asks for headless mode explicitly — a render never opens a window", async () => {
+    openBrowserMock.mockResolvedValue({ close: async () => {} });
+    await openHeadlessBrowser();
+    expect(openBrowserMock).toHaveBeenCalledTimes(1);
+    const [browser, options] = openBrowserMock.mock.calls[0] as [
+      string,
+      { chromiumOptions?: { headless?: boolean } },
+    ];
+    expect(browser).toBe("chrome");
+    expect(options.chromiumOptions?.headless).toBe(true);
+  });
+});
 
 describe("createBrowserPool", () => {
   it("opens the browser once and reuses it", async () => {

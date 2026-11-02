@@ -103,13 +103,14 @@ describe("image brief expander", () => {
 });
 
 describe("structured prompt files", () => {
-  it("image-styles.yaml has the thirteen styles with non-empty blocks", () => {
+  it("image-styles.yaml has the seventeen styles with non-empty blocks", () => {
     const presets = loadImageStylePresets();
     expect(Object.keys(presets).sort()).toEqual([
       "clay-3d",
       "editorial",
       "flat-vector",
       "genki-anime",
+      "ghibli",
       "gongbi",
       "ink-wash",
       "isometric",
@@ -117,9 +118,11 @@ describe("structured prompt files", () => {
       "medieval",
       "paper-cut",
       "photoreal",
+      "sketch",
       "terminal",
       "watercolor",
       "whiteboard",
+      "woodcut",
     ]);
     for (const preset of Object.values(presets)) {
       expect(preset.systemBlock.length).toBeGreaterThan(0);

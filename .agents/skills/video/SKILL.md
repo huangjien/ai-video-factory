@@ -145,6 +145,31 @@ scenes entirely** — so a trigger keyword silently costs that scene its
 picture. There is no `Comparison` or `SvgScene` component any more; `对比`
 and `流程` route to nothing and `FlowChart` respectively.
 
+**The drafter writes these trigger words on purpose — and they eat the
+picture.** The article prompt asks the drafter to name the intended
+component, so it emits lines like `…; stat keyword, close overhead view.`
+or `…; takeaway keyword, centered close-up.` The classifier matches the
+bare word anywhere in the line, so EVERY scene routes to a component and
+the whole film renders as geometry — the requested `image_style` never
+appears once. Always verify before you spend on images:
+
+```bash
+node -e 'const {pickVisualComponent}=require("./packages/draft/dist/visual-classifier.js");
+const YAML=require("yaml"),fs=require("fs");
+const md=fs.readFileSync(process.argv[1],"utf8");
+YAML.parse(md.match(/```yaml\n([\s\S]*?)\n```/)[1]).scenes.forEach((s,i)=>
+  console.log(`scene_${i+1}`, pickVisualComponent(s.visual,i===0).component));' \
+  projects/<id>/article.md
+```
+
+Every scene except the first must report `AnimatedIllustration` for the
+image model to be reached. Two traps when you clean the lines up: the
+`Callout` rules have **no trailing word boundary**, so ordinary words
+match — `tableau` hits `table`, `climbs` hits `cli`; and `Terminal`'s
+`cli` is unanchored at the end too. Rewrite the word, don't just delete
+the keyword — "a wide panorama" for "a wide tableau", "the bar rises
+toward" for "the bar climbs toward".
+
 Renderers: `remotion` covers every registered component; `canvas` → DoodleScene. New scenes need no YAML hand-editing — the storyboard regenerates, but hand edits to `storyboard.yaml` are overwritten by the next `video make` (article.md is the source of truth). One-off visual check of all components: `node scripts/render-visual-smoke.mjs` → stills in `.omo/tmp/visual-smoke/`. Branding smoke: `node scripts/render-brand-smoke.mjs` → `.omo/tmp/brand-smoke/`.
 
 ### How a `visual:` line becomes an image prompt
@@ -390,12 +415,20 @@ trigger keyword in the table above turns the scene into a self-rendered
 component and it loses its generated image. `对比` steers nothing. See the
 trigger table above.
 
-> **Pillow caveat (since v0.9):** the in-pipeline Pillow text-overlay that
-> used to burn captions into generated images was removed with the local
-> diffusion provider. On-screen text now comes from Remotion components and
-> `CaptionsOverlay`; thumbnails must have their title typed in YouTube
-> Studio. `contact_sheet.py` is the only remaining Pillow pass and it draws
-> review labels, not production text.
+> **Pillow caveat (v0.12):** the Pillow text-overlay pass is BACK, as a
+> step separate from image generation. `video make` runs
+> `scripts/pillow-text-overlay.py`, which writes a transparent banner to
+> `assets/images/text/scene_N.png` and the renderer composites it ABOVE the
+> background image (storyboard prop `textOverlaySrc`). The banner holds two
+> lines: a key-info headline and the narration's first sentence as a
+> subline. The headline is picked by priority — `visual.props.text_overlay`
+> → `visual.props.caption` → `visual.props.text`/`title` → captions text —
+> so with no `text_overlay` it shows the SAME short label the caption
+> overlay burns at the bottom of the frame, and the frame prints that line
+> twice. That duplication is the current house style (every shipped
+> project shows it); set `visual.props.text_overlay` per scene to a
+> distinct curated line to avoid it. `contact_sheet.py` is the only other
+> Pillow pass and it draws review labels, not production text.
 
 ### Visual asset guardrails (v0.8)
 
@@ -546,6 +579,14 @@ both stamp into **`article.md` frontmatter** (`image_provider:` /
 Precedence: explicit `--image-provider` flag > `--fake` (⇒ `none`) >
 frontmatter > `minimax`. An unrecognized frontmatter value falls back to
 `minimax` rather than failing — `article.md` is hand-edited.
+
+**`--style` does NOT stamp into the frontmatter — add `theme:` yourself.**
+The draft command only writes the theme into the in-memory article it
+uses to build `storyboard.yaml`, and `video make` re-derives the storyboard
+from `article.md` on every run. A frontmatter with no `theme:` therefore
+re-derives to the default `paper-light` and the theme you asked for is
+silently lost. Put `theme: <name>` in `article.md` frontmatter next to
+`image_style:` and it survives every re-derive.
 
 `--bgm <tag|none>`: the answered tag is stamped into a **fresh** `audio-config.yaml` (`none` → `bgm: null`); an existing `audio-config.yaml` wins (warning printed, file untouched); `--no-audio-plan` drops the `bgm` question entirely.
 

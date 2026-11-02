@@ -245,8 +245,8 @@ export function articleToStoryboardYaml(article: ParsedArticle): string {
     });
     // no_captions: true means NO burned caption text anywhere. The track
     // is already omitted (captionsOn); without this, image components
-    // still draw the scene's caption label at the bottom (captionWiring:
-    // component caption wins), duplicating the Pillow key-info banner.
+    // would still fall back to the scene's caption label at the bottom
+    // (captionWiring: the label draws only when no cue track exists).
     // Image scenes derive as AnimatedIllustration and are swapped to
     // ImageBackground by make's switch step, which keeps props — so the
     // deleted caption stays deleted.

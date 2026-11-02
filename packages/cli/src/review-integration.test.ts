@@ -43,25 +43,82 @@ const CLAIMS = `claims:
     sources: [s1]
 `;
 
+const STORYBOARD_EN = `schema_version: "0.1"
+project:
+  id: t
+  language: en-US
+  fps: 30
+  width: 1920
+  height: 1080
+scenes:
+  - id: scene-01
+    duration: 8
+    narration:
+      text: "A wealthy man receives a strange final measurement."
+    visual:
+      component: Title
+      props:
+        text: "hello"
+`;
+
 const goodYaml = `content:
-  accuracy: ok
-  logic: warn
-  unsupported_claims: ["c1 needs more sources"]
+  accuracy:
+    status: ok
+    evidence: "narration matches the storyboard"
+    recommendation: null
+  logic:
+    status: warn
+    evidence: "scene 4 contradicts scene 6"
+    recommendation: "align the two claims"
+  unsupported_claims:
+    - id: F001
+      severity: major
+      reference: c-1
+      observation: "claim c-1 has no source"
+      evidence: "claims.yaml lists c-1 with sources: []"
+      recommendation: "attach a source"
   contradictions: []
   repetition: []
   overall: warn
 visual:
-  readability: ok
-  density: ok
-  pacing: ok
-  visual_hierarchy: ok
-  caption_length: ok
+  readability:
+    status: ok
+    evidence: "caption is legible"
+    recommendation: null
+  density:
+    status: ok
+    evidence: "one idea per scene"
+    recommendation: null
+  pacing:
+    status: ok
+    evidence: "durations match the narration"
+    recommendation: null
+  visual_hierarchy:
+    status: ok
+    evidence: "subject leads the frame"
+    recommendation: null
+  caption_length:
+    status: ok
+    evidence: "captions fit the safe area"
+    recommendation: null
   overall: pass
 technical:
-  resolution: ok
-  fps: ok
-  audio: ok
-  subtitle: ok
+  resolution:
+    status: ok
+    evidence: "1920x1080"
+    recommendation: null
+  fps:
+    status: ok
+    evidence: "30"
+    recommendation: null
+  audio:
+    status: ok
+    evidence: "narration and bgm present"
+    recommendation: null
+  subtitle:
+    status: ok
+    evidence: "srt covers every scene"
+    recommendation: null
   missing_assets: []
   render_errors: []
   overall: pass`;
@@ -69,9 +126,19 @@ technical:
 describe("video review end-to-end (todo 2) — mock MiniMax", () => {
   let server: Server;
   let baseUrl: string;
+  /** Bodies the judge actually received — lets a test assert what was
+   *  sent, not just what came back. */
+  const capturedBodies: string[] = [];
 
   beforeAll(async () => {
     server = createServer((req: IncomingMessage, res: ServerResponse) => {
+      let body = "";
+      req.on("data", (c: Buffer) => {
+        body += c.toString("utf8");
+      });
+      req.on("end", () => {
+        capturedBodies.push(body);
+      });
       res.statusCode = 200;
       res.setHeader("Content-Type", "application/json");
       res.end(
@@ -212,6 +279,62 @@ describe("video review end-to-end (todo 2) — mock MiniMax", () => {
     process.env["MINIMAX_API_HOST"] = baseUrl;
     const code = await runReview({ project: "missing", cwd, model: "minimax" });
     expect(code).toBe(1);
+  });
+
+  it("resolves the script by the PROJECT's language, not a hardcoded zh-CN", async () => {
+    // The command used to read `script/script.zh-CN.md` for every
+    // project, so an en-US project could never be reviewed — the file it
+    // looked for does not exist. `video script` writes `script.en-US.md`
+    // for en-US, so the path must follow the project's language.
+    const cwd = mkdtempSync(path.join(tmpdir(), "video-rv-"));
+    const project = "en-demo";
+    const root = path.join(cwd, "projects", project);
+    mkdirSync(path.join(root, "storyboard"), { recursive: true });
+    mkdirSync(path.join(root, "script"), { recursive: true });
+    mkdirSync(path.join(root, "research"), { recursive: true });
+    writeFileSync(path.join(root, "storyboard", "storyboard.yaml"), STORYBOARD_EN);
+    writeFileSync(path.join(root, "script", "script.en-US.md"), SCRIPT);
+    writeFileSync(path.join(root, "research", "claims.yaml"), CLAIMS);
+
+    process.env["MINIMAX_API_KEY"] = "test-key-do-not-leak";
+    process.env["MINIMAX_API_HOST"] = baseUrl;
+    const code = await runReview({ project, cwd, model: "minimax" });
+    expect(code).toBe(0);
+    const record = readFileSync(
+      path.join(root, "runs", execFileSync("ls", [path.join(root, "runs")], { encoding: "utf8" }).trim().split("\n")[0] ?? ""),
+      "utf8",
+    );
+    expect(record).toContain("script/script.en-US.md");
+    expect(record).not.toContain("script/script.zh-CN.md");
+  });
+
+  it("runs on a draft-pipeline project: no script/ and no research/ (article.md substitutes)", async () => {
+    // `video draft` writes article.md + storyboard.yaml and nothing else,
+    // so `video review` could never run on a drafted project: it demanded
+    // a script/ and a research/claims.yaml that the pipeline never makes.
+    const cwd = mkdtempSync(path.join(tmpdir(), "video-rv-"));
+    const project = "draft-demo";
+    const root = path.join(cwd, "projects", project);
+    mkdirSync(path.join(root, "storyboard"), { recursive: true });
+    writeFileSync(path.join(root, "storyboard", "storyboard.yaml"), STORYBOARD);
+    writeFileSync(
+      path.join(root, "article.md"),
+      "---\nlanguage: zh-CN\n---\n\n# 标题\n\n正文里的独特标记 sentence from the article body.\n",
+    );
+
+    capturedBodies.length = 0;
+    process.env["MINIMAX_API_KEY"] = "test-key-do-not-leak";
+    process.env["MINIMAX_API_HOST"] = baseUrl;
+    const code = await runReview({ project, cwd, model: "minimax" });
+    expect(code).toBe(0);
+    expect(
+      capturedBodies.some((b) => b.includes("sentence from the article body")),
+    ).toBe(true);
+    const record = readFileSync(
+      path.join(root, "runs", execFileSync("ls", [path.join(root, "runs")], { encoding: "utf8" }).trim().split("\n")[0] ?? ""),
+      "utf8",
+    );
+    expect(record).toContain("article.md");
   });
 
   it("never writes the API key into projects/ or runs/", async () => {

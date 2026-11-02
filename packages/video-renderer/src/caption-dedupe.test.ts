@@ -10,11 +10,12 @@ import { captionWiring, sceneCaptionOwner } from "./Root.js";
  * lines on top of each other — literally unreadable, on every image scene in
  * the shipped projects.
  *
- * Precedence: the component's own caption wins. It carries the scene's
- * `caption:` field — the human's short on-screen label, a few words — while
- * the track falls back to the narration when `captions.source` is
- * `narration`, which is a sentence or two and far too long to burn in. The
- * track still owns every non-image scene.
+ * Precedence: the narration track wins. It carries the full narration —
+ * the same cues the exported SRT is built from — while the component's
+ * `caption` prop is the scene's short static label (a few words for the
+ * whole scene), which reads as noise next to a real subtitle. The label
+ * survives only when the scene has no cue track at all (placeholder
+ * images with no narration).
  */
 
 const IMAGE = "ImageBackground";
@@ -23,11 +24,11 @@ const CAPTIONS = {
   cues: [{ lines: ["一段很长的旁白字幕"], startSec: 0, endSec: 1 }],
 } as RenderPlanScene["captions"];
 
-describe("sceneCaptionOwner — the component's label beats the narration track", () => {
-  it("gives an image scene to the component when it has a caption", () => {
+describe("sceneCaptionOwner — the narration track beats the component's label", () => {
+  it("gives the bottom line to the track on an image scene with both sources", () => {
     expect(
       sceneCaptionOwner(IMAGE, { caption: "一个技能 = 一个文件夹" }, CAPTIONS),
-    ).toBe("component");
+    ).toBe("track");
   });
 
   it("gives a NON-image scene to the track even if props carry a caption", () => {
@@ -36,6 +37,15 @@ describe("sceneCaptionOwner — the component's label beats the narration track"
     expect(sceneCaptionOwner(OTHER, { caption: "ignored" }, CAPTIONS)).toBe(
       "track",
     );
+  });
+
+  it("falls back to the component label when the scene has no cue track", () => {
+    expect(sceneCaptionOwner(IMAGE, { caption: "短标签" }, null)).toBe(
+      "component",
+    );
+    expect(
+      sceneCaptionOwner(IMAGE, { caption: "短标签" }, { cues: [] }),
+    ).toBe("component");
   });
 
   it("falls back to the track when the image scene has no caption", () => {
@@ -63,12 +73,12 @@ describe("sceneCaptionOwner — the component's label beats the narration track"
     ).toBe("none");
   });
 
-  it("prefers the component even when the track has several lines", () => {
+  it("prefers the track even when it has several lines", () => {
     const many = {
       cues: [{ lines: ["第一行", "第二行", "第三行"], startSec: 0, endSec: 1 }],
     } as RenderPlanScene["captions"];
     expect(sceneCaptionOwner(IMAGE, { caption: "短标签" }, many)).toBe(
-      "component",
+      "track",
     );
   });
 });
@@ -80,18 +90,18 @@ describe("captionWiring — both halves of the decision together", () => {
   // scene renders with no text at all. It is asserted here, and it was
   // caught by rendering a still rather than by a unit test.
 
-  it("keeps the caption on the component and gates the track off", () => {
+  it("strips the caption from the component when the track owns it", () => {
     const w = captionWiring(
       IMAGE,
       { caption: "一个技能 = 一个文件夹" },
       CAPTIONS,
     );
-    expect(w.owner).toBe("component");
-    expect(w.componentPropOverride).toStrictEqual({});
-    expect(w.renderTrack).toBe(false);
+    expect(w.owner).toBe("track");
+    expect(w.componentPropOverride).toStrictEqual({ caption: undefined });
+    expect(w.renderTrack).toBe(true);
   });
 
-  it("strips the caption from the component when the track owns it", () => {
+  it("renders the track and needs no override when the component has no caption", () => {
     const w = captionWiring(IMAGE, {}, CAPTIONS);
     expect(w.owner).toBe("track");
     expect(w.componentPropOverride).toStrictEqual({ caption: undefined });
@@ -99,7 +109,8 @@ describe("captionWiring — both halves of the decision together", () => {
   });
 
   it("keeps the component's caption when there is no track to compete", () => {
-    // No track at all ⇒ nothing to overlap with, so the label stays.
+    // No track at all ⇒ the label is the only caption, so it stays
+    // (placeholder-image fallback).
     const w = captionWiring(IMAGE, { caption: "一个技能 = 一个文件夹" }, null);
     expect(w.owner).toBe("component");
     expect(w.componentPropOverride).toStrictEqual({});

@@ -1,43 +1,90 @@
 import { z } from "zod";
 
 /**
- * Review Agent output schema — doc §31 (three review sections).
- * `overall` is the human-readable verdict per section (pass | warn | fail);
- * the individual fields carry the concrete observations.
+ * Review Agent output schema.
+ *
+ * This mirrors `packages/prompts/prompts/review.md` exactly. The two
+ * used to disagree: the prompt (rewritten 2026-10-24) asks for scalar
+ * fields as `{status, evidence, recommendation}` objects and array
+ * fields as structured findings, while this schema still demanded bare
+ * enums and bare strings. Every real review therefore died on
+ * "Review package schema invalid" — the models were right and the
+ * schema was stale.
+ *
+ * `overall` is the human-readable verdict per section (pass | warn |
+ * fail); the individual fields carry the concrete observations.
  */
 export const ReviewVerdict = z.enum(["pass", "warn", "fail"]);
 export type ReviewVerdict = z.infer<typeof ReviewVerdict>;
 
+/** Per-field status, as the prompt defines it. */
+export const FieldStatus = z.enum(["ok", "warn", "fail"]);
+export type FieldStatus = z.infer<typeof FieldStatus>;
+
+/** How severe one structured finding is. */
+export const FindingSeverity = z.enum([
+  "critical",
+  "major",
+  "moderate",
+  "minor",
+]);
+export type FindingSeverity = z.infer<typeof FindingSeverity>;
+
+/** A scalar review field: one status plus the evidence behind it.
+ *  `evidence` and `recommendation` are tolerated as absent/null — a
+ *  field with no evidence is thin, not invalid, and rejecting the whole
+ *  package over it loses every other finding in the report. */
+export const ScalarFindingSchema = z.object({
+  status: FieldStatus,
+  evidence: z.string().nullable().optional(),
+  recommendation: z.string().nullable().optional(),
+});
+export type ScalarFinding = z.infer<typeof ScalarFindingSchema>;
+
+/** One entry of an array field. The prompt asks for id / severity /
+ *  reference / observation / evidence / recommendation; `reference`,
+ *  `evidence` and `recommendation` are tolerated as absent/null for the
+ *  same reason as above. */
+export const StructuredFindingSchema = z.object({
+  id: z.string(),
+  severity: FindingSeverity,
+  reference: z.string().nullable().optional(),
+  observation: z.string(),
+  evidence: z.string().nullable().optional(),
+  recommendation: z.string().nullable().optional(),
+});
+export type StructuredFinding = z.infer<typeof StructuredFindingSchema>;
+
 export const ContentReviewSchema = z
   .object({
-    accuracy: z.enum(["ok", "warn", "fail"]),
-    logic: z.enum(["ok", "warn", "fail"]),
-    unsupported_claims: z.array(z.string()),
-    contradictions: z.array(z.string()),
-    repetition: z.array(z.string()),
+    accuracy: ScalarFindingSchema,
+    logic: ScalarFindingSchema,
+    unsupported_claims: z.array(StructuredFindingSchema),
+    contradictions: z.array(StructuredFindingSchema),
+    repetition: z.array(StructuredFindingSchema),
     overall: ReviewVerdict,
   })
   .strict();
 
 export const VisualReviewSchema = z
   .object({
-    readability: z.enum(["ok", "warn", "fail"]),
-    density: z.enum(["ok", "warn", "fail"]),
-    pacing: z.enum(["ok", "warn", "fail"]),
-    visual_hierarchy: z.enum(["ok", "warn", "fail"]),
-    caption_length: z.enum(["ok", "warn", "fail"]),
+    readability: ScalarFindingSchema,
+    density: ScalarFindingSchema,
+    pacing: ScalarFindingSchema,
+    visual_hierarchy: ScalarFindingSchema,
+    caption_length: ScalarFindingSchema,
     overall: ReviewVerdict,
   })
   .strict();
 
 export const TechnicalReviewSchema = z
   .object({
-    resolution: z.enum(["ok", "warn", "fail"]),
-    fps: z.enum(["ok", "warn", "fail"]),
-    audio: z.enum(["ok", "warn", "fail"]),
-    subtitle: z.enum(["ok", "warn", "fail"]),
-    missing_assets: z.array(z.string()),
-    render_errors: z.array(z.string()),
+    resolution: ScalarFindingSchema,
+    fps: ScalarFindingSchema,
+    audio: ScalarFindingSchema,
+    subtitle: ScalarFindingSchema,
+    missing_assets: z.array(StructuredFindingSchema),
+    render_errors: z.array(StructuredFindingSchema),
     overall: ReviewVerdict,
   })
   .strict();

@@ -5,6 +5,7 @@ import { execSync, spawn } from "node:child_process";
 import http from "node:http";
 import path from "node:path";
 import { resolveProjectDir } from "./project-path.js";
+import { isHeadless } from "./headless.js";
 import { existsSync } from "node:fs";
 import { GLMProvider, loadProviderConfig, MiniMaxProvider } from "@video/llm";
 import {
@@ -125,10 +126,17 @@ export async function resolveYouTubeCredentials(
 }
 
 /** One-time OAuth consent (loopback redirect). Opens the browser, waits
- *  for the code, exchanges it, prints the env lines to store. */
+ *  for the code, exchanges it, prints the env lines to store.
+ *
+ *  `openBrowser: false` (or `VIDEO_HEADLESS=1`) suppresses the browser
+ *  launch — the consent URL is still printed, so the flow completes the
+ *  same way, just without a window appearing. The test suite relies on
+ *  this: driving the consent step used to spawn the OS opener for real,
+ *  which put a Chrome window on the user's screen mid-run. */
 export async function runYouTubeAuth(
   clientSecretPath?: string,
   scope: "upload" | "manage" = "upload",
+  opts: { openBrowser?: boolean } = {},
 ): Promise<number> {
   const file = clientSecretPath ?? defaultClientSecretPath();
   if (!existsSync(file)) {
@@ -185,13 +193,25 @@ export async function runYouTubeAuth(
               }
             : {}),
         });
-        console.log("opening browser for Google consent…");
-        console.log(`  (if nothing opens, visit:)\n  ${authUrl}\n`);
-        const opener = process.platform === "darwin" ? "open" : "xdg-open";
-        try {
-          spawn(opener, [authUrl], { stdio: "ignore", detached: true }).unref();
-        } catch {
-          // URL is printed above; manual visit works the same.
+        // Headless mode (VIDEO_HEADLESS=1) or an explicit opt-out: print
+        // the URL and let the caller visit it. Never open a window the
+        // caller did not ask for.
+        const mayOpenBrowser = opts.openBrowser !== false && !isHeadless();
+        if (mayOpenBrowser) {
+          console.log("opening browser for Google consent…");
+          console.log(`  (if nothing opens, visit:)\n  ${authUrl}\n`);
+          const opener = process.platform === "darwin" ? "open" : "xdg-open";
+          try {
+            spawn(opener, [authUrl], {
+              stdio: "ignore",
+              detached: true,
+            }).unref();
+          } catch {
+            // URL is printed above; manual visit works the same.
+          }
+        } else {
+          console.log("headless mode: no browser opened.");
+          console.log(`  visit this URL to approve:\n  ${authUrl}\n`);
         }
       });
       setTimeout(

@@ -143,3 +143,32 @@ describe("buildMessages — ordering + numbering", () => {
     expect(user.indexOf("REVISION")).toBeLessThan(user.indexOf("IDEA"));
   });
 });
+
+describe("buildMessages — editing-depth / tone knobs (#4)", () => {
+  it("omits both knob blocks when neither is set (byte-identical prompt)", () => {
+    const user = buildMessages(base)[1]?.content ?? "";
+    expect(user).not.toContain("Editing depth:");
+    expect(user).not.toContain("Tone:");
+  });
+
+  it("light depth stays close to the source material", () => {
+    const user =
+      buildMessages({ ...base, editingDepth: "light" })[1]?.content ?? "";
+    expect(user).toContain("Editing depth: light");
+    expect(user).toContain("Stay close to the source/idea material");
+  });
+
+  it("deep depth applies the full quality rules", () => {
+    const user =
+      buildMessages({ ...base, editingDepth: "deep" })[1]?.content ?? "";
+    expect(user).toContain("Editing depth: deep");
+    expect(user).toContain("reorganizing and expanding");
+  });
+
+  it("tone asks for a consistent voice register", () => {
+    const user =
+      buildMessages({ ...base, tone: "conversational" })[1]?.content ?? "";
+    expect(user).toContain("Tone: conversational");
+    expect(user).toContain("consistent from hook to conclusion");
+  });
+});

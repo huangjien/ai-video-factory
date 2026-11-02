@@ -15,6 +15,7 @@ import {
   scoreArticle,
   scoreTotal,
 } from "./article-review.js";
+import type { ResearchNote } from "./revise.js";
 
 /** Fake provider: pops one canned response per chat() call, in order.
  *  Call sequence in the loop is draft, judge, draft, judge, … */
@@ -432,25 +433,159 @@ describe("runScoredDraft", () => {
     expect(p.requests).toHaveLength(3); // bounded at one retry
   });
 
-  it("regenerates below the bar, passes judge feedback into the next draft", async () => {
+  const REVISED_ARTICLE = JSON.stringify({
+    title: "t",
+    hook: "h",
+    sections: [{ heading: "s", body: "b" }],
+    scenes: [
+      {
+        id: "scene_1",
+        duration: 8,
+        caption: "c",
+        visual: "v",
+        narration: "narration line with a concrete number",
+      },
+    ],
+  });
+
+  it("revises surgically below the bar instead of regenerating (stage 1)", async () => {
     const p = new FakeProvider([
       GOOD_ARTICLE,
-      buildRawWithFinding("Major"), // 60 + Major finding → fail
-      GOOD_ARTICLE,
+      buildRawWithFinding("Major"), // 60 → reject, quotable finding
+      REVISED_ARTICLE, // surgical revision (targeted scene_1 narration)
       buildPassingRaw(4), // 80, passes
     ]);
     const r = await runScoredDraft(INPUT, p, null, { minScore: 70 });
     expect(r.passing).toBe(true);
     expect(r.attempts).toHaveLength(2);
+    expect(r.attempts[1]!.mode).toBe("revise");
+    expect(r.markdown).toContain("with a concrete number");
     expect(p.requests).toHaveLength(4);
-    const secondDraftPrompt = p.requests[2]!.messages.map(
-      (m) => m.content,
-    ).join("\n");
-    expect(secondDraftPrompt).toContain("quality judge");
-    expect(secondDraftPrompt).toMatch(/60\/100/);
-    expect(secondDraftPrompt).toContain("acceptance bar of 70/100");
-    expect(secondDraftPrompt).toContain("scene_1 — add a concrete number");
-    expect(secondDraftPrompt).toContain("[Major] LOGIC_GAP");
+    const revisePrompt = p.requests[2]!.messages
+      .map((m) => m.content)
+      .join("\n");
+    expect(revisePrompt).toContain("Findings to fix");
+    expect(revisePrompt).toContain("LOGIC_GAP");
+    expect(revisePrompt).toContain("add a number");
+    // The regeneration feedback block is NOT used on the revision path.
+    expect(revisePrompt).not.toContain("acceptance bar of 70");
+  });
+
+  it("falls back to regeneration with judge feedback when the revision does not improve (stage 2)", async () => {
+    const p = new FakeProvider([
+      GOOD_ARTICLE,
+      buildRawWithFinding("Major"), // 60 → revise
+      REVISED_ARTICLE,
+      buildPassingRaw(3), // 60 — no improvement → regenerate
+      GOOD_ARTICLE, // regeneration with feedback
+      buildPassingRaw(4), // 80, passes
+    ]);
+    const r = await runScoredDraft(INPUT, p, null, { minScore: 70 });
+    expect(r.passing).toBe(true);
+    expect(r.attempts).toHaveLength(3);
+    expect(r.attempts.map((a) => a.mode)).toStrictEqual([
+      "draft",
+      "revise",
+      "regenerate",
+    ]);
+    const regenPrompt = p.requests[4]!.messages
+      .map((m) => m.content)
+      .join("\n");
+    expect(regenPrompt).toContain("quality judge");
+    expect(regenPrompt).toContain("[Major] LOGIC_GAP");
+  });
+
+  it("a no-op revision falls back to regeneration WITHOUT spending an attempt", async () => {
+    const p = new FakeProvider([
+      GOOD_ARTICLE,
+      buildRawWithFinding("Major"), // 60 → revise
+      GOOD_ARTICLE, // revision output identical to base → unusable
+      GOOD_ARTICLE, // regeneration with feedback
+      buildPassingRaw(4), // 80, passes
+    ]);
+    const r = await runScoredDraft(INPUT, p, null, { minScore: 70 });
+    expect(r.passing).toBe(true);
+    expect(r.attempts).toHaveLength(2);
+    // No attempt number gap: 1 (draft), 2 (regenerate).
+    expect(r.attempts.map((a) => a.attempt)).toStrictEqual([1, 2]);
+    expect(r.attempts[1]!.mode).toBe("regenerate");
+  });
+
+  it("regenerates directly when findings are structure-only (nothing to grip)", async () => {
+    const raw = JSON.parse(buildRawWithFinding("Major"));
+    raw.findings[0].code = "STRUCTURE_REPETITION";
+    const p = new FakeProvider([
+      GOOD_ARTICLE,
+      JSON.stringify(raw), // 60, structure-only finding
+      GOOD_ARTICLE, // regeneration with feedback (no revise call first)
+      buildPassingRaw(4), // 80, passes
+    ]);
+    const r = await runScoredDraft(INPUT, p, null, { minScore: 70 });
+    expect(r.passing).toBe(true);
+    expect(r.attempts).toHaveLength(2);
+    expect(r.attempts[1]!.mode).toBe("regenerate");
+    // The second call is a draft-with-feedback, NOT a revise call.
+    const second = p.requests[2]!.messages.map((m) => m.content).join("\n");
+    expect(second).toContain("quality judge");
+    expect(second).not.toContain("Findings to fix");
+  });
+
+  it("routes FACT_* findings through the research callback (once per claim) and feeds notes to the reviser", async () => {
+    const raw = JSON.parse(buildRawWithFinding("Major"));
+    raw.findings[0].code = "FACT_UNSUPPORTED";
+    const researchCalls: string[][] = [];
+    const research = async (claims: string[]): Promise<ResearchNote[]> => {
+      researchCalls.push(claims);
+      return [
+        {
+          claim: "narration line",
+          verdict: "unsupported",
+          notes: "查无出处 — soften or remove the attribution",
+        },
+      ];
+    };
+    const p = new FakeProvider([
+      GOOD_ARTICLE,
+      JSON.stringify(raw), // 60 → revise, FACT_ finding routed
+      REVISED_ARTICLE,
+      buildPassingRaw(4), // 80, passes
+    ]);
+    const r = await runScoredDraft(INPUT, p, null, {
+      minScore: 70,
+      research,
+    });
+    expect(r.passing).toBe(true);
+    expect(r.attempts[1]!.mode).toBe("revise");
+    // The claim was researched exactly once, keyed by its quote.
+    expect(researchCalls).toStrictEqual([["narration line"]]);
+    const revisePrompt = p.requests[2]!.messages
+      .map((m) => m.content)
+      .join("\n");
+    expect(revisePrompt).toContain("Fact-check research");
+    expect(revisePrompt).toContain("查无出处");
+  });
+
+  it("a research failure degrades to revision without notes", async () => {
+    const raw = JSON.parse(buildRawWithFinding("Major"));
+    raw.findings[0].code = "FACT_UNSUPPORTED";
+    const research = async (): Promise<ResearchNote[]> => {
+      throw new Error("search backend down");
+    };
+    const p = new FakeProvider([
+      GOOD_ARTICLE,
+      JSON.stringify(raw),
+      REVISED_ARTICLE,
+      buildPassingRaw(4),
+    ]);
+    const r = await runScoredDraft(INPUT, p, null, {
+      minScore: 70,
+      research,
+    });
+    expect(r.passing).toBe(true);
+    const revisePrompt = p.requests[2]!.messages
+      .map((m) => m.content)
+      .join("\n");
+    expect(revisePrompt).not.toContain("Fact-check research");
   });
 
   it("a Critical finding blocks passing even when overall_score is high", async () => {
@@ -466,10 +601,10 @@ describe("runScoredDraft", () => {
   it("keeps the best candidate when all attempts stay below the bar", async () => {
     const p = new FakeProvider([
       GOOD_ARTICLE,
-      buildPassingRaw(3), // 60
-      GOOD_ARTICLE,
-      buildPassingRaw(4), // 80 - best, still below 100
-      GOOD_ARTICLE,
+      buildRawWithFinding("Major"), // 60 → revise
+      REVISED_ARTICLE,
+      buildPassingRaw(4), // 80 — improved, best, still below 100
+      GOOD_ARTICLE, // regeneration (no quotable findings left)
       buildPassingRaw(2), // 40
     ]);
     const r = await runScoredDraft(INPUT, p, null, {
@@ -479,6 +614,11 @@ describe("runScoredDraft", () => {
     expect(r.passing).toBe(false);
     expect(r.attempts).toHaveLength(3);
     expect(r.score?.computed.overall_score).toBe(80);
+    expect(r.attempts.map((a) => a.mode)).toStrictEqual([
+      "draft",
+      "revise",
+      "regenerate",
+    ]);
   });
 
   it("stops iterating and accepts the draft when the judge fails", async () => {

@@ -54,7 +54,18 @@ export {
   resolveSceneIdentities,
   type SceneIdentity,
 } from "./scene-identity.js";
-export { callDraft, DraftError, type CallDraftResult } from "./agent.js";
+export { callDraft, DraftError, renderArticleMd, type CallDraftResult, type RawArticle } from "./agent.js";
+export {
+  callRevise,
+  verifySurgicalRevision,
+  buildReviseMessages,
+  REVISE_SYSTEM_PROMPT,
+  type CallReviseResult,
+  type ReviseAudit,
+  type ReviseFinding,
+  type ReviseInput,
+  type ResearchNote,
+} from "./revise.js";
 export {
   translateArticle,
   canonicalLanguage,

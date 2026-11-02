@@ -11,7 +11,7 @@ import {
   providerForRole,
   type Provider,
 } from "@video/llm";
-import { MiniMaxWebSearch } from "@video/research";
+import { MiniMaxWebSearch, callResearch } from "@video/research";
 import {
   articleToStoryboardYaml,
   callDraft,
@@ -56,6 +56,11 @@ export interface DraftOptions {
   lang?: "zh-CN" | "en-US";
   duration?: number;
   audience?: string;
+  /** Improvement #4: editing-depth / tone knobs (2026-11) — forwarded
+   *  verbatim into the drafter prompt when set; absent = byte-identical
+   *  prompt to before (same discipline as channelProfile). */
+  editingDepth?: "light" | "medium" | "deep";
+  tone?: "professional" | "conversational" | "academic" | "narrative";
   /** Path to a file containing pre-existing content to revise. */
   from?: string;
   /** Path to a text/markdown file holding the user's raw idea — the LLM
@@ -78,7 +83,7 @@ export interface DraftOptions {
    *  article.md frontmatter (`image_style:`) so `video make` picks it
    *  up. flat-vector (default), photoreal, watercolor, ink-wash, clay-3d,
    *  manga, genki-anime, medieval, editorial, whiteboard, isometric,
-   *  paper-cut. Also a
+   *  paper-cut, gongbi, terminal, ghibli, woodcut, sketch. Also a
    *  video-ask/1 knob (v0.7): passing it explicitly marks the
    *  image_style question as specified for the agent-ask gate
    *  (docs/v0.7-agent-ask-protocol-plan.md §5–§6). */
@@ -496,6 +501,10 @@ export async function runDraft(opts: DraftOptions): Promise<number> {
     audience,
     language,
     duration,
+    ...(opts.editingDepth !== undefined
+      ? { editingDepth: opts.editingDepth }
+      : {}),
+    ...(opts.tone !== undefined ? { tone: opts.tone } : {}),
     ...(fromContent !== undefined ? { fromContent } : {}),
     ...(ideaSeed !== undefined ? { ideaSeed } : {}),
     ...(webContext && webContext.length > 0 ? { webContext } : {}),
@@ -531,13 +540,38 @@ export async function runDraft(opts: DraftOptions): Promise<number> {
             : {}),
           judgeProvider,
           judgeFallback,
+          // Improvement #3: FACT_* findings are fact-checked before the
+          // surgical reviser touches them — it gets verified notes (or
+          // softens the claim) instead of inventing sources. Reuses the
+          // research provider pair and the same web-search backend the
+          // drafting step uses; a failure degrades to no notes inside the
+          // loop, never an abort.
+          research: async (claims) => {
+            const claim = claims[0] ?? "";
+            const out = await callResearch(
+              { topic: claim, audience, language, duration },
+              provider,
+              {
+                web: opts.noWeb === true ? null : new MiniMaxWebSearch(),
+                webQuery: claim,
+              },
+              fallback,
+            );
+            return out.output.claims.map((c) => ({
+              claim: c.claim,
+              verdict:
+                c.status === "fact" ? ("supported" as const) : ("unclear" as const),
+              notes: c.note ?? "",
+            }));
+          },
           onAttempt: (a, total) => {
             if (a.score) {
               const s = a.score;
+              const mode = a.mode === "revise" ? " [revise]" : a.mode === "regenerate" ? " [regenerate]" : "";
               const verdict = a.passing
                 ? "✓ above bar"
                 : a.attempt < total
-                  ? `→ below ${minScore}, regenerating with judge feedback`
+                  ? `→ below ${minScore}, improving`
                   : `→ still below ${minScore} after ${total} attempts`;
               const blockers = s.raw.risk_flags.filter(
                 (r) => r.severity === "Critical",
@@ -547,7 +581,7 @@ export async function runDraft(opts: DraftOptions): Promise<number> {
                   ? ` [blocker: ${blockers.map((r) => r.code).join(", ")}]`
                   : "";
               console.log(
-                `  review ${a.attempt}/${total}: overall=${s.computed.overall_score} grade=${s.computed.grade} coverage=${s.computed.coverage}% → ${s.total}/100${blockerNote}  ${verdict}`,
+                `  review ${a.attempt}/${total}${mode}: overall=${s.computed.overall_score} grade=${s.computed.grade} coverage=${s.computed.coverage}% → ${s.total}/100${blockerNote}  ${verdict}`,
               );
             } else {
               console.error(
@@ -752,6 +786,9 @@ export interface DraftCliOpts {
   lang?: "zh-CN" | "en-US";
   duration?: number;
   audience?: string;
+  /** Improvement #4: editing-depth / tone knobs (2026-11). */
+  editingDepth?: "light" | "medium" | "deep";
+  tone?: "professional" | "conversational" | "academic" | "narrative";
   bgm?: string;
   from?: string;
   file?: string;
@@ -784,6 +821,10 @@ export function draftCliOptsToDraftOptions(
     ...(opts.lang !== undefined ? { lang: opts.lang } : {}),
     ...(opts.duration !== undefined ? { duration: opts.duration } : {}),
     ...(opts.audience !== undefined ? { audience: opts.audience } : {}),
+    ...(opts.editingDepth !== undefined
+      ? { editingDepth: opts.editingDepth }
+      : {}),
+    ...(opts.tone !== undefined ? { tone: opts.tone } : {}),
     ...(opts.bgm !== undefined ? { bgm: opts.bgm } : {}),
     ...(opts.from !== undefined ? { from: opts.from } : {}),
     ...(opts.file !== undefined ? { ideaFile: opts.file } : {}),
@@ -838,6 +879,33 @@ export function registerDraft(program: Command): void {
     )
     .option("--audience <text>", "target audience (default: developers)")
     .option(
+      "--editing-depth <depth>",
+      "how hard the drafter may edit: light|medium|deep (default: deep — the base prompt's editing rules; light = minimal-touch polishing)",
+      (v: string) => {
+        const allowed = ["light", "medium", "deep"];
+        if (!allowed.includes(v)) {
+          throw new Error(`--editing-depth must be ${allowed.join("|")}, got: ${v}`);
+        }
+        return v as "light" | "medium" | "deep";
+      },
+    )
+    .option(
+      "--tone <tone>",
+      "voice register: professional|conversational|academic|narrative (default: chosen from the topic and audience)",
+      (v: string) => {
+        const allowed = [
+          "professional",
+          "conversational",
+          "academic",
+          "narrative",
+        ];
+        if (!allowed.includes(v)) {
+          throw new Error(`--tone must be ${allowed.join("|")}, got: ${v}`);
+        }
+        return v as "professional" | "conversational" | "academic" | "narrative";
+      },
+    )
+    .option(
       "--bgm <tag>",
       "BGM track tag from the library in assets/bgm/ (e.g. upbeat-your-love, light-gravity, classical-gymnopedie-no-3), or none for silence. Default: the audio planner picks from the catalogue. See assets/bgm/README.md",
     )
@@ -855,7 +923,7 @@ export function registerDraft(program: Command): void {
     )
     .option(
       "--image-style <style>",
-      "scene-image style preset — flat-vector | photoreal | watercolor | ink-wash | clay-3d | manga | genki-anime | medieval | editorial | whiteboard | isometric | paper-cut | gongbi (default: flat-vector); see video prompts show image-styles.yaml for use cases",
+      "scene-image style preset — flat-vector | photoreal | watercolor | ink-wash | clay-3d | manga | genki-anime | medieval | editorial | whiteboard | isometric | paper-cut | gongbi | ghibli | woodcut | sketch (default: flat-vector); see video prompts show image-styles.yaml for use cases",
     )
     .option(
       "--image-provider <provider>",

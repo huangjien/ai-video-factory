@@ -643,6 +643,18 @@ Direct upload to YouTube is available too — the package includes the
 metadata, and the upload path handles the OAuth verification that YouTube
 requires. See the release notes for the current state of that flow.
 
+### Headless mode (`VIDEO_HEADLESS=1`)
+
+Two commands can put a window in front of you: `video studio` (only with
+`--open`) and `video youtube --auth`, which opens the Google consent page
+so you can approve the upload scope. `VIDEO_HEADLESS=1` turns both into
+no-ops — the Studio prints its URL, and the consent flow prints the
+consent URL instead of opening it. The flow still works; you just visit
+the URL yourself.
+
+The test suite sets this globally, so `pnpm test` never opens a browser
+on your screen.
+
 ---
 
 ## 12. Project layout and provenance

@@ -1,5 +1,16 @@
 import { openBrowser, type HeadlessBrowser } from "@remotion/renderer";
-export { openBrowser };
+
+/** Open the render browser in HEADLESS mode, explicitly.
+ *
+ *  Remotion defaults to `chromeMode: "headless-shell"` (a binary that
+ *  cannot open a window) and `chromiumOptions.headless: true`, but that
+ *  default is one Remotion release away from changing, and a headful
+ *  Chrome in the middle of a test run hijacks the user's screen. Asking
+ *  for headless explicitly makes the contract ours: no window, ever.
+ */
+export function openHeadlessBrowser(): Promise<HeadlessBrowser> {
+  return openBrowser("chrome", { chromiumOptions: { headless: true } });
+}
 
 /** One Chrome per process, reused by every scene render.
  *
@@ -65,5 +76,5 @@ export function createBrowserPool(
 }
 
 export const sharedBrowser: BrowserPool = createBrowserPool(() =>
-  openBrowser("chrome"),
+  openHeadlessBrowser(),
 );

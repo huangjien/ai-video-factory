@@ -29,15 +29,18 @@ const TRANSITION_SECONDS = 0.6;
  * bottom of the frame, so when both fire the frame shows two different lines
  * printed on top of each other — unreadable, on every generated-image scene.
  *
- * The component's own caption wins, because it carries the scene's
- * `caption:` field: the human's own short on-screen label, capped at a few
- * words by the article spec. The track falls back to the narration when
- * `captions.source` is `narration`, which is a sentence or two — far too long
- * for an on-screen caption. On an image scene the short label is the better
- * caption, so it is the one that gets drawn.
+ * The NARRATION TRACK wins. It is the one the channel spec asks for
+ * (CONTEXT.md 旁白字幕: captions carry the full narration, synced with
+ * speech, and never repeat the scene title), and it is byte-identical to
+ * the exported SRT because both are compiled by the same `buildCaptionCues`.
+ * The component's own caption is the scene's short label — a few static
+ * words that sit on screen for the whole scene; on an image scene the
+ * narration subtitle is the caption that belongs on the bottom line, so
+ * the label loses.
  *
- * The track still owns every non-image scene, and any image scene whose
- * component caption is empty.
+ * The component caption survives only as a FALLBACK for scenes with no
+ * caption cues at all (e.g. mock-image renders with no narration) — the
+ * prop was designed to keep a placeholder image scene informative.
  */
 export type CaptionOwner = "component" | "track" | "none";
 
@@ -67,11 +70,11 @@ export function sceneCaptionOwner(
   props: Record<string, unknown> | undefined,
   captions: RenderPlanScene["captions"],
 ): CaptionOwner {
+  if ((captions?.cues?.length ?? 0) > 0) return "track";
   if (COMPONENT_CAPTION_COMPONENTS.has(component)) {
     const text = props?.["caption"];
     if (typeof text === "string" && text.trim() !== "") return "component";
   }
-  if ((captions?.cues?.length ?? 0) > 0) return "track";
   return "none";
 }
 

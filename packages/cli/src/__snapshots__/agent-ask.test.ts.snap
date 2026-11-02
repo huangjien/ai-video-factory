@@ -102,6 +102,18 @@ exports[`emitQuestionsDoc > emits the full video-ask/1 envelope (snapshot) 1`] =
           "note": "dark CRT console with phosphor-green and cyan glow; code/CLI environments",
           "value": "terminal",
         },
+        {
+          "note": "hand-painted cel animation; painted backgrounds, warm diffused light",
+          "value": "ghibli",
+        },
+        {
+          "note": "carved relief print; bold key lines and flat color areas",
+          "value": "woodcut",
+        },
+        {
+          "note": "graphite pencil drawing; loose contour, hatching, paper white",
+          "value": "sketch",
+        },
       ],
       "default": "flat-vector",
       "flag": "--image-style",

@@ -7,6 +7,13 @@ export interface DraftInput {
   audience: string;
   language: "zh-CN" | "en-US";
   duration: number;
+  /** Improvement #4 (2026-11): editing-depth knob — how hard the drafter
+   *  may edit source/idea material. Omitted → the base prompt behaves
+   *  exactly as before (byte-identical user message). */
+  editingDepth?: "light" | "medium" | "deep";
+  /** Improvement #4 (2026-11): voice register for the article. Omitted →
+   *  the drafter infers it from topic + audience as before. */
+  tone?: "professional" | "conversational" | "academic" | "narrative";
   /** Optional pre-existing content to revise (used by `video draft --from <file>`). */
   fromContent?: string;
   /** Optional raw idea / outline seed (used by `video draft --file <path>`).
@@ -34,6 +41,22 @@ export function buildMessages(input: DraftInput): ChatMessage[] {
     `Language: ${input.language}`,
     `Total duration target (seconds): ${input.duration}`,
   ];
+  if (input.editingDepth !== undefined) {
+    userParts.push(
+      `Editing depth: ${input.editingDepth}`,
+      input.editingDepth === "light"
+        ? "Stay close to the source/idea material — polish wording, fix errors, tighten; do not restructure or add substantial new content."
+        : input.editingDepth === "medium"
+          ? "Balance fidelity to the source material with the article-quality rules above."
+          : "Apply the full article-quality rules above, including reorganizing and expanding where the content needs it.",
+    );
+  }
+  if (input.tone !== undefined) {
+    userParts.push(
+      `Tone: ${input.tone}`,
+      "Keep this voice register consistent from hook to conclusion.",
+    );
+  }
   if (input.fromContent) {
     userParts.push(
       "\n## Existing content to revise (preserve intent, improve as needed)",

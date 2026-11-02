@@ -2,7 +2,16 @@ import { z } from "zod";
 import type { Provider } from "@video/llm";
 import { chatWithFallback, stripReasoning } from "@video/llm";
 import { loadPrompt } from "@video/prompts";
-import { callDraft, extractBalancedJson } from "./agent.js";
+import {
+  callDraft,
+  extractBalancedJson,
+  type RawArticle,
+} from "./agent.js";
+import {
+  callRevise,
+  type ResearchNote,
+  type ReviseFinding,
+} from "./revise.js";
 import { withChannelBlock } from "./channel-profile.js";
 import type { DraftInput } from "./prompt.js";
 
@@ -630,6 +639,12 @@ export function scoreTotal(s: { total: number }): number {
 export interface ScoredAttempt {
   attempt: number;
   markdown: string;
+  /** Structured article of this attempt — present for drafts and
+   * revisions; the base the surgical reviser edits. */
+  raw?: RawArticle;
+  /** How this attempt was produced: fresh draft, surgical revision of
+   * an earlier attempt, or full regeneration with judge feedback. */
+  mode?: "draft" | "revise" | "regenerate";
   score: ArticleScore | null;
   /** Why there is no score (judge failed) — absent when scored. */
   scoreError?: string;
@@ -662,6 +677,12 @@ export interface ScoredDraftOptions {
   minScore?: number;
   /** Total number of draft attempts (not retries). Default 3. */
   maxAttempts?: number;
+  /** Improvement #3 — verify FACT_* findings before the surgical
+   *  reviser touches them. Called once per unique claim (cached), with
+   *  the claim text; returns research notes the reviser may use INSTEAD
+   *  of inventing sources. Failures degrade to “no notes” — research
+   *  must never kill the revision loop. */
+  research?: (claims: string[]) => Promise<ResearchNote[]>;
   /** Parallel best-of-N candidates per review round (2026-10-25 user
    *  directive). Each round launches up to N generate+judge pipelines
    *  concurrently and keeps the best; `maxAttempts` remains the TOTAL
@@ -724,10 +745,23 @@ function feedbackBlock(prev: ScoredAttempt, minScore: number): string {
   return lines.join("\n");
 }
 
-/** Draft → score → (regenerate with feedback until score ≥ minScore
- *  and no Critical risk flag) → best candidate. Never throws on
- *  quality — only `callDraft` failures propagate; a judge failure
- *  degrades to accepting the current draft unreviewed. */
+/** Draft → score → (staged improvement until score ≥ minScore and no
+ * Critical risk flag) → best candidate. Stages (2026-11 improvement #2):
+ *
+ * 1. Fresh round — up to `candidates` parallel generate+judge pipelines.
+ * 2. REVISION rounds — surgical revision of the best rejected candidate
+ *    (fix exactly the quoted findings, keep everything else verbatim).
+ *    One draft+judge pair per round; converges without collateral damage
+ *    to prose that already passed.
+ * 3. REGENERATION rounds — the historical behavior: rewrite the whole
+ *    article with judge feedback. Entered when the revision cannot run
+ *    (no quotable findings / structure-only findings), when it fails, or
+ *    when it stops improving the score — regeneration is the escape
+ *    hatch, not the default, because it can regress passing prose.
+ *
+ * Never throws on quality — only `callDraft`/`callRevise` failures
+ * propagate; a judge failure degrades to accepting the current draft
+ * unreviewed. */
 export async function runScoredDraft(
   input: DraftInput,
   provider: Provider,
@@ -760,31 +794,21 @@ export async function runScoredDraft(
   let attemptNo = 0;
   let round1Count = 0;
 
-  /** One generate+judge pipeline. The attempt number is assigned
-   *  synchronously on entry, so parallel candidates number 1..N in
-   *  launch order while their awaits interleave. */
-  const produce = async (): Promise<ScoredAttempt> => {
-    const n = ++attemptNo;
-    const draftInput: DraftInput =
-      feedback !== undefined ? { ...input, feedback } : input;
-    const draft = await callDraft(draftInput, provider, fallback ?? undefined);
-    usage.input += draft.usage.input;
-    usage.output += draft.usage.output;
-    providerName = draft.providerName;
-
+  /** Shared judge call with the bounded single retry on parse breakdowns
+   *  (ArticleReviewError) — used by both the draft and revision paths so
+   *  neither can diverge on judge policy. A transient judge formatting
+   *  hiccup used to abort the whole loop (2026-10-24, two confirmed
+   *  occurrences); the retry is fixed at one — deterministic policy, no
+   *  LLM-driven control flow. */
+  const judgeMarkdown = async (
+    markdown: string,
+  ): Promise<{ score: ArticleScore | null; scoreError: string | undefined }> => {
     let score: ArticleScore | null = null;
     let scoreError: string | undefined;
-    // Bounded single retry on judge parse/schema breakdowns
-    // (ArticleReviewError): a transient judge formatting hiccup used to
-    // abort the whole loop, discarding the remaining draft attempts and
-    // shipping the video unreviewed (2026-10-24, two confirmed
-    // occurrences). Provider-level failures already have
-    // chatWithFallback inside scoreArticle; the retry here is fixed at
-    // one — deterministic policy, no LLM-driven control flow.
     for (let judgeTry = 1; judgeTry <= 2; judgeTry++) {
       try {
         score = await scoreArticle(
-          draft.markdown,
+          markdown,
           judgeProvider,
           judgeFallback,
           input.channelProfile,
@@ -810,10 +834,47 @@ export async function runScoredDraft(
       judgeUsage.output += score.judge.usage.output;
       judgeProviderName = score.judge.providerName;
     }
+    return { score, scoreError };
+  };
+
+  /** Findings a surgical revision can act on: a verbatim quote to
+   *  target, and not a pure structure problem (reordering/removing
+   *  sections is regeneration's job — the reviser must keep structure). */
+  const quotableFindings = (s: ArticleScore): ReviseFinding[] =>
+    s.raw.findings
+      .filter(
+        (f) =>
+          f.location.quote.trim().length >= 2 &&
+          !f.code.startsWith("STRUCTURE_"),
+      )
+      .map((f) => ({
+        id: f.id,
+        code: f.code,
+        severity: f.severity,
+        quote: f.location.quote,
+        description: f.description,
+        recommendation: f.recommendation,
+      }));
+
+  /** One generate+judge pipeline. The attempt number is assigned
+   *  synchronously on entry, so parallel candidates number 1..N in
+   *  launch order while their awaits interleave. */
+  const produce = async (): Promise<ScoredAttempt> => {
+    const n = ++attemptNo;
+    const draftInput: DraftInput =
+      feedback !== undefined ? { ...input, feedback } : input;
+    const draft = await callDraft(draftInput, provider, fallback ?? undefined);
+    usage.input += draft.usage.input;
+    usage.output += draft.usage.output;
+    providerName = draft.providerName;
+
+    const { score, scoreError } = await judgeMarkdown(draft.markdown);
 
     return {
       attempt: n,
       markdown: draft.markdown,
+      raw: draft.raw,
+      mode: feedback === undefined ? "draft" : "regenerate",
       score,
       ...(scoreError !== undefined ? { scoreError } : {}),
       // No score ≠ passing — it means unreviewed (judge broke); the
@@ -827,6 +888,58 @@ export async function runScoredDraft(
     };
   };
 
+  /** One surgical revise+judge pipeline off `reviseBase`. Returns null
+   *  WITHOUT consuming an attempt when the revision is unusable (call
+   *  failure, structure violated, or no-op output) — the caller falls
+   *  back to regeneration instead of judging a dead revision. */
+  const produceRevise = async (): Promise<ScoredAttempt | null> => {
+    if (reviseBase === null || reviseBase.raw === undefined) return null;
+    let rev;
+    try {
+      rev = await callRevise(
+        {
+          base: reviseBase.raw,
+          baseMarkdown: reviseBase.markdown,
+          findings: reviseFindings,
+          ...(researchNotesBlock === undefined ? {} : researchNotesBlock),
+          topic: input.topic,
+          audience: input.audience,
+          language: input.language,
+          duration: input.duration,
+          ...(input.channelProfile !== undefined
+            ? { channelProfile: input.channelProfile }
+            : {}),
+        },
+        provider,
+        fallback ?? null,
+      );
+    } catch {
+      // DraftError (parse breakdown after retry) — regenerate instead.
+      return null;
+    }
+    usage.input += rev.usage.input;
+    usage.output += rev.usage.output;
+    providerName = rev.providerName;
+    if (!rev.audit.structurePreserved || rev.markdown === reviseBase.markdown)
+      return null;
+
+    const { score, scoreError } = await judgeMarkdown(rev.markdown);
+    const n = ++attemptNo;
+    return {
+      attempt: n,
+      mode: "revise",
+      markdown: rev.markdown,
+      raw: rev.raw,
+      score,
+      ...(scoreError !== undefined ? { scoreError } : {}),
+      passing:
+        score !== null &&
+        score.passing &&
+        score.computed.overall_score >= minScore,
+      usage: rev.usage,
+    };
+  };
+
   /** Strictly-higher replacement keeps the earlier candidate on ties —
    *  same tie behavior as the historical serial loop. */
   const betterScore = (a: ScoredAttempt, b: ScoredAttempt): ScoredAttempt => {
@@ -834,8 +947,101 @@ export async function runScoredDraft(
     const bs = b.score?.computed.overall_score ?? -1;
     return bs > as ? b : a;
   };
+  const bestSoFar = (): ScoredAttempt =>
+    attempts.reduce(betterScore, attempts[0]!);
+
+  // Stage routing state. `mode` starts at "revise": after a rejected
+  // fresh round the next attempt is a surgical revision when the judge
+  // left quotable findings; otherwise (or when the revision fails,
+  // no-ops, or stops improving) the loop regenerates with feedback for
+  // the remaining budget.
+  let mode: "revise" | "regenerate" = "revise";
+  let reviseBase: ScoredAttempt | null = null;
+  let reviseFindings: ReviseFinding[] = [];
+  let researchNotesBlock: { researchNotes: ResearchNote[] } | undefined;
+
+  /** Improvement #3 — one research call per unique FACT_* claim,
+  *  cached for the rest of the run. A research failure degrades to
+  *  empty notes (the reviser then softens the claim instead of citing
+  *  something new). */
+  const researchCache = new Map<string, ResearchNote[]>();
+  const researchNotesFor = async (
+    findings: ReviseFinding[],
+  ): Promise<ResearchNote[] | undefined> => {
+    if (opts.research === undefined) return undefined;
+    const claims = [
+      ...new Set(
+        findings
+          .filter((f) => f.code.startsWith("FACT_"))
+          .map((f) => f.quote.trim()),
+      ),
+    ].filter((c) => c.length > 0);
+    if (claims.length === 0) return undefined;
+    const notes: ResearchNote[] = [];
+    for (const claim of claims) {
+      let cached = researchCache.get(claim);
+      if (cached === undefined) {
+        cached = [];
+        try {
+          cached = await opts.research([claim]);
+        } catch {
+          cached = []; // degrade, never throw
+        }
+        researchCache.set(claim, cached);
+      }
+      notes.push(...cached);
+    }
+    return notes.length > 0 ? notes : undefined;
+  };
+
+  /** Point the revision stage at a base + its quotable findings (and
+   *  refresh the fact-check notes for them). Returns the base so callers
+   *  assign `reviseBase` directly — keeping TS's flow analysis honest
+   *  about the variable's type. */
+  const prepareRevision = async (
+    base: ScoredAttempt,
+    findings: ReviseFinding[],
+  ): Promise<ScoredAttempt> => {
+    reviseBase = base;
+    reviseFindings = findings;
+    const notes = await researchNotesFor(findings);
+    researchNotesBlock =
+      notes === undefined ? undefined : { researchNotes: notes };
+    return base;
+  };
 
   for (let round = 1; attempts.length < maxAttempts; round++) {
+    if (round > 1 && mode === "revise") {
+      const rev = await produceRevise();
+      if (rev === null) {
+        mode = "regenerate";
+        feedback = feedbackBlock(bestSoFar(), minScore);
+        continue;
+      }
+      attempts.push(rev);
+      opts.onAttempt?.(rev, maxAttempts);
+      if (rev.score === null) break; // judge broke — no basis to iterate
+      if (rev.passing) break;
+      if (attempts.length >= maxAttempts) break;
+      const baseScore = reviseBase?.score?.computed.overall_score ?? -1;
+      if (rev.score.computed.overall_score > baseScore) {
+        // Still climbing — keep refining this lineage.
+        const nextFindings = quotableFindings(rev.score);
+        if (nextFindings.length === 0) {
+          mode = "regenerate";
+          feedback = feedbackBlock(rev, minScore);
+        } else {
+          reviseBase = await prepareRevision(rev, nextFindings);
+        }
+      } else {
+        // Revision plateaued or regressed — escape via regeneration.
+        mode = "regenerate";
+        feedback = feedbackBlock(bestSoFar(), minScore);
+      }
+      continue;
+    }
+
+    // Fresh (round 1) or regeneration fan-out — parallel best-of-N.
     const size = Math.min(candidates, maxAttempts - attempts.length);
     const settled = await Promise.allSettled(
       Array.from({ length: size }, () => produce()),
@@ -862,7 +1068,18 @@ export async function runScoredDraft(
 
     // Budget spent: no point asking for another rewrite.
     if (attempts.length >= maxAttempts) break;
-    feedback = feedbackBlock(roundBest, minScore);
+
+    if (round === 1) {
+      reviseFindings = quotableFindings(roundBest.score);
+      if (roundBest.raw !== undefined && reviseFindings.length > 0) {
+        reviseBase = await prepareRevision(roundBest, reviseFindings);
+      } else {
+        // Nothing a surgical pass can grip (structure-only findings,
+        // unquotable findings, or no structured base) — regenerate.
+        mode = "regenerate";
+      }
+    }
+    if (mode === "regenerate") feedback = feedbackBlock(roundBest, minScore);
   }
 
   // Best wins, period: after the final attempt the top-scoring candidate is
@@ -930,6 +1147,7 @@ export function renderArticleReviewYaml(
   lines.push(`attempts:`);
   for (const a of result.attempts) {
     lines.push(`  - attempt: ${a.attempt}`);
+    lines.push(`    mode: ${a.mode ?? "draft"}`);
     if (a.score) {
       lines.push(
         `    overall: ${a.score.computed.overall_score}`,

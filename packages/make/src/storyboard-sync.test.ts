@@ -3,7 +3,7 @@ import { mkdtemp, mkdir, rm, writeFile, readFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { parseArticleWithRecovery } from "@video/draft";
-import { syncStoryboardFromArticle } from "./index.js";
+import { deriveStoryboardSync, syncStoryboardFromArticle } from "./index.js";
 
 /**
  * Content-aware storyboard sync (2026-10-24): ids matching is not enough —
@@ -116,6 +116,37 @@ describe("content-aware storyboard sync", () => {
       const lines = await syncStoryboardFromArticle(dir, article);
       expect(lines).toEqual([]);
       expect(await readFile(sbPath, "utf8")).toContain("component: QuoteBlock");
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+});
+
+describe("deriveStoryboardSync — the current storyboard, without writing", () => {
+  it("reports a stale storyboard and returns the fresh derivation", async () => {
+    const { dir, article } = await mkProject();
+    try {
+      const edited = ARTICLE.replace("第一句。", "改过的第一句。");
+      const reparsed = parseArticleWithRecovery(edited).article;
+      const sync = await deriveStoryboardSync(dir, reparsed);
+      expect(sync.stale).toBe(true);
+      expect(sync.yaml).toContain("改过的第一句。");
+      // The file on disk was NOT touched — the review agent is read-only.
+      const onDisk = await readFile(
+        path.join(dir, "storyboard", "storyboard.yaml"),
+        "utf8",
+      );
+      expect(onDisk).not.toContain("改过的第一句。");
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("reports no drift when the article has not moved", async () => {
+    const { dir, article } = await mkProject();
+    try {
+      const sync = await deriveStoryboardSync(dir, article);
+      expect(sync.stale).toBe(false);
     } finally {
       await rm(dir, { recursive: true, force: true });
     }

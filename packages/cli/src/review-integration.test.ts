@@ -260,6 +260,67 @@ describe("video review end-to-end (todo 2) — mock MiniMax", () => {
     }
   });
 
+  it("judges the storyboard as article.md derives it, not the stale file", async () => {
+    // The storyboard is derived from article.md, and only `video make`
+    // re-derives it. After a hand edit of the article the file on disk
+    // still carries the OLD narration — and the judge used to quote
+    // that old wording. It must read the fresh derivation instead (and
+    // must NOT write to the project: the Review Agent is read-only).
+    const cwd = mkdtempSync(path.join(tmpdir(), "video-rv-"));
+    const project = "stale";
+    const root = path.join(cwd, "projects", project);
+    mkdirSync(path.join(root, "storyboard"), { recursive: true });
+    writeFileSync(path.join(root, "storyboard", "storyboard.yaml"), STORYBOARD);
+    const article = [
+      "---",
+      "project: stale",
+      "language: zh-CN",
+      "duration_target_sec: 20",
+      "voice: zh-CN-YunjianNeural",
+      "---",
+      "",
+      "# 陈旧测试",
+      "",
+      "## 1. 第一节",
+      "",
+      "正文。",
+      "",
+      "## Scenes",
+      "",
+      "```yaml",
+      "scenes:",
+      "  - id: scene_01",
+      "    duration: 10",
+      "    caption: 新标题",
+      "    visual: 一只茶壶放在木桌上",
+      "    narration: 文章里的新旁白。",
+      "  - id: scene_02",
+      "    duration: 10",
+      "    caption: 二",
+      "    visual: 一杯茶冒着热气",
+      "    narration: 第二句。",
+      "```",
+      "",
+    ].join("\n");
+    writeFileSync(path.join(root, "article.md"), article, "utf8");
+    const storyboardBefore = readFileSync(
+      path.join(root, "storyboard", "storyboard.yaml"),
+      "utf8",
+    );
+
+    process.env["MINIMAX_API_HOST"] = baseUrl;
+    process.env["MINIMAX_API_KEY"] = "test-key-do-not-leak";
+    const code = await runReview({ project, cwd, model: "minimax" });
+    expect(code).toBe(0);
+
+    const judged = capturedBodies.join("\n");
+    expect(judged).toContain("文章里的新旁白。");
+    // The stale file was NOT rewritten — the review agent stays read-only.
+    expect(
+      readFileSync(path.join(root, "storyboard", "storyboard.yaml"), "utf8"),
+    ).toBe(storyboardBefore);
+  });
+
   it("exits 1 with helpful error when storyboard missing", async () => {
     const cwd = mkdtempSync(path.join(tmpdir(), "video-rv-"));
     mkdirSync(path.join(cwd, "projects", "missing", "script"), {
@@ -292,7 +353,10 @@ describe("video review end-to-end (todo 2) — mock MiniMax", () => {
     mkdirSync(path.join(root, "storyboard"), { recursive: true });
     mkdirSync(path.join(root, "script"), { recursive: true });
     mkdirSync(path.join(root, "research"), { recursive: true });
-    writeFileSync(path.join(root, "storyboard", "storyboard.yaml"), STORYBOARD_EN);
+    writeFileSync(
+      path.join(root, "storyboard", "storyboard.yaml"),
+      STORYBOARD_EN,
+    );
     writeFileSync(path.join(root, "script", "script.en-US.md"), SCRIPT);
     writeFileSync(path.join(root, "research", "claims.yaml"), CLAIMS);
 
@@ -301,7 +365,13 @@ describe("video review end-to-end (todo 2) — mock MiniMax", () => {
     const code = await runReview({ project, cwd, model: "minimax" });
     expect(code).toBe(0);
     const record = readFileSync(
-      path.join(root, "runs", execFileSync("ls", [path.join(root, "runs")], { encoding: "utf8" }).trim().split("\n")[0] ?? ""),
+      path.join(
+        root,
+        "runs",
+        execFileSync("ls", [path.join(root, "runs")], { encoding: "utf8" })
+          .trim()
+          .split("\n")[0] ?? "",
+      ),
       "utf8",
     );
     expect(record).toContain("script/script.en-US.md");
@@ -331,7 +401,13 @@ describe("video review end-to-end (todo 2) — mock MiniMax", () => {
       capturedBodies.some((b) => b.includes("sentence from the article body")),
     ).toBe(true);
     const record = readFileSync(
-      path.join(root, "runs", execFileSync("ls", [path.join(root, "runs")], { encoding: "utf8" }).trim().split("\n")[0] ?? ""),
+      path.join(
+        root,
+        "runs",
+        execFileSync("ls", [path.join(root, "runs")], { encoding: "utf8" })
+          .trim()
+          .split("\n")[0] ?? "",
+      ),
       "utf8",
     );
     expect(record).toContain("article.md");

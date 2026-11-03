@@ -12,7 +12,9 @@ import {
   MiniMaxProvider,
   pickJudgeProvider,
 } from "@video/llm";
-import { callReview, ReviewPackageSchema } from "@video/review";
+import { callReview, ReviewPackageSchema, type ReviewPackage } from "@video/review";
+import { parseArticleWithRecovery } from "@video/draft";
+import { deriveStoryboardSync } from "@video/make";
 import { parse as parseYaml, stringify as yamlStringify } from "yaml";
 import type { ChatMessage, Provider } from "@video/llm";
 import { formatRunId } from "@video/workflow";
@@ -116,26 +118,35 @@ function safeGitHead(cwd: string): string {
   }
 }
 
-export async function runReview(opts: ReviewOptions): Promise<number> {
-  const cwd = path.resolve(opts.cwd ?? ".");
-  const resolvedProject = resolveProjectDir(opts.project, opts.cwd);
-  if (!resolvedProject.ok) {
-    console.error(resolvedProject.message);
-    return 1;
-  }
-  const projectRoot = resolvedProject.root;
+/** The artifacts a review judge reads: the storyboard (required), the
+ *  script (or article.md), the claims (optional). Shared with
+ *  `video revise --re-review` so both read the project the same way. */
+export interface ReviewArtifacts {
+  storyboard: string;
+  script: string;
+  claims: string;
+  /** Project-relative path of the script artifact ("" when there is none). */
+  scriptFile: string;
+  /** Project-relative path of the claims artifact ("" when there is none). */
+  claimsFile: string;
+  /** True when the storyboard on disk was behind article.md and the
+   *  judge read a freshly derived copy instead. */
+  storyboardStale: boolean;
+}
+
+/** Collect the review inputs for a project. Throws when the storyboard —
+ *  the one required artifact — is missing. */
+export async function collectReviewArtifacts(
+  projectRoot: string,
+): Promise<ReviewArtifacts> {
   const { readFile } = await import("node:fs/promises");
   const sbPath = path.join(projectRoot, "storyboard", "storyboard.yaml");
   const claimsPath = path.join(projectRoot, "research", "claims.yaml");
   const articlePath = path.join(projectRoot, "article.md");
-  // The storyboard is the only REQUIRED input: it is the film itself.
-  // The script and the claims file belong to the script/research
-  // pipeline; `video draft` writes neither, so demanding them made the
-  // command unusable on every drafted project.
   if (!existsSync(sbPath)) {
-    console.error(`missing input: ${sbPath}`);
-    console.error(`  run video draft / video storyboard first`);
-    return 1;
+    throw new Error(
+      `missing input: ${sbPath}\n  run video draft / video storyboard first`,
+    );
   }
   const storyboard = await readFile(sbPath, "utf8");
   const lang = projectLanguage(projectRoot, storyboard);
@@ -165,9 +176,101 @@ export async function runReview(opts: ReviewOptions): Promise<number> {
   const claims = hasClaims
     ? await readFile(claimsPath, "utf8")
     : NO_CLAIMS_NOTE;
-  const claimsFile = hasClaims
-    ? path.relative(projectRoot, claimsPath)
-    : "";
+  const claimsFile = hasClaims ? path.relative(projectRoot, claimsPath) : "";
+
+  // The judge must read a storyboard that MATCHES article.md. The
+  // storyboard is derived from the article, and only `video make`
+  // re-derives it — so after a hand edit of article.md the file on disk
+  // still carries the old narrations, and the judge quotes wording the
+  // article no longer has. Derive the current storyboard in memory: the
+  // Review Agent never writes to the project.
+  let storyboardForJudge = storyboard;
+  let storyboardStale = false;
+  if (existsSync(articlePath)) {
+    try {
+      const { article } = parseArticleWithRecovery(
+        await readFile(articlePath, "utf8"),
+      );
+      const sync = await deriveStoryboardSync(projectRoot, article);
+      if (sync.stale) {
+        storyboardForJudge = sync.yaml;
+        storyboardStale = true;
+      }
+    } catch {
+      // A malformed article must not break the review — the on-disk
+      // storyboard is still worth judging.
+    }
+  }
+
+  return {
+    storyboard: storyboardForJudge,
+    script,
+    claims,
+    scriptFile,
+    claimsFile,
+    storyboardStale,
+  };
+}
+
+/** Read the three review files `video review` writes and merge them into
+ *  one package. The files are written separately (`content-review.yaml`,
+ *  `visual-review.yaml`, `technical-review.yaml`) so a human can read
+ *  them one at a time; the reviser wants them together. */
+export async function loadReviewPackage(
+  projectRoot: string,
+): Promise<ReviewPackage> {
+  const dir = path.join(projectRoot, "review");
+  const { readFile } = await import("node:fs/promises");
+  const read = async (file: string): Promise<Record<string, unknown>> => {
+    const p = path.join(dir, file);
+    if (!existsSync(p)) {
+      throw new Error(
+        `missing ${path.relative(projectRoot, p)} — run \`video review <project>\` first`,
+      );
+    }
+    return parseYaml(await readFile(p, "utf8")) as Record<string, unknown>;
+  };
+  const content = await read("content-review.yaml");
+  const visual = await read("visual-review.yaml");
+  const technical = await read("technical-review.yaml");
+  const merged = {
+    content: content.content,
+    visual: visual.visual,
+    technical: technical.technical,
+  };
+  const parsed = ReviewPackageSchema.safeParse(merged);
+  if (!parsed.success) {
+    throw new Error(
+      `review files do not match the review schema: ${parsed.error.issues
+        .map((i) => `${i.path.join(".")}: ${i.message}`)
+        .join("; ")}`,
+    );
+  }
+  return parsed.data;
+}
+
+export async function runReview(opts: ReviewOptions): Promise<number> {
+  const resolvedProject = resolveProjectDir(opts.project, opts.cwd);
+  if (!resolvedProject.ok) {
+    console.error(resolvedProject.message);
+    return 1;
+  }
+  const projectRoot = resolvedProject.root;
+  let artifacts: ReviewArtifacts;
+  try {
+    artifacts = await collectReviewArtifacts(projectRoot);
+  } catch (err) {
+    console.error(`✗ ${(err as Error).message}`);
+    return 1;
+  }
+  const {
+    storyboard,
+    script,
+    claims,
+    scriptFile,
+    claimsFile,
+    storyboardStale,
+  } = artifacts;
 
   const cfg = loadProviderConfig();
   // 2026-10-26: read the REVIEW role for judge slots — this used to read
@@ -276,6 +379,12 @@ export async function runReview(opts: ReviewOptions): Promise<number> {
   );
   console.log("");
   console.log(`${MARK_OK} wrote review/{content,visual,technical}-review.yaml`);
+  if (storyboardStale) {
+    console.log(
+      "  note: storyboard.yaml was behind article.md — the judge read a freshly derived copy (the file was NOT rewritten)",
+    );
+    console.log("        run `video make` to persist the derivation");
+  }
   console.log(
     `  content=${overall[0]}  visual=${overall[1]}  technical=${overall[2]}`,
   );

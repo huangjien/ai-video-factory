@@ -612,24 +612,40 @@ export function preserveMotionPlan(
   return kept;
 }
 
-export async function syncStoryboardFromArticle(
+export interface StoryboardSync {
+  /** The storyboard YAML the project SHOULD have right now — derived
+   *  from article.md, with the motion plan carried over. */
+  yaml: string;
+  /** True when the on-disk storyboard differs from it (stale or absent). */
+  stale: boolean;
+  /** The content hash of the derivation — the sidecar's value. */
+  hash: string;
+  /** What changed, for the log. */
+  notes: string[];
+  /** How many motion-plan fields were carried over. */
+  kept: number;
+}
+
+/**
+ * Compute the storyboard the project SHOULD have, without touching the
+ * file.
+ *
+ * The review agent needs this: it reads the storyboard, and after a hand
+ * edit of article.md the on-disk storyboard still carries the OLD
+ * narrations — so the judge quotes wording the article no longer has.
+ * Deriving in memory gives the judge the current article without
+ * mutating a human-approved project (the Review Agent is read-only).
+ */
+export async function deriveStoryboardSync(
   projectRoot: string,
   article: ParsedArticle,
-): Promise<string[]> {
+): Promise<StoryboardSync> {
   const storyboardPath = path.join(
     projectRoot,
     "storyboard",
     "storyboard.yaml",
   );
   const hashPath = path.join(path.dirname(storyboardPath), ".derived-hash");
-  // Content-aware sync (2026-10-24): the ids-match fast path used to skip
-  // re-derivation even when article content that FEEDS the storyboard
-  // changed (frontmatter `captions_source`, per-scene caption/visual/
-  // narration/duration) — the operator had to rm the storyboard by hand
-  // (hit twice on 2026-10-24). Hash that content into a sidecar and
-  // re-derive (keeping the motion plan) whenever it drifts. Pure hand
-  // edits to storyboard.yaml still win: the hash only moves when
-  // article.md moves.
   const derivedHash = createHash("sha256")
     .update(
       JSON.stringify({
@@ -653,14 +669,13 @@ export async function syncStoryboardFromArticle(
     ? readFileSync(hashPath, "utf8").trim()
     : null;
   if (!existsSync(storyboardPath)) {
-    await mkdir(path.dirname(storyboardPath), { recursive: true });
-    await writeFile(
-      storyboardPath,
-      articleToStoryboardYaml(article),
-      "utf8",
-    );
-    await writeFile(hashPath, derivedHash, "utf8");
-    return ["storyboard.yaml: created from article.md"];
+    return {
+      yaml: articleToStoryboardYaml(article),
+      stale: true,
+      hash: derivedHash,
+      notes: ["storyboard.yaml: created from article.md"],
+      kept: 0,
+    };
   }
 
   const yamlText = readFileSync(storyboardPath, "utf8");
@@ -688,16 +703,22 @@ export async function syncStoryboardFromArticle(
     articleIds.length === storyboardIds.length &&
     articleIds.every((id, i) => id === storyboardIds[i]);
 
-  if (idsMatch && storedHash === derivedHash) return [];
+  if (idsMatch && storedHash === derivedHash) {
+    return {
+      yaml: yamlText,
+      stale: false,
+      hash: derivedHash,
+      notes: [],
+      kept: 0,
+    };
+  }
 
   const derived = articleToStoryboardYaml(article);
   const nextDoc = parseYaml(derived) as {
     scenes?: Record<string, unknown>[];
   };
   const kept = preserveMotionPlan(nextDoc, parsed);
-  await writeFile(storyboardPath, yamlStringify(nextDoc), "utf8");
-  await writeFile(hashPath, derivedHash, "utf8");
-  return [
+  const notes = [
     idsMatch
       ? `storyboard.yaml: article content changed — re-derived (${articleIds.length} scenes, motion plan kept: ${kept})`
       : `storyboard.yaml: ${articleIds.length} scenes synced from article.md`,
@@ -705,6 +726,31 @@ export async function syncStoryboardFromArticle(
       ? [`storyboard.yaml: kept the motion plan (${kept} field(s))`]
       : []),
   ];
+  return {
+    yaml: yamlStringify(nextDoc),
+    stale: true,
+    hash: derivedHash,
+    notes,
+    kept,
+  };
+}
+
+export async function syncStoryboardFromArticle(
+  projectRoot: string,
+  article: ParsedArticle,
+): Promise<string[]> {
+  const storyboardPath = path.join(
+    projectRoot,
+    "storyboard",
+    "storyboard.yaml",
+  );
+  const hashPath = path.join(path.dirname(storyboardPath), ".derived-hash");
+  const sync = await deriveStoryboardSync(projectRoot, article);
+  if (!sync.stale) return [];
+  await mkdir(path.dirname(storyboardPath), { recursive: true });
+  await writeFile(storyboardPath, sync.yaml, "utf8");
+  await writeFile(hashPath, sync.hash, "utf8");
+  return sync.notes;
 }
 
 /**
@@ -1053,9 +1099,7 @@ function updateStoryboardForImages(
       src: imagePath,
       // no_captions: true → the Pillow key-info banner is the only burned
       // text; do NOT resurrect the bottom caption label here (2026-10-26).
-      ...(prevText !== undefined && !noCaptions
-        ? { caption: prevText }
-        : {}),
+      ...(prevText !== undefined && !noCaptions ? { caption: prevText } : {}),
       ...(prevKenBurns !== undefined ? { kenBurnsScale: prevKenBurns } : {}),
     };
     switched++;

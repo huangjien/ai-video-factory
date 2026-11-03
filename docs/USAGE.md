@@ -611,6 +611,7 @@ path.
 | `video audio-asset` | BGM and SFX assets                                           |
 | `video mix`         | The mix step on its own                                      |
 | `video review`      | Content, visual, and technical review YAMLs                  |
+| `video revise`      | Apply the review's findings as a targeted article edit       |
 | `video qa`          | Rebuild the QA report for the current preview                |
 | `video validate`    | Validate a storyboard against the full rule set              |
 

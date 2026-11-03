@@ -16,7 +16,7 @@ export const MINIMAL_API_COMMANDS: readonly MinimalApiCommand[] = [
   {
     invocation: "video draft <topic>",
     purpose:
-      "write `article.md` + `audio-config.yaml` from a topic via MiniMax/GLM (research + script + storyboard + audio plan in one; `--no-audio-plan` to split; `--file <path>` to seed with your raw idea, opinions preserved; **v0.4** `--style <theme>` writes storyboard theme; **v0.4** `--no-captions` skips the caption overlay)",
+      "write `article.md` + `audio-config.yaml` from a topic via MiniMax/GLM (research + script + storyboard + audio plan in one; `--no-audio-plan` to split; `--file <path>` to seed with your raw idea, opinions preserved; **v0.4** `--style <theme>` writes storyboard theme; **v0.4** `--no-captions` skips the caption overlay; `--from-review <project>` revises an existing project from its `video review` report — surgical, no regeneration, project frontmatter preserved)",
   },
   {
     invocation: "video audio-plan <project>",
@@ -80,6 +80,7 @@ export const ADVANCED_VERBS: readonly string[] = [
   "studio",
   "qa",
   "review",
+  "revise",
   "validate",
   "scene",
   "learn",
@@ -129,7 +130,8 @@ const BANNER_CORE_STEPS: readonly {
     desc: "write article.md + audio-config.yaml",
     cont: [
       "(--no-web, --style, --file, --no-review,",
-      " --min-score, --max-attempts, --judge-model)",
+      " --from-review, --min-score, --max-attempts,",
+      " --judge-model)",
     ],
   },
   {

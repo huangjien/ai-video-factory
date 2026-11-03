@@ -461,9 +461,9 @@ describe("runScoredDraft", () => {
     expect(r.attempts[1]!.mode).toBe("revise");
     expect(r.markdown).toContain("with a concrete number");
     expect(p.requests).toHaveLength(4);
-    const revisePrompt = p.requests[2]!.messages
-      .map((m) => m.content)
-      .join("\n");
+    const revisePrompt = p.requests[2]!.messages.map((m) => m.content).join(
+      "\n",
+    );
     expect(revisePrompt).toContain("Findings to fix");
     expect(revisePrompt).toContain("LOGIC_GAP");
     expect(revisePrompt).toContain("add a number");
@@ -488,9 +488,9 @@ describe("runScoredDraft", () => {
       "revise",
       "regenerate",
     ]);
-    const regenPrompt = p.requests[4]!.messages
-      .map((m) => m.content)
-      .join("\n");
+    const regenPrompt = p.requests[4]!.messages.map((m) => m.content).join(
+      "\n",
+    );
     expect(regenPrompt).toContain("quality judge");
     expect(regenPrompt).toContain("[Major] LOGIC_GAP");
   });
@@ -530,6 +530,206 @@ describe("runScoredDraft", () => {
     expect(second).not.toContain("Findings to fix");
   });
 
+  it("starts from a seed: it is judged, and the first revision applies the seed's findings", async () => {
+    // The seed path (video draft --from-review): no draft is generated.
+    // The seed article is judged, and the revision applies the findings
+    // that came from OUTSIDE the judge (a video review report).
+    const p = new FakeProvider([
+      buildRawWithFinding("Major"), // the seed's score — 60, rejected
+      REVISED_ARTICLE, // the surgical revision
+      buildPassingRaw(4), // the revision's score — 80, passes
+    ]);
+    const r = await runScoredDraft(INPUT, p, null, {
+      minScore: 70,
+      seed: {
+        markdown: GOOD_ARTICLE,
+        raw: JSON.parse(GOOD_ARTICLE),
+        findings: [
+          {
+            id: "R-1",
+            code: "REVIEW_CONTRADICTIONS",
+            severity: "Major",
+            quote: "narration line",
+            description: "from the review report",
+            recommendation: "fix what the review reported",
+          },
+        ],
+      },
+    });
+    expect(r.passing).toBe(true);
+    expect(r.attempts[0]!.mode).toBe("seed");
+    expect(r.attempts[1]!.mode).toBe("revise");
+    // The revision prompt carries the SEED's finding, not the judge's.
+    const revisePrompt = p.requests[1]!.messages.map((m) => m.content).join(
+      "\n",
+    );
+    expect(revisePrompt).toContain("R-1");
+    expect(revisePrompt).toContain("from the review report");
+    expect(revisePrompt).not.toContain("LOGIC_GAP");
+    // No draft was generated — the seed took its place.
+    expect(p.requests).toHaveLength(3);
+  });
+
+  it("never regenerates a seeded article — it keeps the best revision", async () => {
+    // The draft loop's escape hatch is a full rewrite. A seeded revision
+    // must not take it: the article on disk is the human's.
+    const p = new FakeProvider([
+      buildRawWithFinding("Major"), // the seed — 60
+      REVISED_ARTICLE, // the revision
+      buildRawWithFinding("Major"), // the revision did NOT improve — 60
+      GOOD_ARTICLE, // a regeneration would come here — must not be called
+      buildPassingRaw(4),
+    ]);
+    const r = await runScoredDraft(INPUT, p, null, {
+      minScore: 70,
+      noRegenerate: true,
+      seed: {
+        markdown: GOOD_ARTICLE,
+        raw: JSON.parse(GOOD_ARTICLE),
+        findings: [
+          {
+            id: "R-1",
+            code: "REVIEW_CONTRADICTIONS",
+            severity: "Major",
+            quote: "narration line",
+            description: "from the review report",
+            recommendation: "fix it",
+          },
+        ],
+      },
+    });
+    expect(r.attempts.map((a) => a.mode)).toStrictEqual(["seed", "revise"]);
+    // No draft was generated — only the seed's judge call and the
+    // revision's two calls.
+    expect(p.requests).toHaveLength(3);
+  });
+
+  it("keeps the revision even when it scores below the seed", async () => {
+    // The review's findings were asked for. The score is reported, not
+    // obeyed — a lower score must not discard the fix.
+    const p = new FakeProvider([
+      buildRawWithFinding("Minor"), // the seed — 60, below the 70 bar
+      REVISED_ARTICLE,
+      buildRawWithFinding("Critical"), // the revision — 40, below the seed
+    ]);
+    const r = await runScoredDraft(INPUT, p, null, {
+      minScore: 70,
+      noRegenerate: true,
+      seed: {
+        markdown: GOOD_ARTICLE,
+        raw: JSON.parse(GOOD_ARTICLE),
+        findings: [
+          {
+            id: "R-1",
+            code: "REVIEW_CONTRADICTIONS",
+            severity: "Major",
+            quote: "narration line",
+            description: "from the review report",
+            recommendation: "fix it",
+          },
+        ],
+      },
+    });
+    expect(r.attempts.map((a) => a.mode)).toStrictEqual(["seed", "revise"]);
+    // The revision is the winner even though the seed scored higher.
+    expect(r.markdown).toContain("with a concrete number");
+  });
+
+  it("a seed that already clears the bar is accepted without a revision", async () => {
+    const p = new FakeProvider([buildPassingRaw(4)]);
+    const r = await runScoredDraft(INPUT, p, null, {
+      minScore: 70,
+      seed: {
+        markdown: GOOD_ARTICLE,
+        raw: JSON.parse(GOOD_ARTICLE),
+        findings: [],
+      },
+    });
+    expect(r.passing).toBe(true);
+    expect(r.attempts).toHaveLength(1);
+    expect(r.attempts[0]!.mode).toBe("seed");
+    expect(p.requests).toHaveLength(1); // the judge call, nothing else
+  });
+
+  it("states the no-source rule on a FACT finding the research could NOT verify", async () => {
+    // The research failing must not leave the reviser free to invent a
+    // citation — the first real run of `video revise` turned
+    // "余世存说过：…" into "余世存在《时间之书》里写过：…".
+    const raw = JSON.parse(buildRawWithFinding("Major"));
+    raw.findings[0].code = "FACT_UNSUPPORTED";
+    const p = new FakeProvider([
+      GOOD_ARTICLE,
+      JSON.stringify(raw),
+      REVISED_ARTICLE,
+      buildPassingRaw(4),
+    ]);
+    const research = async (): Promise<ResearchNote[]> => {
+      throw new Error("research is down");
+    };
+    await runScoredDraft(INPUT, p, null, { minScore: 70, research });
+    const revisePrompt = p.requests[2]!.messages.map((m) => m.content).join(
+      "\n",
+    );
+    expect(revisePrompt).toContain("OVERRIDE");
+    expect(revisePrompt).toContain("DISREGARD that part");
+  });
+
+  it("does not state the no-source rule when the research verified the claim", async () => {
+    const raw = JSON.parse(buildRawWithFinding("Major"));
+    raw.findings[0].code = "FACT_UNSUPPORTED";
+    const p = new FakeProvider([
+      GOOD_ARTICLE,
+      JSON.stringify(raw),
+      REVISED_ARTICLE,
+      buildPassingRaw(4),
+    ]);
+    const research = async (): Promise<ResearchNote[]> => [
+      { claim: "narration line", verdict: "supported", notes: "confirmed" },
+    ];
+    await runScoredDraft(INPUT, p, null, { minScore: 70, research });
+    const revisePrompt = p.requests[2]!.messages.map((m) => m.content).join(
+      "\n",
+    );
+    expect(revisePrompt).not.toContain("No verified source was found");
+  });
+
+  it("targets the prose copy too — the same claim lives in two places", async () => {
+    // The article states the claim in the section body AND in the scene
+    // narration. Fixing only the copy the judge quoted leaves the
+    // article contradicting itself.
+    const dupArticle = JSON.stringify({
+      title: "t",
+      hook: "h",
+      sections: [
+        { heading: "s", body: "增长率为 37%，这个数字来自二手的报道。" },
+      ],
+      scenes: [
+        {
+          id: "scene_1",
+          duration: 8,
+          caption: "c",
+          visual: "v",
+          narration: "增长率为 37%，这个数字来自二手报道。",
+        },
+      ],
+    });
+    const raw = JSON.parse(buildRawWithFinding("Major"));
+    raw.findings[0].location.quote = "增长率为 37%，这个数字来自二手报道。";
+    const p = new FakeProvider([
+      dupArticle,
+      JSON.stringify(raw),
+      dupArticle,
+      buildPassingRaw(4),
+    ]);
+    await runScoredDraft(INPUT, p, null, { minScore: 70 });
+    const revisePrompt = p.requests[2]!.messages.map((m) => m.content).join(
+      "\n",
+    );
+    // Both copies are quoted for repair.
+    expect(revisePrompt).toContain("增长率为 37%，这个数字来自二手报道。");
+    expect(revisePrompt).toContain("增长率为 37%，这个数字来自二手的报道。");
+  });
+
   it("routes FACT_* findings through the research callback (once per claim) and feeds notes to the reviser", async () => {
     const raw = JSON.parse(buildRawWithFinding("Major"));
     raw.findings[0].code = "FACT_UNSUPPORTED";
@@ -558,9 +758,9 @@ describe("runScoredDraft", () => {
     expect(r.attempts[1]!.mode).toBe("revise");
     // The claim was researched exactly once, keyed by its quote.
     expect(researchCalls).toStrictEqual([["narration line"]]);
-    const revisePrompt = p.requests[2]!.messages
-      .map((m) => m.content)
-      .join("\n");
+    const revisePrompt = p.requests[2]!.messages.map((m) => m.content).join(
+      "\n",
+    );
     expect(revisePrompt).toContain("Fact-check research");
     expect(revisePrompt).toContain("查无出处");
   });
@@ -582,9 +782,9 @@ describe("runScoredDraft", () => {
       research,
     });
     expect(r.passing).toBe(true);
-    const revisePrompt = p.requests[2]!.messages
-      .map((m) => m.content)
-      .join("\n");
+    const revisePrompt = p.requests[2]!.messages.map((m) => m.content).join(
+      "\n",
+    );
     expect(revisePrompt).not.toContain("Fact-check research");
   });
 

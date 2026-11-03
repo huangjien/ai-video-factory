@@ -495,6 +495,36 @@ storyboard 的生成 provider 来评分。`video draft` 可用 `--judge-model
 里的 `generation_model:` / `judge_model:`（`video prompts eval` 加 `--gen`
 可把生成与评审拆开）。
 
+### 10.1.2 评审发现怎么落地
+
+`video review` 的发现要能被修复，必须锚定到具体文字：每条结构化发现带
+`field`（narration / caption / visual / section）和 `quote`（逐字引文）。
+只写"scene-07 太密"而没有引文的发现会被跳过（它无法被定点修改）。
+
+`video revise <项目>` 把可修复的发现变成一次定点修改；`video draft
+--from-review <项目>` 做同一件事，但走完整的 draft 阶段（裁判评分、
+`article-review.yaml`、run 记录、audio-config 保留、storyboard 重派生）：
+
+```bash
+video review "努力"                    # 评审 → review/*.yaml
+video draft --from-review "努力"       # 评审发现 → 定点修改（约 1 次修订 + 1 次评分）
+video make "努力"                      # 只重画受影响的场景图 / 重合成受影响的旁白
+```
+
+`--from-review` 的边界：文章在磁盘上是种子，**永远不会被整体重写**
+（`noRegenerate`）；默认预算 2 次尝试（种子评分 + 一次修订），要继续打磨用
+`--max-attempts`；frontmatter（voice / image_style / tts_provider 等）原样保留；
+agent-ask 门被跳过——项目自己的 frontmatter 就是答案。两条规则与 `video revise`
+共用：
+
+- **同一主张写了两遍也要一起改。** 文章把每个主张写在正文小节（人读）和
+  场景旁白（视频说）里，`projects/努力` 20 条旁白里有 15 条在正文里重复了
+  一遍。只改一份会让文章自相矛盾——实测：只改旁白 76.6/100，两份都改
+  88.4/100。
+- **没有核实过的声明不许编出处。** 事实类发现先做核查；核查不到就在发现上
+  写明覆盖指令（"忽略上文建议里加出处的那部分，弱化措辞"）——否则修订器会
+  跟着评审建议里提到的书名编出出处。
+
 ### 10.2 编程代理问题协议
 
 `video-ask/1` 是让 agent harness 向人提问的协议。当 harness 能弹窗提问时
@@ -526,6 +556,7 @@ storyboard 的生成 provider 来评分。`video draft` 可用 `--judge-model
 | `video audio-asset` | BGM 与 SFX 素材 |
 | `video mix` | 单独跑混音步骤 |
 | `video review` | 内容、视觉、技术三类审核 YAML |
+| `video revise` | 把审核发现作为定点修改写回 article.md（两份主张一起改） |
 | `video qa` | 为当前预览重建 QA 报告 |
 | `video validate` | 按完整规则校验分镜 |
 

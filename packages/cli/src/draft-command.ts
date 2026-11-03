@@ -13,14 +13,19 @@ import {
 } from "@video/llm";
 import { MiniMaxWebSearch, callResearch } from "@video/research";
 import {
+  applyRevisionToMarkdown,
+  articleMdToRawArticle,
   articleToStoryboardYaml,
   callDraft,
   DEFAULT_MIN_SCORE,
   parseArticleWithRecovery,
+  planReviewRevision,
   renderArticleReviewYaml,
   resolveImageStyle,
   runScoredDraft,
   type ParsedArticle,
+  type RawArticle,
+  type ReviseFinding,
 } from "@video/draft";
 import {
   callAudioPlan,
@@ -29,6 +34,7 @@ import {
 } from "@video/audio-plan";
 import { DEFAULT_THEME_NAME } from "@video/theme";
 import { resolveProjectDir } from "./project-path.js";
+import { loadReviewPackage } from "./review-command.js";
 import { withProgress } from "./ui.js";
 import {
   maybeAgentAsk,
@@ -46,8 +52,13 @@ import {
 } from "@video/tts";
 
 export interface DraftOptions {
-  topic: string;
+  topic?: string;
   cwd?: string;
+  /** Revise an existing project from its `video review` report instead
+   *  of drafting a new article. The article on disk is the seed: it is
+   *  judged, the review's findings are applied surgically, and the
+   *  quality loop continues from there. */
+  fromReview?: string;
   model?: "minimax" | "glm";
   /** Judge provider for the article review loop (2026-10-26 cross-model
    *  design). Default: the review role, flipped off the generator when
@@ -419,8 +430,16 @@ export async function runDraft(opts: DraftOptions): Promise<number> {
   // The tts question is conditional on a healthy local voicebox — probe
   // here (the ask module stays I/O-free). Humans never pay the probe:
   // it only runs when the gate could actually ask.
+  //
+  // The seed mode skips the gate: the project's own frontmatter IS the
+  // answer (language, duration, voice, backend, image style) — asking
+  // again would invite the agent to overwrite the human's config with
+  // defaults.
   let askCtx: AskCtx | undefined;
-  const askTrigger = resolveAskTrigger(opts);
+  const askTrigger =
+    opts.fromReview !== undefined
+      ? { mode: "off" as const }
+      : resolveAskTrigger(opts);
   if (
     askTrigger.mode !== "off" &&
     (askTrigger.mode === "force" || detectAgentEnv())
@@ -430,20 +449,83 @@ export async function runDraft(opts: DraftOptions): Promise<number> {
       askCtx = { voiceboxProfiles: status.profiles };
     }
   }
-  const askExit = await maybeAgentAsk(opts, process.argv, askCtx);
+  const askExit =
+    opts.fromReview !== undefined
+      ? null
+      : await maybeAgentAsk(opts, process.argv, askCtx);
   if (askExit !== null) {
     // No process.exitCode here: callers get the code from the return
     // value (the commander action assigns it; a sticky write here would
     // leak the exit code into unrelated library callers' processes).
     return askExit;
   }
-  const resolvedProject = resolveProjectDir(opts.topic, opts.cwd);
-  if (!resolvedProject.ok) {
-    console.error(resolvedProject.message);
-    console.error(
-      `hint: scaffold it with \`video new <topic>\` first, then re-run`,
+  // `--from-review <project>`: the project to revise is given
+  // explicitly, and its article.md + review report become the loop's
+  // seed. Without it the topic names the project, as before.
+  let seed:
+    | {
+        markdown: string;
+        raw: RawArticle;
+        findings: ReviseFinding[];
+      }
+    | undefined;
+  let topic = opts.topic;
+  let resolvedProject: ReturnType<typeof resolveProjectDir>;
+  if (opts.fromReview !== undefined) {
+    resolvedProject = resolveProjectDir(opts.fromReview, opts.cwd);
+    if (!resolvedProject.ok) {
+      console.error(resolvedProject.message);
+      return 1;
+    }
+    const root = resolvedProject.root;
+    const articleFile = path.join(root, "article.md");
+    if (!existsSync(articleFile)) {
+      console.error(`missing ${articleFile} — run \`video draft\` first`);
+      return 1;
+    }
+    let review;
+    try {
+      review = await loadReviewPackage(root);
+    } catch (err) {
+      console.error(`✗ ${(err as Error).message}`);
+      return 1;
+    }
+    const articleMd = await readFile(articleFile, "utf8");
+    let parsedArticle;
+    try {
+      parsedArticle = parseArticleWithRecovery(articleMd).article;
+    } catch (err) {
+      console.error(`✗ article.md is malformed: ${(err as Error).message}`);
+      return 1;
+    }
+    const base = articleMdToRawArticle(parsedArticle);
+    const plan = planReviewRevision(review, base);
+    if (plan.findings.length === 0) {
+      console.error("✗ no review finding maps to a passage in article.md");
+      for (const s of plan.skipped) {
+        console.error(`  - ${s.source}: ${s.reason}`);
+      }
+      return 1;
+    }
+    seed = { markdown: articleMd, raw: base, findings: plan.findings };
+    // The project names itself: the article's title, else its slug.
+    topic = parsedArticle.title ?? parsedArticle.frontmatter.project;
+    console.log(
+      `▷ revising ${opts.fromReview} from its review — ${plan.findings.length} finding(s), ${plan.skipped.length} skipped`,
     );
-    return 1;
+  } else {
+    if (topic === undefined || topic.trim() === "") {
+      console.error("✗ a topic is required (or use --from-review <project>)");
+      return 1;
+    }
+    resolvedProject = resolveProjectDir(topic, opts.cwd);
+    if (!resolvedProject.ok) {
+      console.error(resolvedProject.message);
+      console.error(
+        `hint: scaffold it with \`video new <topic>\` first, then re-run`,
+      );
+      return 1;
+    }
   }
   const projectRoot = resolvedProject.root;
 
@@ -486,10 +568,13 @@ export async function runDraft(opts: DraftOptions): Promise<number> {
   const audience = opts.audience ?? "developers";
 
   let webContext: { url: string; title: string; snippet: string }[] | undefined;
-  if (!opts.noWeb) {
+  // The seed mode skips the topic search: the article already exists,
+  // and searching for its title buys nothing. The fact-check research
+  // (inside the loop) does its own search per claim.
+  if (!opts.noWeb && opts.fromReview === undefined) {
     try {
       webContext = await withProgress("web search", () =>
-        new MiniMaxWebSearch().search(opts.topic),
+        new MiniMaxWebSearch().search(topic),
       );
     } catch {
       webContext = undefined;
@@ -497,7 +582,7 @@ export async function runDraft(opts: DraftOptions): Promise<number> {
   }
 
   const draftInput = {
-    topic: opts.topic,
+    topic,
     audience,
     language,
     duration,
@@ -528,7 +613,14 @@ export async function runDraft(opts: DraftOptions): Promise<number> {
     ));
   } else {
     const minScore = opts.minScore ?? DEFAULT_MIN_SCORE;
-    const maxAttempts = opts.maxAttempts ?? 8;
+    // The seed mode's budget is smaller on purpose: the user asked for
+    // the REVIEW's findings to be applied, not for a fresh optimization
+    // run against the 90 bar — every extra attempt is ~15 min of
+    // revision+judge over a whole article. Two = the seed's judge call
+    // plus one revision that applies the findings. Raise it explicitly
+    // with --max-attempts when the loop should keep refining.
+    const maxAttempts =
+      opts.maxAttempts ?? (opts.fromReview !== undefined ? 2 : 8);
     const result = await withProgress(
       `drafting article (${chosenName}, judged by ${judgePick.name})`,
       async () => {
@@ -538,6 +630,7 @@ export async function runDraft(opts: DraftOptions): Promise<number> {
           ...(opts.candidates !== undefined
             ? { candidates: opts.candidates }
             : {}),
+          ...(seed !== undefined ? { seed, noRegenerate: true } : {}),
           judgeProvider,
           judgeFallback,
           // Improvement #3: FACT_* findings are fact-checked before the
@@ -560,14 +653,23 @@ export async function runDraft(opts: DraftOptions): Promise<number> {
             return out.output.claims.map((c) => ({
               claim: c.claim,
               verdict:
-                c.status === "fact" ? ("supported" as const) : ("unclear" as const),
+                c.status === "fact"
+                  ? ("supported" as const)
+                  : ("unclear" as const),
               notes: c.note ?? "",
             }));
           },
           onAttempt: (a, total) => {
             if (a.score) {
               const s = a.score;
-              const mode = a.mode === "revise" ? " [revise]" : a.mode === "regenerate" ? " [regenerate]" : "";
+              const mode =
+                a.mode === "revise"
+                  ? " [revise]"
+                  : a.mode === "regenerate"
+                    ? " [regenerate]"
+                    : a.mode === "seed"
+                      ? " [seed]"
+                      : "";
               const verdict = a.passing
                 ? "✓ above bar"
                 : a.attempt < total
@@ -619,6 +721,32 @@ export async function runDraft(opts: DraftOptions): Promise<number> {
       "utf8",
     );
     console.log(`✓ article review → ${reviewPath}`);
+
+    // In the seed mode the loop's markdown is a RE-RENDER of the
+    // structured article (the renderer owns the shape, the file owns the
+    // content). Re-rendering would drop the project's frontmatter keys
+    // and the scene keys the drafter never emits — so the revision is
+    // applied to the ORIGINAL text instead, and only the passages that
+    // changed are written.
+    if (seed !== undefined) {
+      const winner = result.attempts.find(
+        (a) => a.markdown === result.markdown,
+      );
+      if (
+        winner?.raw !== undefined &&
+        (winner.mode === "seed" || winner.mode === "revise")
+      ) {
+        const patched = applyRevisionToMarkdown(
+          seed.markdown,
+          seed.raw,
+          winner.raw,
+        );
+        markdown = patched.markdown;
+        console.log(
+          `  applied the review to the article — ${patched.changed.length} passage(s) changed`,
+        );
+      }
+    }
   }
 
   const articlePath = path.join(projectRoot, "article.md");
@@ -668,15 +796,28 @@ export async function runDraft(opts: DraftOptions): Promise<number> {
   // backend that owns it, and the default is MiniMax speech-2.8-hd
   // unless a carried key, an explicit flag, or a hand-pinned Edge voice
   // says otherwise.
-  const narration = resolveNarrationConfig({
-    ttsChoice: opts.tts,
-    language,
-    carriedProvider: frontmatterValue(stamped, "tts_provider"),
-    draftVoice: frontmatterValue(stamped, "voice"),
-  });
-  stamped = stampFrontmatterKey(stamped, "tts_provider", narration.provider);
-  if (narration.voice !== "") {
-    stamped = stampFrontmatterKey(stamped, "voice", narration.voice);
+  // In the seed mode the project owns its narration config: the voice
+  // and the backend are the human's choices (pinned in the article's
+  // frontmatter), not the drafter's to re-derive. Re-stamping them
+  // would swap a pinned Edge voice for the language default.
+  const narration =
+    opts.fromReview !== undefined
+      ? {
+          provider:
+            frontmatterValue(stamped, "tts_provider") ?? DEFAULT_TTS_PROVIDER,
+          voice: frontmatterValue(stamped, "voice") ?? "",
+        }
+      : resolveNarrationConfig({
+          ttsChoice: opts.tts,
+          language,
+          carriedProvider: frontmatterValue(stamped, "tts_provider"),
+          draftVoice: frontmatterValue(stamped, "voice"),
+        });
+  if (opts.fromReview === undefined) {
+    stamped = stampFrontmatterKey(stamped, "tts_provider", narration.provider);
+    if (narration.voice !== "") {
+      stamped = stampFrontmatterKey(stamped, "voice", narration.voice);
+    }
   }
   await writeFile(articlePath, stamped, "utf8");
 
@@ -748,7 +889,7 @@ export async function runDraft(opts: DraftOptions): Promise<number> {
       console.log(
         `  voice=${step.config.voice ?? "(default)"}  bgm=${step.config.bgm ?? "(none)"}  sfx=${sfxCount}  tokens=${step.tokens.input}+${step.tokens.output}`,
       );
-      audioPlanHint = `edit article.md / audio-config.yaml, then \`video make ${opts.topic}\``;
+      audioPlanHint = `edit article.md / audio-config.yaml, then \`video make ${topic}\``;
     } else if (step.status === "skipped" && step.reason === "exists") {
       console.log(
         `  audio-config.yaml exists — kept (hand edits win); re-run \`video audio-plan\` to regenerate`,
@@ -760,7 +901,7 @@ export async function runDraft(opts: DraftOptions): Promise<number> {
           `bgm answer not applied — audio-config.yaml kept; run 'video audio-plan' to regenerate`,
         );
       }
-      audioPlanHint = `edit article.md / audio-config.yaml, then \`video make ${opts.topic}\``;
+      audioPlanHint = `edit article.md / audio-config.yaml, then \`video make ${topic}\``;
     } else if (step.status === "skipped") {
       audioPlanHint = `edit article.md to refine the narrative, then \`video audio-plan <topic>\``;
     } else {
@@ -792,6 +933,8 @@ export interface DraftCliOpts {
   bgm?: string;
   from?: string;
   file?: string;
+  /** Revise an existing project from its `video review` report. */
+  fromReview?: string;
   audioPlan?: boolean;
   imageStyle?: string;
   imageProvider?: string;
@@ -828,6 +971,7 @@ export function draftCliOptsToDraftOptions(
     ...(opts.bgm !== undefined ? { bgm: opts.bgm } : {}),
     ...(opts.from !== undefined ? { from: opts.from } : {}),
     ...(opts.file !== undefined ? { ideaFile: opts.file } : {}),
+    ...(opts.fromReview !== undefined ? { fromReview: opts.fromReview } : {}),
     noAudioPlan: opts.audioPlan === false,
     ...(opts.imageStyle !== undefined ? { imageStyle: opts.imageStyle } : {}),
     ...(opts.imageProvider !== undefined
@@ -857,8 +1001,8 @@ export function registerDraft(program: Command): void {
   program
     .command("draft")
     .argument(
-      "<topic>",
-      "topic — used as project slug (slugify the topic for the directory name)",
+      "[topic]",
+      "topic — used as project slug (slugify the topic for the directory name). Omit it with --from-review: the project names itself",
     )
     .option("--cwd <dir>", "base directory for the project")
     .option("--model <provider>", "model provider: minimax|glm (default: glm)")
@@ -884,7 +1028,9 @@ export function registerDraft(program: Command): void {
       (v: string) => {
         const allowed = ["light", "medium", "deep"];
         if (!allowed.includes(v)) {
-          throw new Error(`--editing-depth must be ${allowed.join("|")}, got: ${v}`);
+          throw new Error(
+            `--editing-depth must be ${allowed.join("|")}, got: ${v}`,
+          );
         }
         return v as "light" | "medium" | "deep";
       },
@@ -902,7 +1048,8 @@ export function registerDraft(program: Command): void {
         if (!allowed.includes(v)) {
           throw new Error(`--tone must be ${allowed.join("|")}, got: ${v}`);
         }
-        return v as "professional" | "conversational" | "academic" | "narrative";
+        return v as
+          "professional" | "conversational" | "academic" | "narrative";
       },
     )
     .option(
@@ -916,6 +1063,10 @@ export function registerDraft(program: Command): void {
     .option(
       "--file <path>",
       "path to a text/markdown file holding your raw idea — polished into the article, opinions preserved",
+    )
+    .option(
+      "--from-review <project>",
+      "revise an existing project from its `video review` report: the article on disk is the seed, the review's findings are applied surgically, and the quality loop continues from there",
     )
     .option(
       "--no-audio-plan",
@@ -977,9 +1128,9 @@ export function registerDraft(program: Command): void {
       "--no-ask",
       "v0.7: never ask questions — accept defaults even under an agent harness",
     )
-    .action(async (topic: string, opts: DraftCliOpts) => {
+    .action(async (topic: string | undefined, opts: DraftCliOpts) => {
       process.exitCode = await runDraft({
-        topic,
+        ...(topic !== undefined ? { topic } : {}),
         ...draftCliOptsToDraftOptions(opts),
       });
     });

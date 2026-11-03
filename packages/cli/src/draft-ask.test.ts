@@ -230,7 +230,7 @@ describe("runDraft ask gate — proceed paths", () => {
     // First real spend step reached: web search ran.
     expect(searchMock).toHaveBeenCalledTimes(1);
     // The pipeline produced its artifacts in the scaffolded project.
-    const projDir = path.join(root, "projects", opts.topic);
+    const projDir = path.join(root, "projects", opts.topic ?? "");
     const entries = await readdir(projDir);
     expect(entries).toContain("article.md");
   }

@@ -2,16 +2,13 @@ import { z } from "zod";
 import type { Provider } from "@video/llm";
 import { chatWithFallback, stripReasoning } from "@video/llm";
 import { loadPrompt } from "@video/prompts";
+import { callDraft, extractBalancedJson, type RawArticle } from "./agent.js";
+import { callRevise, type ResearchNote, type ReviseFinding } from "./revise.js";
 import {
-  callDraft,
-  extractBalancedJson,
-  type RawArticle,
-} from "./agent.js";
-import {
-  callRevise,
-  type ResearchNote,
-  type ReviseFinding,
-} from "./revise.js";
+  guardUnverifiedFact,
+  withDuplicateCopies,
+  NO_SOURCE_RULE,
+} from "./review-feedback.js";
 import { withChannelBlock } from "./channel-profile.js";
 import type { DraftInput } from "./prompt.js";
 
@@ -642,9 +639,10 @@ export interface ScoredAttempt {
   /** Structured article of this attempt — present for drafts and
    * revisions; the base the surgical reviser edits. */
   raw?: RawArticle;
-  /** How this attempt was produced: fresh draft, surgical revision of
-   * an earlier attempt, or full regeneration with judge feedback. */
-  mode?: "draft" | "revise" | "regenerate";
+  /** How this attempt was produced: a fresh draft, a surgical revision
+   *  of an earlier attempt, a full regeneration with judge feedback, or
+   *  the seed the loop started from. */
+  mode?: "draft" | "revise" | "regenerate" | "seed";
   score: ArticleScore | null;
   /** Why there is no score (judge failed) — absent when scored. */
   scoreError?: string;
@@ -677,6 +675,26 @@ export interface ScoredDraftOptions {
   minScore?: number;
   /** Total number of draft attempts (not retries). Default 3. */
   maxAttempts?: number;
+  /** Never regenerate — the seeded article belongs to a human and a
+   *  regeneration would replace it wholesale. The draft loop uses a
+   *  rewrite as its escape hatch; a revision has no such luxury, so the
+   *  loop keeps the best revision and stops. */
+  noRegenerate?: boolean;
+  /** Start from an article that already exists, with findings that
+   *  came from outside the judge (a `video review` report).
+   *
+   *  The seed is judged like any other attempt — the bar still applies
+   *  — and the FIRST revision applies `findings`. The loop then
+   *  continues with the judge's own findings, exactly as it would
+   *  after any draft. */
+  seed?: {
+    /** The article the revision starts from. */
+    markdown: string;
+    /** The same article, structured — the reviser's base. */
+    raw: RawArticle;
+    /** The findings to apply in the first revision. */
+    findings: ReviseFinding[];
+  };
   /** Improvement #3 — verify FACT_* findings before the surgical
    *  reviser touches them. Called once per unique claim (cached), with
    *  the claim text; returns research notes the reviser may use INSTEAD
@@ -737,6 +755,11 @@ function feedbackBlock(prev: ScoredAttempt, minScore: number): string {
           }`,
         );
       }
+    }
+    // An unsupported claim the research could not verify: the rewrite
+    // must soften it, not cite something new.
+    if (majors.some((f) => f.code.startsWith("FACT_"))) {
+      lines.push(NO_SOURCE_RULE);
     }
   }
   lines.push(
@@ -802,7 +825,10 @@ export async function runScoredDraft(
    *  LLM-driven control flow. */
   const judgeMarkdown = async (
     markdown: string,
-  ): Promise<{ score: ArticleScore | null; scoreError: string | undefined }> => {
+  ): Promise<{
+    score: ArticleScore | null;
+    scoreError: string | undefined;
+  }> => {
     let score: ArticleScore | null = null;
     let scoreError: string | undefined;
     for (let judgeTry = 1; judgeTry <= 2; judgeTry++) {
@@ -840,8 +866,11 @@ export async function runScoredDraft(
   /** Findings a surgical revision can act on: a verbatim quote to
    *  target, and not a pure structure problem (reordering/removing
    *  sections is regeneration's job — the reviser must keep structure). */
-  const quotableFindings = (s: ArticleScore): ReviseFinding[] =>
-    s.raw.findings
+  const quotableFindings = (
+    s: ArticleScore,
+    article?: RawArticle,
+  ): ReviseFinding[] => {
+    const base = s.raw.findings
       .filter(
         (f) =>
           f.location.quote.trim().length >= 2 &&
@@ -855,6 +884,10 @@ export async function runScoredDraft(
         description: f.description,
         recommendation: f.recommendation,
       }));
+    // The same claim lives in the prose section AND the scene
+    // narration — target both, or the article contradicts itself.
+    return article === undefined ? base : withDuplicateCopies(base, article);
+  };
 
   /** One generate+judge pipeline. The attempt number is assigned
    *  synchronously on entry, so parallel candidates number 1..N in
@@ -961,9 +994,9 @@ export async function runScoredDraft(
   let researchNotesBlock: { researchNotes: ResearchNote[] } | undefined;
 
   /** Improvement #3 — one research call per unique FACT_* claim,
-  *  cached for the rest of the run. A research failure degrades to
-  *  empty notes (the reviser then softens the claim instead of citing
-  *  something new). */
+   *  cached for the rest of the run. A research failure degrades to
+   *  empty notes (the reviser then softens the claim instead of citing
+   *  something new). */
   const researchCache = new Map<string, ResearchNote[]>();
   const researchNotesFor = async (
     findings: ReviseFinding[],
@@ -997,23 +1030,81 @@ export async function runScoredDraft(
   /** Point the revision stage at a base + its quotable findings (and
    *  refresh the fact-check notes for them). Returns the base so callers
    *  assign `reviseBase` directly — keeping TS's flow analysis honest
-   *  about the variable's type. */
+   *  about the variable's type.
+   *
+   *  Two guarantees ride along:
+   *
+   *  - The same claim lives in TWO places (the prose section and the
+   *    scene narration). The revision targets both, or the article ends
+   *    up contradicting itself.
+   *  - A FACT_* finding whose claim the research could NOT verify gets
+   *    the no-source rule stated on it. Without it the reviser invents
+   *    a citation ("余世存在《时间之书》里写过" — a book nobody
+   *    supplied). */
   const prepareRevision = async (
     base: ScoredAttempt,
     findings: ReviseFinding[],
   ): Promise<ScoredAttempt> => {
     reviseBase = base;
-    reviseFindings = findings;
     const notes = await researchNotesFor(findings);
     researchNotesBlock =
       notes === undefined ? undefined : { researchNotes: notes };
+    reviseFindings = findings.map((f) => {
+      if (!f.code.startsWith("FACT_")) return f;
+      const verified = researchCache.get(f.quote.trim()) ?? [];
+      if (verified.length > 0) return f;
+      return guardUnverifiedFact(f);
+    });
     return base;
   };
 
   for (let round = 1; attempts.length < maxAttempts; round++) {
+    // The SEED path (2026-11): start from an article that already
+    // exists and a set of findings that came from OUTSIDE the judge
+    // (a `video review` report). The seed is judged like any other
+    // attempt — the bar still applies — and the first revision applies
+    // the external findings. After that the loop behaves normally: the
+    // judge's own findings take over, and a stalled revision still
+    // escapes into a regeneration.
+    if (round === 1 && opts.seed !== undefined) {
+      const seed = opts.seed;
+      const { score, scoreError } = await judgeMarkdown(seed.markdown);
+      const attempt: ScoredAttempt = {
+        attempt: ++attemptNo,
+        markdown: seed.markdown,
+        raw: seed.raw,
+        mode: "seed",
+        score,
+        ...(scoreError !== undefined ? { scoreError } : {}),
+        passing:
+          score !== null &&
+          score.passing &&
+          score.computed.overall_score >= minScore,
+        usage: { input: 0, output: 0 },
+      };
+      attempts.push(attempt);
+      opts.onAttempt?.(attempt, maxAttempts);
+      if (score === null) break; // judge broke — no basis to iterate
+      if (attempt.passing) break; // the seed already clears the bar
+      if (seed.findings.length === 0) {
+        // Nothing to apply — fall through to the normal loop.
+        if (opts.noRegenerate === true) break;
+        mode = "regenerate";
+        feedback = feedbackBlock(attempt, minScore);
+        continue;
+      }
+      reviseFindings = seed.findings;
+      reviseBase = await prepareRevision(attempt, seed.findings);
+      continue;
+    }
+
     if (round > 1 && mode === "revise") {
       const rev = await produceRevise();
       if (rev === null) {
+        // The revision was unusable. A seeded revision cannot fall back
+        // to a regeneration (that would replace the human's article) —
+        // it keeps what it has.
+        if (opts.noRegenerate === true) break;
         mode = "regenerate";
         feedback = feedbackBlock(bestSoFar(), minScore);
         continue;
@@ -1026,8 +1117,9 @@ export async function runScoredDraft(
       const baseScore = reviseBase?.score?.computed.overall_score ?? -1;
       if (rev.score.computed.overall_score > baseScore) {
         // Still climbing — keep refining this lineage.
-        const nextFindings = quotableFindings(rev.score);
+        const nextFindings = quotableFindings(rev.score, rev.raw);
         if (nextFindings.length === 0) {
+          if (opts.noRegenerate === true) break;
           mode = "regenerate";
           feedback = feedbackBlock(rev, minScore);
         } else {
@@ -1035,6 +1127,9 @@ export async function runScoredDraft(
         }
       } else {
         // Revision plateaued or regressed — escape via regeneration.
+        // A seeded revision stops instead: the article on disk is the
+        // human's, and the best candidate is kept.
+        if (opts.noRegenerate === true) break;
         mode = "regenerate";
         feedback = feedbackBlock(bestSoFar(), minScore);
       }
@@ -1070,7 +1165,7 @@ export async function runScoredDraft(
     if (attempts.length >= maxAttempts) break;
 
     if (round === 1) {
-      reviseFindings = quotableFindings(roundBest.score);
+      reviseFindings = quotableFindings(roundBest.score, roundBest.raw);
       if (roundBest.raw !== undefined && reviseFindings.length > 0) {
         reviseBase = await prepareRevision(roundBest, reviseFindings);
       } else {
@@ -1087,8 +1182,18 @@ export async function runScoredDraft(
   // "after 8 times, use the top score one, no matter what"). `passing` is
   // reported honestly alongside; selection itself is score-only.
   // maxAttempts ≥ 1 ⇒ the loop ran at least once.
-  let best = attempts[0]!;
-  for (const a of attempts) best = betterScore(best, a);
+  //
+  // The SEED is the exception: it is the baseline the revision started
+  // from, not a candidate. The review's findings were asked for, so the
+  // winner is the best REVISION — a revision that scores lower than the
+  // seed still ships (the score is reported, not obeyed). With no
+  // revision at all, the seed is the article.
+  const ranked: ScoredAttempt[] =
+    opts.seed === undefined
+      ? attempts
+      : attempts.filter((a) => a.mode !== "seed");
+  let best: ScoredAttempt = ranked[0] ?? attempts[0]!;
+  for (const a of ranked) best = betterScore(best, a);
   // "Regenerated" means the shipped draft came from a feedback round —
   // candidates within round 1 are siblings, not regenerations.
   const regenerated =

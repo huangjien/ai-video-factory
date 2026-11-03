@@ -76,6 +76,7 @@ Full command set:
 | `video make <project>` | Full render: TTS → assets → scenes → mix → `final-mixed.mp4` |
 | `video preview <project>` | Fast preview render |
 | `video review <project>` | LLM review (content / visual / technical) |
+| `video revise <project>` | Apply the review's findings as a targeted article edit (no full rewrite) |
 | `video approve [stage] <project>` | Approve a stage |
 | `video reject <project> <reason>` | Reject current stage |
 | `video final <project>` | Final mixed MP4 with narration + BGM + SFX |
@@ -589,6 +590,66 @@ silently lost. Put `theme: <name>` in `article.md` frontmatter next to
 `image_style:` and it survives every re-derive.
 
 `--bgm <tag|none>`: the answered tag is stamped into a **fresh** `audio-config.yaml` (`none` → `bgm: null`); an existing `audio-config.yaml` wins (warning printed, file untouched); `--no-audio-plan` drops the `bgm` question entirely.
+
+## 2.9 The review → revise loop (findings become targeted edits)
+
+`video review` is read-only: it writes `review/{content,visual,technical}-review.yaml`
+and stops. `video revise` closes the loop — it resolves every content/visual
+finding to the passage it quotes (or the scene/section it names), then the
+surgical reviser edits **only those passages**.
+
+```bash
+video review  "AI 思维链"     # → review/*.yaml (read-only)
+video revise  "AI 思维链"     # → article.md (targeted) + article-revise.yaml
+video draft --from-review "AI 思维链"  # the same fix as a draft stage
+```
+
+What it does NOT do:
+
+- **No full rewrite.** Untouched passages stay byte-identical — `characters:`,
+  `hold_after_sec`, `lead_in_sec`, `map:` and every frontmatter key survive.
+- **No technical edits.** Resolution / fps / audio / missing-asset findings
+  describe the render; they are listed as skipped, never handed to the reviser.
+- **No invented sources.** An unsupported-claim finding gets the rule stated
+  ON the finding ("no verified source was found — soften or scope the claim
+  instead of adding a citation"). Without it the reviser invented a book
+  title nobody supplied. `--research` fact-checks the claims first (one
+  research call per claim — slow, and it often fails on this repo's
+  providers, so it is off by default).
+
+**Both copies get fixed.** An article says each claim TWICE — once in the
+prose section (what the human reads) and once in the scene narration (what
+the video says). 15 of the 20 narrations in `projects/努力` restate a phrase
+that also lives in the prose. A finding therefore gets TWO targets: the
+narration and the prose sentence that says the same thing. Fixing only the
+copy the judge quoted leaves the article contradicting itself — measured on
+`projects/努力`: narration-only scored 76.6/100, both copies 88.4/100.
+
+**Findings must be anchored.** Every structured review finding carries
+`field` (narration / caption / visual / section) and `quote` (the passage,
+verbatim). A finding that names a scene but not the text inside it is
+reported and then set aside — the repair path edits one quoted passage at a
+time, so an un-anchored finding is a finding nobody can act on.
+
+**The judge reads a fresh storyboard.** The storyboard is derived from
+article.md, and only `video make` re-derives it — so after a hand edit the
+file on disk still carries the old narrations and the judge quotes wording
+the article no longer has. `video review` now derives the current storyboard
+IN MEMORY (the Review Agent stays read-only) and warns when the file on
+disk is behind.
+
+The revised article is re-scored by the article judge, so `article-revise.yaml`
+records `before_overall → after_overall` next to the findings applied and the
+findings skipped. `--re-review` re-runs the review agent on the revised film.
+`video revise` refreshes `storyboard.yaml` from the revised article — the
+storyboard is derived, so a hand-edit there would be overwritten by the next
+`video make`.
+
+`video draft --from-review <project>` runs the same fix as a draft stage: seed =
+the article on disk, the review's findings applied in the first revision, then the
+quality loop continues with the judge's own findings (budget 2 by default, never
+regenerating the seeded article; frontmatter and narration config preserved;
+agent-ask skipped — the project's frontmatter is the answer).
 
 ## 3. Canonical end-to-end
 

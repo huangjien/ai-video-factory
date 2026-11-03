@@ -50,7 +50,13 @@ OUTPUT FORMAT
    says a claim is unsupported and no verified replacement is provided
    in the research notes, soften or scope the claim instead of citing
    something new.
-8. Output in the article's existing language.
+8. If a finding cannot be resolved by editing the quoted text — it asks
+   for a production decision, a confirmation, or a change to a
+   different artifact ("confirm this is intentional", "restore the
+   title card", "re-render this scene") — leave the passage UNCHANGED.
+   An unresolvable finding is a question for a human, not an edit. Do
+   not "improve" the passage to look responsive.
+9. Output in the article's existing language.
 
 # PROCEDURE
 

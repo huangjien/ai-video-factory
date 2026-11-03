@@ -19,6 +19,7 @@ import { registerMotion } from "./motion-command.js";
 import { registerAudio } from "./audio-command.js";
 import { registerAudioAsset } from "./audio-asset-command.js";
 import { registerReview } from "./review-command.js";
+import { registerRevise } from "./revise-command.js";
 import { registerYouTube } from "./youtube-command.js";
 import { registerBilibili } from "./bilibili-command.js";
 import { registerThumbnail } from "./thumbnail-command.js";
@@ -70,6 +71,7 @@ for (const register of [
   registerAudio,
   registerAudioAsset,
   registerReview,
+  registerRevise,
   registerYouTube,
   registerBilibili,
   registerThumbnail,

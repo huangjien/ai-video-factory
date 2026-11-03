@@ -47,6 +47,9 @@ const titleProps = z
   .object({
     text: z.string().min(1),
     subtext: z.string().optional(),
+    /** Bullet items under the title ("a · b · c" line) — present only
+     *  when the scene's content really enumerates. */
+    bullets: z.array(z.string().min(1)).min(2).max(6).optional(),
     /** Small uppercase kicker above the title (e.g. "Chapter One"). */
     kicker: z.string().optional(),
     /** Hex accent color override; defaults to theme.accent. */
@@ -504,7 +507,7 @@ export const REGISTRY: Record<string, RegistryEntry> = {
 export const COMPONENT_NAMES = Object.keys(REGISTRY);
 
 export type RegistryPropsByName = {
-  Title: { text: string; subtext?: string };
+  Title: { text: string; subtext?: string; bullets?: string[] };
   Paragraph: { text: string; align?: "left" | "center" };
   AnimatedIllustration: { text: string; visual?: string };
   CodeBlock: { code: string; language?: string; highlightLines?: number[] };

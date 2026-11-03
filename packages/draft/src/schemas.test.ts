@@ -321,17 +321,44 @@ describe("articleToStoryboardYaml (VDSL sync)", () => {
     expect(parsed.scenes[1]?.duration).toBe(6);
   });
 
-  it("uses Title for the first scene, with the film's title as the subtitle", () => {
+  it("uses Title for the first scene; the small line is bullets or nothing", () => {
     const yaml = articleToStoryboardYaml(fixture);
     const parsed = parseYaml(yaml) as {
       scenes: {
-        visual: { component: string; props: Record<string, string> };
+        visual: { component: string; props: Record<string, unknown> };
       }[];
     };
     expect(parsed.scenes[0]?.visual.component).toBe("Title");
     expect(parsed.scenes[0]?.visual.props.text).toBe("开场");
-    // The film's title, not the scene's art direction.
-    expect(parsed.scenes[0]?.visual.props.subtext).toBe("同步测试");
+    // The fixture's narration does not enumerate → NO small line at all
+    // (the film's title used to sit there and read as a redundant echo;
+    // user note 2026-11: bullets or nothing).
+    expect(parsed.scenes[0]?.visual.props.subtext).toBeUndefined();
+    expect(parsed.scenes[0]?.visual.props.bullets).toBeUndefined();
+  });
+
+  it("emits bullets on the title card when the narration enumerates", () => {
+    const enumerated: ParsedArticle = {
+      ...fixture,
+      scenes: [
+        {
+          ...fixture.scenes[0]!,
+          narration:
+            "学也学不进去，玩也玩不尽兴，睡也睡不安稳，偏偏胃口还特别好。这样的日子，你可能也正在经历。",
+        },
+        fixture.scenes[1]!,
+      ],
+    };
+    const yaml = articleToStoryboardYaml(enumerated);
+    const parsed = parseYaml(yaml) as {
+      scenes: { visual: { props: { bullets?: string[] } } }[];
+    };
+    expect(parsed.scenes[0]?.visual.props.bullets).toStrictEqual([
+      "学也学不进去",
+      "玩也玩不尽兴",
+      "睡也睡不安稳",
+      "偏偏胃口还特别好",
+    ]);
   });
 
   it("never writes the art direction onto the title card", () => {
@@ -340,24 +367,24 @@ describe("articleToStoryboardYaml (VDSL sync)", () => {
     // directions appeared on screen.
     const yaml = articleToStoryboardYaml(fixture);
     const parsed = parseYaml(yaml) as {
-      scenes: { visual: { props: Record<string, string> } }[];
+      scenes: { visual: { props: Record<string, unknown> } }[];
     };
     const props = parsed.scenes[0]?.visual.props ?? {};
     expect(Object.values(props).join(" ")).not.toContain("两个数据库图标");
   });
 
-  it("truncates a long title so it does not overflow the 36px <p>", () => {
+  it("never puts the film's title on the title card, however long", () => {
+    // The small line is bullets or nothing — the film's title has no
+    // place there (user note 2026-11: it read as a redundant echo).
     const longTitle: ParsedArticle = {
       ...fixture,
       title: "x".repeat(120),
     };
     const yaml = articleToStoryboardYaml(longTitle);
     const parsed = parseYaml(yaml) as {
-      scenes: { visual: { props: { subtext: string } } }[];
+      scenes: { visual: { props: Record<string, unknown> } }[];
     };
-    const sub = parsed.scenes[0]?.visual.props.subtext ?? "";
-    expect(sub.length).toBeLessThanOrEqual(51);
-    expect(sub).toMatch(/…$/);
+    expect(JSON.stringify(parsed.scenes[0]?.visual.props)).not.toContain("xxx");
   });
 
   it("uses AnimatedIllustration for subsequent scenes (caption + visual)", () => {

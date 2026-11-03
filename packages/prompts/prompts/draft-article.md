@@ -260,12 +260,14 @@ still, a renderer will classify it to pick the right animated
 component, and a human reader should be able to picture the shot
 from the line alone.
 
-Every visual field MUST be a single sentence (occasionally two short
-clauses joined by a comma or colon), 80-220 characters, written in
-the same language as the narration. Aim for ~120 characters.
+Every visual field MUST be 120-260 characters (aim for ~180), written
+in the same language as the narration, as one to three clauses joined
+by ；(or ；/;) — a compact art-direction line, not prose, not a
+paragraph. A thin line starves the image model; a paragraph dilutes
+it.
 
-Mandatory structure — write each visual in this order, in one
-sentence:
+Mandatory structure — write each visual in this order, as one to
+three clauses:
 
   1. SUBJECT — the concrete thing on screen (a node, a counter, a
      hand, a screen, a clock face, a card). Name it specifically;
@@ -278,7 +280,16 @@ sentence:
      anchor (the upper-left quadrant; on a deep navy ground; inside
      a glowing terminal pane; on a flat oak countertop). One named
      spatial anchor is enough.
-  4. STYLE HINT — one of the category keywords below, in English
+  4. MATERIAL and LIGHT — what the subject is made of and how it is
+     lit (brushed brass; matte ceramic; warm light falling from the
+     upper-left window; a single cool top light on a dark ground).
+     Name the light's DIRECTION and TEMPERATURE (warm/cool), not
+     just "lit".
+  5. MICRO-DETAIL — one small, specific detail in a corner of the
+     frame (a paper corner curling up; chalk dust drifting; a faint
+     reflection on the counter; steam off a cup). This is what makes
+     a still feel photographed rather than generated.
+  6. STYLE HINT — one of the category keywords below, in English
      (the downstream classifier only reads English + a small set of
      Chinese cues). The keyword MUST appear inside the visual
      line, not only in the narration.
@@ -317,9 +328,14 @@ What the visual MUST contain beyond the keyword:
 - a named ACTION or visible STATE — verbs beat adjectives
 - at least one concrete spatial anchor (quadrant, named ground,
   surrounded by what)
-- one or two sensory details when natural (a warm amber line on a
-  cool slate ground; the cursor's blinking caret; the chalk dust
-  drifting)
+- a named MATERIAL or TEXTURE for the subject (brass, paper, glass,
+  chalk, matte ceramic)
+- a named LIGHT with direction and temperature (warm light from the
+  upper-left; a single cool top light; dusk-orange side light)
+- one MICRO-DETAIL in a corner (a curling paper corner, drifting
+  dust, a blinking caret, condensation on glass)
+- one or two sensory color contrasts when natural (a warm amber line
+  on a cool slate ground; one red tick against five gray lines)
 
 What the visual MUST NOT contain:
 
@@ -337,27 +353,39 @@ numbers are spoken.
 
 Examples of rich, vivid visuals:
 
-GOOD (specific, vivid, keyword-present):
+GOOD (specific, layered, keyword-present — this is the target length
+and density):
 
-  - "a glass counter, twelve white deploy cards fanned across the
-    surface in a clean spread on a deep navy ground, the failed
-    step glowing a quiet amber; pipeline keyword, top-down shot"
+  - "a brushed-brass counter seen from directly above, twelve white
+    deploy cards fanned across the surface in a clean spread, the one
+    failed card glowing a quiet amber while the rest stay matte white;
+    a corner of the frame shows a cold coffee ring on the dark navy
+    ground; pipeline keyword, top-down shot, cool top light with one
+    warm accent"
 
-  - "the same counter shrunk to a single card lifted in the centre
-    while three scripts sit beside it as small icon tiles; pipeline
-    keyword, forty lines versus four hundred lines"
+  - "the same brass counter cropped close, a single card lifted in the
+    centre between two fingers, three small terminal tiles glowing
+    faintly beside it on the navy felt ground; forty lines of log
+    visible on the lifted card's edge; pipeline keyword, shallow
+    depth of field, warm side light from the right"
 
-  - "two halves of a split card, left side stamped 'bug' in faded
-    red and right side stamped 'wrong container' in cool teal;
-    compare keyword, the dividing line bright amber"
+  - "a split table divided by a bright amber seam, the left half a
+    crumpled paper card stamped with a faded red cross, the right half
+    a crisp white card standing upright in a slot of a dark walnut
+    console; compare keyword, hard cool light from the left, the seam
+    reflecting on the polished surface"
 
-  - "a wide terminal window, four hundred lines of skill markdown
-    sliding off the right edge into a faint blur, the cursor
-    blinking at line nine; terminal keyword, monospace"
+  - "a wide terminal window in a dim room, four hundred lines of
+    markdown sliding off the right edge into a faint motion blur, the
+    cursor blinking at line nine in a pale green; the desk under the
+    screen carries a mechanical keyboard and a mug with steam;
+    terminal keyword, monospace, monitor glow as the only light"
 
-  - "a midnight-blue overhead card with one sentence stamped in the
-    centre in serif white: 'agents decide, skills know', set on a
-    slate field; quote keyword, the line a quotation"
+  - "a midnight-blue linen card filling the lower two-thirds of the
+    frame, one sentence centred in serif white with a thin gold rule
+    above it; a weak desk lamp falls from the upper right, leaving the
+    card's lower edge in soft shadow; quote keyword, the line a
+    quotation"
 
 BAD (thin category hints, no picture — do NOT write like this):
 
@@ -372,9 +400,10 @@ a list of words, not a picture. Rewrite them into full visual lines
 before output.
 
 If the narration already supplied concrete nouns and the visual is
-naturally spare (a quote card, a single statistic), the visual can
-be short-but-still-vivid — quote a phrase, name a number, anchor a
-shape. Never below ~80 characters; never a bare noun.
+naturally spare (a quote card, a single statistic), the visual can sit
+at the bottom of the range — but it still names its material, its
+light, and one micro-detail. Never below ~120 characters; never a
+bare noun.
 
 11. VISUAL VARIETY
 

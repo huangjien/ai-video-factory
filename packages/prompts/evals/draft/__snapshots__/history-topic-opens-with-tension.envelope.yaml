@@ -1,10 +1,10 @@
 case: history-topic-opens-with-tension
 agent: draft
-prompt_hash: sha256:804cc20070e47db513aff434dff0ee29d972660cd078ec3b6fd408d634332eaf
+prompt_hash: sha256:39ec994454b901e38fb7bdb321bf9ae991191bc3ed9f41a43ce4a2a6f4a67ab8
 messages:
   - role: system
-    bytes: 19919
-    content_sha256: sha256:07eb317b189cc88b2549f9587f50a4efbabb3c847ebbb71d1091dc1044a74ea2
+    bytes: 21636
+    content_sha256: sha256:017fd2beea3a9499bc9a65d00f29a1c4595c7b326d9e57b8241df87921335e07
     blocks:
       - "Prioritize:"
       - "Avoid:"

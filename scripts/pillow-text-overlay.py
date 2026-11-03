@@ -238,15 +238,19 @@ def render_overlay(
     height: int,
     text: str,
     out_path: Path,
-    subline: str = "",
+    bullets: Optional[list[str]] = None,
 ) -> None:
     """Render a two-tier banner on a transparent RGBA canvas the same size
     as the underlying scene image:
 
     tier 1 (big):   `text` — the scene's key-info headline
-    tier 2 (small): `subline` — the narration's first sentence, ~45% of
-                    the headline size, slightly translucent so the
-                    hierarchy reads. Skipped when empty.
+    tier 2 (small): `bullets` — the scene's enumeration, one line of
+                    "a · b · c" items at ~38% of the headline size,
+                    slightly translucent so the hierarchy reads. Only
+                    present when the scene's content really enumerates —
+                    a bare first-sentence subline duplicated the caption
+                    track at the bottom of the frame (2026-11 user note:
+                    bullets or nothing). Skipped when empty.
 
     Both centered horizontally, anchored at the top, 4-way dark outline
     so they read on any image background."""
@@ -263,40 +267,41 @@ def render_overlay(
 
     font, lines = _fit_size(draw, text, max_w, max_h)
 
-    # Subline tier: ~45% of the headline size, its own width/height budget
-    # (2 wrapped lines max via the same auto-shrink).
+    # Bullet tier: one "a · b · c" line at ~38% of the headline size,
+    # wrapped to at most two lines by the same auto-shrink.
     sub_font = None
     sub_lines: list[str] = []
-    if subline.strip():
-        sub_start = max(28, int(font.size * 0.45))
-        sub_min = max(20, int(font.size * 0.3))
+    joined_bullets = " · ".join(bullets or []).strip()
+    if joined_bullets:
+        sub_start = max(26, int(font.size * 0.38))
+        sub_min = max(20, int(font.size * 0.26))
         sub_size = sub_start
         while sub_size >= sub_min:
-            fp = pick_font_path(subline)
+            fp = pick_font_path(joined_bullets)
             candidate = (
                 ImageFont.truetype(fp, size=sub_size)
                 if fp
                 else ImageFont.load_default()
             )
-            cand_lines = _wrap_to_width(draw, subline, candidate, max_w)
+            cand_lines = _wrap_to_width(draw, joined_bullets, candidate, max_w)
             widths = []
             heights = []
             for line in cand_lines:
                 bb = draw.textbbox((0, 0), line, font=candidate)
                 widths.append(bb[2] - bb[0])
                 heights.append(bb[3] - bb[1])
-            if max(widths) <= max_w and sum(heights) <= int(height * 0.09):
+            if max(widths) <= max_w and len(cand_lines) <= 2:
                 sub_font, sub_lines = candidate, cand_lines
                 break
             sub_size -= 2
         if sub_font is None:
-            fp = pick_font_path(subline)
+            fp = pick_font_path(joined_bullets)
             sub_font = (
                 ImageFont.truetype(fp, size=sub_min)
                 if fp
                 else ImageFont.load_default()
             )
-            sub_lines = _wrap_to_width(draw, subline, sub_font, max_w)[:2]
+            sub_lines = _wrap_to_width(draw, joined_bullets, sub_font, max_w)[:2]
 
     # Top-center anchor with 6% margin from the top edge.
     top_margin = int(height * 0.06)
@@ -399,57 +404,138 @@ def scene_text(s: dict) -> str:
     return ""
 
 
-def _first_sentence(narration: str) -> str:
-    """First sentence of the narration, whitespace-normalized."""
+def _strip_connective(segment: str) -> str:
+    for prefix in _CONNECTIVE_PREFIXES:
+        if segment.startswith(prefix) and len(segment) > len(prefix) + 1:
+            return segment[len(prefix):].strip()
+    return segment
+
+
+# Leading connectives that are part of the sentence's glue, not the list
+# item itself ("先分清…" → the bullet is the item, not "先").
+_STRIP_START = (
+    "先", "再", "然后", "最后", "接着", "以及", "和", "与", "或",
+    "比如", "例如", "就是", "也就是", "还有", "又", "还是", "就", "都",
+    "而是", "而非", "也",
+)
+# Segment openers that mark a TAIL clause ("方向、环境、运气，都会影响
+# 结果" — the tail is the claim, not a fourth item). Dropped outright.
+_DROP_START = (
+    "都会", "也会", "才是", "却是", "其实", "并不", "不过是",
+    # concessive openers — the clause concedes, it is not an item
+    "即使", "哪怕", "即便",
+    # the known cleft lead-in ("最重要的，是…") — the list follows it
+    "最重要的",
+)
+# A segment carrying the negated CONCLUSION ("任劳任怨，并不等于真正的
+# 努力") is the claim, not an item. Dropped outright — as are
+# pronoun-possessive predicates ("你的职责是平整土地": a maxim, not a
+# list item).
+_DROP_CONTAIN = ("不等于", "不是", "你的", "我的", "他的")
+# Trailing conditional/spoken markers ("影响日常功能时" → the condition,
+# not the item) — stripped.
+_DROP_SUFFIX = ("时", "的话", "而言", "来说", "之后", "以后")
+# Cleft lead-ins ("最重要的是" → the list follows it) — the segment is
+# glue, so it is DROPPED, not stripped to a fragment ("最怕的是" → "最怕"
+# is not a bullet).
+_DROP_CLEFT = ("的是", "要的是", "重要的是")
+
+
+def _strip_connective(segment: str) -> str:
+    for prefix in _STRIP_START:
+        if segment.startswith(prefix) and len(segment) > len(prefix) + 1:
+            return segment[len(prefix):].strip()
+    return segment
+
+
+def _clean_segment(segment: str) -> Optional[str]:
+    """None when the segment is glue (a tail or the sentence's claim);
+    the cleaned item otherwise."""
+    if any(segment.startswith(p) for p in _DROP_START):
+        return None
+    if any(marker in segment for marker in _DROP_CONTAIN):
+        return None
+    for cleft in _DROP_CLEFT:
+        if segment.endswith(cleft):
+            return None
+    seg = _strip_connective(segment)
+    for suffix in _DROP_SUFFIX:
+        if seg.endswith(suffix) and len(seg) > len(suffix) + 1:
+            seg = seg[: -len(suffix)].strip()
+            break
+    return seg
+
+
+def _bullets_from(narration: str) -> list[str]:
+    """The enumeration a scene's narration really contains, as short
+    bullet items.
+
+    A sentence counts as a list when, after splitting on the enumeration
+    separators (，、；) and dropping glue, THREE or more segments remain
+    that are each 2-14 characters and AVERAGE at most 9 — short parallel
+    beats, not clause chains. ("把时间投在能积累的事情上，精神状态反而
+    会更稳、更有活力一些" averages ~10 and stays out; "每周练一项技能，
+    做一次复盘，交付一个可验证的小里程碑" averages 8 and gets bullets.)
+    The colon's lead-in ("换成可执行的节奏：") is not a bullet. Four
+    items cap.
+
+    Returns [] when nothing enumerates: the caller then renders no small
+    line at all (2026-11 user note — a bare sentence under the headline
+    duplicated the caption track; bullets or nothing)."""
     text = re.sub(r"\s+", " ", narration or "").strip()
     if not text:
-        return ""
-    m = re.match(r"^(.+?[。！？!?\.\u2026])(?=\s|$)", text)
-    return (m.group(1) if m else text).strip()
+        return []
+    sentences = [s for s in re.split(r"[。！？!?]", text) if s.strip()]
+    for sentence in sentences:
+        # A list often follows a colon — the lead-in is not a bullet.
+        colon = sentence.find("：")
+        if 0 < colon and len(sentence[colon + 1:].strip()) >= 8:
+            sentence = sentence[colon + 1:]
+        segments = [
+            seg.strip()
+            for seg in re.split(r"[，、；;,]", sentence)
+            if seg.strip()
+        ]
+        cleaned: list[str] = []
+        for seg in segments:
+            seg = _clean_segment(seg)
+            if seg is None or len(seg) < 2 or len(seg) > 14:
+                continue
+            if seg not in cleaned:
+                cleaned.append(seg)
+        if len(cleaned) >= 3:
+            total = sum(len(seg) for seg in cleaned)
+            if total / len(cleaned) <= 8.5:
+                return cleaned[:4]
+    return []
 
 
-def scene_texts(s: dict, headline_override: str = "") -> tuple[str, str]:
-    """(headline, subline) for the two-tier banner.
+def scene_texts(s: dict, headline_override: str = "") -> tuple[str, list[str]]:
+    """(headline, bullets) for the two-tier banner.
 
     headline: `headline_override` (e.g. the article's caption in
     no_captions mode) or the scene_text() priority chain.
-    subline: the narration's first sentence — the scene's key point —
-    truncated so it never becomes a paragraph. Dropped when it would just
-    repeat the headline.
-    """
+    bullets: the narration's enumeration (three or more parallel items,
+    max four) — [] when the narration does not enumerate, in which case
+    NO small line is rendered. A first-sentence subline used to sit
+    here; it duplicated the burned-in caption track at the bottom."""
     headline = (headline_override or scene_text(s)).strip()
     if not headline:
-        return "", ""
+        return "", []
     narration = ""
     narr = s.get("narration") or {}
     if isinstance(narr, dict):
         narration = narr.get("text") or ""
     elif isinstance(narr, str):
         narration = narr
-    subline = _first_sentence(narration)
-    # Cap: one line's worth of info, not a paragraph (~64 units; CJK chars
-    # count double next to Latin, mirroring the caption safe-area rule).
-    max_units = 64
-    units = 0
-    kept: list[str] = []
-    truncated = False
-    for ch in subline:
-        units += 2 if has_cjk(ch) else 1
-        if units > max_units:
-            truncated = True
-            break
-        kept.append(ch)
-    subline = "".join(kept).rstrip()
-    if truncated:
-        # Never end mid-word: back off to the last word boundary, then mark
-        # the elision. CJK has no spaces — the ellipsis alone is fine.
-        sp = subline.rfind(" ")
-        if sp > 0:
-            subline = subline[:sp].rstrip()
-        subline += "…"
-    if not subline or subline == headline:
-        return headline, ""
-    return headline, subline
+    bullets = [
+        b
+        for b in _bullets_from(narration)
+        if b not in headline and headline not in b
+    ]
+    if len(bullets) < 3:
+        return headline, []
+    return headline, bullets
 
 
 def parse_article_captions(path: Path) -> dict[int, str]:
@@ -545,7 +631,7 @@ def main(argv: Iterable[str]) -> int:
         n = scene_id_to_index(sid)
         if n < 0:
             continue
-        headline, subline = scene_texts(s)
+        headline, bullets = scene_texts(s)
         if not headline:
             # no_captions storyboards carry no caption text — fall back to
             # the article's own caption for this scene index.
@@ -553,7 +639,7 @@ def main(argv: Iterable[str]) -> int:
             if not headline:
                 skipped += 1
                 continue
-            headline, subline = scene_texts(s, headline)
+            headline, bullets = scene_texts(s, headline)
         # Size source: the underlying scene image. If absent, skip.
         img_path = images_dir / f"scene_{n}.jpg"
         if not img_path.exists():
@@ -570,7 +656,7 @@ def main(argv: Iterable[str]) -> int:
             continue
         with Image.open(img_path) as img:
             w, h = img.size
-        render_overlay(w, h, headline, out_path, subline=subline)
+        render_overlay(w, h, headline, out_path, bullets=bullets)
         made += 1
     print(f"made {made} overlay(s)  skipped {skipped}  → {out_dir}")
     return 0

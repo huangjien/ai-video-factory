@@ -48,17 +48,139 @@ export type VisualPropsBuilder = (
 // ---------------------------------------------------------------------------
 // Title — opening card. Always first scene.
 // ---------------------------------------------------------------------------
-const buildTitle: VisualPropsBuilder = (scene, input) => {
+/**
+ * The enumeration a passage actually contains, as bullet-worthy items.
+ *
+ *  The title card's small line used to be the film's title — under the
+ *  big caption it read as a redundant second thought (2026-11 user note:
+ *  "小字部分没有太多意义"). The small line is now either BULLETS — when
+ *  the scene's narration really enumerates (three or more parallel
+ *  segments, averaging at most 9 characters) — or nothing. A
+ *  single-sentence subline is not accepted: it duplicates the burned-in
+ *  caption track at the bottom of the frame.
+ *
+ *  Deterministic on purpose: the same scan runs in the Pillow overlay
+ *  pass (scripts/pillow-text-overlay.py) for the content frames, and
+ *  the two surfaces must agree on what counts as a list.
+ */
+
+/** Segment openers that mark a TAIL clause ("方向、环境、运气，都会影响
+ *  结果" — the tail is the claim, not a fourth item). Dropped outright. */
+const ENUM_DROP_START = [
+  "都会",
+  "也会",
+  "才是",
+  "却是",
+  "其实",
+  "并不",
+  "不过是",
+  // concessive openers — the clause concedes, it is not an item
+  "即使",
+  "哪怕",
+  "即便",
+  // the known cleft lead-in ("最重要的，是…") — the list follows it
+  "最重要的",
+];
+
+/** A segment carrying the negated CONCLUSION ("任劳任怨，并不等于真正的
+ *  努力") is the claim, not an item — dropped outright, as are
+ *  pronoun-possessive predicates ("你的职责是平整土地": a maxim, not a
+ *  list item). */
+const ENUM_DROP_CONTAIN = ["不等于", "不是", "你的", "我的", "他的"];
+
+/** Leading connectives that are the sentence's glue ("先分清…" → the
+ *  bullet is the item, not "先"). */
+const ENUM_STRIP_START = [
+  "先",
+  "再",
+  "然后",
+  "最后",
+  "接着",
+  "以及",
+  "和",
+  "与",
+  "或",
+  "比如",
+  "例如",
+  "就是",
+  "也就是",
+  "还有",
+  "又",
+  "还是",
+  "就",
+  "都",
+  "而是",
+  "而非",
+  "也",
+];
+
+/** Trailing conditional/spoken markers ("影响日常功能时" → the
+ *  condition, not the item) and cleft lead-ins ("最重要的是"). */
+const ENUM_DROP_SUFFIX = ["时", "的话", "而言", "来说", "之后", "以后"];
+
+/** Cleft lead-ins ("最重要的是" → the list follows it) — the segment is
+ *  glue, so it is DROPPED, not stripped to a fragment ("最怕的是" →
+ *  "最怕" is not a bullet). */
+const ENUM_DROP_CLEFT = ["的是", "要的是", "重要的是"];
+
+export function extractEnumeration(text: string, max = 4): string[] {
+  const sentences = text
+    .replace(/\s+/g, " ")
+    .split(/[。！？!?\n]/)
+    .map((s) => s.trim())
+    .filter((s) => s !== "");
+  for (const sentence of sentences) {
+    // A list often follows a colon ("换成可执行的节奏：每周练一项技能，…")
+    // — the lead-in is not a bullet.
+    const colon = sentence.indexOf("：");
+    const body =
+      colon > 0 && sentence.slice(colon + 1).trim().length >= 8
+        ? sentence.slice(colon + 1)
+        : sentence;
+    const segments = body
+      .split(/[，、；;,]/)
+      .map((s) => s.trim())
+      .filter((s) => s !== "");
+    const cleaned: string[] = [];
+    for (let seg of segments) {
+      if (ENUM_DROP_START.some((p) => seg.startsWith(p))) continue;
+      if (ENUM_DROP_CONTAIN.some((m) => seg.includes(m))) continue;
+      if (ENUM_DROP_CLEFT.some((c) => seg.endsWith(c))) continue;
+      for (const p of ENUM_STRIP_START) {
+        if (seg.startsWith(p) && seg.length > p.length + 1) {
+          seg = seg.slice(p.length).trim();
+          break;
+        }
+      }
+      for (const suffix of ENUM_DROP_SUFFIX) {
+        if (seg.endsWith(suffix) && seg.length > suffix.length + 1) {
+          seg = seg.slice(0, -suffix.length).trim();
+          break;
+        }
+      }
+      if (seg.length >= 2 && seg.length <= 14 && !cleaned.includes(seg)) {
+        cleaned.push(seg);
+      }
+    }
+    if (cleaned.length >= 3) {
+      const total = cleaned.reduce((n, s) => n + s.length, 0);
+      if (total / cleaned.length <= 8.5) return cleaned.slice(0, max);
+    }
+  }
+  return [];
+}
+
+const buildTitle: VisualPropsBuilder = (scene, _input) => {
   const props: Record<string, unknown> = {
     text: scene.caption,
   };
-  // The subtitle is the FILM's title, never the scene's `visual:` line.
-  // `visual:` is an art-direction PROMPT — it is written for the image
-  // model ("画面左右分成两栏，左侧铺满桌面的宏大城堡剪影…") and putting
-  // it on screen printed the staging directions onto the title card.
-  const title = input.title?.trim() ?? "";
-  if (title.length > 0) {
-    props.subtext = truncateForSubtext(title);
+  // The small line under the big caption is BULLETS or NOTHING. The
+  // film's title used to sit there and read as a redundant echo of the
+  // caption; an art-direction line must never be viewer-facing copy.
+  // (`visual:` is written for the image model.)
+  const bullets = extractEnumeration(scene.narration ?? "");
+  if (bullets.length >= 3) {
+    props.bullets = bullets;
   }
   return props;
 };
@@ -645,23 +767,4 @@ function truncate(s: string, max: number): string {
   const flat = s.replace(/\s+/g, " ").trim();
   if (flat.length <= max) return flat;
   return `${flat.slice(0, max - 1)}…`;
-}
-
-/** Title.subtext is rendered as one <p> at 36px on the title card —
- *  long descriptions overflow and become unreadable. Trim to one short
- *  clause. Matches the helper in `schemas.ts` so we don't double-import
- *  from there. */
-function truncateForSubtext(s: string): string {
-  const MAX = 50;
-  if (s.length <= MAX) return s;
-  const cut = s.slice(0, MAX);
-  const lastPunct = Math.max(
-    cut.lastIndexOf("。"),
-    cut.lastIndexOf("，"),
-    cut.lastIndexOf(","),
-    cut.lastIndexOf("."),
-    cut.lastIndexOf(" "),
-  );
-  const trimmed = lastPunct > 20 ? cut.slice(0, lastPunct) : cut;
-  return `${trimmed}…`;
 }

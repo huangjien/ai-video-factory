@@ -421,9 +421,16 @@ trigger table above.
 > `scripts/pillow-text-overlay.py`, which writes a transparent banner to
 > `assets/images/text/scene_N.png` and the renderer composites it ABOVE the
 > background image (storyboard prop `textOverlaySrc`). The banner holds two
-> lines: a key-info headline and the narration's first sentence as a
-> subline. The headline is picked by priority — `visual.props.text_overlay`
-> → `visual.props.caption` → `visual.props.text`/`title` → captions text —
+> lines: a key-info headline and — since 2026-11 — a BULLET line that only
+> appears when the scene's narration really enumerates (three or more
+> parallel segments, averaged ≤9 chars: "一次代码复盘 · 一个已合并的PR ·
+> 一次故障演练"). The old first-sentence subline is gone (user note: it
+> duplicated the bottom caption track — bullets or nothing). The same scan
+> runs in `extractEnumeration` (packages/draft/src/visual-builders.ts) for
+> the title card: the small line under the big caption is bullets or
+> nothing, and the film's title no longer appears on the card at all.
+> The headline is picked by priority — `visual.props.text_overlay` →
+> `visual.props.caption` → `visual.props.text`/`title` → captions text —
 > so with no `text_overlay` it shows the SAME short label the caption
 > overlay burns at the bottom of the frame, and the frame prints that line
 > twice. That duplication is the current house style (every shipped

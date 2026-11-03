@@ -7,6 +7,11 @@ export interface TitleProps {
   theme?: Theme;
   text: string;
   subtext?: string | undefined;
+  /** Bullet items under the title — shown only when the scene's
+   *  content really enumerates (three or more parallel items). They
+   *  replace the old single-line subtext, which read as a redundant
+   *  echo of the caption. Rendered as one centered "a · b · c" line. */
+  bullets?: string[] | undefined;
   /** Optional small kicker (e.g. "Chapter One", "Tutorial 03") rendered
    *  above the main title in uppercase tracking. */
   kicker?: string;
@@ -34,6 +39,7 @@ export const Title: FC<TitleProps> = ({
   theme = darkTechTheme,
   text,
   subtext,
+  bullets,
   kicker,
   accent,
   startFrame,
@@ -129,9 +135,27 @@ export const Title: FC<TitleProps> = ({
             borderRadius: 3,
           }}
         />
-        {/* Subtext (optional) — slightly larger, muted, fades in after
-            the title. */}
-        {subtext !== undefined ? (
+        {/* Subtext / bullets (optional) — the small line under the
+            title. Bullets ("a · b · c") win when present: they carry
+            the scene's real enumeration. A bare subtext still renders
+            for older registered storyboards. */}
+        {bullets !== undefined && bullets.length >= 2 ? (
+          <div
+            style={{
+              marginTop: 36,
+              fontSize: 30,
+              color: theme.colors.secondary,
+              fontFamily: theme.typography.subtitle.fontFamily,
+              fontWeight: 500,
+              letterSpacing: 2,
+              opacity: Math.max(0, (enter.opacity - 0.3) / 0.7),
+              textAlign: "center",
+              maxWidth: 1400,
+            }}
+          >
+            {bullets.join("　·　")}
+          </div>
+        ) : subtext !== undefined ? (
           <div
             style={{
               marginTop: 36,

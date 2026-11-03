@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { VISUAL_BUILDERS } from "./visual-builders.js";
+import { VISUAL_BUILDERS, extractEnumeration } from "./visual-builders.js";
 import type { Scene as ArticleScene } from "./schemas.js";
 
 const scene = (
@@ -12,18 +12,46 @@ const scene = (
 });
 
 describe("buildTitle", () => {
-  it("emits text from caption and subtext from the film's title", () => {
+  it("emits bullets when the first scene's narration enumerates", () => {
+    const props = VISUAL_BUILDERS.Title!(
+      scene({
+        id: "scene_1",
+        duration: 5,
+        caption: "学不进，玩不尽兴",
+        visual: "A direction",
+        narration:
+          "学也学不进去，玩也玩不尽兴，睡也睡不安稳，偏偏胃口还特别好。这样的日子，你可能也正在经历。",
+      }),
+      { section: null, title: "你不是在努力，只是在吃苦" },
+    );
+    expect(props.text).toBe("学不进，玩不尽兴");
+    // The small line is the enumeration — the film's title is gone.
+    expect(props.bullets).toStrictEqual([
+      "学也学不进去",
+      "玩也玩不尽兴",
+      "睡也睡不安稳",
+      "偏偏胃口还特别好",
+    ]);
+    expect(props.subtext).toBeUndefined();
+    expect(JSON.stringify(props)).not.toContain("你不是在努力");
+  });
+
+  it("outputs nothing when the narration does not enumerate", () => {
+    // The old fallback put the film's title in the small line, where it
+    // read as a redundant echo of the caption (user: bullets or nothing).
     const props = VISUAL_BUILDERS.Title!(
       scene({
         id: "scene_1",
         duration: 5,
         caption: "Title text",
-        visual: "A short subtext",
+        visual: "a direction",
+        narration: "只有一句话的旁白，没有并列结构。",
       }),
       { section: null, title: "The Film Title" },
     );
-    expect(props.text).toBe("Title text");
-    expect(props.subtext).toBe("The Film Title");
+    expect(props.bullets).toBeUndefined();
+    expect(props.subtext).toBeUndefined();
+    expect(JSON.stringify(props)).not.toContain("The Film Title");
   });
 
   it("never puts the art direction on screen", () => {
@@ -36,31 +64,50 @@ describe("buildTitle", () => {
       { section: null, title: "读者为什么弃书" },
     );
     expect(JSON.stringify(props)).not.toContain("画面左右分成两栏");
-    expect(props.subtext).toBe("读者为什么弃书");
+  });
+});
+
+describe("extractEnumeration", () => {
+  it("finds a 、-separated list and strips the colon lead-in", () => {
+    expect(
+      extractEnumeration(
+        "别再说每天进步一点点这样的空话。换成可执行的节奏：每周练一项技能，做一次复盘，交付一个可验证的小里程碑。",
+      ),
+    ).toStrictEqual([
+      "每周练一项技能",
+      "做一次复盘",
+      "交付一个可验证的小里程碑",
+    ]);
   });
 
-  it("omits the subtitle when the article has no title", () => {
-    const props = VISUAL_BUILDERS.Title!(
-      scene({
-        id: "scene_1",
-        duration: 5,
-        caption: "c",
-        visual: "a direction",
-      }),
-      { section: null },
-    );
-    expect(props.subtext).toBeUndefined();
-    expect(JSON.stringify(props)).not.toContain("a direction");
+  it("drops tail clauses and cleft lead-ins", () => {
+    // 都会影响结果 is the claim, not a fourth item; 最怕的是 is the
+    // lead-in to the list.
+    expect(
+      extractEnumeration("方向、环境、运气，都会影响结果。"),
+    ).toStrictEqual(["方向", "环境", "运气"]);
+    expect(
+      extractEnumeration("最怕的是，不甘心平庸，又不肯付出，讨厌拖延。"),
+    ).toStrictEqual(["不甘心平庸", "不肯付出", "讨厌拖延"]);
   });
 
-  it("truncates subtext to 80 chars with a trailing …", () => {
-    const long = "x".repeat(120);
-    const props = VISUAL_BUILDERS.Title!(
-      scene({ id: "scene_1", duration: 5, caption: "c", visual: "v" }),
-      { section: null, title: long },
+  it("returns nothing for clause chains and negated conclusions", () => {
+    // 把时间投在… averages ~10 characters — a clause chain, not a list.
+    expect(
+      extractEnumeration(
+        "把时间投在能积累的事情上，精神状态反而会更稳、更有活力一些。",
+      ),
+    ).toStrictEqual([]);
+    // 并不等于… is the sentence's conclusion.
+    expect(
+      extractEnumeration("每天加班、任劳任怨，并不等于真正的努力。"),
+    ).toStrictEqual([]);
+  });
+
+  it("returns nothing for plain prose", () => {
+    expect(extractEnumeration("冲动的决定，很多人后悔一阵子。")).toStrictEqual(
+      [],
     );
-    expect((props.subtext as string).length).toBeLessThanOrEqual(51);
-    expect((props.subtext as string).endsWith("…")).toBe(true);
   });
 });
 

@@ -5,6 +5,7 @@ export {
   parseArticleLenient,
   parseArticleWithRecovery,
   recoverEmptyNarrations,
+  articleMdToRawArticle,
   articleToStoryboardYaml,
   type ArticleFrontmatter,
   type Scene,
@@ -54,7 +55,13 @@ export {
   resolveSceneIdentities,
   type SceneIdentity,
 } from "./scene-identity.js";
-export { callDraft, DraftError, renderArticleMd, type CallDraftResult, type RawArticle } from "./agent.js";
+export {
+  callDraft,
+  DraftError,
+  renderArticleMd,
+  type CallDraftResult,
+  type RawArticle,
+} from "./agent.js";
 export {
   callRevise,
   verifySurgicalRevision,
@@ -66,6 +73,20 @@ export {
   type ReviseInput,
   type ResearchNote,
 } from "./revise.js";
+export {
+  planReviewRevision,
+  TECHNICAL_SKIP_REASON,
+  NO_SOURCE_RULE,
+  guardUnverifiedFact,
+  withDuplicateCopies,
+  type ReviewRevisionPlan,
+  type SkippedReviewFinding,
+} from "./review-feedback.js";
+export {
+  applyRevisionToMarkdown,
+  splitArticleMarkdown,
+  type ArticlePatchResult,
+} from "./article-patch.js";
 export {
   translateArticle,
   canonicalLanguage,

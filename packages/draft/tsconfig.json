@@ -8,6 +8,8 @@
   "references": [
     { "path": "../llm" },
     { "path": "../prompts" },
-    { "path": "../theme" }
+    { "path": "../review" },
+    { "path": "../theme" },
+    { "path": "../tts" }
   ]
 }

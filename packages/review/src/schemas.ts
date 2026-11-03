@@ -41,10 +41,27 @@ export const ScalarFindingSchema = z.object({
 });
 export type ScalarFinding = z.infer<typeof ScalarFindingSchema>;
 
+/** Which text of a scene a finding is about. The review agent names it
+ *  so the finding can be repaired: a scene-level complaint without a
+ *  field ("scene-07 is too dense") cannot be turned into a targeted
+ *  edit, because the reviser edits one passage at a time. */
+export const ReviewFindingField = z.enum([
+  "narration",
+  "caption",
+  "visual",
+  "section",
+]);
+export type ReviewFindingField = z.infer<typeof ReviewFindingField>;
+
 /** One entry of an array field. The prompt asks for id / severity /
  *  reference / observation / evidence / recommendation; `reference`,
  *  `evidence` and `recommendation` are tolerated as absent/null for the
- *  same reason as above. */
+ *  same reason as above.
+ *
+ *  `field` and `quote` are what make a finding REPAIRABLE: the field
+ *  names which text of the scene the finding is about, and the quote is
+ *  the passage the reviser will be asked to edit. A finding that omits
+ *  them is reported, but it cannot be acted on. */
 export const StructuredFindingSchema = z.object({
   id: z.string(),
   severity: FindingSeverity,
@@ -52,6 +69,10 @@ export const StructuredFindingSchema = z.object({
   observation: z.string(),
   evidence: z.string().nullable().optional(),
   recommendation: z.string().nullable().optional(),
+  /** Which text of the scene this finding is about. */
+  field: ReviewFindingField.nullable().optional(),
+  /** The exact passage the finding is about, quoted verbatim. */
+  quote: z.string().nullable().optional(),
 });
 export type StructuredFinding = z.infer<typeof StructuredFindingSchema>;
 

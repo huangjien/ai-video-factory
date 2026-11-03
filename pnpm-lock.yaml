@@ -355,6 +355,9 @@ importers:
       '@video/prompts':
         specifier: workspace:*
         version: link:../prompts
+      '@video/review':
+        specifier: workspace:*
+        version: link:../review
       '@video/theme':
         specifier: workspace:*
         version: link:../theme

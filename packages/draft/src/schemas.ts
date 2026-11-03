@@ -5,6 +5,7 @@ import { pickVisualComponent } from "./visual-classifier.js";
 import { VISUAL_BUILDERS } from "./visual-builders.js";
 import type { VisualPropsBuilder } from "./visual-builders.js";
 import { emitSceneAnimations } from "./animation-emitter.js";
+import type { RawArticle } from "./agent.js";
 
 /**
  * Draft output schema — markdown-first by design. The LLM produces the
@@ -172,6 +173,37 @@ export interface ParsedArticle {
   title?: string;
   /** Original markdown, preserved verbatim for round-trip editing. */
   markdown: string;
+}
+
+/** The article's hook line — `> **Hook** (≤20s): …`. The label and the
+ *  separator are kept by the caller; only the hook text is the article's
+ *  own content. */
+const HOOK_RE = /^>\s*\*\*Hook\*\*([^\n]*?[:：])[ \t]*(.*)$/m;
+
+/**
+ * Rebuild the structured article from article.md.
+ *
+ * The surgical reviser works on the shape the DRAFTER emits (title,
+ * hook, sections, scenes) — not on markdown. A revision that starts
+ * from an on-disk article.md therefore has to rebuild that shape first.
+ *
+ * The scene objects are copied WHOLE, so the keys the drafter never
+ * emits but a human does (`characters`, `hold_after_sec`, `lead_in_sec`,
+ * `map`) survive into the revision base and out of it again.
+ */
+export function articleMdToRawArticle(article: ParsedArticle): RawArticle {
+  const hook = article.proseBody.match(HOOK_RE);
+  return {
+    ...(article.title !== undefined ? { title: article.title } : {}),
+    ...(hook?.[2] !== undefined ? { hook: hook[2].trim() } : {}),
+    sections: parseProseSections(article.proseBody).map((s) => ({
+      // The markdown carries "## 1. 第一节"; the structured shape carries
+      // the bare heading — the renderer adds the number back.
+      heading: s.heading.replace(/^\d+\.\s*/, ""),
+      body: s.body,
+    })),
+    scenes: article.scenes.map((s) => ({ ...s })),
+  };
 }
 
 /** Convert a parsed article into the renderer's VDSL storyboard YAML.

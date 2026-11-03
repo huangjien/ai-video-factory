@@ -71,6 +71,21 @@ Each finding must include:
 - `evidence`: An exact quotation, observed metadata, error message, or other available supporting evidence.
 - `recommendation`: A concise corrective action, or `null` if no actionable recommendation can be justified.
 
+If the finding is about a specific piece of TEXT — a narration line, a
+caption, a visual direction, or a prose section — also include:
+
+- `field`: Which text it is about: `narration`, `caption`, `visual`, or `section`.
+- `quote`: The passage itself, quoted EXACTLY as it appears in the artifact.
+
+This is not bookkeeping: a finding that names a scene but not the text
+inside it cannot be repaired. The repair path edits one quoted passage
+at a time, so an un-anchored finding ("scene-07 is too dense") is
+reported and then set aside. Anchor it and it gets fixed.
+
+Quote only what is really there. If you cannot find the passage, leave
+`quote` as `null` and say so in `observation` — a wrong quote is worse
+than no quote, because it points the repair at the wrong text.
+
 If no issues are found in an array field, return an empty array (`[]`). Do not fabricate findings to populate a field.
 
 ## Overall Verdicts
@@ -98,6 +113,10 @@ A finding's severity does not automatically determine its verdict without consid
 1. Review each field independently before determining section-level verdicts.
 2. Base every non-`ok` verdict on a concrete observation or an explicitly stated evidence limitation.
 3. Distinguish confirmed defects, unsupported assertions, and unverified properties.
+4. Anchor every finding you want repaired to the exact text it is about
+   (`field` + `quote`), and say plainly when the defect is not in the
+   text at all — a defect in the render, the asset, or the timing is
+   real, but no quotation will fix it.
 4. Cross-check consistency across the storyboard, script, and claims.
 5. Avoid duplicate findings. If one root cause affects multiple fields, reference the same finding ID where appropriate.
 6. Do not penalize stylistic preferences unless they conflict with an explicit requirement or materially impair comprehension.

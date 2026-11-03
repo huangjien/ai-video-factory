@@ -13,6 +13,18 @@ Bilibili field limits (the web form rejects or truncates beyond these):
 - description: at most 2000 characters.
 - tags: at most 10 tags, each at most 20 characters.
 
+LANGUAGE — write in the video's own language:
+- `title`, `description` and `tags` are written in the SAME language as the
+  video's narration. A Chinese video gets Chinese metadata; an English
+  video gets English metadata. Never write Chinese copy for an English
+  video, and never translate a title that is already in the video's
+  language.
+- `suggested_category` is the ONE exception: it is a real Bilibili section
+  name and is ALWAYS a Chinese name (科技 / 计算机技术 / …), whichever
+  language the video is in.
+- `cover_prompt` is always written in English — the image model reads
+  English prompts best.
+
 YAML syntax — get this wrong and the whole block is discarded:
 - Wrap EVERY string value in double quotes. A bare string containing ":",
   "#", or a leading special character breaks the parser, and multi-line
@@ -24,9 +36,9 @@ YAML syntax — get this wrong and the whole block is discarded:
 - `suggested_category: null` for the no-pick case.
 
 `tags` are how a video escapes the subscriber feed, so pick terms a viewer
-would actually search — "AI Agent", "大模型", "程序员", "效率工具". Not
-sentences, not the whole title split into fragments, not generic filler like
-"热门" or "推荐".
+would actually search — "AI Agent", "DevOps", "大模型", "程序员", "效率工具".
+Not sentences, not the whole title split into fragments, not generic filler
+like "热门" or "推荐".
 
 `suggested_category` is the 分区 the video is filed under. Choose from the
 real Bilibili section names, e.g. 科技 / 计算机技术 / 科学科普 / 职场就业 /

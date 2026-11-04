@@ -495,13 +495,21 @@ node packages/cli/dist/index.js bilibili "<topic>"
 # → projects/<slug>/bilibili/CHECKLIST.md    (the manual upload steps)
 ```
 
-**This command does not upload, and cannot.** Bilibili exposes no public
-video-upload API for third-party tools — the `openhome.bilibili.com` platform
-covers games, live, and content-partner integrations, not generic submission.
-The web form posts to undocumented internal endpoints that require a signed
-request and session cookies, and are actively hardened against automation.
-So `CHECKLIST.md` is the deliverable: every field the form asks for, with the
-ones a machine can know already filled in.
+**The upload itself is automated too** (2026-11-04, verified: 军种与兵种的组织文化 → BV1EExQ6GEUj in 36 s):
+
+```bash
+python3 scripts/bilibili-upload.py "<slug>"           # read package.yaml, upload final-mixed.mp4
+python3 scripts/bilibili-upload.py "<slug>" --dry-run # print the submission fields only
+python3 scripts/bilibili-upload.py --login            # QR re-scan when the cookie expires (~30 days)
+```
+
+It drives the undocumented endpoints through `stream_gears` with session
+cookies (`~/.config/secrets/biliup-cookies.json`), which is exactly why the
+platform can't offer a stable contract: treat the script as a working
+convention, not a supported API. The 分区 name from `package.yaml` maps to a
+tid via the table in the script (`--tid` overrides); the cover defaults to
+`youtube/thumbnail.jpg`. EN/localized videos have no `bilibili/package.yaml`
+— use `--standalone --video … --title … --desc … --tag … --tid …`.
 
 Field limits are enforced by schema before you reach the form (title ≤ 80
 characters, 简介 ≤ 2000, ≤ 10 tags of ≤ 20 characters each) — the form

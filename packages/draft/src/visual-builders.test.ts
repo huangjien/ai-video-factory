@@ -109,6 +109,18 @@ describe("extractEnumeration", () => {
       [],
     );
   });
+
+  it("rejects mixed-granularity fragments — scene beats, not a list", () => {
+    // A real failure on 军种与兵种的组织文化: the opening's scene
+    // description chopped into [军舰在夜里航行, 舰桥, 机舱, …] — places
+    // (2 chars) mixed with a clause (9 chars) is not parallel structure.
+    // Rule: the longest segment stays within 3× the shortest.
+    expect(
+      extractEnumeration(
+        "想象三个场景。一艘军舰在夜间航行。舰桥、动力舱、通信室和损管小组，各自盯着自己的岗位。",
+      ),
+    ).toStrictEqual([]);
+  });
 });
 
 describe("buildFlowChart", () => {

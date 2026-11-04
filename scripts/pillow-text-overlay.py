@@ -504,6 +504,13 @@ def _bullets_from(narration: str) -> list[str]:
             if seg not in cleaned:
                 cleaned.append(seg)
         if len(cleaned) >= 3:
+            # Parallel beats share a GRANULARITY. "舰桥、机舱" (2-char
+            # places) mixed with "军舰在夜里航行" (a 7-char clause) is a
+            # scene description chopped up, not a list — require the
+            # longest segment to stay within 3× the shortest.
+            shortest = min(len(seg) for seg in cleaned)
+            if max(len(seg) for seg in cleaned) > shortest * 3:
+                continue
             total = sum(len(seg) for seg in cleaned)
             if total / len(cleaned) <= 8.5:
                 return cleaned[:4]

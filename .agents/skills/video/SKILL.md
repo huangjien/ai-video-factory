@@ -85,7 +85,7 @@ Full command set:
 | `video thumbnail <project>` | YouTube thumbnail (MiniMax image) |
 | `video shorts <project>` | 60s Shorts clip (MiniMax video) |
 | `video youtube <project>` | Title / description / chapters / shorts hook; `--upload` publishes final-mixed.mp4 + thumbnail directly (OAuth: `video youtube --auth` once, then `--privacy private\|unlisted\|public`, default private) |
-| `video bilibili <project>` | Bilibili submission metadata: title / 简介 / ≤10 tags / suggested 分区 / cover prompt → `bilibili/CHECKLIST.md`. **Packaging only — Bilibili has no public upload API**, so the last step is manual. Never hard-fails: a bad model response degrades to a deterministic package with a warning. |
+| `video bilibili <project>` | Bilibili submission metadata: title / 简介 / ≤10 tags / suggested 分区 / cover prompt → `bilibili/package.yaml` + `CHECKLIST.md`. Never hard-fails: a bad model response degrades to a deterministic package with a warning. **Upload is automated**: `python3 scripts/bilibili-upload.py <project>` (stream_gears + cookie login at `~/.config/secrets/biliup-cookies.json`, ~30-day expiry → `--login` re-scans the QR; `--dry-run` prints the submission fields; 分区 tid mapping built in, `--tid` overrides). Verified 2026-11-04: 军种与兵种的组织文化 → BV1EExQ6GEUj in 36 s. EN videos: use `--standalone --video … --title … --desc … --tag … --tid …`. |
 | `video visuals <project>` | v0.8: generate scene images + contact sheet for review (gate off by default) |
 | `video research <topic>` | Facts + sources + claims package (feeds draft) |
 | `video motion <project>` | Per-scene animation timelines (agent + heuristics) |

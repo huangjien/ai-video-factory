@@ -163,6 +163,12 @@ export function extractEnumeration(text: string, max = 4): string[] {
       }
     }
     if (cleaned.length >= 3) {
+      // Parallel beats share a GRANULARITY. "舰桥、机舱" (2-char places)
+      // mixed with "军舰在夜里航行" (a 7-char clause) is a scene
+      // description chopped up, not a list — require the longest segment
+      // to stay within 3× the shortest.
+      const shortest = Math.min(...cleaned.map((s) => s.length));
+      if (Math.max(...cleaned.map((s) => s.length)) > shortest * 3) continue;
       const total = cleaned.reduce((n, s) => n + s.length, 0);
       if (total / cleaned.length <= 8.5) return cleaned.slice(0, max);
     }

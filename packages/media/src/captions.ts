@@ -132,18 +132,29 @@ export function buildCaptionCues(
   let current = "";
   for (const fragment of fragmentNarration(trimmed)) {
     // A single fragment can still exceed the cue budget (no punctuation
-    // for hundreds of characters). Split it rather than clipping it.
+    // for hundreds of characters). Split it rather than clipping it — at
+    // TOKEN boundaries, not raw characters: a character cut lands
+    // mid-word for Latin text ("technolo / gy", seen in the 军种与兵种
+    // en-US SRT, 2026-11-04). CJK tokens are single characters, so the
+    // Chinese cut points are identical to the old behavior.
     if (textUnits(fragment) > budget) {
       if (current !== "") {
         groups.push(current);
         current = "";
       }
       let piece = "";
-      for (const ch of fragment) {
-        piece += ch;
-        if (textUnits(piece) >= budget) {
-          groups.push(piece.trim());
-          piece = "";
+      let pieceUnits = 0;
+      for (const token of fragment.match(/\s+|[A-Za-z0-9]+|[^\sA-Za-z0-9]/gu) ??
+        []) {
+        const tokenUnits = textUnits(token);
+        if (pieceUnits + tokenUnits >= budget && /\S/.test(piece.trimEnd())) {
+          const trimmedPiece = piece.trim();
+          if (trimmedPiece !== "") groups.push(trimmedPiece);
+          piece = /\s+/.test(token) ? "" : token;
+          pieceUnits = textUnits(piece);
+        } else {
+          piece += token;
+          pieceUnits += tokenUnits;
         }
       }
       if (piece.trim()) current = piece.trim();

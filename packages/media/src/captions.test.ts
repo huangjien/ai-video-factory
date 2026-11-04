@@ -54,6 +54,26 @@ describe("buildCaptionCues (CS-07)", () => {
     expect(cues[cues.length - 1]?.endSec).toBeCloseTo(20, 6);
   });
 
+  it("never splits an English word across cues (Latin cut at token boundaries)", () => {
+    // The oversize fallback used to cut at raw characters: "…structure,
+    // technolo" / "gy, and identity…" — seen in the 军种与兵种 en-US
+    // SRT, 2026-11-04. English must cut at word boundaries; Chinese
+    // (character tokens) keeps the old cut points.
+    const en =
+      "See this clearly, and what you see is no longer just style, but how mission, " +
+      "structure, technology, and identity shaped the organization, step by step, " +
+      "into what it is today.";
+    const joined = buildCaptionCues(en, 10.7)
+      .map((c) => c.lines.join(" "))
+      .join(" ");
+    expect(joined).not.toMatch(/technolo\s*$/m);
+    expect(joined).toContain("technology, and identity");
+    // every cue stays within the two-line budget
+    for (const cue of buildCaptionCues(en, 10.7)) {
+      expect(cue.lines.length).toBeLessThanOrEqual(MAX_CAPTION_LINES);
+    }
+  });
+
   it("is continuous and monotonic — no gaps, no overlaps, no reordering", () => {
     const cues = buildCaptionCues(narration, 20);
     for (let i = 0; i < cues.length; i++) {

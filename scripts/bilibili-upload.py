@@ -93,6 +93,12 @@ def main() -> int:
             return 2
         print(json.dumps({"video": args.video, "title": args.title, "tid": args.tid,
                           "tag": args.tag, "cover": args.cover or ""}, ensure_ascii=False))
+        # --dry-run must gate here too: the project branch returns before
+        # importing stream_gears, but this branch used to import and upload
+        # regardless of the flag (2026-11-04: a --dry-run verification run
+        # submitted for real).
+        if args.dry_run:
+            return 0
         import stream_gears
         if len(args.title) > 80:
             print(f"标题 {len(args.title)} 字符超 B 站上限 80，截断", file=sys.stderr)

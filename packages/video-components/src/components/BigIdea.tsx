@@ -19,11 +19,19 @@ export interface BigIdeaProps {
   frame: number;
 }
 
-/** CJK text has no spaces — split into characters; otherwise words. */
-function tokenize(text: string): string[] {
-  return /[\u4e00-\u9fa5]/.test(text)
-    ? Array.from(text)
-    : text.split(/\s+/).filter((t) => t.length > 0);
+/** CJK text has no spaces — split into characters; otherwise words.
+ *  Latin tokens keep a trailing space when rendered (`whiteSpace:
+ *  "pre"`), otherwise the inline-block spans glue into
+ *  "Cultureisthedefaultwayof" — seen on the 军种与兵种 en-US title
+ *  card, 2026-11-04. */
+function tokenize(text: string): { cjk: boolean; tokens: string[] } {
+  const cjk = /[\u4e00-\u9fa5]/.test(text);
+  return {
+    cjk,
+    tokens: cjk
+      ? Array.from(text)
+      : text.split(/\s+/).filter((t) => t.length > 0),
+  };
 }
 
 /** Full-screen typographic statement. Tokens (words, or characters for
@@ -44,7 +52,7 @@ export const BigIdea: FC<BigIdeaProps> = ({
   // Per-token reveal. With animations, each token waits for its own
   // `__reveal__` cue; without, the reveal runs as a smooth easeOut
   // over the first 55% of the scene.
-  const tokens = tokenize(text);
+  const { cjk, tokens } = tokenize(text);
   const reveal = hasAnimations
     ? progressFor(animations, "__reveal__", sceneSec, 0.55)
     : Math.min(1, frame / Math.max(1, durationInFrames * 0.55));
@@ -133,12 +141,16 @@ export const BigIdea: FC<BigIdeaProps> = ({
               key={i}
               style={{
                 display: "inline-block",
+                // Latin words need their inter-word space INSIDE the
+                // inline-block span — outside it, adjacent spans have
+                // only the 0.05em gap and the words glue together.
+                whiteSpace: cjk ? undefined : "pre",
                 // A small upward translate + fade on each token's
                 // appearance gives the reveal a tactile feel.
                 transform: `translateY(${(1 - 1) * 0}px)`,
               }}
             >
-              {tok}
+              {cjk ? tok : i < visible.length - 1 ? tok + " " : tok}
             </span>
           ))}
           {/* "..." cursor at the tail of the reveal when mid-reveal. */}

@@ -29,6 +29,16 @@ export interface DraftInput {
    *  pacing / arc rules to the system prompt. Unknown or omitted → the
    *  system prompt is byte-identical to the pre-profile one. */
   channelProfile?: string;
+  /** "image" = every scene gets a generated illustration (no component
+   *  keywords); "components" = the default mixed register. Omitted →
+   *  byte-identical prompt to the pre-flag one.
+   *
+   *  Why it exists: the drafter names the intended component in every
+   *  `visual:` line ("…; stat keyword, …"), and the classifier routes
+   *  on that bare word — so a film meant to be all photographs came out
+   *  as geometry (50 of 57 scenes on 军种与兵种的组织文化, 2026-11-04).
+   *  The fix used to be hand-editing ~30 visual lines per film. */
+  visualMode?: "image" | "components";
 }
 
 /** Body lives in `packages/prompts/prompts/draft-article.md` — edit it there. */
@@ -49,6 +59,14 @@ export function buildMessages(input: DraftInput): ChatMessage[] {
         : input.editingDepth === "medium"
           ? "Balance fidelity to the source material with the article-quality rules above."
           : "Apply the full article-quality rules above, including reorganizing and expanding where the content needs it.",
+    );
+  }
+  if (input.visualMode === "image") {
+    userParts.push(
+      "Visual mode: IMAGE-ONLY",
+      'Every scene gets a GENERATED ILLUSTRATION (the image model renders the `visual:` line). Therefore: do NOT name a component, and do NOT include a style keyword — no "stat keyword", "流程关键词", "list keyword", "timeline", "引用", "金字塔" and so on. Those words silently route the scene to a self-rendered geometry component and it loses its picture.',
+      "The ONLY keyword you may use is `takeaway` / `核心观点`, and only for a scene whose whole point IS the statement (it becomes the full-screen statement card).",
+      "Write each `visual:` line as a pure art-direction sentence about the picture: subject, action, setting, material and light, micro-detail — and stop there.",
     );
   }
   if (input.tone !== undefined) {

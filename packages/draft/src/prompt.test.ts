@@ -26,6 +26,35 @@ describe("SYSTEM_PROMPT contract", () => {
   });
 });
 
+describe("visual mode — image-only films", () => {
+  it("tells the drafter to name no component when visualMode is image", () => {
+    const user = buildMessages({
+      topic: "t",
+      audience: "developers",
+      language: "zh-CN",
+      duration: 180,
+      visualMode: "image",
+    })
+      .map((m) => m.content)
+      .join("\n");
+    expect(user).toContain("IMAGE-ONLY");
+    expect(user).toContain("do NOT name a component");
+    expect(user).toContain("takeaway");
+  });
+
+  it("leaves the prompt untouched when the mode is omitted (default)", () => {
+    const base = {
+      topic: "t",
+      audience: "developers",
+      language: "zh-CN" as const,
+      duration: 180,
+    };
+    const withoutMode = buildMessages(base);
+    const withComponents = buildMessages({ ...base, visualMode: "components" });
+    expect(withComponents).toStrictEqual(withoutMode);
+  });
+});
+
 describe("buildMessages", () => {
   it("always emits system + user with the four core inputs", () => {
     const msgs = buildMessages(base);

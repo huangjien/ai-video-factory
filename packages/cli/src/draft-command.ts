@@ -22,6 +22,7 @@ import {
   planReviewRevision,
   renderArticleReviewYaml,
   resolveImageStyle,
+  resolveVisualMode,
   runScoredDraft,
   type ParsedArticle,
   type RawArticle,
@@ -99,6 +100,11 @@ export interface DraftOptions {
    *  image_style question as specified for the agent-ask gate
    *  (docs/v0.7-agent-ask-protocol-plan.md §5–§6). */
   imageStyle?: string;
+  /** Visual mode — "image" makes every scene a generated illustration
+   *  (the drafter writes no component keywords); "components" is the
+   *  default mixed register. Stamped into article.md frontmatter so the
+   *  choice survives re-drafts and l10n copies. */
+  visualMode?: "image" | "components";
   /** Scene-image provider — written into the article.md frontmatter
    *  (`image_provider:`) so `video make` picks it up. minimax (default)
    *  | openai | gemini | mock | none. Also a video-ask/1 knob: passing
@@ -586,6 +592,9 @@ export async function runDraft(opts: DraftOptions): Promise<number> {
     audience,
     language,
     duration,
+    ...(opts.visualMode !== undefined
+      ? { visualMode: resolveVisualMode(opts.visualMode) }
+      : {}),
     ...(opts.editingDepth !== undefined
       ? { editingDepth: opts.editingDepth }
       : {}),
@@ -767,6 +776,15 @@ export async function runDraft(opts: DraftOptions): Promise<number> {
   let stamped = opts.imageStyle
     ? stampFrontmatterKey(markdown, "image_style", imageStyle)
     : markdown;
+  // The visual mode is durable project config, like image_style: it
+  // decides whether the drafter may name components at all.
+  if (opts.visualMode !== undefined) {
+    stamped = stampFrontmatterKey(
+      stamped,
+      "visual_mode",
+      resolveVisualMode(opts.visualMode),
+    );
+  }
   // Same contract as image_style: the provider choice is durable project
   // config, so it belongs in article.md where `video make` reads it — not
   // in a one-shot draft flag.
@@ -937,6 +955,7 @@ export interface DraftCliOpts {
   fromReview?: string;
   audioPlan?: boolean;
   imageStyle?: string;
+  visualMode?: string;
   imageProvider?: string;
   channelProfile?: string;
   tts?: string;
@@ -974,6 +993,9 @@ export function draftCliOptsToDraftOptions(
     ...(opts.fromReview !== undefined ? { fromReview: opts.fromReview } : {}),
     noAudioPlan: opts.audioPlan === false,
     ...(opts.imageStyle !== undefined ? { imageStyle: opts.imageStyle } : {}),
+    ...(opts.visualMode !== undefined
+      ? { visualMode: resolveVisualMode(opts.visualMode) }
+      : {}),
     ...(opts.imageProvider !== undefined
       ? { imageProvider: opts.imageProvider }
       : {}),
@@ -1051,6 +1073,10 @@ export function registerDraft(program: Command): void {
         return v as
           "professional" | "conversational" | "academic" | "narrative";
       },
+    )
+    .option(
+      "--visual-mode <mode>",
+      "image = every scene becomes a generated illustration (no component keywords); components = the default mixed register",
     )
     .option(
       "--bgm <tag>",

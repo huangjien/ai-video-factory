@@ -74,6 +74,22 @@ export function resolveImageStyle(value: unknown): ImageStyle {
     : DEFAULT_IMAGE_STYLE;
 }
 
+/** How a film's scenes get their pictures.
+ *
+ *  "image" = every scene is a generated illustration (the drafter writes
+ *  no component keywords). "components" = the default mixed register,
+ *  where the drafter names the intended component and the classifier
+ *  routes on it.
+ *
+ *  Unknown / missing / invalid → the default. */
+export type VisualMode = "image" | "components";
+
+export const DEFAULT_VISUAL_MODE: VisualMode = "components";
+
+export function resolveVisualMode(value: unknown): VisualMode {
+  return value === "image" ? "image" : DEFAULT_VISUAL_MODE;
+}
+
 interface StylePreset {
   /** Composition guidance for the prompt-expanding LLM. */
   systemBlock: string;

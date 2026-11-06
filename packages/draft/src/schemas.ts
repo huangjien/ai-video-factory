@@ -55,6 +55,12 @@ export const ArticleFrontmatterSchema = z
      *  parsing); resolveImageStyle coerces unknown values to
      *  flat-vector at the use site. */
     image_style: z.string().optional(),
+    /** "image" = every scene gets a generated illustration. The drafter
+     *  writes no component keywords, because a keyword routes the scene
+     *  to a self-rendered geometry component and it loses its picture.
+     *  Optional and typo-tolerant like image_style; absent → the default
+     *  mixed register. */
+    visual_mode: z.string().optional(),
     /** v0.10: the era, region and culture the whole video is set in, e.g.
      *  `Tang-dynasty China, 626 CE`. Spliced into every image brief so the
      *  expander can state period dress and appearance instead of leaving the

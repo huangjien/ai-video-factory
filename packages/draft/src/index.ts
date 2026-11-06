@@ -144,10 +144,13 @@ export {
   DEFAULT_IMAGE_STYLE,
   IMAGE_STYLES,
   IMAGE_STYLE_PRESETS,
+  DEFAULT_VISUAL_MODE,
   resolveImageStyle,
+  resolveVisualMode,
   stylePromptSuffix,
   styleSystemBlock,
   type ImageStyle,
+  type VisualMode,
 } from "./image-style.js";
 export {
   VISUAL_BUILDERS,

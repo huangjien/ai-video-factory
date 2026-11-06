@@ -30,6 +30,14 @@ contracts, not prose.
 9. Natural spoken register for {{TARGET_LANG}}: narration is
    text-to-speech input. No markdown, no quotation marks around it, no
    speaker labels, no parenthetical stage directions.
+10. Localize PLACEHOLDER PERSONAL NAMES to common {{TARGET_LANG}}
+   names — never transliterate them. A Chinese example person
+   (小王，小李，老张，张三…) in an English article becomes a common
+   English name ("Tom", "Ms. Smith"); an English example person
+   ("Tom", "Mr. Smith") in a Chinese article becomes a common Chinese
+   name (小王，小李). Use ONE name per character consistently across
+   the whole article. Real people are NOT placeholders — their names
+   follow normal translation (Elon Musk ↔ 马斯克).
 
 ## Input article
 

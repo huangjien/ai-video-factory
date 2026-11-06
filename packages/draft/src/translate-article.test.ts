@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { loadPrompt } from "@video/prompts";
 import { existsSync, readFileSync, statSync } from "node:fs";
 import { mkdtemp, rm, writeFile, mkdir } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -49,7 +50,10 @@ sfx: {}
 /** Fake provider: returns a canned "translation" with the visual lines
  *  MANGLED — the module must pin them back to canonical byte-for-byte. */
 function fakeProvider(response: () => string): Provider {
-  return { name: "fake", chat: async () => ({ content: response(), usage: { input: 1, output: 1 } }) };
+  return {
+    name: "fake",
+    chat: async () => ({ content: response(), usage: { input: 1, output: 1 } }),
+  };
 }
 
 const TRANSLATED = (visualOverride?: (v: string) => string): string => `---
@@ -87,6 +91,16 @@ async function makeProject(): Promise<string> {
   await mkdir(path.join(root, "assets", "images"), { recursive: true });
   return root;
 }
+
+describe("translate prompt — name localization rule", () => {
+  it("instructs the model to localize placeholder names, never transliterate", () => {
+    const prompt = loadPrompt("translate-article");
+    expect(prompt).toContain("PLACEHOLDER PERSONAL NAMES");
+    expect(prompt).toContain("never transliterate");
+    expect(prompt).toContain("小王");
+    expect(prompt).toContain("Elon Musk");
+  });
+});
 
 describe("translateArticle", () => {
   it("creates an l10n workdir with pinned visuals, rewritten frontmatter, swapped voice, and a shared images symlink", async () => {

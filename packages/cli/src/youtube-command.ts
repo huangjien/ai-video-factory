@@ -558,14 +558,23 @@ function synthFromArticle(
 ): YouTubeInput {
   const { article } = parseArticleWithRecovery(articleMd);
   const storyboard = synthStoryboardYaml(article.scenes, syncedDurations);
-  const script = `# ${article.frontmatter.project}\n\n${article.proseBody.trim()}\n`;
+  // The script header anchors the packager's output language too — the
+  // translated slug ("AI时代App会消失吗") dragged an en-US title into
+  // Chinese even after the topic fix. Same source as `topic` above.
+  const script = `# ${article.title ?? article.frontmatter.project}\n\n${article.proseBody.trim()}\n`;
   const research = articleMd;
   return {
     storyboard,
     script,
     research,
+    language: article.frontmatter.language,
     hook: extractHook(article.proseBody),
-    topic: article.frontmatter.project,
+    // The topic anchors the packager's OUTPUT LANGUAGE. The frontmatter
+    // `project:` slug survives translation unchanged (translate rule 7),
+    // so an l10n article carries the CANONICAL language's slug here —
+    // which dragged an en-US package's title into Chinese (2026-11-04).
+    // The article's own H1 is the translated title; prefer it.
+    topic: article.title ?? article.frontmatter.project,
     // v0.10.3: the thumbnail inherits the video's visual identity — same
     // style preset, same palette, same era anchoring as the scene briefs.
     ...(article.frontmatter.image_style
@@ -936,10 +945,7 @@ export function registerYouTube(program: Command): void {
           ...(opts.thumbnailProvider !== undefined
             ? {
                 thumbnailProvider: opts.thumbnailProvider as
-                  | "mock"
-                  | "minimax"
-                  | "openai"
-                  | "gemini",
+                  "mock" | "minimax" | "openai" | "gemini",
               }
             : {}),
           ...(opts.thumbnail === false ? { noThumbnail: true } : {}),

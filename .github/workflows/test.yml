@@ -178,7 +178,7 @@ jobs:
   # acceptance audit after another ~28 min.
   render:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 40
     needs: install
     steps:
       - uses: actions/checkout@v4
@@ -241,7 +241,12 @@ jobs:
         # Serial on purpose: 4 forks × Chrome on a 2-core runner made the
         # slowest browser LAUNCH blow Remotion's 30s setup timeout
         # (2026-11-04, demo-devops) while the other three files passed.
-        # One render pipeline at a time; the 25-min job budget holds.
+        # One render pipeline at a time.
+        # Coverage OFF: the config enables it globally, v8 instrumentation
+        # slowed every render step ~1.5-2x, and this job's coverage table
+        # has no consumer (thresholds live on `pnpm test` only).
+        # The serial renders + cold browser need more than the old 25-min
+        # job cap — which canceled a run mid-final (2026-11-04).
         run: >-
           pnpm exec vitest run
           packages/cli/src/pipeline-integration.test.ts
@@ -249,6 +254,7 @@ jobs:
           packages/cli/src/demo-ai-concept.test.ts
           packages/cli/src/demo-devops.test.ts
           --no-file-parallelism
+          --coverage.enabled=false
           --testTimeout=300000
 
   # Full end-to-end audit. This is intentionally manual because it renders

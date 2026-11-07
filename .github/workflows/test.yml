@@ -225,8 +225,10 @@ jobs:
       - name: Pre-download Remotion browser
         run: >-
           node -e
-          "const {ensureBrowser} = require('@remotion/renderer');
-          ensureBrowser().then(() => console.log('chrome-headless-shell ready'))"
+          "const {createRequire} = require('node:module');
+          const req = createRequire(process.cwd() + '/packages/video-renderer/dist/index.js');
+          const {ensureBrowser} = req('@remotion/renderer');
+          ensureBrowser().then(() => console.log('chrome-headless-shell ready')).catch((e) => { console.error(e); process.exit(1); })"
 
       - name: Render integration tests
         run: >-
@@ -290,8 +292,10 @@ jobs:
       - name: Pre-download Remotion browser
         run: >-
           node -e
-          "const {ensureBrowser} = require('@remotion/renderer');
-          ensureBrowser().then(() => console.log('chrome-headless-shell ready'))"
+          "const {createRequire} = require('node:module');
+          const req = createRequire(process.cwd() + '/packages/video-renderer/dist/index.js');
+          const {ensureBrowser} = req('@remotion/renderer');
+          ensureBrowser().then(() => console.log('chrome-headless-shell ready')).catch((e) => { console.error(e); process.exit(1); })"
 
       - name: §62.4 acceptance audit
         run: |

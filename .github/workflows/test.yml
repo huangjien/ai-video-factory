@@ -238,12 +238,17 @@ jobs:
           ensureBrowser().then(() => console.log('chrome-headless-shell ready')).catch((e) => { console.error(e); process.exit(1); })"
 
       - name: Render integration tests
+        # Serial on purpose: 4 forks × Chrome on a 2-core runner made the
+        # slowest browser LAUNCH blow Remotion's 30s setup timeout
+        # (2026-11-04, demo-devops) while the other three files passed.
+        # One render pipeline at a time; the 25-min job budget holds.
         run: >-
           pnpm exec vitest run
           packages/cli/src/pipeline-integration.test.ts
           packages/cli/src/demo-mcp.test.ts
           packages/cli/src/demo-ai-concept.test.ts
           packages/cli/src/demo-devops.test.ts
+          --no-file-parallelism
           --testTimeout=300000
 
   # Full end-to-end audit. This is intentionally manual because it renders

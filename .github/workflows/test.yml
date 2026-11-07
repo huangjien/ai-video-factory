@@ -192,8 +192,16 @@ jobs:
         uses: pnpm/action-setup@v4
         with: {}
 
-      - name: Install ffmpeg
-        run: sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg && ffmpeg -version | head -1
+      - name: Install ffmpeg + Remotion Linux dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg \
+            libnss3 libdbus-1-3 libatk1.0-0 libatk-bridge2.0-0 libcups2 \
+            libdrm2 libxkbcommon0 libatspi2.0-0 libxcomposite1 libxdamage1 \
+            libxfixes3 libxrandr2 libgbm1 libpango-1.0-0 libcairo2 \
+            libasound2 || true
+          sudo apt-get install -y -qq libasound2t64 || true
+          ffmpeg -version | head -1
 
       - name: Cache pnpm store
         uses: actions/cache@v4
@@ -208,6 +216,18 @@ jobs:
       - name: Build
         run: pnpm run build
 
+      - name: Cache Remotion Chrome Headless Shell
+        uses: actions/cache@v4
+        with:
+          path: node_modules/.remotion
+          key: remotion-browser-${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}
+
+      - name: Pre-download Remotion browser
+        run: >-
+          node -e
+          "const {ensureBrowser} = require('@remotion/renderer');
+          ensureBrowser().then(() => console.log('chrome-headless-shell ready'))"
+
       - name: Render integration tests
         run: >-
           pnpm exec vitest run
@@ -215,6 +235,7 @@ jobs:
           packages/cli/src/demo-mcp.test.ts
           packages/cli/src/demo-ai-concept.test.ts
           packages/cli/src/demo-devops.test.ts
+          --testTimeout=300000
 
   # Full end-to-end audit. This is intentionally manual because it renders
   # more video than the integration tests above and made normal push CI exceed
@@ -236,8 +257,16 @@ jobs:
         uses: pnpm/action-setup@v4
         with: {}
 
-      - name: Install ffmpeg
-        run: sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg && ffmpeg -version | head -1
+      - name: Install ffmpeg + Remotion Linux dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg \
+            libnss3 libdbus-1-3 libatk1.0-0 libatk-bridge2.0-0 libcups2 \
+            libdrm2 libxkbcommon0 libatspi2.0-0 libxcomposite1 libxdamage1 \
+            libxfixes3 libxrandr2 libgbm1 libpango-1.0-0 libcairo2 \
+            libasound2 || true
+          sudo apt-get install -y -qq libasound2t64 || true
+          ffmpeg -version | head -1
 
       - name: Cache pnpm store
         uses: actions/cache@v4
@@ -251,6 +280,18 @@ jobs:
 
       - name: Build
         run: pnpm run build
+
+      - name: Cache Remotion Chrome Headless Shell
+        uses: actions/cache@v4
+        with:
+          path: node_modules/.remotion
+          key: remotion-browser-${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}
+
+      - name: Pre-download Remotion browser
+        run: >-
+          node -e
+          "const {ensureBrowser} = require('@remotion/renderer');
+          ensureBrowser().then(() => console.log('chrome-headless-shell ready'))"
 
       - name: §62.4 acceptance audit
         run: |

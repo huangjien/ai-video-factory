@@ -48,7 +48,10 @@ import {
  * rather than opening a fresh Chrome for every `selectComposition` and
  * every `renderMedia`. Measured on a 2-scene render: 16 browser
  * processes before, 1 after. */
-const RENDER_TIMEOUT = 300_000;
+// 600s: the full preview+final pipeline on a 2-core CI runner with a cold
+// Chrome Headless Shell ran past the previous 300s (2026-11-04 render-job
+// failure). Local macOS stays ~2 min.
+const RENDER_TIMEOUT = 600_000;
 
 async function seedProject(root: string): Promise<string> {
   // runNew's cwd is the BASE dir; the project lands at ${cwd}/projects/<projectId>.

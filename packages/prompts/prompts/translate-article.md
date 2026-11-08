@@ -15,9 +15,12 @@ contracts, not prose.
    - each scene's `narration:` text
    - each scene's `caption:` text
    - frontmatter `topic:`/`audience:` if present
-3. NEVER translate, reword, or reformat the `visual:` value of any scene.
-   Copy it byte-identical. It is an image-model directive whose content
-   hash decides cached image reuse; any change re-spends image generation.
+3. NEVER translate, reword, or reformat the `visual:` value or the
+   `component:` field of any scene. Copy both byte-identical. They are
+   machine-consumed directives: `visual:` is an image-model brief whose
+   content hash decides cached image reuse, and `component:` names the
+   component the scene renders as; any change re-spends image generation
+   or re-routes the scene.
 4. Keep every scene `id:` identical. Keep scene count and order identical.
 5. Keep `duration:`, `hold_after_sec:`, `lead_in_sec:` numbers identical.
 6. Keep `characters:` lists (ids and variants) identical if present.

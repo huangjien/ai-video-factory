@@ -1,5 +1,10 @@
-import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
+import { stringify as stringifyYaml } from "yaml";
 import type { RawArticle } from "./agent.js";
+import {
+  findScenesHeading,
+  findYamlFence,
+  splitFrontmatterParts,
+} from "./article-md.js";
 
 /**
  * Surgical markdown patcher.
@@ -37,32 +42,29 @@ interface MarkdownParts {
   tail: string;
 }
 
-const FRONTMATTER_RE = /^---\r?\n[\s\S]*?\r?\n---\r?\n?/;
-const SCENES_HEADING_RE = /^#{1,6}\s*Scenes[^\n]*$/im;
-const FENCE_RE = /```(?:yaml)?\s*\n([\s\S]*?)\n```/;
-
-/** Split article.md into the parts the patcher replaces independently. */
+/** Split article.md into the parts the patcher replaces independently.
+ *  The format primitives live in article-md.ts (single owner). */
 export function splitArticleMarkdown(md: string): MarkdownParts {
-  const fm = md.match(FRONTMATTER_RE);
-  const frontmatter = fm?.[0] ?? "";
-  const rest = md.slice(frontmatter.length);
-  const heading = rest.match(SCENES_HEADING_RE);
-  if (!heading || heading.index === undefined) {
+  const fm = splitFrontmatterParts(md) ?? {
+    block: "",
+    frontmatterRaw: "",
+    body: md,
+  };
+  const heading = findScenesHeading(fm.body);
+  if (!heading) {
     throw new Error("article.md has no `## Scenes` heading");
   }
-  const prose = rest.slice(0, heading.index);
-  const afterHeading = rest.slice(heading.index + heading[0].length);
-  const fence = afterHeading.match(FENCE_RE);
-  if (!fence || fence.index === undefined || fence[1] === undefined) {
+  const fence = findYamlFence(heading.afterHeading);
+  if (!fence) {
     throw new Error("`## Scenes` heading is not followed by a YAML code block");
   }
   return {
-    frontmatter,
-    prose,
-    scenesHeading: heading[0],
-    between: afterHeading.slice(0, fence.index),
-    scenesYaml: fence[1],
-    tail: afterHeading.slice(fence.index + fence[0].length),
+    frontmatter: fm.block,
+    prose: heading.proseBody,
+    scenesHeading: heading.heading,
+    between: fence.before,
+    scenesYaml: fence.yaml,
+    tail: fence.after,
   };
 }
 

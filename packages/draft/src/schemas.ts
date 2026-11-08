@@ -3,6 +3,11 @@ import { parse as parseYaml } from "yaml";
 import { DEFAULT_THEME_NAME } from "@video/theme";
 import { pickVisualComponent } from "./visual-classifier.js";
 import { VISUAL_BUILDERS } from "./visual-builders.js";
+import {
+  findScenesHeading,
+  findYamlFence,
+  splitFrontmatterParts,
+} from "./article-md.js";
 import type { VisualPropsBuilder } from "./visual-builders.js";
 import { emitSceneAnimations } from "./animation-emitter.js";
 import type { RawArticle } from "./agent.js";
@@ -648,15 +653,16 @@ function splitFrontmatter(md: string): {
   frontmatter: unknown;
   body: string;
 } {
-  const re = /^---\r?\n([\s\S]*?)\r?\n---\r?\n?/;
-  const m = md.match(re);
-  if (!m) {
+  // Format primitives live in article-md.ts (single owner); this wrapper
+  // adds parse-article's error policy on top.
+  const parts = splitFrontmatterParts(md);
+  if (!parts) {
     throw new Error(
       "article.md is missing YAML frontmatter (--- ... --- at top)",
     );
   }
-  const fmRaw = m[1] ?? "";
-  const body = md.slice(m[0].length);
+  const fmRaw = parts.frontmatterRaw;
+  const body = parts.body;
   let fm: unknown;
   try {
     fm = parseYaml(fmRaw);
@@ -679,17 +685,15 @@ function splitScenesBlock(body: string): {
   proseBody: string;
   scenesYaml: string;
 } {
-  const headingRe = /^#{1,6}\s*Scenes[^\n]*$/im;
-  const headingMatch = body.match(headingRe);
-  if (!headingMatch || headingMatch.index === undefined) {
+  // Format primitives live in article-md.ts; this wrapper adds
+  // parse-article's error policy on top.
+  const heading = findScenesHeading(body);
+  if (!heading) {
     throw new Error("article.md has no `## Scenes` heading");
   }
-  const proseBody = body.slice(0, headingMatch.index);
-  const afterHeading = body.slice(headingMatch.index + headingMatch[0].length);
-  const fenceRe = /```(?:yaml)?\s*\n([\s\S]*?)\n```/;
-  const fenceMatch = afterHeading.match(fenceRe);
-  if (!fenceMatch || fenceMatch[1] === undefined) {
+  const fence = findYamlFence(heading.afterHeading);
+  if (!fence) {
     throw new Error("`## Scenes` heading is not followed by a YAML code block");
   }
-  return { proseBody, scenesYaml: fenceMatch[1] };
+  return { proseBody: heading.proseBody, scenesYaml: fence.yaml };
 }

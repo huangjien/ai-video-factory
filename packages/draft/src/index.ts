@@ -158,6 +158,13 @@ export {
   type VisualPropsBuilder,
 } from "./visual-builders.js";
 export {
+  findScenesHeading,
+  findYamlFence,
+  frontmatterHasKey,
+  readFrontmatterKey,
+  splitFrontmatterParts,
+} from "./article-md.js";
+export {
   emitSceneAnimations,
   type EmitContext,
   type TimelineAnimation,

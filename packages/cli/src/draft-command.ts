@@ -23,6 +23,8 @@ import {
   renderArticleReviewYaml,
   resolveImageStyle,
   resolveVisualMode,
+  frontmatterHasKey as frontmatterHasKeyMd,
+  readFrontmatterKey,
   runScoredDraft,
   type ParsedArticle,
   type RawArticle,
@@ -181,10 +183,8 @@ export function stampFrontmatterKey(
  *  stamps check this so an explicit flag, a carried key, or a hand-set
  *  value always wins over the baked default. */
 export function frontmatterHasKey(markdown: string, key: string): boolean {
-  if (!markdown.startsWith("---")) return false;
-  const end = markdown.indexOf("\n---", 3);
-  if (end === -1) return false;
-  return new RegExp(`^${key}:.*$`, "m").test(markdown.slice(0, end));
+  // Format primitives live in @video/draft's article-md module.
+  return frontmatterHasKeyMd(markdown, key);
 }
 
 /** The article's frontmatter value for `key`, or undefined. */
@@ -192,14 +192,8 @@ export function frontmatterValue(
   markdown: string,
   key: string,
 ): string | undefined {
-  if (!markdown.startsWith("---")) return undefined;
-  const end = markdown.indexOf("\n---", 3);
-  if (end === -1) return undefined;
-  const m = new RegExp(`^${key}:[ \\t]*(.*)$`, "m").exec(
-    markdown.slice(0, end),
-  );
-  if (m?.[1] === undefined) return undefined;
-  return m[1].trim().replace(/^["']|["']$/g, "");
+  // Format primitives live in @video/draft's article-md module.
+  return readFrontmatterKey(markdown, key);
 }
 
 /** Frontmatter keys the drafter owns: they describe THIS run and must always

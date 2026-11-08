@@ -114,6 +114,33 @@ describe("chatStream", () => {
     }
   });
 
+  it("reports usage 0/0 when the stream never carries a usage frame (the MiniMax no-include_usage gap)", async () => {
+    // MiniMax's OpenAI-compatible stream omits usage unless the request
+    // asks for it (stream_options.include_usage). The provider adds that
+    // flag; THIS test pins the stream-layer semantics of the gap: a
+    // usage-less stream yields 0/0, which minimax.ts surfaces as a
+    // stderr warning instead of silently writing fabricated numbers
+    // into run records.
+    const events = [
+      'data: {"choices":[{"delta":{"content":"hello"}}]}\n\n',
+      "data: [DONE]\n\n",
+    ];
+    const original = global.fetch;
+    global.fetch = (async () => okResponse(sseStream(events))) as typeof fetch;
+    try {
+      const r = await chatStream({
+        url: "http://x",
+        headers: {},
+        body: {},
+        timeoutMs: 1_000,
+      });
+      expect(r.content).toBe("hello");
+      expect(r.usage).toEqual({ input: 0, output: 0 });
+    } finally {
+      global.fetch = original;
+    }
+  });
+
   it("tolerates a malformed frame without sinking the response", async () => {
     const events = [
       "this is not valid json\n\n",

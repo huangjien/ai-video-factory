@@ -80,15 +80,32 @@ export class MiniMaxProvider implements Provider {
       // own AbortSignal. Re-issue the same request as a STREAM, which
       // sends headers immediately — see packages/llm/src/stream.ts.
       if (!isHeadersTimeout(err)) throw err;
+      // MiniMax follows the OpenAI streaming contract: usage is only
+      // included when stream_options asks for it. Without this the
+      // fallback fabricated usage 0/0 — run records showed
+      // "judge_tokens=0+0" for every judge call that hit this path
+      // (2026-11-04).
+      const streamBody = {
+        ...requestBody,
+        stream_options: { include_usage: true },
+      };
       const streamed = await chatStream({
         url: `${this.apiHost}/v1/chat/completions`,
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${key}`,
         },
-        body: requestBody,
+        body: streamBody,
         timeoutMs: LLM_TIMEOUT_MS,
       });
+      if (streamed.usage.input === 0 && streamed.usage.output === 0) {
+        // The provider ignored stream_options (or the stream ended before
+        // any usage frame) — say so instead of writing a fabricated 0/0
+        // into run records.
+        console.error(
+          "warning: MiniMax streamed response carried no usage — token accounting for this call is unknown",
+        );
+      }
       body = JSON.stringify({
         choices: [{ message: { content: streamed.content } }],
         usage: {

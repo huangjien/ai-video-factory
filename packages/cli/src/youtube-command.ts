@@ -459,7 +459,10 @@ export async function runYouTube(opts: YouTubeOptions): Promise<number> {
   console.log(brandBannerLine());
   console.log(channelHeader(opts.project, `youtube · ${result.providerName}`));
   console.log("");
-  console.log(`${MARK_OK} packaged projects/${opts.project}/youtube/`);
+  // opts.project may be a PATH (l10n workdirs) — join from projectRoot and
+  // print where the files actually landed, not a slug-joined guess.
+  const ytDir = path.relative(process.cwd(), path.join(projectRoot, "youtube"));
+  console.log(`${MARK_OK} packaged ${ytDir}/`);
   console.log(`  title: ${result.youtube.title}`);
   console.log(
     `  chapters: ${result.youtube.chapters.length} · vtt=youtube/chapters.vtt`,

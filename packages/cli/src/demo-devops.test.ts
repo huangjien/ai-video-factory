@@ -12,6 +12,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterAll, describe, expect, it } from "vitest";
 import { runNew } from "./new-command.js";
+import { gitInit } from "./test-git-init.js";
 import { runApprove } from "./workflow-commands.js";
 import { runPreview, runFinal } from "./render-command.js";
 import { runQa } from "./qa-command.js";
@@ -56,6 +57,8 @@ describe("Demo 3 — DevOps Architecture end to end (T7.4, plan §35)", () => {
     cwd = mkdtempSync(path.join(tmpdir(), "video-demo-devops-"));
     await runNew({ projectId: "devops-architecture", cwd });
     projectDir = path.join(cwd, "projects", "devops-architecture");
+    // a real repo: safeGitHead records provenance instead of "unknown"
+    gitInit(projectDir);
     copyFileSync(
       path.join(EXAMPLE_DIR, "storyboard.yaml"),
       path.join(projectDir, "storyboard", "storyboard.yaml"),

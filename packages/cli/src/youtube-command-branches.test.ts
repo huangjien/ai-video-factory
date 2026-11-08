@@ -204,8 +204,8 @@ describe("youtube command branches", () => {
       expect(existsSync(path.join(proj, "youtube", "title.txt"))).toBe(true);
       expect(existsSync(path.join(proj, "youtube", "package.yaml"))).toBe(true);
       expect(existsSync(path.join(proj, "youtube", "chapters.vtt"))).toBe(true);
-      expect(logs.join("\n")).toContain(
-        "packaged projects/yt-article/youtube/",
+      expect(logs.join("\n")).toMatch(
+        /packaged .*projects[\\/\\]yt-article[\\/\\]youtube/,
       );
     });
 

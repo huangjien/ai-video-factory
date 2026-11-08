@@ -21,6 +21,7 @@ import {
   runRollback,
   runResume,
 } from "./workflow-commands.js";
+import { gitInit } from "./test-git-init.js";
 
 /**
  * These tests exercise the CLI command pipeline at the function level
@@ -145,16 +146,6 @@ function readState(root: string): {
   };
 }
 
-function gitInit(root: string): void {
-  // Need git so safeGitHead in the CLI returns a real hash, not "unknown".
-  execFileSync("git", ["init", "-q"], { cwd: root });
-  execFileSync("git", ["config", "user.email", "test@example.com"], {
-    cwd: root,
-  });
-  execFileSync("git", ["config", "user.name", "Test"], { cwd: root });
-  execFileSync("git", ["add", "."], { cwd: root });
-  execFileSync("git", ["commit", "-q", "-m", "init"], { cwd: root });
-}
 
 describe("CLI pipeline integration — runPreview / runFinal / runStatus / workflow verbs", () => {
   let cwd: string;

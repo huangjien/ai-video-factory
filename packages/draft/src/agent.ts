@@ -50,6 +50,9 @@ export interface RawArticle {
     caption?: string;
     visual?: string;
     narration?: string;
+    /** Explicit component routing — see ROUTABLE_COMPONENTS. Omitted →
+     *  keyword classification. */
+    component?: string | undefined;
   }[];
 }
 
@@ -138,6 +141,9 @@ export function renderArticleMd(input: DraftInput, r: RawArticle): string {
       `    duration: ${s.duration ?? 0}`,
       `    caption: ${yamlScalar(s.caption ?? "")}`,
       `    visual: ${yamlScalar(s.visual ?? "")}`,
+      ...(s.component
+        ? [`    component: ${yamlScalar(s.component)}`]
+        : []),
       `    narration: |`,
       ...(s.narration ?? "").split("\n").map((line) => `      ${line}`),
     ]),

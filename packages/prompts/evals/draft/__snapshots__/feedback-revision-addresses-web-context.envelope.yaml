@@ -1,10 +1,10 @@
 case: feedback-revision-addresses-web-context
 agent: draft
-prompt_hash: sha256:2fbd710fd14e18efe74d7221877c23fb337d4af512054c7a174d1f8a72237cde
+prompt_hash: sha256:2f088604a0e93407354aab79e27121768b7d82d7e8e3b5371763656db2496fa6
 messages:
   - role: system
-    bytes: 21636
-    content_sha256: sha256:017fd2beea3a9499bc9a65d00f29a1c4595c7b326d9e57b8241df87921335e07
+    bytes: 22516
+    content_sha256: sha256:d52c49a68e817be1aad2e35f2b751495fa6881784309d3fa5a67b038bed4828f
     blocks:
       - "Prioritize:"
       - "Avoid:"
@@ -20,6 +20,9 @@ messages:
       - "Prefer:"
       - "Do NOT begin with:"
       - "What the visual MUST NOT contain:"
+      - § 10a. COMPONENT FIELD (optional, sparse)
+      - "ONLY when the scene IS that component:"
+      - "Allowed names (registered components):"
       - "Normally use:"
       - "Good captions communicate:"
       - "Use transitions such as:"

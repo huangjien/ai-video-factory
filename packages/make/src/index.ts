@@ -660,6 +660,7 @@ export async function deriveStoryboardSync(
           caption: s.caption,
           visual: s.visual,
           narration: s.narration,
+          component: s.component,
         })),
       }),
     )

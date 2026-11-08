@@ -346,6 +346,25 @@ What the visual MUST NOT contain:
 - more than one style keyword (one keyword wins, pick the strongest)
 - any text the viewer must read (the caption is for that)
 
+## 10a. COMPONENT FIELD (optional, sparse)
+
+Each scene MAY carry a `component:` field naming the component the scene
+renders as — a full-screen statement card, a quote card, a pyramid. Set it
+ONLY when the scene IS that component:
+
+- a scene whose whole point is one statement → `component: BigIdea`
+- a quoted saying with attribution → `component: QuoteBlock`
+
+Allowed names (registered components): Title, BigIdea, QuoteBlock, StatGrid,
+BarChart, Leaderboard, Checklist, Timeline, FlowChart, Terminal, Callout,
+PyramidDiagram, VennDiagram, CycleDiagram, MapInsert, AnimatedIllustration.
+
+Omit the field for every ordinary scene — those become generated
+illustrations, which is the default look of a film. The field routes the
+scene deterministically; do not ALSO embed keywords for it in the
+`visual:` line (that convention is retired for films that set
+`component:`).
+
 The visual should directly support the narration but need not repeat
 it. The narration carries numbers, names, steps, and facts. The
 visual carries the PICTURE — what the camera shows while those

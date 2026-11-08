@@ -1,7 +1,10 @@
 import { z } from "zod";
 import { parse as parseYaml } from "yaml";
 import { DEFAULT_THEME_NAME } from "@video/theme";
-import { pickVisualComponent } from "./visual-classifier.js";
+import {
+  pickVisualComponent,
+  ROUTABLE_COMPONENTS,
+} from "./visual-classifier.js";
 import { VISUAL_BUILDERS } from "./visual-builders.js";
 import {
   findScenesHeading,
@@ -106,6 +109,13 @@ export const SceneBlockSchema = z
             caption: z.string().min(1),
             visual: z.string().min(1),
             narration: z.string().min(1),
+            /** Explicit component routing (2026-11): names the component
+             *  this scene renders as, overriding the keyword classifier.
+             *  Must be a registered name (ROUTABLE_COMPONENTS in
+             *  visual-classifier.ts); an unknown name warns and falls
+             *  back to keyword classification. Optional — most scenes
+             *  are generated illustrations. */
+            component: z.string().optional(),
             /** CS-12: the characters on screen, cited by their stable
              *  character-bible id and (optionally) the appearance variant.
              *  The image brief then splices that character's anchors in, so
@@ -213,7 +223,17 @@ export function articleMdToRawArticle(article: ParsedArticle): RawArticle {
       heading: s.heading.replace(/^\d+\.\s*/, ""),
       body: s.body,
     })),
-    scenes: article.scenes.map((s) => ({ ...s })),
+    scenes: article.scenes.map((s) => ({
+      // copy whole, then narrow: RawArticle's scene type only declares a
+      // subset of the parsed Scene (characters / hold_after_sec / … ride
+      // along as extra props at runtime but don't type-check here).
+      ...s,
+      id: s.id,
+      duration: s.duration,
+      caption: s.caption,
+      visual: s.visual,
+      narration: s.narration,
+    })),
   };
 }
 
@@ -272,8 +292,26 @@ export function articleToStoryboardYaml(article: ParsedArticle): string {
   let previousSectionIdx = -1;
   article.scenes.forEach((s, i) => {
     const id = `scene-${String(i + 1).padStart(2, "0")}`;
-    const isFirst = keepTitleCard && i === 0;
-    const component = pickVisualComponent(s.visual ?? "", isFirst).component;
+    // Component routing priority (2026-11: explicit beats inference):
+    // 1. an explicit `component:` field in the article scene — UNKNOWN
+    //    names warn and fall through, a typo must not brick the derive;
+    // 2. the keyword classifier (legacy lines);
+    // 3. AnimatedIllustration. An explicit field on scene 1 also beats
+    //    the forced first-scene Title.
+    const explicit = s.component;
+    const explicitKnown =
+      typeof explicit === "string" &&
+      (ROUTABLE_COMPONENTS as readonly string[]).includes(explicit);
+    if (typeof explicit === "string" && !explicitKnown) {
+      console.warn(
+        `article scene ${i + 1}: unknown component "${explicit}" — falling back to keyword classification`,
+      );
+    }
+    const useExplicit = typeof explicit === "string" && explicitKnown;
+    const isFirst = keepTitleCard && i === 0 && !useExplicit;
+    const component = useExplicit
+      ? (explicit as string)
+      : pickVisualComponent(s.visual ?? "", isFirst).component;
     const sectionIdx =
       sections.length === 0
         ? 0

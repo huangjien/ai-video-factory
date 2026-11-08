@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { parse as parseYaml } from "yaml";
 import {
   ArticleFrontmatterSchema,
@@ -385,6 +385,39 @@ describe("articleToStoryboardYaml (VDSL sync)", () => {
       scenes: { visual: { props: Record<string, unknown> } }[];
     };
     expect(JSON.stringify(parsed.scenes[0]?.visual.props)).not.toContain("xxx");
+  });
+
+  it("explicit component field wins — even over the forced scene-1 Title", () => {
+    const withComponent: ParsedArticle = {
+      ...fixture,
+      scenes: fixture.scenes.map((s, i) =>
+        i === 0 ? { ...s, component: "BigIdea" } : s,
+      ),
+    };
+    const yaml = articleToStoryboardYaml(withComponent);
+    const parsed = parseYaml(yaml) as {
+      scenes: { visual: { component: string } }[];
+    };
+    expect(parsed.scenes[0]?.visual.component).toBe("BigIdea");
+  });
+
+  it("unknown component name warns and falls back to keyword classification", () => {
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const typo: ParsedArticle = {
+      ...fixture,
+      scenes: fixture.scenes.map((s, i) =>
+        i === 1 ? { ...s, component: "StatGird" } : s,
+      ),
+    };
+    const yaml = articleToStoryboardYaml(typo);
+    warnSpy.mockRestore();
+    const parsed = parseYaml(yaml) as {
+      scenes: { visual: { component: string } }[];
+    };
+    // The typo is NOT used: the scene falls back to keyword
+    // classification, and the fixture's "结束画面" carries no cue →
+    // AnimatedIllustration.
+    expect(parsed.scenes[1]?.visual.component).toBe("AnimatedIllustration");
   });
 
   it("uses AnimatedIllustration for subsequent scenes (caption + visual)", () => {

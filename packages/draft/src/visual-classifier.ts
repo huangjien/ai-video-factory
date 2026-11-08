@@ -38,6 +38,29 @@
  * render their known fields.
  */
 
+/** The component names an article's \`component:\` field may name.
+ *  DoodleScene and ImageBackground are render-side only (canvas renderer
+ *  / make's image switch) and are deliberately NOT reachable from the
+ *  article. Keep in sync with the rules below. */
+export const ROUTABLE_COMPONENTS = [
+  "Title",
+  "AnimatedIllustration",
+  "Callout",
+  "FlowChart",
+  "Terminal",
+  "Timeline",
+  "QuoteBlock",
+  "StatGrid",
+  "BarChart",
+  "Leaderboard",
+  "Checklist",
+  "BigIdea",
+  "PyramidDiagram",
+  "VennDiagram",
+  "CycleDiagram",
+  "MapInsert",
+] as const;
+
 export type ComponentName =
   | "Title"
   | "AnimatedIllustration"

@@ -2,7 +2,7 @@
 
 This directory is the project's **single source of truth for BGM music**.
 Every video we generate picks its background music from here (no live
-generation, no outside download). Track 16 covers distinct types / modes
+generation, no outside download). The 35 tracks cover distinct types / modes
 so the audio-plan agent can pick a mood without overlap.
 
 ## Naming convention
@@ -31,12 +31,35 @@ The slug is a lowercased, hyphen-joined token from the original track title.
 | `chill-slow-times-over-here` | chill / slow | Slow Times Over Here | Midnight North | Dak6FQssVKw |
 | `travel-sunset-paradise` | travel / vacation | Sunset Paradise | Wonki | AZQONwyI5IE |
 | `upbeat-your-love` | upbeat / forward-moving | Your Love | Niwel (NCS) | PuCWn_OVga8 |
+| `epic-the-epic-hero` | epic / trailer build | The Epic Hero | Keys of Moon | ETbsXdqgcTM |
+| `epic-phoenix` | epic / long arc | Phoenix | Scott Buckley | 4HhM66X978U |
+| `trailer-silhouette-of-war` | trailer / conflict | Silhouette of War | Keys of Moon | Lzofxb1vATw |
+| `war-endless-storm` | war / open conflict | Endless Storm | Makai Symphony | TNs5JFYaTMk |
+| `sad-lonesome-journey` | sad / melancholy | Lonesome Journey | Keys of Moon | p5cWMxzzMdA |
+| `sad-undertow` | sad / quiet piano | Undertow | Scott Buckley | 3TKghKSDnEM |
+| `dramatic-this-too-shall-pass` | dramatic / emotional peak | This Too Shall Pass | Scott Buckley | LlU2X2AWhho |
+| `dark-shattered-glass` | dark / mysterious | Shattered Glass | Cjbeards | lRwq7pfA4Gg |
+| `suspense-faith` | suspense / spy | FAITH | yenss | VZzyKHoBKtQ |
+| `chinese-lau-tzu-ehru` | chinese / erhu | Lau Tzu Ehru | Doug Maxwell | QRF2zzEFu8c |
+| `japanese-yugen` | japanese / soft | Yugen | Keys of Moon | MM2-z8inpY8 |
+| `samurai-a-just-ronin` | samurai / duel | A Just Ronin | SolasComposer | EmkO1W6asvM |
+| `medieval-adventure-beyond` | medieval / folk quest | Adventure Beyond | Alexander Nakarada | LYf2gOIt_OQ |
+| `hopeful-resolutions` | hopeful / turnaround | RESOLUTIONS | Scott Buckley | LEm_RLKKGBQ |
+| `inspiring-flowing-energy` | inspiring / forward motion | Flowing Energy | Keys of Moon | pBT01U9zgfQ |
+| `romantic-white-petals` | romantic / tender | White Petals | Keys of Moon | uYjUI_zeeJk |
+| `corporate-synesthesia` | corporate / product | SYNESTHESIA | GalaxyTones | ikz1aBQi2v0 |
+| `lofi-herbal-tea` | lofi / study | Herbal Tea | SmartToaster | 6ukEy6FOxZE |
 
 ## Source playlist
 
-All tracks came from
-<https://www.youtube.com/playlist?list=PL_k9bFPONrNfrmOXvxU3FijljSFUCc-Rm>
-— a curated "No Copyright Music" / "背景音樂 無版權音樂 免費音樂" list.
+All tracks came from two curated "No Copyright Music" playlists:
+
+- <https://www.youtube.com/playlist?list=PL_k9bFPONrNfrmOXvxU3FijljSFUCc-Rm>
+  — "No Copyright Music" / "背景音樂 無版權音樂 免費音樂" (the first 17 tracks).
+- <https://www.youtube.com/playlist?list=PLfP6i5T0-DkJPT4dkMAr0PwRq1m25UtoO>
+  — a 213-track non-copyrighted library (the epic / sad / dark / oriental /
+    romantic / corporate set, added 2026-11-11).
+
 Each `*.license.txt` cites the source video ID, the artist, and the
 no-copyright status. Verify before any commercial distribution.
 
@@ -56,18 +79,25 @@ warns and mixes silence rather than failing the render.
 
 ## Two measurements that change the choice
 
-`loudness_lufs_i` spans about 8 dB across this library (-15.4 to -7.5),
+`loudness_lufs_i` spans about 15 dB across this library (-22.0 to -7.3),
 while the mixer applies ONE fixed bed level. A quiet master therefore sits
-several dB under the narration and a loud one swamps it.
+several dB under the narration and a loud one swamps it. The quiet end
+(`sad-lonesome-journey`, `japanese-yugen`, `romantic-white-petals`) needs a
+raised bed to be audible at all; the loud end (`war-endless-storm`,
+`corporate-synesthesia`) needs attenuation.
 
 `dynamic_range_lu` above ~8 means the track breathes, so the bed swells in
 the gaps between narration — fine under sparse narration, wrong under dense
-explanatory text.
+explanatory text. The 2026-11-11 additions reach 21.6 LU
+(`samurai-a-just-ronin`) and 19.7 LU (`epic-phoenix`).
 
 `needs_loop_under_300s` marks tracks shorter than a typical runtime. They
 loop, and a track that does not resolve at its end (`upbeat-your-love`) makes
 the seam audible; `chill-slow-times-over-here`, `classical-gymnopedie-no-3`
-and `peaceful-sleeping-sheep` run long enough not to.
+and `peaceful-sleeping-sheep` run long enough not to. Five tracks added on
+2026-11-11 also run long enough not to: `epic-phoenix` (413s),
+`dramatic-this-too-shall-pass` (448s), `hopeful-resolutions` (328s),
+`samurai-a-just-ronin` (381s) and `medieval-adventure-beyond` (309s).
 
 ## Adding a track
 
@@ -83,6 +113,16 @@ yt-dlp -x --audio-format mp3 --audio-quality 192K \
   "https://www.youtube.com/watch?v=<id>"
 ```
 
-A 192 kbps mp3 keeps the whole library at ~85 MB; the original
+A 192 kbps mp3 keeps the whole library (35 tracks) at ~190 MB; the original
 `AudioAssetError("directory not found")` is the easiest way to spot a
 track that's missing during a refetch.
+
+Measure a new track before writing its `music.json` entry — the numbers
+are real readings, not estimates:
+
+```bash
+ffmpeg -hide_banner -nostats -i assets/bgm/<slug>.mp3 -af ebur128=peak=true -f null -
+```
+
+`I:` is `loudness_lufs_i`, `LRA:` is `dynamic_range_lu`; `ffprobe` gives
+`duration_sec`.

@@ -31,6 +31,7 @@ import { mkdir, readFile, symlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { loadPrompt, fillPrompt } from "@video/prompts";
 import type { Provider } from "@video/llm";
+import { parseDocument, isSeq, isMap } from "yaml";
 import {
   articleToStoryboardYaml,
   parseArticleLenient,
@@ -120,33 +121,120 @@ function rewriteFrontmatter(
   return out;
 }
 
-/** Byte-pin every canonical `visual:` line into the translated text,
- *  matched by scene id so scene order cannot silently drift. */
+/** The first fenced YAML block after the `## Scenes` heading, with its
+ *  offset in the markdown. */
+function findScenesYamlBlock(
+  md: string,
+): { yaml: string; start: number } | null {
+  const m = /##\s*Scenes[\s\S]*?```(?:yaml)?\s*\n([\s\S]*?)\n```/.exec(md);
+  if (!m || m.index === undefined || m[1] === undefined) return null;
+  const rel = m[0].lastIndexOf(m[1]);
+  return { yaml: m[1], start: m.index + rel };
+}
+
+/** Byte-pin every canonical `visual:` value into the translated text,
+ *  matched by scene id so scene order cannot silently drift.
+ *
+ *  The value is replaced by YAML SOURCE RANGE, not by line: a long visual
+ *  line comes back from the model as a wrapped multi-line plain scalar,
+ *  and a line-based replace rewrites only the first physical line — the
+ *  continuation lines survive, the pinned text parses back to a DIFFERENT
+ *  visual, and the structure check rejects a perfectly good translation.
+ *  A model that drops the `visual:` key outright is repaired the same way
+ *  (the key is re-inserted after the scene's `id:` line). */
 function pinVisualLines(
   translatedMd: string,
   canonical: ParsedArticle,
 ): { text: string; violations: string[] } {
   const violations: string[] = [];
-  let out = translatedMd;
   for (const scene of canonical.scenes) {
     if (scene.visual.includes("\n")) {
       violations.push(
         `scene ${scene.id}: canonical visual is multi-line — unsupported, translate manually`,
       );
-      continue;
     }
-    // Anchor on the scene's `id:` line, then replace the next `visual:`
-    // line within that scene block (visual is one line by schema usage).
-    const re = new RegExp(
-      `(- id:\\s*${escapeRegExp(scene.id)}\\n[\\s\\S]*?visual:\\s*)(?:.*)(?=\\n)`,
-    );
-    if (!re.test(out)) {
-      violations.push(`scene ${scene.id}: no visual line found in translation`);
-      continue;
-    }
-    out = out.replace(re, `$1${escapeRegExpReplacement(scene.visual)}`);
   }
-  return { text: out, violations };
+  const block = findScenesYamlBlock(translatedMd);
+  if (!block) {
+    return {
+      text: translatedMd,
+      violations: [...violations, "translated article has no scenes YAML block"],
+    };
+  }
+  const pinned = pinVisualsInYaml(block.yaml, canonical);
+  const text =
+    translatedMd.slice(0, block.start) +
+    pinned.yaml +
+    translatedMd.slice(block.start + block.yaml.length);
+  return { text, violations: [...violations, ...pinned.violations] };
+}
+
+/** YAML-quote a pinned value. JSON double-quoted syntax is a subset of
+ *  YAML's, and it round-trips the exact string the model must not change.
+ *  A plain (unquoted) scalar is preferred — it keeps the l10n article
+ *  shaped like the canonical one — but only when it parses back to the
+ *  exact same string; anything YAML would mangle (a leading indicator
+ *  char, ": ", " #", trailing space) falls back to the quoted form. */
+function pinYamlValue(value: string): string {
+  const probe = parseDocument(`visual: ${value}\n`);
+  const node = probe.get("visual", true) as { value?: unknown } | undefined;
+  if (node && node.value === value) return value;
+  return JSON.stringify(value);
+}
+
+/** Replace the `visual:` value of every scene in a scenes-YAML block with
+ *  the canonical one, by source range. Returns the patched YAML. */
+function pinVisualsInYaml(
+  yamlText: string,
+  canonical: ParsedArticle,
+): { yaml: string; violations: string[] } {
+  const violations: string[] = [];
+  const doc = parseDocument(yamlText);
+  const scenes = doc.get("scenes");
+  const items = isSeq(scenes) ? scenes.items : [];
+  interface Edit {
+    start: number;
+    end: number;
+    text: string;
+  }
+  const edits: Edit[] = [];
+  canonical.scenes.forEach((scene, i) => {
+    const item = items[i];
+    if (!item || !isMap(item)) {
+      violations.push(`scene ${scene.id}: missing from translation`);
+      return;
+    }
+    const node = item.get("visual", true) as
+      | { range?: [number, number, number] }
+      | undefined;
+    if (node?.range) {
+      const [start, valueEnd] = node.range;
+      edits.push({ start, end: valueEnd, text: pinYamlValue(scene.visual) });
+      return;
+    }
+    // The model dropped the key — re-insert it after the scene's `id:` line.
+    const idNode = item.get("id", true) as
+      | { range?: [number, number, number] }
+      | undefined;
+    if (!idNode?.range) {
+      violations.push(`scene ${scene.id}: no id line found in translation`);
+      return;
+    }
+    const idEnd = idNode.range[1];
+    const lineEnd = yamlText.indexOf("\n", idEnd);
+    const at = lineEnd === -1 ? yamlText.length : lineEnd + 1;
+    edits.push({
+      start: at,
+      end: at,
+      text: `    visual: ${pinYamlValue(scene.visual)}\n`,
+    });
+  });
+  // Apply back-to-front so earlier offsets stay valid.
+  let out = yamlText;
+  for (const edit of [...edits].sort((a, b) => b.start - a.start)) {
+    out = out.slice(0, edit.start) + edit.text + out.slice(edit.end);
+  }
+  return { yaml: out, violations };
 }
 
 function escapeRegExp(s: string): string {

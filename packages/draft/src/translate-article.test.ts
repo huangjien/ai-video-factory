@@ -151,6 +151,99 @@ describe("translateArticle", () => {
     }
   });
 
+  it("pins a visual value the model wrapped across several lines", async () => {
+    // A long visual line comes back from the model as a wrapped multi-line
+    // plain scalar. A line-based pin replaces only the first physical line,
+    // leaving the continuation lines behind — the pinned text then parses
+    // back to a DIFFERENT visual and the structure check rejects it.
+    const root = await makeProject();
+    const wrapped = `---
+project: 测试项目
+language: zh-CN
+duration_target_sec: 60
+voice: narrator-zh
+---
+
+# Test project
+
+## Scenes
+
+\`\`\`yaml
+scenes:
+  - id: scene_1
+    duration: 10
+    caption: Title scene
+    visual: 深蓝会议桌上的一份提案卡片
+      ，冷白顶灯从上方落下，桌面反射出微弱的光斑
+    narration: |
+      Narration for the first scene.
+  - id: scene_2
+    duration: 12
+    caption: Second scene
+    visual: 一本摊开的技术书，细金线串起光点
+    narration: |
+      Narration for the second scene.
+\`\`\`
+`;
+    try {
+      const res = await translateArticle({
+        projectRoot: root,
+        targetLang: "en-US",
+        provider: fakeProvider(() => wrapped),
+        voice: "en-US-ChristopherNeural",
+      });
+      const article = readFileSync(res.articlePath, "utf8");
+      // The whole wrapped scalar collapsed back to the canonical one-liner.
+      expect(article).toContain("visual: 深蓝会议桌上的一份提案卡片，冷白顶灯");
+      expect(article).not.toContain("，冷白顶灯从上方落下");
+      expect(article).toContain("visual: 一本摊开的技术书，细金线串起光点");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("restores a visual key the model dropped", async () => {
+    const root = await makeProject();
+    const dropped = `---
+project: 测试项目
+language: zh-CN
+duration_target_sec: 60
+voice: narrator-zh
+---
+
+# Test project
+
+## Scenes
+
+\`\`\`yaml
+scenes:
+  - id: scene_1
+    duration: 10
+    caption: Title scene
+    narration: |
+      Narration for the first scene.
+  - id: scene_2
+    duration: 12
+    caption: Second scene
+    visual: 一本摊开的技术书，细金线串起光点
+    narration: |
+      Narration for the second scene.
+\`\`\`
+`;
+    try {
+      const res = await translateArticle({
+        projectRoot: root,
+        targetLang: "en-US",
+        provider: fakeProvider(() => dropped),
+        voice: "en-US-ChristopherNeural",
+      });
+      const article = readFileSync(res.articlePath, "utf8");
+      expect(article).toContain("visual: 深蓝会议桌上的一份提案卡片，冷白顶灯");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("rejects translating to the canonical language", async () => {
     const root = await makeProject();
     try {

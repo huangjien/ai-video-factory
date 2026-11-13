@@ -30,7 +30,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { mkdir, readFile, symlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { loadPrompt, fillPrompt } from "@video/prompts";
-import type { Provider } from "@video/llm";
+import { stripReasoning, type Provider } from "@video/llm";
 import { parseDocument, isSeq, isMap } from "yaml";
 import {
   articleToStoryboardYaml,
@@ -343,7 +343,12 @@ export async function translateArticle(
       messages: buildMessages(canonicalMd, targetLang, extra),
       temperature: 0.3,
     });
-    translatedMd = stripFence(res.content.trim());
+    // A reasoning model answers with a leading `<think>…</think>` block.
+    // Left in place, the frontmatter check fails ("missing YAML
+    // frontmatter") and every scene looks missing — the translation is
+    // thrown away for a wrapper the provider added, not for a bad
+    // translation. Strip it before parsing.
+    translatedMd = stripFence(stripReasoning(res.content).trim());
     const pin = pinVisualLines(translatedMd, canonical);
     translatedMd = pin.text;
     violations = [...pin.violations, ...validateStructure(translatedMd, canonical, targetLang)];

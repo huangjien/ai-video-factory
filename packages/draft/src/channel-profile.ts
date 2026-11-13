@@ -15,7 +15,10 @@ import { loadPrompt } from "@video/prompts";
  * the same typo-tolerant contract `image_style` and `channel_profile`
  * already use in ArticleFrontmatterSchema.
  */
-export const CHANNEL_PROFILES = ["chinese-storybook"] as const;
+export const CHANNEL_PROFILES = [
+  "chinese-storybook",
+  "software-architecture-series",
+] as const;
 
 export type ChannelProfile = (typeof CHANNEL_PROFILES)[number];
 
@@ -31,10 +34,16 @@ export function resolveChannelProfile(
 /** Bodies live in `packages/prompts/prompts/` — edit them there. */
 const DRAFT_BLOCKS: Record<ChannelProfile, string> = {
   "chinese-storybook": loadPrompt("draft-channel-chinese-storybook"),
+  "software-architecture-series": loadPrompt(
+    "draft-channel-software-architecture-series",
+  ),
 };
 
 const REVIEW_BLOCKS: Record<ChannelProfile, string> = {
   "chinese-storybook": loadPrompt("review-channel-chinese-storybook"),
+  "software-architecture-series": loadPrompt(
+    "review-channel-software-architecture-series",
+  ),
 };
 
 /** Extra rules for the drafter's system prompt. Undefined when off. */

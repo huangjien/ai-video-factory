@@ -1662,25 +1662,15 @@ async function runMix(
     // path — the ducker and master fades in the engine apply unchanged.
     const wsRoot = workspaceRootFor(projectRoot);
     const total = await totalNarrationSeconds(projectRoot);
-    const windows = planBgmWindows(config.bgm_tracks, total, (track) => {
-      if (!isTrackPath(track)) {
-        return path.join(
-          projectRoot,
-          "assets",
-          "audio-assets",
-          "bgm",
-          `${track}.wav`,
-        );
-      }
-      // Path tracks: project-relative first, then workspace root —
-      // shared brand audio lives in <ws>/assets/brand/.
-      const inProject = path.resolve(projectRoot, track);
-      if (existsSync(inProject)) return inProject;
-      if (wsRoot && existsSync(path.resolve(wsRoot, track))) {
-        return path.resolve(wsRoot, track);
-      }
-      return inProject; // missing → ffmpeg fails loudly downstream
-    });
+    // Resolve every window's track up front: the resolver is async, while
+    // planBgmWindows takes a synchronous lookup.
+    const resolvedTracks = new Map<string, string>();
+    for (const t of config.bgm_tracks) {
+      resolvedTracks.set(t.track, await resolveBgmTrack(projectRoot, t.track));
+    }
+    const windows = planBgmWindows(config.bgm_tracks, total, (track) =>
+      resolvedTracks.get(track) ?? path.resolve(projectRoot, track),
+    );
     const timelinePath = await renderBgmTimeline(
       windows,
       path.join(projectRoot, "assets", "audio-assets", "bgm", "_timeline.wav"),
@@ -1738,6 +1728,33 @@ export function workspaceRootFor(projectRoot: string): string | null {
     dir = path.dirname(dir);
   }
   return null;
+}
+
+/**
+ * Resolve ONE `bgm_tracks` window to a real audio file.
+ *
+ * A NAMED tag resolves exactly like the single-`bgm` path: the project's
+ * own override first, then the curated workspace library, then the
+ * workspace brand folder. (Hardcoding <project>/assets/audio-assets/bgm/
+ * <tag>.wav broke every multi-window config that named a library track —
+ * that file only exists when a `--bgm-dir` was staged, so ffmpeg died with
+ * "No such file or directory" while building the timeline.)
+ *
+ * A PATH-shaped track resolves project-relative first, then workspace-
+ * relative: shared brand audio lives in <ws>/assets/brand/.
+ */
+export async function resolveBgmTrack(
+  projectRoot: string,
+  track: string,
+): Promise<string> {
+  if (!isTrackPath(track)) return await resolveLibraryBgm(projectRoot, track);
+  const inProject = path.resolve(projectRoot, track);
+  if (existsSync(inProject)) return inProject;
+  const wsRoot = workspaceRootFor(projectRoot);
+  if (wsRoot && existsSync(path.resolve(wsRoot, track))) {
+    return path.resolve(wsRoot, track);
+  }
+  return inProject; // missing → ffmpeg fails loudly downstream
 }
 
 /** Sum the measured scene narration wavs — the timeline's `until_sec`

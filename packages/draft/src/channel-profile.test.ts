@@ -103,6 +103,45 @@ describe("profile blocks", () => {
   });
 });
 
+describe("software-architecture-series profile", () => {
+  it("resolves the registered profile", () => {
+    expect(resolveChannelProfile("software-architecture-series")).toBe(
+      "software-architecture-series",
+    );
+  });
+
+  it("pins the three standalone-opening laws in the drafter block", () => {
+    const draft = channelDraftBlock("software-architecture-series") ?? "";
+    expect(draft).toContain("standalone opening");
+    expect(draft).toMatch(/concrete scene, not an abstract dichotomy/i);
+    expect(draft).toMatch(/borrowed concept is defined in plain language/i);
+    expect(draft).toMatch(/title's promise is discharged/i);
+  });
+
+  it("forbids cross-episode references in the drafter block", () => {
+    const draft = channelDraftBlock("software-architecture-series") ?? "";
+    expect(draft).toMatch(/上一集|another episode/i);
+  });
+
+  it("carries the pacing targets the series shares", () => {
+    const draft = channelDraftBlock("software-architecture-series") ?? "";
+    expect(draft).toContain("220");
+    expect(draft).toContain("240");
+    expect(draft).toContain("55");
+    expect(draft).toContain("70");
+    expect(draft).toContain("96");
+  });
+
+  it("gives the judge the standalone-ness checks", () => {
+    const review = channelReviewBlock("software-architecture-series") ?? "";
+    expect(review).toMatch(/abstract opening/i);
+    expect(review).toMatch(/undefined borrowed concept/i);
+    expect(review).toMatch(/cross-episode dependency/i);
+    expect(review).toMatch(/premise discharge/i);
+    expect(review).toContain("96");
+  });
+});
+
 describe("withChannelBlock", () => {
   it("returns the base byte-identical when the profile is off", () => {
     for (const kind of ["draft", "review"] as const) {

@@ -244,6 +244,31 @@ scenes:
     }
   });
 
+  it("translates a reasoning-model reply that leads with a <think> block", async () => {
+    // MiniMax (and other reasoning providers) answer with a leading
+    // `<think>…</think>` block. Before the strip, the frontmatter check
+    // failed and every scene read as "missing from translation" — a
+    // provider wrapper, not a bad translation, threw the whole thing away.
+    const root = await makeProject();
+    const thinking = fakeProvider(() =>
+      `<think>\n\nLet me translate each scene.\n</think>\n\n${TRANSLATED()}`,
+    );
+    try {
+      const res = await translateArticle({
+        projectRoot: root,
+        targetLang: "en-US",
+        provider: thinking,
+        voice: "en-US-ChristopherNeural",
+      });
+      const article = readFileSync(res.articlePath, "utf8");
+      expect(article).not.toContain("<think>");
+      expect(article).toContain("Narration for the first scene.");
+      expect(article).toContain("language: en-US");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("rejects translating to the canonical language", async () => {
     const root = await makeProject();
     try {

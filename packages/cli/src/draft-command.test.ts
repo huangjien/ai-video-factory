@@ -642,3 +642,26 @@ describe("runDraft — the channel profile stamp", () => {
     expect(article).toContain("channel_profile: chinese-storybook");
   }, 20_000);
 });
+
+describe("runDraft — the title card style stamp", () => {
+  it("stamps the title treatment into the article frontmatter", async () => {
+    const proj = path.join(projectsRoot, "projects", "dr-title-style");
+    await mkdir(proj, { recursive: true });
+    await writeProjectState(proj, initState("dr-title-style"));
+    const code = await runDraft({
+      topic: "dr-title-style",
+      cwd: projectsRoot,
+      model: "glm",
+      titleStyle: "brush",
+      noWeb: true,
+      noReview: true,
+      noAudioPlan: true,
+    });
+    expect(code).toBe(0);
+    const article = await readFile(
+      path.join(proj, "article.md"),
+      "utf8",
+    );
+    expect(article).toContain("title_style: brush");
+  }, 20_000);
+});

@@ -36,6 +36,22 @@ describe("buildTitle", () => {
     expect(JSON.stringify(props)).not.toContain("你不是在努力");
   });
 
+  it("carries the article's artistic treatment into the props", () => {
+    const props = VISUAL_BUILDERS.Title!(
+      scene({ id: "scene_1", duration: 5, caption: "玄武门之变" }),
+      { section: null, titleStyle: "brush" },
+    );
+    expect(props.style).toBe("brush");
+  });
+
+  it("falls back to the default treatment for an unknown style", () => {
+    const props = VISUAL_BUILDERS.Title!(
+      scene({ id: "scene_1", duration: 5, caption: "玄武门之变" }),
+      { section: null, titleStyle: "brussh" },
+    );
+    expect(props.style).toBeUndefined();
+  });
+
   it("outputs nothing when the narration does not enumerate", () => {
     // The old fallback put the film's title in the small line, where it
     // read as a redundant echo of the caption (user: bullets or nothing).

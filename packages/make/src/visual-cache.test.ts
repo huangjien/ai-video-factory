@@ -196,3 +196,35 @@ describe("image cache keys the expander revision", () => {
     expect(imageCacheKey({ ...base, bakeDigest: "sha256:aaa" })).toBe(key);
   });
 });
+
+describe("the title card is an image component", () => {
+  it("generates the title scene's art and keeps the card's own component", async () => {
+    // The card draws the scene's picture behind its type, so it
+    // consumes a generated image like the other image components — and
+    // it must NOT be swapped to ImageBackground (that would drop the
+    // title's type).
+    const dir = await mkProject();
+    try {
+      await mkdir(path.join(dir, "storyboard"), { recursive: true });
+      await writeFile(
+        path.join(dir, "storyboard", "storyboard.yaml"),
+        `project:\n  id: visual-cache\n  language: zh-CN\nscenes:\n  - id: scene-01\n    visual:\n      component: Title\n      props:\n        text: 一\n`,
+        "utf8",
+      );
+      const gen = await generateSceneVisuals(
+        dir,
+        parseArticleWithRecovery(articleMd("对比要点乙")).article,
+        OPTS,
+      );
+      expect(gen.join("\n")).toContain("scene_1.jpg");
+      const sb = await readFile(
+        path.join(dir, "storyboard", "storyboard.yaml"),
+        "utf8",
+      );
+      expect(sb).toContain("component: Title");
+      expect(sb).toContain("text: 一");
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+});

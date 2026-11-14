@@ -94,6 +94,11 @@ export const ArticleFrontmatterSchema = z
      *  unknown profile must fall back to the neutral default rather
      *  than fail parsing. */
     channel_profile: z.string().optional(),
+    /** The title card's artistic treatment: "kai" sets the title
+     *  horizontally in a brush 楷 face, "brush" sets it as a vertical
+     *  column in a running brush. Typo-tolerant plain string like
+     *  image_style; absent or unknown → "kai". */
+    title_style: z.string().optional(),
   })
   .passthrough();
 export type ArticleFrontmatter = z.infer<typeof ArticleFrontmatterSchema>;
@@ -323,6 +328,7 @@ export function articleToStoryboardYaml(article: ParsedArticle): string {
       section,
       language: f.language,
       ...(article.title !== undefined ? { title: article.title } : {}),
+      ...(f.title_style !== undefined ? { titleStyle: f.title_style } : {}),
     });
     // no_captions: true means NO burned caption text anywhere. The track
     // is already omitted (captionsOn); without this, image components

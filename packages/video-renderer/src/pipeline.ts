@@ -44,6 +44,7 @@ import {
   faststart,
   renderSceneToVideo,
   resolveImageSources,
+  workspaceRootFor,
 } from "./render.js";
 
 const STORYBOARD_REL = "storyboard/storyboard.yaml";
@@ -155,18 +156,6 @@ export async function mergeBrandConfig(
     return;
   }
   renderPlan.style.brand = parsed.data;
-}
-
-/** `<anywhere>/projects/<slug>` → `<anywhere>`; also works for nested
- *  workdirs (`projects/<slug>/l10n/<lang>/`) — same walk-up contract as
- *  make's copy, so brand.yaml applies to translated renders too. */
-function workspaceRootFor(projectRoot: string): string | null {
-  let dir = path.dirname(projectRoot);
-  for (let hops = 0; hops < 8 && dir !== path.dirname(dir); hops++) {
-    if (path.basename(dir) === "projects") return path.dirname(dir);
-    dir = path.dirname(dir);
-  }
-  return null;
 }
 
 /** Parse + normalize one brand.yaml. Returns null (with a warning) when

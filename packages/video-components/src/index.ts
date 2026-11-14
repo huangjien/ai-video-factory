@@ -26,6 +26,13 @@ export {
   typewriter,
   type SlideResult,
 } from "./animations.js";
+export {
+  TITLE_FONTS,
+  TITLE_STYLES,
+  isTitleStyle,
+  type TitleFont,
+  type TitleStyle,
+} from "./titleFonts.js";
 
 export { Title, type TitleProps } from "./components/Title.js";
 export { Paragraph, type ParagraphProps } from "./components/Paragraph.js";

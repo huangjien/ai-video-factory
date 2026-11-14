@@ -27,6 +27,10 @@ export interface BuildInput {
   /** CS-12: the article's H1 — the film's title. It is the only
    *  human-readable title text available to the title card. */
   title?: string | undefined;
+  /** The title card's artistic treatment, from the article frontmatter
+   *  (`title_style`): "kai" for a horizontal brush 楷 face, "brush" for a
+   *  vertical running-brush column. Unknown values fall back to "kai". */
+  titleStyle?: string | undefined;
 }
 
 /** Localize a fallback label. The builders were otherwise language-blind: an
@@ -176,10 +180,15 @@ export function extractEnumeration(text: string, max = 4): string[] {
   return [];
 }
 
-const buildTitle: VisualPropsBuilder = (scene, _input) => {
+const buildTitle: VisualPropsBuilder = (scene, input) => {
   const props: Record<string, unknown> = {
     text: scene.caption,
   };
+  // The title card is set in an artistic face. The article picks the
+  // treatment; an unknown value falls back to the horizontal one.
+  if (input.titleStyle === "brush" || input.titleStyle === "kai") {
+    props.style = input.titleStyle;
+  }
   // The small line under the big caption is BULLETS or NOTHING. The
   // film's title used to sit there and read as a redundant echo of the
   // caption; an art-direction line must never be viewer-facing copy.

@@ -51,7 +51,10 @@ export function selfRenderedSceneNumbers(projectRoot: string): Set<number> {
   for (const [n, component] of components) {
     if (
       component === "AnimatedIllustration" ||
-      component === "ImageBackground"
+      component === "ImageBackground" ||
+      // The title card draws the scene's art behind its type, so it
+      // consumes a generated picture like the image components do.
+      component === "Title"
     ) {
       continue;
     }

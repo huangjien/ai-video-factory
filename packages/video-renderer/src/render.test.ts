@@ -222,16 +222,44 @@ describe("resolveImageSources — every component gets a scene background", () =
     return { plan, bytes: bytes.length };
   };
 
-  it("binds assets/images/scene_N.jpg behind a Title scene", async () => {
+  it("gives a Title scene the art as a prop (it paints its own picture)", async () => {
+    // The title card needs the picture's pixels to pick an ink that
+    // reads on them, so it takes the art as a prop instead of as the
+    // scene background layer.
     const { plan, bytes } = projectWithImage("7", "Title");
     const resolved = await resolveImageSources(plan);
-    const src = resolved.scenes[0]?.backgroundSrc;
+    const src = resolved.scenes[0]?.props["artSrc"];
     expect(src).toMatch(/^data:image\/jpeg;base64,/);
-    expect(Buffer.from(src!.split(",")[1]!, "base64").length).toBe(bytes);
+    expect(Buffer.from(String(src).split(",")[1]!, "base64").length).toBe(bytes);
+    expect(resolved.scenes[0]?.backgroundSrc).toBeUndefined();
+  });
+
+  it("inlines the vendored artistic font for a Title scene", async () => {
+    // The browser can only read what the entry embeds, so the face is
+    // inlined from the workspace's shared `assets/fonts/`.
+    const ws = mkdtempSync(path.join(tmpdir(), "video-fonts-"));
+    const root = path.join(ws, "projects", "fixture");
+    mkdirSync(path.join(root, "assets", "images"), { recursive: true });
+    mkdirSync(path.join(ws, "assets", "fonts"), { recursive: true });
+    writeFileSync(path.join(root, "assets", "images", "scene_1.jpg"), "x");
+    writeFileSync(
+      path.join(ws, "assets", "fonts", "LXGWWenKai-Regular.ttf"),
+      "font-bytes",
+    );
+    const resolved = await resolveImageSources({
+      ...samplePlan,
+      projectRoot: root,
+      scenes: [{ ...samplePlan.scenes[0]!, props: { text: "题" } }],
+    });
+    const font = resolved.scenes[0]?.props["fontSrc"];
+    expect(font).toMatch(/^data:font\/ttf;base64,/);
+    expect(
+      Buffer.from(String(font).split(",")[1]!, "base64").toString("utf8"),
+    ).toBe("font-bytes");
   });
 
   it("binds the background for EVERY component, not just ImageBackground", async () => {
-    for (const component of ["Title", "FlowChart", "Terminal", "Checklist"]) {
+    for (const component of ["FlowChart", "Terminal", "Checklist"]) {
       const { plan } = projectWithImage("3", component);
       const resolved = await resolveImageSources(plan);
       expect(resolved.scenes[0]?.backgroundSrc).toMatch(/^data:image\/jpeg;/);

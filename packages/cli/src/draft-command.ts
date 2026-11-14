@@ -36,6 +36,7 @@ import {
   type AudioConfig,
 } from "@video/audio-plan";
 import { DEFAULT_THEME_NAME } from "@video/theme";
+import { TITLE_STYLES } from "@video/video-components";
 import { resolveProjectDir } from "./project-path.js";
 import { loadReviewPackage } from "./review-command.js";
 import { withProgress } from "./ui.js";
@@ -117,6 +118,11 @@ export interface DraftOptions {
    *  → VDSL → RenderPlan.style. Distinct from `imageStyle`, which is the
    *  per-film art style. */
   channelProfile?: string;
+  /** The title card's artistic treatment — "kai" (horizontal brush 楷
+   *  face) or "brush" (vertical running-brush column). Stamped into
+   *  article.md frontmatter (`title_style:`) so `video make` picks it
+   *  up; the faces are vendored in the workspace's `assets/fonts/`. */
+  titleStyle?: string;
   /** Narration backend — written into article.md frontmatter
    *  (`tts_provider:` + `voice:`) so `video make` picks it up.
    *  minimax-system | voicebox:<profile> | f5tts | edge. Also a
@@ -799,6 +805,12 @@ export async function runDraft(opts: DraftOptions): Promise<number> {
       opts.channelProfile,
     );
   }
+  // The title card's treatment is durable per-film config, like the art
+  // style: it is read by `video make` from the article, not by the
+  // drafter.
+  if (opts.titleStyle !== undefined) {
+    stamped = stampFrontmatterKey(stamped, "title_style", opts.titleStyle);
+  }
   // Same contract as image_provider: the narration backend is durable
   // project config (tts_provider + voice), and --tts / the video-ask
   // answer is the explicit value that always wins.
@@ -952,6 +964,7 @@ export interface DraftCliOpts {
   visualMode?: string;
   imageProvider?: string;
   channelProfile?: string;
+  titleStyle?: string;
   tts?: string;
   style?: string;
   captions?: boolean;
@@ -995,6 +1008,9 @@ export function draftCliOptsToDraftOptions(
       : {}),
     ...(opts.channelProfile !== undefined
       ? { channelProfile: opts.channelProfile }
+      : {}),
+    ...(opts.titleStyle !== undefined
+      ? { titleStyle: opts.titleStyle }
       : {}),
     ...(opts.tts !== undefined ? { tts: opts.tts } : {}),
     ...(opts.style !== undefined ? { style: opts.style } : {}),
@@ -1112,6 +1128,18 @@ export function registerDraft(program: Command): void {
     .option(
       "--channel-profile <name>",
       "v0.11: cross-video channel grammar profile stamped into article.md frontmatter and carried to the render plan (currently: chinese-storybook). Distinct from --image-style, which is the per-film art style.",
+    )
+    .option(
+      "--title-style <style>",
+      `the opening title card's artistic treatment, stamped into article.md frontmatter: ${TITLE_STYLES.join(" | ")} (kai = horizontal brush face, brush = vertical column)`,
+      (v) => {
+        if (!TITLE_STYLES.includes(v as (typeof TITLE_STYLES)[number])) {
+          throw new Error(
+            `--title-style must be ${TITLE_STYLES.join("|")}, got: ${v}`,
+          );
+        }
+        return v;
+      },
     )
     .option(
       "--style <theme>",

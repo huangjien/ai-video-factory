@@ -5,6 +5,7 @@ import { Paragraph } from "./components/Paragraph.js";
 import { CodeBlock } from "./components/CodeBlock.js";
 import { Terminal } from "./components/Terminal.js";
 import { Image } from "./components/Image.js";
+import { paperLightTheme } from "./theme.js";
 
 const baseScene = (frame: number) => ({
   startFrame: 0,
@@ -122,5 +123,79 @@ describe("Todo 8 — components batch A (render at frame 0 and mid)", () => {
     for (const el of items) {
       expect(() => renderToStaticMarkup(el)).not.toThrow();
     }
+  });
+});
+
+describe("Title — the artistic title card", () => {
+  it("paints the scene art behind the type", () => {
+    const html = renderToStaticMarkup(
+      <Title
+        text="弃书不是题材太小"
+        artSrc="data:image/jpeg;base64,AAAA"
+        theme={paperLightTheme}
+        {...baseScene(15)}
+      />,
+    );
+    expect(html).toContain('src="data:image/jpeg;base64,AAAA"');
+  });
+
+  it("sets the title in the artistic face, not the theme's sans", () => {
+    const html = renderToStaticMarkup(
+      <Title
+        text="弃书不是题材太小"
+        theme={paperLightTheme}
+        {...baseScene(15)}
+      />,
+    );
+    expect(html).toContain("TitleKai");
+    expect(html).toContain(paperLightTheme.typography.title.fontFamily);
+  });
+
+  it("sets the brush style as a vertical column", () => {
+    const html = renderToStaticMarkup(
+      <Title
+        text="玄武门之变"
+        style="brush"
+        theme={paperLightTheme}
+        {...baseScene(15)}
+      />,
+    );
+    expect(html).toContain("vertical-rl");
+    expect(html).toContain("TitleBrush");
+  });
+
+  it("keeps a Latin title horizontal even in the brush style", () => {
+    // A vertical column only reads for CJK.
+    const html = renderToStaticMarkup(
+      <Title
+        text="Seven Wrong Calls"
+        style="brush"
+        theme={paperLightTheme}
+        {...baseScene(15)}
+      />,
+    );
+    expect(html).not.toContain("vertical-rl");
+  });
+
+  it("draws in the theme's ink when there is no art to adapt to", () => {
+    const html = renderToStaticMarkup(
+      <Title text="测试" theme={paperLightTheme} {...baseScene(15)} />,
+    );
+    expect(html).toContain(paperLightTheme.colors.primary);
+  });
+
+  it("falls back to the horizontal treatment for an unknown style", () => {
+    // A hand-edited storyboard may carry a style the card does not know;
+    // it must not fail the render.
+    const html = renderToStaticMarkup(
+      <Title
+        text="玄武门之变"
+        style={"brussh" as never}
+        theme={paperLightTheme}
+        {...baseScene(15)}
+      />,
+    );
+    expect(html).toContain("TitleKai");
+    expect(html).not.toContain("vertical-rl");
   });
 });

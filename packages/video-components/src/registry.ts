@@ -54,6 +54,17 @@ const titleProps = z
     kicker: z.string().optional(),
     /** Hex accent color override; defaults to theme.accent. */
     accent: z.string().optional(),
+    /** Which artistic treatment the card uses: "kai" (horizontal brush
+     *  楷 face) or "brush" (vertical running-brush column). Plain
+     *  string so a typo in a hand-edited storyboard falls back to the
+     *  default instead of failing validation. */
+    style: z.string().optional(),
+    /** Scene art behind the card — a data URL the renderer resolves
+     *  from `assets/images/scene_N.jpg`. */
+    artSrc: z.string().optional(),
+    /** The font file for `style`, as a data URL the renderer resolves
+     *  from the workspace's `assets/fonts/`. */
+    fontSrc: z.string().optional(),
   })
   .passthrough();
 

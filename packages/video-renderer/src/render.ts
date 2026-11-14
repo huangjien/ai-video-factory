@@ -15,6 +15,7 @@ import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
 import { bundle } from "@remotion/bundler";
 import { renderMedia, selectComposition } from "@remotion/renderer";
+import { isTitleStyle, TITLE_FONTS } from "@video/video-components";
 import { sharedBrowser, type BrowserPool } from "./browser.js";
 import {
   slicePlanScene,
@@ -262,6 +263,12 @@ export async function resolveImageSources(
         const withSrc = await resolveComponentSrc(scene, warn);
         return resolveTextOverlay(withSrc, plan.projectRoot, warn);
       }
+      // The title card paints its own art: it needs the picture's
+      // pixels to choose an ink that reads on them, so the art arrives
+      // as a prop instead of as the scene background layer.
+      if (scene.component === "Title") {
+        return resolveTitleCard(plan, scene);
+      }
       const bound = await bindSceneBackground(plan, scene);
       return bound;
     }),
@@ -350,7 +357,19 @@ async function bindSceneBackground(
   plan: RenderPlan,
   scene: RenderPlanScene,
 ): Promise<RenderPlanScene> {
-  if (!plan.projectRoot) return scene;
+  const file = findSceneImage(plan, scene);
+  if (file === null) return scene;
+  return { ...scene, backgroundSrc: await toDataUrl(file) };
+}
+
+/** The generated art for a scene, by the naming convention `video make`
+ *  writes (`assets/images/scene_N.jpg`). Null when the project has no
+ *  image for this scene — hand-authored projects legitimately have none. */
+function findSceneImage(
+  plan: RenderPlan,
+  scene: RenderPlanScene,
+): string | null {
+  if (!plan.projectRoot) return null;
   const idNum = scene.id.match(/scene[-_]?(\d+)/)?.[1];
   const n = String(idNum ? parseInt(idNum, 10) : scene.index + 1);
   for (const ext of [".jpg", ".jpeg", ".png", ".webp"]) {
@@ -360,10 +379,56 @@ async function bindSceneBackground(
       "images",
       `scene_${n}${ext}`,
     );
-    if (!existsSync(file)) continue;
-    return { ...scene, backgroundSrc: await toDataUrl(file) };
+    if (existsSync(file)) return file;
   }
-  return scene;
+  return null;
+}
+
+/**
+ * The title card's two assets, inlined as data URLs.
+ *
+ * The art is the scene's own generated picture. The face is the
+ * vendored artistic font for the card's style — the fonts live in the
+ * workspace's `assets/fonts/` (shared by every film, like the BGM),
+ * and the browser can only read what the entry embeds.
+ */
+async function resolveTitleCard(
+  plan: RenderPlan,
+  scene: RenderPlanScene,
+): Promise<RenderPlanScene> {
+  const artFile = findSceneImage(plan, scene);
+  const artSrc =
+    artFile === null ? undefined : await toDataUrl(artFile);
+  const style = isTitleStyle(scene.props.style) ? scene.props.style : "kai";
+  const fontFile = findFontFile(plan.projectRoot, TITLE_FONTS[style].file);
+  const fontSrc =
+    fontFile === null ? undefined : await toFontDataUrl(fontFile);
+  return {
+    ...scene,
+    props: {
+      ...scene.props,
+      ...(artSrc !== undefined ? { artSrc } : {}),
+      ...(fontSrc !== undefined ? { fontSrc } : {}),
+    },
+  };
+}
+
+/** The vendored artistic font, from the workspace's shared `assets/fonts/`
+ *  or from the project's own copy. Null when neither has it — the card
+ *  then falls back to the theme's type family. */
+function findFontFile(
+  projectRoot: string | undefined,
+  file: string,
+): string | null {
+  if (!projectRoot) return null;
+  const roots = [projectRoot];
+  const wsRoot = workspaceRootFor(projectRoot);
+  if (wsRoot !== null) roots.unshift(wsRoot);
+  for (const root of roots) {
+    const candidate = path.join(root, "assets", "fonts", file);
+    if (existsSync(candidate)) return candidate;
+  }
+  return null;
 }
 
 /** File path → `data:<mime>;base64,…` for the headless browser. */
@@ -371,6 +436,25 @@ async function toDataUrl(file: string): Promise<string> {
   const bytes = await readFile(file);
   const mime = imageMime(path.extname(file).toLowerCase());
   return `data:${mime};base64,${Buffer.from(bytes).toString("base64")}`;
+}
+
+/** A font file → a data URL the browser can register as a FontFace. */
+async function toFontDataUrl(file: string): Promise<string> {
+  const bytes = await readFile(file);
+  const mime = path.extname(file).toLowerCase() === ".otf" ? "font/otf" : "font/ttf";
+  return `data:${mime};base64,${Buffer.from(bytes).toString("base64")}`;
+}
+
+/** The workspace root that owns a project directory (`projects/<name>`).
+ *  Shared assets — the BGM library, the brand kit, the artistic fonts —
+ *  live there, not inside a single project. */
+export function workspaceRootFor(projectRoot: string): string | null {
+  let dir = path.dirname(projectRoot);
+  for (let hops = 0; hops < 8 && dir !== path.dirname(dir); hops++) {
+    if (path.basename(dir) === "projects") return path.dirname(dir);
+    dir = path.dirname(dir);
+  }
+  return null;
 }
 
 /** Re-mux with +faststart for streamable MP4 without recompressing video. */

@@ -119,7 +119,7 @@ new content with `toContain` tests in
 
 ### Visual components (registry — 24 components)
 
-`video make` re-derives `storyboard.yaml` from article.md on every run: each scene's `visual:` field is keyword-matched by a deterministic classifier (`packages/draft/src/visual-classifier.ts`), which picks a component and a prop builder fills structured props from caption/narration/prose. First scene is always Title. When editing article.md, steer visuals by putting trigger keywords in `visual:`:
+`video make` re-derives `storyboard.yaml` from article.md on every run: each scene's `visual:` field is keyword-matched by a deterministic classifier (`packages/draft/src/visual-classifier.ts`), which picks a component and a prop builder fills structured props from caption/narration/prose. First scene is always Title — the opening card: it draws the scene's generated picture full-bleed and writes the title over it in an artistic face (`kai` = horizontal brush 楷, `brush` = vertical running-brush column; both vendored in `assets/fonts/`, SIL OFL), with the ink picked against the picture's brightness. Pick the treatment per film with `video draft --title-style kai|brush` (stamped into article.md frontmatter as `title_style:`). When editing article.md, steer visuals by putting trigger keywords in `visual:`:
 
 | Trigger keywords in `visual:` (en / zh) | Component | Look |
 |---|---|---|

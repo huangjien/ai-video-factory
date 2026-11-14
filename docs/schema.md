@@ -99,6 +99,15 @@ and optional `edges[]` ([from, to] index pairs) plus `direction`;
 values fail loudly at render time rather than silently substituting a
 different look.
 
+`Title` is the opening card: it draws the scene's generated art full-bleed
+and writes the title over it in an artistic face — `kai` sets it
+horizontally in LXGW WenKai, `brush` as a vertical column in Ma Shan Zheng
+(both vendored in `assets/fonts/`, SIL OFL). The ink is chosen against the
+picture, not the theme: a paper-bright picture takes dark ink, a darker one
+takes light ink. The renderer inlines the picture and the face into the
+plan (`props.artSrc` / `props.fontSrc`); see `title_style:` below for the
+per-film choice.
+
 The scene family also decides the animation fallback: `canvas` scenes
 auto-draw sequentially (strokes, ease-out, ~0.25 s stagger) so a minimal
 storyboard still animates; `remotion` components fall back to their
@@ -129,6 +138,11 @@ legible. No image on disk → the scene paints the theme background, so
 hand-authored projects without `video make` output are unaffected.
 `ImageBackground` scenes keep their own full-bleed `props.src` and get no
 second background.
+
+The `Title` card is the exception: it takes the same picture as
+`props.artSrc` and paints it itself, because it needs the picture's own
+pixels to pick an ink that reads on them. `video make` therefore writes an
+image for the title scene like it does for every other scene.
 
 ## The `animations[]` timeline — the scene's choreography
 
@@ -224,6 +238,29 @@ old setting.
 `video draft` preserves this key (and `image_style` / `image_provider`) across
 re-drafts; `project`, `language`, `duration_target_sec` and `voice` always
 reflect the newest run.
+
+### `title_style:` — the title card's artistic treatment
+
+The opening title card is written in an artistic face over the scene's own
+art. Two treatments ship:
+
+| value   | face          | layout                         |
+| ------- | ------------- | ------------------------------ |
+| `kai`   | LXGW WenKai   | horizontal, centred            |
+| `brush` | Ma Shan Zheng | vertical column down the right |
+
+```yaml
+---
+project: xuanwumen
+title_style: brush
+---
+```
+
+Both faces are vendored in `assets/fonts/` (SIL OFL), so the card renders
+the same on macOS, Linux and CI — the machine's own CJK fonts are never
+used. An unknown value falls back to `kai`. The key is the article's
+per-film choice; a channel profile that opts out of the title card (the
+storybook channel) never reads it.
 
 ### `tts_provider:` — narration backend (voicebox / minimax, v0.9.x)
 

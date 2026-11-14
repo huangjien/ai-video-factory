@@ -107,9 +107,11 @@ narration does — the durations you declare are a plan, not a floor.
 Write narration whose SPEECH TIME equals duration_target_sec: at the
 rate above that is 220-300 characters per minute times the duration in
 minutes (1,760-2,400 Chinese characters for a 480-second film, 660-900
-for 180 seconds). Aim for the middle-to-upper part of that range:
-writing 30% under the target produces a film 30% shorter than the one
-that was asked for.
+for 180 seconds). Aim for the MIDDLE of that range, not the top: the
+measured reading rate varies with the text (250-282 Chinese characters
+per minute on real drafts), and the film's length IS that speech. Aiming
+high overshoots the target — a 360-second target drafted at the top of
+the range came out 454 seconds long.
 
 Each scene's declared duration should match the length of its own
 narration, so the plan and the speech agree.

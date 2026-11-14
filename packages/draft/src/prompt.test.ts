@@ -249,3 +249,19 @@ describe("SYSTEM_PROMPT — the caption safe area", () => {
     );
   });
 });
+
+describe("SYSTEM_PROMPT — the narration length contract", () => {
+  it("says the film's length IS the narration's measured speech", () => {
+    // Every scene's duration is re-timed to its measured speech, so
+    // the two are the same number.
+    expect(SYSTEM_PROMPT).toMatch(/THE NARRATION IS THE FILM/);
+    expect(SYSTEM_PROMPT).toMatch(/re-timed to its\s+measured speech/);
+  });
+
+  it("aims at the middle of the character range, not the top", () => {
+    // Aiming high overshot: a 360 s target drafted at the top of the
+    // range measured 454 s of speech.
+    expect(SYSTEM_PROMPT).toContain("Aim for the MIDDLE of that range");
+    expect(SYSTEM_PROMPT).toMatch(/250-282 Chinese characters/);
+  });
+});

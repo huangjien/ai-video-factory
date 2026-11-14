@@ -653,6 +653,16 @@ export async function deriveStoryboardSync(
           no_captions: article.frontmatter["no_captions"] === true,
           captions_source: article.frontmatter["captions_source"],
           channel_profile: article.frontmatter["channel_profile"],
+          // These frontmatter keys change the DERIVED storyboard, so
+          // they belong in the freshness hash. Without them the make
+          // skipped the re-derive and the change silently did nothing:
+          // flipping `visual_mode` to image left the storyboard's
+          // self-rendered components in place (2026-11-14 — the film
+          // kept its diagrams), and a theme change never reached the
+          // storyboard at all.
+          visual_mode: article.frontmatter["visual_mode"],
+          theme: article.frontmatter["theme"],
+          title_style: article.frontmatter["title_style"],
         },
         scenes: article.scenes.map((s) => ({
           id: s.id,

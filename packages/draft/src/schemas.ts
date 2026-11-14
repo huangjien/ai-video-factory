@@ -314,9 +314,28 @@ export function articleToStoryboardYaml(article: ParsedArticle): string {
     }
     const useExplicit = typeof explicit === "string" && explicitKnown;
     const isFirst = keepTitleCard && i === 0 && !useExplicit;
+    // `visual_mode: image` is a CONTRACT, not a hint (2026-11-14).
+    //
+    //  The keyword classifier routes a scene to a self-rendered
+    //  component whenever its art-direction line CONTAINS a trigger
+    //  word — and ordinary sentences contain them: 本质上 → BigIdea,
+    //  示例 → Checklist, 三层 → PyramidDiagram, 轮转 → CycleDiagram.
+    //  The scene then silently loses its picture and the film becomes a
+    //  slideshow of geometry: measured on one draft, 40 of 42 scenes
+    //  routed to components and ONE to an image.
+    //
+    //  In image mode every scene derives as an illustration (the title
+    //  card still draws its generated picture full-bleed), and make's
+    //  switch step gives it the image. An explicit `component:` on the
+    //  scene still wins — that is a hand edit, not an inference.
+    const imageOnly = f.visual_mode === "image";
     const component = useExplicit
       ? (explicit as string)
-      : pickVisualComponent(s.visual ?? "", isFirst).component;
+      : imageOnly
+        ? isFirst
+          ? "Title"
+          : "AnimatedIllustration"
+        : pickVisualComponent(s.visual ?? "", isFirst).component;
     const sectionIdx =
       sections.length === 0
         ? 0

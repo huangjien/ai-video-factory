@@ -927,3 +927,77 @@ scenes:
     expect(parseArticle(md).title).toBeUndefined();
   });
 });
+
+describe("articleToStoryboardYaml — visual_mode: image", () => {
+  /** Two scenes whose art-direction lines contain the trigger words an
+   *  ordinary Chinese sentence has: 本质上 (→ BigIdea), 示例 (→
+   *  Checklist), 三层 (→ PyramidDiagram). The classifier would route
+   *  them to self-rendered components and the scenes would lose their
+   *  pictures. */
+  const noisyFixture: ParsedArticle = {
+    frontmatter: {
+      project: "img-mode",
+      language: "zh-CN",
+      duration_target_sec: 40,
+      voice: "zh-CN-YunjianNeural",
+    },
+    proseBody: "",
+    title: "图像模式",
+    scenes: [
+      {
+        id: "scene_1",
+        duration: 8,
+        caption: "开场",
+        visual: "一只黄铜漏斗悬在画面中央，碎片穿过筛网；冷白顶光从上方压下",
+        narration: "本质上这是一个简化问题",
+      },
+      {
+        id: "scene_2",
+        duration: 6,
+        caption: "细节",
+        visual: "三块玻璃卡片沿木架排开，示例标签贴在边缘；暖黄侧光",
+        narration: "这里给出示例",
+      },
+    ],
+    markdown: "",
+  };
+
+  it("routes every scene to an illustration when the mode says image", () => {
+    const yaml = articleToStoryboardYaml({
+      ...noisyFixture,
+      frontmatter: { ...noisyFixture.frontmatter, visual_mode: "image" },
+    });
+    const parsed = parseYaml(yaml) as {
+      scenes: { id: string; visual: { component: string } }[];
+    };
+    // The first scene keeps the title card (it draws its own image
+    // full-bleed); every other scene is an illustration.
+    expect(parsed.scenes[0]!.visual.component).toBe("Title");
+    expect(parsed.scenes[1]!.visual.component).toBe("AnimatedIllustration");
+  });
+
+  it("still routes by keyword without the mode (the historical behaviour)", () => {
+    const yaml = articleToStoryboardYaml(noisyFixture);
+    const parsed = parseYaml(yaml) as {
+      scenes: { id: string; visual: { component: string } }[];
+    };
+    const components = parsed.scenes.map((s) => s.visual.component);
+    expect(components.some((c) => c !== "AnimatedIllustration")).toBe(true);
+  });
+
+  it("lets an explicit component override the mode (a hand edit)", () => {
+    const yaml = articleToStoryboardYaml({
+      ...noisyFixture,
+      frontmatter: { ...noisyFixture.frontmatter, visual_mode: "image" },
+      scenes: [
+        { ...noisyFixture.scenes[0]!, component: "Callout" },
+        noisyFixture.scenes[1]!,
+      ],
+    });
+    const parsed = parseYaml(yaml) as {
+      scenes: { id: string; visual: { component: string } }[];
+    };
+    expect(parsed.scenes[0]!.visual.component).toBe("Callout");
+    expect(parsed.scenes[1]!.visual.component).toBe("AnimatedIllustration");
+  });
+});

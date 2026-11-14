@@ -65,4 +65,52 @@ describe("runs + retry + resume (todo 12) — §62.1 / §62.2", () => {
     expect(record).not.toHaveProperty("provider");
     expect(record).not.toHaveProperty("model");
   });
+
+  it("round-trips the wire telemetry of a model call", async () => {
+    const root = tmpRoot();
+    await writeRun(
+      root,
+      baseRecord({
+        stage: "draft",
+        provider: "minimax",
+        model: "MiniMax-M3",
+        duration_ms: 301_500,
+        telemetry: {
+          requests: 3,
+          streams: 1,
+          headers_timeout_retries: 1,
+          reasoning_tokens: 900,
+        },
+      }),
+    );
+    const list = await listRuns(root);
+    expect(list[0]?.telemetry).toEqual({
+      requests: 3,
+      streams: 1,
+      headers_timeout_retries: 1,
+      reasoning_tokens: 900,
+    });
+    expect(list[0]?.duration_ms).toBe(301_500);
+  });
+});
+
+describe("run ordering", () => {
+  it("keeps the write order for runs written in the same millisecond", async () => {
+    // The resume path reads the LAST successful run. Two runs in the
+    // same millisecond used to sort arbitrarily (the id's suffix was
+    // random), so the resume could pick the wrong stage.
+    const root = tmpRoot();
+    await writeRun(root, baseRecord({ stage: "compile", status: "succeeded" }));
+    await writeRun(root, baseRecord({ stage: "render", status: "failed" }));
+    await writeRun(root, baseRecord({ stage: "review", status: "succeeded" }));
+    expect(await lastSuccessfulStage(root)).toBe("review");
+  });
+
+  it("gives run ids a monotonic suffix", () => {
+    const a = formatRunId("draft");
+    const b = formatRunId("draft");
+    const seqA = Number(/-(\d{3})$/.exec(a)![1]);
+    const seqB = Number(/-(\d{3})$/.exec(b)![1]);
+    expect(seqB).toBeGreaterThan(seqA);
+  });
 });

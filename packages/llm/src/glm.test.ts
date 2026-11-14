@@ -62,6 +62,53 @@ describe("GLMProvider (todo 3) — docs.z.ai/devpack", () => {
     expect(p["defaultModel"]).toBe("glm-5.3");
   });
 
+  it("never sends a thinking field — GLM-5.3 forces thinking", async () => {
+    // docs.bigmodel.cn — 思考模式: GLM-5.3 rejects
+    // `thinking: {"type":"disabled"}`. Sending it would fail the call,
+    // so the provider drops the request's wish and lets GLM reason.
+    process.env["GLM_API_KEY"] = "glm-test-key";
+    let body: string | undefined;
+    const server = createServer((req: IncomingMessage, res: ServerResponse) => {
+      const chunks: Buffer[] = [];
+      req.on("data", (c) => chunks.push(c));
+      req.on("end", () => {
+        body = Buffer.concat(chunks).toString("utf8");
+        res.statusCode = 200;
+        res.setHeader("Content-Type", "application/json");
+        res.end(JSON.stringify(responseBody));
+      });
+    });
+    await new Promise<void>((r) => server.listen(0, "127.0.0.1", () => r()));
+    const port = (server.address() as AddressInfo).port;
+    const p = new GLMProvider({ baseUrl: `http://127.0.0.1:${port}` });
+    await p.chat({ ...baseReq, thinking: "disabled" });
+    expect(JSON.parse(body ?? "{}")).not.toHaveProperty("thinking");
+    await new Promise<void>((r) => server.close(() => r()));
+  });
+
+  it("records how many output tokens went into reasoning", async () => {
+    process.env["GLM_API_KEY"] = "glm-test-key";
+    responseBody = {
+      choices: [
+        { message: { content: "ok-glm" }, index: 0, finish_reason: "stop" },
+      ],
+      usage: {
+        prompt_tokens: 30,
+        completion_tokens: 18,
+        completion_tokens_details: { reasoning_tokens: 1_234 },
+      },
+    };
+    const p = new GLMProvider({ baseUrl });
+    const r = await p.chat(baseReq);
+    expect(r.telemetry?.reasoningTokens).toBe(1_234);
+    responseBody = {
+      choices: [
+        { message: { content: "ok-glm" }, index: 0, finish_reason: "stop" },
+      ],
+      usage: { prompt_tokens: 30, completion_tokens: 18 },
+    };
+  });
+
   it("throws ChatError with provider=glm on 401", async () => {
     process.env["GLM_API_KEY"] = "glm-test-key";
     statusToSend = 401;

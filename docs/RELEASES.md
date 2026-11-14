@@ -61,6 +61,176 @@ renderer upscales. The last one bites `video thumbnail`: the overlay that
 rendered CJK titles crisply was Pillow inside the deleted worker, so
 `youtube/thumbnail.*` must now be typed in YouTube Studio.
 
+## Unreleased — the 300-second tax, and a draft stage that leaves a trace
+
+**A long model call is no longer paid for twice.** Node's bundled undici
+gives up waiting for response headers after 300 seconds, and a
+non-streaming chat completion sends its headers only after the whole
+answer is generated — so every completion slower than five minutes died
+with `UND_ERR_HEADERS_TIMEOUT`, threw its tokens away, and was issued
+again as a stream. The 2026-11-13 draft (`projects/任务式指挥与agent设计`)
+paid that tax on every one of its five judge calls: **94 minutes of wall
+clock for ten model calls, about half of it spent on requests that were
+discarded.**
+
+The cause was a regression, not a provider limit. `7d1aec5` (2026-09-25)
+raised the ceiling to 900 s through a custom undici `Agent`;
+`f618cdf` (2026-09-27) replaced that Agent with `AbortSignal.timeout` to
+dodge a Node-22 incompatibility and **silently dropped the ceiling back
+to 300 s** — `AbortSignal` bounds the whole request, not the header wait,
+so it could not replace what it replaced.
+
+- `packages/llm/src/http.ts` (new) — one shared undici `Agent` with
+  `headersTimeout` / `bodyTimeout` at the 40-minute `LLM_TIMEOUT_MS`, used
+  by every provider call. The Node-22 problem f618cdf hit does not apply
+  here: both the `fetch` and the `Agent` come from the same standalone
+  `undici` package, so the pool accepts its own dispatcher.
+  `LLM_HTTP_TIMEOUT_MS` overrides the ceiling for an operator who wants a
+  shorter wait.
+- The streaming re-issue stays as a safety net, but it is now unreachable
+  in practice: a request that would have died at 300 s simply waits.
+
+**The draft stage now leaves a trace.** It wrote no run record at all, so
+a 94-minute draft could only be reconstructed from file mtimes, and every
+`duration_ms` in the project read 0.
+
+- One run record per model call, written as the call happens:
+  `runs/draft-*.yaml` (generation), `runs/draft-judge-*.yaml` (scoring),
+  `runs/draft-audio-plan-*.yaml` (the audio plan). Each carries the
+  serving provider, the model, the tokens, a **real** `duration_ms`, and a
+  `telemetry` block: `requests`, `streams`, `headers_timeout_retries`.
+- `ProviderTelemetry` (`packages/llm/src/provider.ts`) travels with every
+  provider response. A failed attempt attaches its own numbers to the
+  error, and the retry layer folds the discarded attempts into the
+  surviving response — so a request that was thrown away is counted, not
+  lost.
+
+**The judge's answer was 91% hidden thinking.** Measured on the 2026-11-13
+article with MiniMax-M3: the judge wrote **119,029 characters**, of which
+**108,846 (91%) were reasoning nobody reads** — 31,916 output tokens and
+161 s to produce a 10,183-character scorecard. Trimming the scorecard
+fields would have saved 9% of that; the reasoning was the cost.
+
+- `ChatRequest.thinking` (`packages/llm/src/provider.ts`) asks a provider
+  to skip its reasoning. MiniMax-M3 honours it
+  (`thinking: {"type":"disabled"}` — "Skips thinking and answers
+  directly"); **GLM-5.3 cannot** — its thinking is forced and the
+  parameter is rejected, so the GLM provider deliberately drops the field
+  rather than sending it and failing the call.
+- The **judge** asks for no reasoning
+  (`packages/draft/src/article-review.ts`): **1,692 output tokens and 9.5 s**
+  for the same article, scoring **88.8** against **88.4** with reasoning
+  (four no-reasoning runs spanned 85.8–90.8 — that spread is the judge's
+  own noise, not the reasoning).
+- The **draft keeps its reasoning.** Without it the article comes out
+  half-length — 19 scenes / 215 s against a 480 s target, versus 33 scenes
+  / 480 s with reasoning — because the model plans the scene budget while
+  it thinks.
+
+- `telemetry.reasoning_tokens` records the overhead per call, so the run
+  record shows what the thinking cost instead of hiding it in the token
+  count.
+
+**The ladder stops re-rolling the dice.** The judge's noise on ONE draft
+is **±1.9 points** — ten judgments of the same article: 84.2 / 85.8 / 87.4
+/ 88.0 / 88.0 / 88.4 / 88.8 / 89.0 / 90.2 / 90.8 (sd 1.85, range 6.6) —
+and the 90-point bar sits *inside* that band. The 2026-11-13 run spent five
+attempts and passed on a +7.6 jump from a blind rewrite: luck, not
+improvement.
+
+- `video draft` now judges each draft **twice** and averages
+  (`--judge-samples`, default 2). The per-indicator scores are averaged;
+  the findings, comment and suggestions come from the **median**
+  judgment; every sample's tokens and telemetry are counted. Measured on
+  the same ten judgments: the pair-averages have sd **1.28** against the
+  single samples' 1.85, and a range of 3.5 against 6.6 — the √2 the
+  averaging predicts.
+- The loop's progress test no longer reads the raw score. A revision
+  counts as progress when **the defect load shrank** (Critical 3, Major 2,
+  Moderate 1, Minor 0.5) **or** the score moved by more than
+  `IMPROVEMENT_MARGIN` (1.0 point — inside the noise band on purpose). A
+  revision that shrank the defects but left the score flat now keeps the
+  surgical line alive instead of being thrown away for a blind rewrite;
+  a blind rewrite is still the escape hatch when neither the defects nor
+  the score moved.
+
+**The rubric and the drafter finally agree.** The judge kept filing
+findings the writer was never asked to satisfy: a missing runnable
+example (its own headline complaint, four times across the 2026-11-13
+run), terminology drift between the prose and the narration, sources
+without a locator, absolute claims. Each was a finding the writer could
+not have avoided — and the loop paid a full generation + judging round
+for each one.
+
+- `packages/prompts/prompts/draft-article.md` — new section 21: a
+  **runnable example** whenever the article defines a protocol, schema,
+  interface or configuration (field names AND types, plus what
+  validation failure does); **one name per concept**; **the narration is
+  not a second copy** (a scene that mentions a list must match the prose
+  exactly); a **checkable locator** for every named external source, with
+  author-made mappings marked as the author's; **calibrated claims** (no
+  absolutes the evidence cannot carry); **no dangling pronouns**. The
+  final-validation list gained five checks for them.
+- `packages/prompts/prompts/draft-article-review.md` — new section "THE
+  WRITER'S CONTRACT": the judge now scores against the contract it was
+  given. The **±10% scene-duration tolerance** (it was filing
+  FORMAT_VIOLATION for a 0.6% miss — 477 s against 480 s), the YAML
+  frontmatter as **metadata rather than content**, a `visual:` line as an
+  **art-direction line rather than prose**, and what the writer is
+  required to supply. Its PROCEDURE step 3 also stopped contradicting
+  its own FINDINGS section ("non-zero / non-five" vs "below 4").
+- The prompt-eval snapshots were regenerated
+  (`video prompts eval --offline --update-snapshots`).
+- `article-review.yaml` now records the judge's spread:
+  `judge_samples: N` and `judge_sample_scores: [...]`. The score is the
+  MEAN of those judgments — a report that hides the spread makes a
+  noisy score look certain.
+
+**Two more gaps the film run exposed.** Rendering the 95.4 article found
+a hard pipeline constraint the drafter had never been told:
+
+- The burned caption IS the scene narration, and the renderer rejects a
+  narration that wraps past 4 lines of 24 units. The drafter prompt now
+  states the limit (about 90 CJK characters per scene) and the
+  final-validation list checks it — otherwise `video make` fails on the
+  caption overflow with the draft looking perfect.
+- `video make`'s render step reported `preview failed` with no reason
+  when the reason lived in the outcome's lines (the storyboard approval
+  gate does). The step now carries the actual first line.
+- **The narration IS the film.** Every scene's duration is re-timed to
+  its measured speech, so the finished film's length is the narration's
+  length — and the drafter prompt said the narration should fill only
+  55-70% of the target. A draft that followed that rule produced a
+  **329-second film for a 480-second target** (69%). The prompt now
+  states the contract the pipeline actually implements: the narration's
+  SPEECH TIME equals `duration_target_sec` (220-300 Chinese characters
+  per minute × the duration in minutes), and each scene's declared
+  duration matches its own narration. Measured: **2,125 characters →
+  ~451 s of speech → 94% of the target**, the same shape as the shipped
+  films (93%, 88%, 97%).
+
+Measured on the same topic with the same knobs: **95.4 / grade A, zero
+findings** (before: 91.2 with four findings). The judge's headline
+complaint moved from "最大的缺口是缺少一个可运行的任务对象与执行链示例"
+to the next level up ("补上一个可运行的最小编排器实现") — the gap the
+writer was never told about is closed.
+
+The prompt costs what it cost before: a generation re-measurement with
+the new prompt ran 167 s / 26,152 output tokens (156 tok/s) against
+171 s / 27,969 (164 tok/s) with the old one. The 818 s generation in
+the scored run was a provider-side outlier (40 tok/s) — the judge call
+in that same run held the normal 159 tok/s.
+
+**`--candidates` was registered but never mapped.** The flag reached
+commander and was then dropped by `draftCliOptsToDraftOptions`, so every
+film of 240 s or longer ran the auto default — **2 parallel candidates,
+2× the generation spend** — no matter what the user asked for. Now the
+flag maps through.
+
+Measured on the replay of the 2026-11-13 topic: the judge-shaped call
+(29 KB article + 11 KB rubric) that took **523.5 s** — 300.1 s discarded,
+223 s real — now completes in one request.
+
 ## Unreleased — BGM library, Bilibili packaging, en-US captions
 
 **BGM is a local library, not a service.** `assets/bgm/` is the single source
@@ -1028,18 +1198,57 @@ to their article frontmatter.
 | `v0.3.9`  | `feat/v0.3.9-draft-merges-audio-plan`                           | merge commit on main                       |
 | `v0.3.10` | `feat/v0.3.10-draft-idea-file`                                  | merge commit on main                       |
 | `v0.3.11` | `chore/v0.3.11-drop-legacy-traces`                              | merge commit on main                       |
-| `v0.5`    | (no separate branch — v0.5 landed on main)                      | `a674437` (+ `d438666` lint config)        |
-| `v0.5.1`  | (no separate branch — T5+T6.1 landed on main)                   | `a674437` … (cumulative)                   |
-| `v0.5.2`  | (no separate branch — T6.2 + T6.3 + fix landed on main)         | `3da7ff2`, `7d97608`, `638ac88`, `2170a4c` |
-| `v0.5.3`  | (no separate branch — flux default + pre-flight landed on main) | TBD in commit message                      |
-| `v0.6.0`  | (no separate branch — laya advisory layer landed on main)       | `c3d6691`                                  |
-| `v0.7`    | `v0.7-agent-ask`                                                | merge commit on main                       |
+| `v0.4`    | (no separate branch — v0.4 landed on main)                      | **no tag** |
+| `v0.4.1`  | (no separate branch — pi / oh-my-pi adapter landed on main)     | **no tag** |
+| `v0.4.2`  | (no separate branch — four new `style.theme` palettes)          | **no tag** |
+| `v0.4.3`  | (no separate branch — default theme flipped to paper-light)     | **no tag** |
+| `v0.4.4`  | (no separate branch — cosmetic UX redesign landed on main)      | **no tag** |
+| `v0.5`    | (no separate branch — v0.5 landed on main)                      | `a674437` (+ `d438666` lint config) — **no tag** |
+| `v0.5.1`  | (no separate branch — T5+T6.1 landed on main)                   | `a674437` … (cumulative) — **no tag** |
+| `v0.5.2`  | (no separate branch — T6.2 + T6.3 + fix landed on main)         | `3da7ff2`, `7d97608`, `638ac88`, `2170a4c` — **no tag** |
+| `v0.5.3`  | (no separate branch — flux default + pre-flight landed on main) | TBD in commit message — **no tag** |
+| `v0.6.0`  | (no separate branch — laya advisory layer landed on main)       | `c3d6691` — **no tag** |
+| `v0.7`    | `v0.7-agent-ask`                                                | merge commit on main — tagged `v0.7` |
+| `v0.7.1`  | (no separate branch — live progress landed on main)             | `ca178c3` — tagged `v0.7.1` |
+| `v0.8`    | (no separate branch — visual guardrails landed on main)         | **no tag** |
+| `v0.8.1`  | (no separate branch — minimax default landed on main)           | **no tag** |
+| `v0.9`    | (no separate branch — visual cache + prompt evals landed)       | `7dadf48` — **no tag** |
+| `v0.9.1`  | (no separate branch — TTS providers + draft quality bar)        | `0c9b11f` — **no tag** |
 
-All release tags are on `origin` and pushed.
+### Tagging gap (open)
+
+`origin` carries 15 tags: `v0.2`, `v0.3`, `v0.3.3`–`v0.3.14`, `v0.7`, `v0.7.1`.
+Every shipped release from `v0.4` onward except `v0.7` / `v0.7.1` is missing
+its tag — and **no GitHub Release exists at all** (`gh release list` is
+empty). A version bump with no tag is a half-shipped release: `git describe`
+and `gh release` both under-report what `main` contains. Backfill before the
+next minor ships:
+
+```bash
+git tag -a v<X>.<Y> -m "<summary>" <release-commit>   # one per missing release
+git push origin v<X>.<Y>
+gh release create v<X>.<Y> --title "v<X>.<Y> — <summary>" --notes-file <RELEASES.md section>
+```
 
 ## Versioning convention
 
 - **v0.x.y** — development tags, may be incremented without a strict semver contract.
 - **Major bumps (v1.0)** reserved for the first production-ready milestone after GLM image + cloud rendering land.
+- **Minor bump ⇒ git tag + GitHub Release (required).** When the minor
+  component changes (`v0.9` → `v0.10`, `v0.9.1` → `v0.10`), the release is
+  **not finished** until all three exist:
+  1. An annotated tag on the `main` commit that carries the new version —
+     `git tag -a v<X>.<Y> -m "<summary>" <release-commit>`.
+  2. The tag pushed — `git push origin v<X>.<Y>`.
+  3. A GitHub Release — `gh release create v<X>.<Y> --title "v<X>.<Y> — <summary>" --notes-file <RELEASES.md section>`.
+
+  The GitHub Release body is the matching `## v<X>.<Y>` section of this file.
+  A minor bump shipped without a pushed tag **and** a GitHub Release is a
+  bug, not a style choice.
+- **Patch tags (`v0.9.1`) are optional** — tag them when the change is
+  user-visible, skip them for internal churn.
+- **Three version sources, one commit** — `package.json`,
+  `packages/cli/package.json`, and `packages/cli/src/version.ts` (`VERSION`)
+  must carry the same number in the release commit; the tag names that number.
 - Tags are immutable; new work creates a new tag rather than moving an old one.
 - **Package manager**: this project uses **pnpm 12.5+** (enforced via the `packageManager` field in `package.json`). The lockfile is `pnpm-lock.yaml`; do not commit `package-lock.json`.

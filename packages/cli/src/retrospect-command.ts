@@ -132,6 +132,10 @@ export function extractSuggestions(content: string): string {
 }
 
 export async function runRetrospect(opts: RetrospectOptions): Promise<number> {
+  // The run record's duration is the WORK, not the wrapper: a
+  // `duration_ms: 0` in a run record reads as "instant" and
+  // hides the slow call that actually happened.
+  const startedAt = Date.now();
   const resolved = resolveProjectDir(opts.project, opts.cwd);
   if (!resolved.ok) {
     console.error(resolved.message);
@@ -206,7 +210,7 @@ export async function runRetrospect(opts: RetrospectOptions): Promise<number> {
     input_files: ["runs/", "qa/render-report.json"],
     output_files: ["retrospect.md"],
     created_at: dated,
-    duration_ms: 0,
+    duration_ms: Date.now() - startedAt,
     provider: providerName,
     model: "retrospect-v0.4",
     prompt_hash:

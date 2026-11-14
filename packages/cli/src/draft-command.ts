@@ -1,5 +1,6 @@
 import type { Command } from "commander";
 import { mkdir, writeFile, readFile } from "node:fs/promises";
+import { execSync } from "node:child_process";
 import path from "node:path";
 import { existsSync } from "node:fs";
 import {
@@ -10,8 +11,11 @@ import {
   pickJudgeProvider,
   providerForRole,
   type Provider,
+  type ProviderTelemetry,
 } from "@video/llm";
 import { MiniMaxWebSearch, callResearch } from "@video/research";
+import {
+} from "@video/draft";
 import {
   applyRevisionToMarkdown,
   articleMdToRawArticle,
@@ -156,6 +160,13 @@ export interface DraftOptions {
   minScore?: number;
   /** Total draft attempts in the review loop (not extra retries). Default 3. */
   maxAttempts?: number;
+  /** How many independent judgments to average per draft. Default 2.
+   *
+   *  The judge's noise on one draft is ±2.5 points (measured), and the
+   *  90-point bar sits inside that band — so a single judgment cannot
+   *  tell "this draft improved" from "the dice moved". Two samples
+   *  cost ~28 s and ~5k tokens. */
+  judgeSamples?: number;
   /** Parallel best-of-N candidates per review round (default 1 = serial).
    *  N > 1 spends N× draft+judge tokens per round and caps wall time at
    *  one round's generation. */
@@ -166,6 +177,91 @@ function providerInstance(name: string): Provider {
   if (name === "glm") return new GLMProvider();
   if (name === "minimax") return new MiniMaxProvider();
   throw new Error(`unsupported provider: ${name}`);
+}
+
+/** The model a provider serves by default. The run record names the
+ *  SERVING provider (it may differ from the configured one after a
+ *  failover); the model is what that provider runs. */
+function modelFor(name: string): string {
+  return name === "glm" ? "glm-5.3" : "MiniMax-M3";
+}
+
+function safeGitHead(cwd: string): string {
+  try {
+    // stderr is swallowed: a project outside a git repo would otherwise
+    // print "fatal: not a git repository" into the draft's output.
+    return execSync("git rev-parse HEAD", {
+      cwd,
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "ignore"],
+    }).trim();
+  } catch {
+    return "unknown";
+  }
+}
+
+/** One run record per model call.
+ *
+ * The draft stage used to write NO run record at all: a 94-minute draft
+ * (2026-11-13 — ten model calls) left nothing behind but the article, so
+ * the time could only be reconstructed from file mtimes, and every
+ * `duration_ms` in the project read 0.
+ *
+ * Each record says what the call cost (tokens) and what it did on the
+ * wire (`telemetry`): `headers_timeout_retries > 0` means the request
+ * was issued, thrown away by the client, and re-issued — the failure
+ * mode that used to double every long call.
+ */
+async function writeModelRun(
+  projectRoot: string,
+  args: {
+    stage: "draft" | "draft-judge" | "draft-audio-plan";
+    provider: string;
+    usage: { input: number; output: number };
+    telemetry?: ProviderTelemetry | undefined;
+    error?: string | undefined;
+  },
+): Promise<void> {
+  const { formatRunId, writeRun } = await import("@video/workflow");
+  const rate = args.provider === "glm" ? 0.0008 : 0.001;
+  await writeRun(projectRoot, {
+    run_id: formatRunId(args.stage),
+    stage: args.stage,
+    status: args.error === undefined ? "succeeded" : "failed",
+    actor: "agent",
+    tool:
+      args.stage === "draft"
+        ? "video-draft"
+        : args.stage === "draft-judge"
+          ? "video-draft-judge"
+          : "video-draft-audio-plan",
+    input_commit: safeGitHead(projectRoot),
+    input_files: [],
+    output_files:
+      args.stage === "draft"
+        ? ["article.md"]
+        : args.stage === "draft-audio-plan"
+          ? ["audio-config.yaml"]
+          : [],
+    created_at: new Date().toISOString(),
+    duration_ms: args.telemetry?.durationMs ?? 0,
+    provider: args.provider,
+    model: modelFor(args.provider),
+    tokens: args.usage,
+    estimated_cost_usd:
+      (args.usage.input / 1000) * rate + (args.usage.output / 1000) * rate,
+    ...(args.telemetry !== undefined
+      ? {
+          telemetry: {
+            requests: args.telemetry.requests,
+            streams: args.telemetry.streams,
+            headers_timeout_retries: args.telemetry.headersTimeoutRetries,
+            reasoning_tokens: args.telemetry.reasoningTokens,
+          },
+        }
+      : {}),
+    ...(args.error !== undefined ? { error: args.error } : {}),
+  });
 }
 
 /** Insert `key: value` into the article's frontmatter block (replace in
@@ -337,6 +433,9 @@ export type AudioPlanStep =
       status: "written";
       config: AudioConfig;
       tokens: { input: number; output: number };
+      /** Provider that served the plan call + what it did on the wire. */
+      providerName: string;
+      telemetry: ProviderTelemetry;
     }
   | { status: "skipped"; reason: string }
   | { status: "failed"; error: string };
@@ -361,13 +460,22 @@ export async function writeAudioConfigIfAbsent(
     return { status: "skipped", reason: "exists" };
   }
   try {
-    const { config, yaml, usage } = await withProgress("audio-plan", () =>
-      callAudioPlan(
-        { article, language: article.frontmatter.language },
-        provider,
-        fallback,
-      ),
-    );
+    const { config, yaml, usage, providerName, telemetry } =
+      await withProgress("audio-plan", () =>
+        callAudioPlan(
+          { article, language: article.frontmatter.language },
+          provider,
+          fallback,
+        ),
+      );
+    // The audio plan is a model call too — it belongs in the stage's
+    // run records like every other one.
+    await writeModelRun(projectRoot, {
+      stage: "draft-audio-plan",
+      provider: providerName,
+      usage,
+      telemetry,
+    });
     // v0.7 (--bgm): stamp the answered tag over the audio-plan LLM's
     // pick for the `bgm:` key ONLY (voice and sfx stay LLM-chosen);
     // `none` → bgm: null. Re-rendered with the package's own
@@ -389,7 +497,13 @@ export async function writeAudioConfigIfAbsent(
       outYaml = renderAudioConfig(outConfig);
     }
     await writeFile(outPath, outYaml, "utf8");
-    return { status: "written", config: outConfig, tokens: usage };
+    return {
+      status: "written",
+      config: outConfig,
+      tokens: usage,
+      providerName,
+      telemetry,
+    };
   } catch (err) {
     return { status: "failed", error: (err as Error).message };
   }
@@ -613,13 +727,20 @@ export async function runDraft(opts: DraftOptions): Promise<number> {
   let judgeModelName: string | null = null;
   let judgeSpend: { input: number; output: number } | null = null;
   if (opts.noReview === true) {
-    ({
-      markdown,
-      usage,
-      providerName: servedBy,
-    } = await withProgress(`drafting article (${chosenName})`, () =>
+    const draft = await withProgress(`drafting article (${chosenName})`, () =>
       callDraft(draftInput, provider, fallback),
-    ));
+    );
+    markdown = draft.markdown;
+    usage = draft.usage;
+    servedBy = draft.providerName;
+    await writeModelRun(projectRoot, {
+      stage: "draft",
+      provider: draft.providerName,
+      usage: draft.usage,
+      ...(draft.telemetry !== undefined
+        ? { telemetry: draft.telemetry }
+        : {}),
+    });
   } else {
     const minScore = opts.minScore ?? DEFAULT_MIN_SCORE;
     // The seed mode's budget is smaller on purpose: the user asked for
@@ -636,6 +757,11 @@ export async function runDraft(opts: DraftOptions): Promise<number> {
         return await runScoredDraft(draftInput, provider, fallback, {
           minScore,
           maxAttempts,
+          // Average the judge's noise: the product path asks for two
+          // independent judgments per draft (the CLI's default). The
+          // judge's spread on one draft is ±2.5 points and the bar sits
+          // inside that band.
+          judgeSamples: opts.judgeSamples ?? 2,
           ...(opts.candidates !== undefined
             ? { candidates: opts.candidates }
             : {}),
@@ -668,7 +794,33 @@ export async function runDraft(opts: DraftOptions): Promise<number> {
               notes: c.note ?? "",
             }));
           },
-          onAttempt: (a, total) => {
+          onAttempt: async (a, total) => {
+            // One run record per model call: the generation and the
+            // judge are separate calls with separate providers, separate
+            // token bills and separate durations. The seed attempt made
+            // no generation call — it is an article that already
+            // existed — so only its judge call is recorded.
+            if (a.mode !== "seed") {
+              await writeModelRun(projectRoot, {
+                stage: "draft",
+                provider: a.providerName,
+                usage: a.usage,
+                ...(a.telemetry !== undefined
+                  ? { telemetry: a.telemetry }
+                  : {}),
+              });
+            }
+            const judge = a.score?.judge;
+            if (judge !== undefined) {
+              await writeModelRun(projectRoot, {
+                stage: "draft-judge",
+                provider: judge.providerName,
+                usage: judge.usage,
+                ...(judge.telemetry !== undefined
+                  ? { telemetry: judge.telemetry }
+                  : {}),
+              });
+            }
             if (a.score) {
               const s = a.score;
               const mode =
@@ -971,6 +1123,9 @@ export interface DraftCliOpts {
   review?: boolean;
   minScore?: number;
   maxAttempts?: number;
+  judgeSamples?: number;
+  /** Parallel best-of-N candidates per review round. */
+  candidates?: number;
   ask?: boolean;
 }
 
@@ -1019,6 +1174,15 @@ export function draftCliOptsToDraftOptions(
     ...(opts.minScore !== undefined ? { minScore: opts.minScore } : {}),
     ...(opts.maxAttempts !== undefined
       ? { maxAttempts: opts.maxAttempts }
+      : {}),
+    ...(opts.judgeSamples !== undefined
+      ? { judgeSamples: opts.judgeSamples }
+      : {}),
+    // `--candidates` was registered but never mapped — the flag was
+    // silently dropped and every long film ran the auto default (2
+    // parallel candidates = 2× the generation spend).
+    ...(opts.candidates !== undefined
+      ? { candidates: opts.candidates }
       : {}),
     // commander folds `--ask`/`--no-ask` into a single `ask` boolean
     // (never a `noAsk` key): `false` means the user passed `--no-ask`
@@ -1161,6 +1325,11 @@ export function registerDraft(program: Command): void {
     .option(
       "--max-attempts <n>",
       "total draft attempts in the quality loop (default: 8; the top-scoring candidate is kept regardless of passing)",
+      (v) => parseInt(v, 10),
+    )
+    .option(
+      "--judge-samples <n>",
+      "independent judgments averaged per draft (default: 2; 1 = single judgment. The judge's noise on one draft is ±2.5 points, and the bar sits inside that band)",
       (v) => parseInt(v, 10),
     )
     .option(

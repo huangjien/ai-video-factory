@@ -175,6 +175,10 @@ function renderReviseYaml(record: {
 }
 
 export async function runRevise(opts: ReviseOptions): Promise<number> {
+  // The run record's duration is the WORK, not the wrapper: a
+  // `duration_ms: 0` in a run record reads as "instant" and
+  // hides the slow call that actually happened.
+  const startedAt = Date.now();
   const resolved = resolveProjectDir(opts.project, opts.cwd);
   if (!resolved.ok) {
     console.error(resolved.message);
@@ -517,7 +521,7 @@ export async function runRevise(opts: ReviseOptions): Promise<number> {
     input_files: ["article.md", "review/content-review.yaml"],
     output_files: ["article.md", "article-revise.yaml"],
     created_at: new Date().toISOString(),
-    duration_ms: 0,
+    duration_ms: Date.now() - startedAt,
     provider: revised.providerName,
     model: modelFor(revised.providerName),
     tokens: revised.usage,

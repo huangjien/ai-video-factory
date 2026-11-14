@@ -1,4 +1,8 @@
-import type { ChatMessage, Provider } from "@video/llm";
+import type {
+  ChatMessage,
+  Provider,
+  ProviderTelemetry,
+} from "@video/llm";
 import { callStructured, extractJsonObject } from "@video/llm";
 import { loadPrompt } from "@video/prompts";
 import { withChannelBlock } from "./channel-profile.js";
@@ -72,6 +76,9 @@ export interface CallReviseResult {
   audit: ReviseAudit;
   usage: { input: number; output: number };
   providerName: string;
+  /** What the call did on the wire — requests, streams, discarded
+   *  header-timeout retries, wall clock. */
+  telemetry: ProviderTelemetry;
 }
 
 /** Body lives in `packages/prompts/prompts/draft-article-revise.md`. */
@@ -269,5 +276,6 @@ export async function callRevise(
     audit,
     usage: r.usage,
     providerName: r.providerName,
+    telemetry: r.telemetry,
   };
 }

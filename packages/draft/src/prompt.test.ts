@@ -24,6 +24,37 @@ describe("SYSTEM_PROMPT contract", () => {
     expect(SYSTEM_PROMPT).toContain('"narration"');
     expect(SYSTEM_PROMPT).toContain('"visual"');
   });
+
+  // The judge files findings against the contract; these four rules
+  // are what the contract now says (2026-11-14). Each one closes a
+  // gap that cost a full draft-loop round: the judge kept asking for
+  // a runnable example, a single name per concept, a checkable source,
+  // and non-absolute claims — none of which the writer had been told.
+  it("asks for a runnable example when the article defines a protocol", () => {
+    expect(SYSTEM_PROMPT).toContain("RUNNABLE EXAMPLE");
+    expect(SYSTEM_PROMPT).toContain("copy-pasteable example");
+    expect(SYSTEM_PROMPT).toMatch(/validation fails/i);
+  });
+
+  it("asks for one name per concept across prose and narration", () => {
+    expect(SYSTEM_PROMPT).toContain("ONE NAME PER CONCEPT");
+    expect(SYSTEM_PROMPT).toContain("THE NARRATION IS NOT A SECOND COPY");
+  });
+
+  it("asks for a checkable locator on named external sources", () => {
+    expect(SYSTEM_PROMPT).toMatch(/^D\. SOURCES$/m);
+    expect(SYSTEM_PROMPT).toContain("checkable locator");
+  });
+
+  it("asks for calibrated claims and no dangling pronouns", () => {
+    expect(SYSTEM_PROMPT).toContain("CALIBRATED CLAIMS");
+    expect(SYSTEM_PROMPT).toContain("NO DANGLING PRONOUNS");
+  });
+
+  it("checks the new rules in the final validation list", () => {
+    expect(SYSTEM_PROMPT).toContain("ONE runnable example with types");
+    expect(SYSTEM_PROMPT).toContain("ONE name, and every scene that mentions");
+  });
 });
 
 describe("visual mode — image-only films", () => {
@@ -199,5 +230,22 @@ describe("buildMessages — editing-depth / tone knobs (#4)", () => {
       buildMessages({ ...base, tone: "conversational" })[1]?.content ?? "";
     expect(user).toContain("Tone: conversational");
     expect(user).toContain("consistent from hook to conclusion");
+  });
+});
+
+describe("SYSTEM_PROMPT — the caption safe area", () => {
+  it("states the per-scene narration limit the renderer enforces", () => {
+    // The burned caption IS the scene narration; the renderer rejects
+    // anything that wraps past 4 lines of 24 units, and `video make`
+    // fails on it. The drafter was never told.
+    expect(SYSTEM_PROMPT).toMatch(/caption safe area/i);
+    expect(SYSTEM_PROMPT).toMatch(/4 lines of 24 units/i);
+    expect(SYSTEM_PROMPT).toMatch(/90 CJK characters/i);
+  });
+
+  it("checks the limit in the final validation list", () => {
+    expect(SYSTEM_PROMPT).toContain(
+      "Every scene's narration fits the caption safe area",
+    );
   });
 });

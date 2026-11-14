@@ -90,6 +90,10 @@ export async function generateThumbnailImage(opts: {
   projectLabel: string;
 }): Promise<string | null> {
   const projectRoot = opts.projectRoot;
+  // The run record's duration is the WORK, not the wrapper: a
+  // `duration_ms: 0` in a run record reads as "instant" and hides the
+  // slow call that actually happened.
+  const startedAt = Date.now();
   const promptPath = path.join(projectRoot, "youtube", "thumbnail-prompt.txt");
   if (!existsSync(promptPath)) {
     console.error(`missing thumbnail prompt: ${promptPath}`);
@@ -178,7 +182,7 @@ export async function generateThumbnailImage(opts: {
         : "youtube/thumbnail.png",
     ],
     created_at: new Date().toISOString(),
-    duration_ms: 0,
+    duration_ms: Date.now() - startedAt,
     provider: provider.name,
     model: `${width}x${height}`,
     prompt_hash: promptHash,
@@ -206,6 +210,10 @@ export async function generateThumbnailImage(opts: {
  * `generateThumbnailImage` itself when no thumbnail exists yet.
  */
 export async function runThumbnail(opts: ThumbnailOptions): Promise<number> {
+  // The run record's duration is the WORK, not the wrapper: a
+  // `duration_ms: 0` in a run record reads as "instant" and
+  // hides the slow call that actually happened.
+  const startedAt = Date.now();
   const resolvedProject = resolveProjectDir(opts.project, opts.cwd);
   if (!resolvedProject.ok) {
     console.error(resolvedProject.message);

@@ -1,10 +1,14 @@
 import { describe, expect, it } from "vitest";
 import type { ChatRequest, ChatResponse, Provider } from "@video/llm";
 import {
+  ARTICLE_REVIEW_SYSTEM_PROMPT,
   ArticleScoreRawSchema,
   buildArticleReviewMessages,
   DEFAULT_MIN_SCORE,
+  defectLoad,
+  IMPROVEMENT_MARGIN,
   MAX_POSSIBLE_SCORE,
+  mergeScores,
   PROFILE,
   PROFILE_ID,
   computeScore,
@@ -16,6 +20,7 @@ import {
   scoreTotal,
 } from "./article-review.js";
 import type { ResearchNote } from "./revise.js";
+import type { ArticleScore, ArticleScoreRaw } from "./article-review.js";
 
 /** Fake provider: pops one canned response per chat() call, in order.
  *  Call sequence in the loop is draft, judge, draft, judge, … */
@@ -77,10 +82,36 @@ function buildPassingRaw(score = 4): string {
   });
 }
 
+/** A raw payload where ONE indicator has a given score and the rest are
+ *  4 — for testing the averaging of the judge's samples. */
+function buildRawWithIndicator(indicatorId: string, score: number): string {
+  const dimensions = PROFILE.map((d) => ({
+    id: d.id,
+    indicators: d.indicators.map((i) => ({
+      id: i.id,
+      score: i.id === indicatorId ? score : 4,
+      reason: "ok",
+    })),
+  }));
+  return JSON.stringify({
+    dimension_scores: dimensions,
+    findings: [],
+    risk_flags: [],
+    limitations: [],
+    summary: {
+      strengths: [],
+      main_weaknesses: [],
+      conclusion: "",
+      confidence: 0.5,
+    },
+    comment: "looks good",
+    suggestions: [],
+  });
+}
+
 /** Same shape but a finding is attached so the loop has something to
  *  pass into the next draft. The quote must appear in GOOD_ARTICLE
- *  to survive the evidence pass. */
-function buildRawWithFinding(
+ *  to survive the evidence pass. */function buildRawWithFinding(
   severity: "Critical" | "Major" | "Moderate" | "Minor" = "Major",
 ): string {
   const dimensions = PROFILE.map((d) => ({
@@ -369,6 +400,56 @@ describe("scoreTotal", () => {
 // ---------------------------------------------------------------------------
 
 describe("runScoredDraft", () => {
+  it("records what each attempt's calls did on the wire", async () => {
+    // A provider that reports its wire-level cost — the numbers the run
+    // record needs to tell a slow model from a doomed request.
+    class TelemetryProvider extends FakeProvider {
+      override async chat(req: ChatRequest): Promise<ChatResponse> {
+        const r = await super.chat(req);
+        return {
+          ...r,
+          telemetry: {
+            requests: 1,
+            streams: 0,
+            headersTimeoutRetries: 0,
+            reasoningTokens: 0,
+            durationMs: 1234,
+          },
+        };
+      }
+    }
+    const p = new TelemetryProvider([GOOD_ARTICLE, buildPassingRaw(4)]);
+    const r = await runScoredDraft(INPUT, p, null, { minScore: 70 });
+    const attempt = r.attempts[0]!;
+    expect(attempt.providerName).toBe("fake");
+    expect(attempt.telemetry?.requests).toBe(1);
+    expect(attempt.telemetry?.durationMs).toBe(1234);
+    // The judge call is a separate call — it carries its own numbers.
+    expect(attempt.score?.judge?.telemetry?.requests).toBe(1);
+    expect(attempt.score?.judge?.telemetry?.durationMs).toBe(1234);
+  });
+
+  it("names the provider that served each attempt (a failover changes it)", async () => {
+    const gen = new FakeProvider([GOOD_ARTICLE], "fake-gen");
+    const judge = new FakeProvider([buildPassingRaw(4)], "fake-judge");
+    const r = await runScoredDraft(INPUT, gen, null, {
+      minScore: 70,
+      judgeProvider: judge,
+      judgeFallback: null,
+    });
+    expect(r.attempts[0]?.providerName).toBe("fake-gen");
+    expect(r.attempts[0]?.score?.judge?.providerName).toBe("fake-judge");
+  });
+
+  it("asks the judge for no hidden reasoning", async () => {
+    // The judge's reasoning was 91% of its output (measured) — the
+    // scorecard itself is a tenth of the answer.
+    const p = new FakeProvider([GOOD_ARTICLE, buildPassingRaw(4)]);
+    await runScoredDraft(INPUT, p, null, { minScore: 70 });
+    const judgeReq = p.requests[1]!;
+    expect(judgeReq.thinking).toBe("disabled");
+  });
+
   it("accepts the first draft when it meets the bar (1 draft + 1 judge call)", async () => {
     const p = new FakeProvider([GOOD_ARTICLE, buildPassingRaw(4)]);
     const r = await runScoredDraft(INPUT, p, null, { minScore: 70 });
@@ -1031,5 +1112,311 @@ describe("a stray severity label must not discard the whole judgement", () => {
     const parsed = ArticleScoreRawSchema.safeParse(raw);
     expect(parsed.success).toBe(true);
     expect(parsed.success && parsed.data.risk_flags[0]!.severity).toBe("Minor");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// The judge's noise, and the ladder that follows the defects instead of it.
+// ---------------------------------------------------------------------------
+
+describe("mergeScores — averaging the judge's noise", () => {
+  /** Two judgments of the same draft that disagree about one indicator. */
+  const samples = (): ArticleScore[] => {
+    const raw = (a1: number): ArticleScoreRaw => ({
+      dimension_scores: PROFILE.map((d) => ({
+        id: d.id,
+        indicators: d.indicators.map((i) => ({
+          id: i.id,
+          score: i.id === "A1" ? a1 : 4,
+          reason: "ok",
+        })),
+      })),
+      findings: [],
+      risk_flags: [],
+      limitations: [],
+      summary: {
+        strengths: [],
+        main_weaknesses: [],
+        conclusion: "",
+        confidence: 0.5,
+      },
+      comment: "c",
+      suggestions: [],
+    });
+    const one = (a1: number): ArticleScore => {
+      const r = raw(a1);
+      return {
+        profile_id: PROFILE_ID,
+        raw: r,
+        computed: computeScore(r),
+        passing: false,
+        comment: r.comment,
+        suggestions: [],
+        total: computeScore(r).overall_score,
+      };
+    };
+    return [one(2), one(4)];
+  };
+
+  it("averages the per-indicator scores", () => {
+    const merged = mergeScores(samples());
+    const a1 = merged.raw.dimension_scores.find((d) => d.id === "A")!
+      .indicators.find((i) => i.id === "A1")!;
+    expect(a1.score).toBe(3);
+  });
+
+  it("lands between the two judgments' scores", () => {
+    const s = samples();
+    const merged = mergeScores(s);
+    const low = s[0]!.computed.overall_score;
+    const high = s[1]!.computed.overall_score;
+    expect(merged.computed.overall_score).toBeGreaterThan(low);
+    expect(merged.computed.overall_score).toBeLessThan(high);
+  });
+
+  it("is a passthrough for a single sample", () => {
+    const s = samples();
+    expect(mergeScores([s[0]!])).toBe(s[0]);
+  });
+
+  it("sums the token spend of every sample", () => {
+    const s = samples();
+    s[0]!.judge = {
+      providerName: "fake",
+      usage: { input: 10, output: 20 },
+    };
+    s[1]!.judge = {
+      providerName: "fake",
+      usage: { input: 10, output: 20 },
+    };
+    const merged = mergeScores(s);
+    expect(merged.judge?.usage).toEqual({ input: 20, output: 40 });
+  });
+});
+
+describe("defectLoad — the signal the ladder follows", () => {
+  it("counts Critical heavier than Major, and Minor as a whisper", () => {
+    const raw = ArticleScoreRawSchema.parse({
+      dimension_scores: [
+        { id: "A", indicators: [{ id: "A1", score: 3, reason: "" }] },
+      ],
+      findings: [],
+      risk_flags: [],
+      limitations: [],
+    });
+    const base = {
+      profile_id: PROFILE_ID,
+      raw,
+      computed: computeScore(raw),
+      passing: false,
+      comment: "",
+      suggestions: [],
+      total: 0,
+    };
+    const withFinding = (
+      severity: "Critical" | "Major" | "Moderate" | "Minor",
+    ) => ({
+      ...base,
+      raw: {
+        ...raw,
+        findings: [
+          {
+            id: "F-001",
+            code: "LOGIC_GAP",
+            severity,
+            dimension_ids: ["B"],
+            indicator_ids: ["B1"],
+            location: { quote: "q" },
+            description: "d",
+            impact: "",
+            recommendation: "",
+            confidence: 0.5,
+            verification_status: "verified_in_text" as const,
+          },
+        ],
+      },
+    });
+    expect(defectLoad(withFinding("Critical"))).toBeGreaterThan(
+      defectLoad(withFinding("Major")),
+    );
+    expect(defectLoad(withFinding("Major"))).toBeGreaterThan(
+      defectLoad(withFinding("Moderate")),
+    );
+    expect(defectLoad(withFinding("Moderate"))).toBeGreaterThan(
+      defectLoad(withFinding("Minor")),
+    );
+    expect(defectLoad(withFinding("Minor"))).toBeGreaterThan(0);
+    expect(defectLoad(null)).toBe(Number.POSITIVE_INFINITY);
+  });
+});
+
+describe("runScoredDraft — averaging the judge", () => {
+  it("judges the draft twice when asked, and reports the mean", async () => {
+    // The judge rolls 2 and then 4 on A1; the average is 3 — a score
+    // neither roll produced on its own.
+    const p = new FakeProvider([
+      GOOD_ARTICLE,
+      buildRawWithIndicator("A1", 2),
+      buildRawWithIndicator("A1", 4),
+    ]);
+    const r = await runScoredDraft(INPUT, p, null, {
+      minScore: 70,
+      judgeSamples: 2,
+    });
+    // 1 draft + 2 judge calls.
+    expect(p.requests).toHaveLength(3);
+    expect(r.attempts[0]?.score?.judge?.usage.output).toBe(40);
+  });
+
+  it("judges once when the caller asks for one sample", async () => {
+    const p = new FakeProvider([GOOD_ARTICLE, buildPassingRaw(4)]);
+    await runScoredDraft(INPUT, p, null, { minScore: 70, judgeSamples: 1 });
+    expect(p.requests).toHaveLength(2);
+  });
+});
+
+describe("runScoredDraft — the ladder follows the defects, not the dice", () => {
+  const REVISED = JSON.stringify({
+    title: "t",
+    hook: "h",
+    sections: [{ heading: "s", body: "b" }],
+    scenes: [
+      {
+        id: "scene_1",
+        duration: 8,
+        caption: "c",
+        visual: "v",
+        narration: "narration line with a concrete number",
+      },
+    ],
+  });
+  const REVISED_AGAIN = JSON.stringify({
+    title: "t",
+    hook: "h",
+    sections: [{ heading: "s", body: "b" }],
+    scenes: [
+      {
+        id: "scene_1",
+        duration: 8,
+        caption: "c",
+        visual: "v",
+        narration: "narration line with two concrete numbers",
+      },
+    ],
+  });
+
+  it("keeps revising when the defects shrank but the score did not move", async () => {
+    // Attempt 1 scores 60 with a Major finding; the revision downgrades
+    // it to a Minor but the score stays at 60 (the judge's noise). The
+    // old rule read the flat score as a regression and threw the draft
+    // away for a blind rewrite; the new rule sees the defects shrink
+    // and keeps the surgical line alive.
+    const p = new FakeProvider([
+      GOOD_ARTICLE,
+      buildRawWithFinding("Major"), // 60, one Major finding
+      REVISED,
+      buildRawWithFinding("Minor"), // 60, one Minor finding — less bad
+      REVISED_AGAIN, // the next revision (a real change, not a no-op)
+      buildPassingRaw(3),
+    ]);
+    const r = await runScoredDraft(INPUT, p, null, {
+      minScore: 70,
+      maxAttempts: 3,
+    });
+    // It kept revising instead of regenerating on the flat score.
+    expect(r.attempts.map((a) => a.mode)).toStrictEqual([
+      "draft",
+      "revise",
+      "revise",
+    ]);
+  });
+
+  it("still regenerates when neither the defects nor the score improved", async () => {
+    // The revision keeps the same Major finding and the same score.
+    const p = new FakeProvider([
+      GOOD_ARTICLE,
+      buildRawWithFinding("Major"), // 60, one Major finding
+      REVISED,
+      buildRawWithFinding("Major"), // 60, same finding — no progress
+      GOOD_ARTICLE, // regeneration with feedback
+      buildPassingRaw(4), // 80, passes
+    ]);
+    const r = await runScoredDraft(INPUT, p, null, { minScore: 70 });
+    expect(r.attempts.map((a) => a.mode)).toStrictEqual([
+      "draft",
+      "revise",
+      "regenerate",
+    ]);
+  });
+
+  it("the improvement margin is wider than the judge's noise floor", () => {
+    // A gain of 1 point is inside the ±2.5 noise band — it must not
+    // count as progress on its own.
+    expect(IMPROVEMENT_MARGIN).toBeLessThan(2.5);
+  });
+});
+
+describe("the judge's prompt knows the writer's contract", () => {
+  it("states the scene-duration tolerance (±10%) so a small deviation is not a defect", () => {
+    // The drafter is told to land within ±10%; the judge was filing
+    // FORMAT_VIOLATION for a 0.6% miss (477 s against 480 s).
+    expect(ARTICLE_REVIEW_SYSTEM_PROMPT).toContain("±10%");
+    expect(ARTICLE_REVIEW_SYSTEM_PROMPT).toMatch(/not a defect|NOT a defect/i);
+  });
+
+  it("treats the YAML frontmatter as metadata, not content", () => {
+    expect(ARTICLE_REVIEW_SYSTEM_PROMPT).toMatch(/frontmatter/i);
+    expect(ARTICLE_REVIEW_SYSTEM_PROMPT).toMatch(/metadata/i);
+  });
+
+  it("judges a visual line as an art-direction line, not prose", () => {
+    expect(ARTICLE_REVIEW_SYSTEM_PROMPT).toMatch(/ART-DIRECTION/i);
+    expect(ARTICLE_REVIEW_SYSTEM_PROMPT).toMatch(/not prose/i);
+  });
+
+  it("knows the writer must supply a runnable example and a checkable source", () => {
+    expect(ARTICLE_REVIEW_SYSTEM_PROMPT).toMatch(/runnable example/i);
+    expect(ARTICLE_REVIEW_SYSTEM_PROMPT).toMatch(/locator/i);
+  });
+
+  it("uses one rule for when a finding is written (below 4), not two", () => {
+    // The procedure said "non-zero / non-five" while the findings
+    // section said "below 4" — two different rules in one prompt.
+    expect(ARTICLE_REVIEW_SYSTEM_PROMPT).toMatch(/BELOW 4/);
+    expect(ARTICLE_REVIEW_SYSTEM_PROMPT).not.toMatch(/non-zero \/ non-five/);
+  });
+});
+
+describe("the report shows the judge's spread", () => {
+  it("writes the sample scores when the score is an average", () => {
+    const p = new FakeProvider([
+      GOOD_ARTICLE,
+      buildRawWithIndicator("A1", 2),
+      buildRawWithIndicator("A1", 4),
+    ]);
+    const r = runScoredDraft(INPUT, p, null, {
+      minScore: 70,
+      judgeSamples: 2,
+    });
+    return r.then((res) => {
+      const yaml = renderArticleReviewYaml(res, {
+        project: "demo",
+        threshold: 70,
+        language: "zh-CN",
+      });
+      expect(yaml).toContain("judge_samples: 2");
+      expect(yaml).toMatch(/judge_sample_scores: \[/);
+    });
+  });
+
+  it("writes no sample line for a single judgment", async () => {
+    const p = new FakeProvider([GOOD_ARTICLE, buildPassingRaw(4)]);
+    const res = await runScoredDraft(INPUT, p, null, { minScore: 70 });
+    const yaml = renderArticleReviewYaml(res, {
+      project: "demo",
+      threshold: 70,
+      language: "zh-CN",
+    });
+    expect(yaml).not.toContain("judge_samples:");
   });
 });

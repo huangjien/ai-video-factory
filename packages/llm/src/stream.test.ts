@@ -1,5 +1,18 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { chatStream, isHeadersTimeout, stripReasoning } from "./stream.js";
+
+/**
+ * The transport is mocked, not the global `fetch`: the provider layer
+ * goes through `llmFetch` (packages/llm/src/http.ts), which uses the
+ * STANDALONE undici package so the header wait can exceed undici's
+ * 300 s default. A test that stubs `global.fetch` would no longer
+ * intercept anything.
+ */
+const fetchMock = vi.hoisted(() => vi.fn());
+vi.mock("undici", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("undici")>();
+  return { ...actual, fetch: fetchMock };
+});
 
 describe("isHeadersTimeout", () => {
   it("recognizes the undici code at the top level", () => {
@@ -57,20 +70,15 @@ describe("chatStream", () => {
       'data: {"choices":[{"delta":{"content":" world"}}]}\n\n',
       'data: {"choices":[{"delta":{"content":"!"}}]}\n\n',
     ];
-    const original = global.fetch;
-    global.fetch = (async () => okResponse(sseStream(events))) as typeof fetch;
-    try {
-      const r = await chatStream({
-        url: "http://x",
-        headers: { authorization: "Bearer t" },
-        body: { model: "m" },
-        timeoutMs: 1_000,
-      });
-      expect(r.content).toBe("hello world!");
-      expect(r.usage).toEqual({ input: 0, output: 0 });
-    } finally {
-      global.fetch = original;
-    }
+    fetchMock.mockResolvedValue(okResponse(sseStream(events)));
+    const r = await chatStream({
+      url: "http://x",
+      headers: { authorization: "Bearer t" },
+      body: { model: "m" },
+      timeoutMs: 1_000,
+    });
+    expect(r.content).toBe("hello world!");
+    expect(r.usage).toEqual({ input: 0, output: 0 });
   });
 
   it("skips the [DONE] sentinel without raising", async () => {
@@ -78,19 +86,14 @@ describe("chatStream", () => {
       'data: {"choices":[{"delta":{"content":"x"}}]}\n\n',
       "data: [DONE]\n\n",
     ];
-    const original = global.fetch;
-    global.fetch = (async () => okResponse(sseStream(events))) as typeof fetch;
-    try {
-      const r = await chatStream({
-        url: "http://x",
-        headers: {},
-        body: {},
-        timeoutMs: 1_000,
-      });
-      expect(r.content).toBe("x");
-    } finally {
-      global.fetch = original;
-    }
+    fetchMock.mockResolvedValue(okResponse(sseStream(events)));
+    const r = await chatStream({
+      url: "http://x",
+      headers: {},
+      body: {},
+      timeoutMs: 1_000,
+    });
+    expect(r.content).toBe("x");
   });
 
   it("captures the final usage chunk", async () => {
@@ -98,20 +101,15 @@ describe("chatStream", () => {
       'data: {"choices":[{"delta":{"content":"a"}}]}\n\n',
       'data: {"choices":[{"delta":{"content":"b"}}],"usage":{"prompt_tokens":7,"completion_tokens":3}}\n\n',
     ];
-    const original = global.fetch;
-    global.fetch = (async () => okResponse(sseStream(events))) as typeof fetch;
-    try {
-      const r = await chatStream({
-        url: "http://x",
-        headers: {},
-        body: {},
-        timeoutMs: 1_000,
-      });
-      expect(r.content).toBe("ab");
-      expect(r.usage).toEqual({ input: 7, output: 3 });
-    } finally {
-      global.fetch = original;
-    }
+    fetchMock.mockResolvedValue(okResponse(sseStream(events)));
+    const r = await chatStream({
+      url: "http://x",
+      headers: {},
+      body: {},
+      timeoutMs: 1_000,
+    });
+    expect(r.content).toBe("ab");
+    expect(r.usage).toEqual({ input: 7, output: 3 });
   });
 
   it("reports usage 0/0 when the stream never carries a usage frame (the MiniMax no-include_usage gap)", async () => {
@@ -125,20 +123,15 @@ describe("chatStream", () => {
       'data: {"choices":[{"delta":{"content":"hello"}}]}\n\n',
       "data: [DONE]\n\n",
     ];
-    const original = global.fetch;
-    global.fetch = (async () => okResponse(sseStream(events))) as typeof fetch;
-    try {
-      const r = await chatStream({
-        url: "http://x",
-        headers: {},
-        body: {},
-        timeoutMs: 1_000,
-      });
-      expect(r.content).toBe("hello");
-      expect(r.usage).toEqual({ input: 0, output: 0 });
-    } finally {
-      global.fetch = original;
-    }
+    fetchMock.mockResolvedValue(okResponse(sseStream(events)));
+    const r = await chatStream({
+      url: "http://x",
+      headers: {},
+      body: {},
+      timeoutMs: 1_000,
+    });
+    expect(r.content).toBe("hello");
+    expect(r.usage).toEqual({ input: 0, output: 0 });
   });
 
   it("tolerates a malformed frame without sinking the response", async () => {
@@ -146,95 +139,75 @@ describe("chatStream", () => {
       "this is not valid json\n\n",
       'data: {"choices":[{"delta":{"content":"ok"}}]}\n\n',
     ];
-    const original = global.fetch;
-    global.fetch = (async () => okResponse(sseStream(events))) as typeof fetch;
-    try {
-      const r = await chatStream({
-        url: "http://x",
-        headers: {},
-        body: {},
-        timeoutMs: 1_000,
-      });
-      expect(r.content).toBe("ok");
-    } finally {
-      global.fetch = original;
-    }
+    fetchMock.mockResolvedValue(okResponse(sseStream(events)));
+    const r = await chatStream({
+      url: "http://x",
+      headers: {},
+      body: {},
+      timeoutMs: 1_000,
+    });
+    expect(r.content).toBe("ok");
   });
 
   it("sends `Accept: text/event-stream` and `stream: true`", async () => {
     let captured: RequestInit | undefined;
     let url = "";
-    const original = global.fetch;
-    global.fetch = (async (u: string | URL | Request, init?: RequestInit) => {
-      url = String(u);
-      captured = init;
-      return okResponse(
-        sseStream(['data: {"choices":[{"delta":{"content":"x"}}]}\n\n']),
-      );
-    }) as typeof fetch;
-    try {
-      await chatStream({
-        url: "http://x",
-        headers: { "x-k": "1" },
-        body: { model: "m" },
-        timeoutMs: 1_000,
-      });
-      expect(url).toBe("http://x");
-      const req = captured as RequestInit | undefined;
-      expect((req?.headers as Record<string, string> | undefined)?.Accept).toBe(
-        "text/event-stream",
-      );
-      expect(
-        (req?.headers as Record<string, string> | undefined)?.["x-k"],
-      ).toBe("1");
-      const body = JSON.parse(String(req?.body));
-      expect(body.stream).toBe(true);
-      expect(body.model).toBe("m");
-    } finally {
-      global.fetch = original;
-    }
+    fetchMock.mockImplementation(
+      async (u: string | URL | Request, init?: RequestInit) => {
+        url = String(u);
+        captured = init;
+        return okResponse(
+          sseStream(['data: {"choices":[{"delta":{"content":"x"}}]}\n\n']),
+        );
+      },
+    );
+    await chatStream({
+      url: "http://x",
+      headers: { "x-k": "1" },
+      body: { model: "m" },
+      timeoutMs: 1_000,
+    });
+    expect(url).toBe("http://x");
+    const req = captured as RequestInit | undefined;
+    expect((req?.headers as Record<string, string> | undefined)?.Accept).toBe(
+      "text/event-stream",
+    );
+    expect((req?.headers as Record<string, string> | undefined)?.["x-k"]).toBe(
+      "1",
+    );
+    const body = JSON.parse(String(req?.body));
+    expect(body.stream).toBe(true);
+    expect(body.model).toBe("m");
   });
 
   it("throws with `status` when the server returns a non-2xx", async () => {
-    const original = global.fetch;
-    global.fetch = (async () =>
-      errResponse(503, "down for maintenance")) as typeof fetch;
-    try {
-      const err = await chatStream({
-        url: "http://x",
-        headers: {},
-        body: {},
-        timeoutMs: 1_000,
-      }).then(
-        () => null,
-        (e) => e,
-      );
-      expect(err).toBeInstanceOf(Error);
-      expect((err as { status?: number }).status).toBe(503);
-      expect(String(err?.message).slice(0, 30)).toContain("stream API 503");
-    } finally {
-      global.fetch = original;
-    }
+    fetchMock.mockResolvedValue(errResponse(503, "down for maintenance"));
+    const err = await chatStream({
+      url: "http://x",
+      headers: {},
+      body: {},
+      timeoutMs: 1_000,
+    }).then(
+      () => null,
+      (e) => e,
+    );
+    expect(err).toBeInstanceOf(Error);
+    expect((err as { status?: number }).status).toBe(503);
+    expect(String(err?.message).slice(0, 30)).toContain("stream API 503");
   });
 
   it("throws on a body-less 2xx (defends against a misbehaving server)", async () => {
-    const original = global.fetch;
-    global.fetch = (async () =>
-      new Response(null, { status: 200 })) as typeof fetch;
-    try {
-      const err = await chatStream({
-        url: "http://x",
-        headers: {},
-        body: {},
-        timeoutMs: 1_000,
-      }).then(
-        () => null,
-        (e) => e,
-      );
-      expect(String((err as Error).message)).toContain("no body");
-    } finally {
-      global.fetch = original;
-    }
+    fetchMock.mockResolvedValue(new Response(null, { status: 200 }));
+    const err = await chatStream({
+      url: "http://x",
+      headers: {},
+      body: {},
+      timeoutMs: 1_000,
+    }).then(
+      () => null,
+      (e) => e,
+    );
+    expect(String((err as Error).message)).toContain("no body");
   });
 });
 

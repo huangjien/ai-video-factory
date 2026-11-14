@@ -9,16 +9,20 @@ export {
   type Role,
 } from "./config.js";
 export {
+  addTelemetry,
+  emptyTelemetry,
   type ChatError,
   type ChatMessage,
   type ChatRequest,
   type ChatResponse,
   type ChatRole,
   type Provider,
+  type ProviderTelemetry,
   type Usage,
 } from "./provider.js";
 export { withRetry, chatWithFallback } from "./retry.js";
 export { LLM_TIMEOUT_MS } from "./timeout.js";
+export { closeLlmHttp, llmFetch } from "./http.js";
 export { stripReasoning, chatStream, isHeadersTimeout } from "./stream.js";
 export {
   callStructured,

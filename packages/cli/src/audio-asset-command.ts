@@ -66,6 +66,10 @@ async function writeAsset(
 }
 
 export async function runAudioAsset(opts: AudioAssetOptions): Promise<number> {
+  // The run record's duration is the WORK, not the wrapper: a
+  // `duration_ms: 0` in a run record reads as "instant" and
+  // hides the slow call that actually happened.
+  const startedAt = Date.now();
   const cwd = path.resolve(opts.cwd ?? ".");
   const resolvedProject = resolveProjectDir(opts.project, opts.cwd);
   if (!resolvedProject.ok) {
@@ -123,7 +127,7 @@ export async function runAudioAsset(opts: AudioAssetOptions): Promise<number> {
       opts.sfxTag ? `assets/audio-assets/sfx/${opts.sfxTag}.wav` : "",
     ].filter((f) => f.length > 0),
     created_at: new Date().toISOString(),
-    duration_ms: 0,
+    duration_ms: Date.now() - startedAt,
     provider: providerName,
     model: "audio-asset",
     prompt_hash: promptHash,

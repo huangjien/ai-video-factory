@@ -1,6 +1,11 @@
 import { z } from "zod";
-import type { Provider } from "@video/llm";
-import { chatWithFallback, stripReasoning } from "@video/llm";
+import type { Provider, ProviderTelemetry } from "@video/llm";
+import {
+  addTelemetry,
+  chatWithFallback,
+  emptyTelemetry,
+  stripReasoning,
+} from "@video/llm";
 import { loadPrompt } from "@video/prompts";
 import { callDraft, extractBalancedJson, type RawArticle } from "./agent.js";
 import { callRevise, type ResearchNote, type ReviseFinding } from "./revise.js";
@@ -409,10 +414,138 @@ export interface ArticleScore {
   suggestions: string[];
   /** Total computed overall_score (0-100). Convenience field — same as `computed.overall_score`. */
   total: number;
+  /** The overall score of EACH judgment, when more than one was taken.
+   *  The spread is the judge's noise on this draft (measured: ±1.9
+   *  points on one article) — it belongs in the report, because a
+   *  score without it looks more certain than it is. */
+  samples?: number[] | undefined;
   /** Serving judge provider + token spend, stamped by `scoreArticle`
    *  (2026-10-26 cross-model design: judge spend was previously dropped
    *  on the floor, so loop totals under-counted the review cost). */
-  judge?: { providerName: string; usage: { input: number; output: number } };
+  judge?: {
+    providerName: string;
+    usage: { input: number; output: number };
+    /** What the judge call did on the wire — requests, streams,
+     *  discarded header-timeout retries, wall clock. */
+    telemetry?: ProviderTelemetry;
+  };
+}
+
+/** Merge N judgments of the SAME draft into one scorecard.
+ *
+ *  The per-indicator scores are averaged — the engine computes the
+ *  weighted score from them, so averaging there IS averaging the
+ *  score. The findings, comment, suggestions and risk flags come from
+ *  the MEDIAN judgment: the middle one, not the luckiest and not the
+ *  unluckiest. Averaging findings would invent defects no judge raised
+ *  and hide ones they did.
+ *
+ *  The token spend and the wire telemetry are SUMMED: an averaged score
+ *  that hid two calls' worth of cost would be a lie in the run
+ *  record. */
+export function mergeScores(samples: ArticleScore[]): ArticleScore {
+  const first = samples[0];
+  if (first === undefined) throw new Error("mergeScores needs a sample");
+  if (samples.length === 1) return first;
+
+  const sorted = [...samples].sort(
+    (a, b) => a.computed.overall_score - b.computed.overall_score,
+  );
+  const median = sorted[Math.floor((sorted.length - 1) / 2)]!;
+
+  // Per-indicator averages, keyed by dimension then indicator.
+  const dims = new Map<
+    string,
+    Map<string, { sum: number; n: number; reason: string }>
+  >();
+  for (const s of samples) {
+    for (const d of s.raw.dimension_scores) {
+      const inds = dims.get(d.id) ?? new Map();
+      dims.set(d.id, inds);
+      for (const i of d.indicators) {
+        const cur = inds.get(i.id) ?? { sum: 0, n: 0, reason: i.reason };
+        cur.sum += i.score;
+        cur.n += 1;
+        inds.set(i.id, cur);
+      }
+    }
+  }
+  const dimension_scores = [...dims.entries()].map(([id, inds]) => ({
+    id: id as ArticleScoreRaw["dimension_scores"][number]["id"],
+    indicators: [...inds.entries()].map(([iid, v]) => ({
+      id: iid,
+      score: v.sum / v.n,
+      reason: v.reason,
+    })),
+  }));
+
+  const raw: ArticleScoreRaw = {
+    ...median.raw,
+    dimension_scores,
+  };
+  const computed = computeScore(raw);
+  const hasBlocked = raw.risk_flags.some((rf) => rf.severity === "Critical");
+  const { passing } = passesBar(computed, raw.risk_flags, hasBlocked);
+
+  const judge = median.judge
+    ? {
+        providerName: median.judge.providerName,
+        usage: samples.reduce(
+          (sum, s) => ({
+            input: sum.input + (s.judge?.usage.input ?? 0),
+            output: sum.output + (s.judge?.usage.output ?? 0),
+          }),
+          { input: 0, output: 0 },
+        ),
+        ...(samples.some((s) => s.judge?.telemetry !== undefined)
+          ? {
+              telemetry: addTelemetry(
+                undefined,
+                samples.reduce<ProviderTelemetry | undefined>(
+                  (acc, s) => addTelemetry(acc, s.judge?.telemetry),
+                  undefined,
+                ),
+              ),
+            }
+          : {}),
+      }
+    : undefined;
+
+  return {
+    ...median,
+    raw,
+    computed,
+    passing,
+    total: computed.overall_score,
+    // The individual judgments, so the report can show the spread the
+    // average was taken over.
+    samples: samples.map((s) => s.computed.overall_score),
+    ...(judge !== undefined ? { judge } : {}),
+  };
+}
+
+/** How much a revision must move the score to count as progress.
+ *
+ *  The judge's noise on one draft is ±2.5 points (measured: 85.8 /
+ *  88.0 / 88.8 / 90.8 for four judgments of the same article). A gain
+ *  smaller than that is indistinguishable from the dice moving, so
+ *  treating it as progress (or as regression) is reading noise. */
+export const IMPROVEMENT_MARGIN = 1.0;
+
+/** The defect load of a scorecard: Critical findings dominate, then
+ *  Major, then Moderate; Minor findings are a whisper but still count
+ *  as progress.
+ *
+ *  This is the signal the ladder follows instead of the raw score:
+ *  "the defects shrank" is far less noisy than "the number moved". */
+export function defectLoad(score: ArticleScore | null | undefined): number {
+  if (score === null || score === undefined) return Number.POSITIVE_INFINITY;
+  return score.raw.findings.reduce((sum, f) => {
+    if (f.severity === "Critical") return sum + 3;
+    if (f.severity === "Major") return sum + 2;
+    if (f.severity === "Moderate") return sum + 1;
+    return sum + 0.5;
+  }, 0);
 }
 
 // ---------------------------------------------------------------------------
@@ -565,6 +698,21 @@ export async function scoreArticle(
 ): Promise<ArticleScore> {
   const out = await chatWithFallback(provider, fallback ?? null, {
     messages: buildArticleReviewMessages(markdown, channelProfile, task),
+    // No hidden reasoning — and ONLY here.
+    //
+    //  Measured on the 2026-11-13 article (MiniMax-M3): the judge wrote
+    //  119,029 characters, of which 108,846 (91%) were thinking nobody
+    //  reads. 31,916 output tokens and 161 s for a 10,183-character
+    //  scorecard. With thinking off: 1,692 tokens, 9.5 s — and the same
+    //  score (88.4 with reasoning, 88.8 without; four runs without
+    //  reasoning spanned 85.8–90.8, so the spread is the judge's own
+    //  noise, not the reasoning).
+    //
+    //  The DRAFT keeps its reasoning: without it the article comes out
+    //  half-length (19 scenes / 215 s against a 480 s target, versus
+    //  33 scenes / 480 s with reasoning) — the model plans the scene
+    //  budget while it thinks.
+    thinking: "disabled",
   });
   // CS-14: the judge's reasoning block carries a JSON sketch too —
   // extract it from the ANSWER, not from the thinking.
@@ -619,7 +767,13 @@ export async function scoreArticle(
     comment: rawScore.comment,
     suggestions: rawScore.suggestions,
     total: computed.overall_score,
-    judge: { providerName: out.provider, usage: out.response.usage },
+    judge: {
+      providerName: out.provider,
+      usage: out.response.usage,
+      ...(out.response.telemetry !== undefined
+        ? { telemetry: out.response.telemetry }
+        : {}),
+    },
   };
 }
 
@@ -648,6 +802,14 @@ export interface ScoredAttempt {
   scoreError?: string;
   passing: boolean;
   usage: { input: number; output: number };
+  /** Provider that served the GENERATION call — may differ from the
+   *  configured one after a failover. */
+  providerName: string;
+  /** What the generation call did on the wire: HTTP requests issued,
+   *  streams used, header-timeout retries (requests thrown away and
+   *  re-issued), wall clock. The judge's own numbers ride on
+   *  `score.judge.telemetry`. */
+  telemetry?: ProviderTelemetry | undefined;
 }
 
 export interface ScoredDraftResult {
@@ -675,6 +837,26 @@ export interface ScoredDraftOptions {
   minScore?: number;
   /** Total number of draft attempts (not retries). Default 3. */
   maxAttempts?: number;
+  /** How many INDEPENDENT judgments to average per draft.
+   *
+   *  The judge's noise on ONE draft is ±2.5 points — four judgments of
+   *  the same article scored 85.8 / 88.0 / 88.8 / 90.8. A bar of 90
+   *  sits INSIDE that band, so a single judgment cannot tell "this
+   *  draft improved" from "the dice moved", and the loop ended up
+   *  rewriting whole articles hoping for a lucky roll (the 2026-11-13
+   *  run passed on a +7.6 jump from a blind rewrite).
+   *
+   *  Averaging shrinks the spread by √N and turns the score back into a
+   *  usable signal. Two samples cost ~28 s and ~5k tokens — cheap since
+   *  the judge stopped thinking (see the `thinking: "disabled"` request
+   *  in `scoreArticle`).
+   *
+   *  Default 1 — the historical single-judgment behaviour. The CLI asks
+   *  for 2 (`--judge-samples`, default 2): the noise is a property of
+   *  the JUDGE, and the product path is where it has to be averaged
+   *  away. Library callers that want the averaged score pass 2 (or
+   *  more) explicitly. */
+  judgeSamples?: number;
   /** Never regenerate — the seeded article belongs to a human and a
    *  regeneration would replace it wholesale. The draft loop uses a
    *  rewrite as its escape hatch; a revision has no such luxury, so the
@@ -719,8 +901,11 @@ export interface ScoredDraftOptions {
   judgeProvider?: Provider;
   /** Fallback for the judge call. Default: the generator `fallback`. */
   judgeFallback?: Provider | null;
-  /** Progress callback for CLI logging. */
-  onAttempt?: (a: ScoredAttempt, total: number) => void;
+  /** Progress callback for CLI logging. May be async — the loop awaits
+   *  it, so a callback that writes a run record is finished before the
+   *  next attempt starts (a fire-and-forget write would be lost when
+   *  the process exits). */
+  onAttempt?: (a: ScoredAttempt, total: number) => void | Promise<void>;
 }
 
 function feedbackBlock(prev: ScoredAttempt, minScore: number): string {
@@ -804,6 +989,12 @@ export async function runScoredDraft(
     1,
     opts.candidates ?? (input.duration >= 240 ? 2 : 1),
   );
+  // How many independent judgments to average per draft. The judge's
+  // noise on ONE draft is ±2.5 points and the bar sits inside that
+  // band, so a single judgment cannot tell progress from a lucky roll.
+  // Default 1 (the historical single-judgment behaviour); the CLI asks
+  // for 2.
+  const judgeSamples = Math.max(1, opts.judgeSamples ?? 1);
   const judgeProvider = opts.judgeProvider ?? provider;
   const judgeFallback =
     opts.judgeFallback !== undefined ? opts.judgeFallback : fallback;
@@ -817,13 +1008,13 @@ export async function runScoredDraft(
   let attemptNo = 0;
   let round1Count = 0;
 
-  /** Shared judge call with the bounded single retry on parse breakdowns
-   *  (ArticleReviewError) — used by both the draft and revision paths so
-   *  neither can diverge on judge policy. A transient judge formatting
-   *  hiccup used to abort the whole loop (2026-10-24, two confirmed
-   *  occurrences); the retry is fixed at one — deterministic policy, no
-   *  LLM-driven control flow. */
-  const judgeMarkdown = async (
+  /** One judgment of the draft, with the bounded single retry on parse
+   *  breakdowns (ArticleReviewError) — used by both the draft and
+   *  revision paths so neither can diverge on judge policy. A transient
+   *  judge formatting hiccup used to abort the whole loop (2026-10-24,
+   *  two confirmed occurrences); the retry is fixed at one —
+   *  deterministic policy, no LLM-driven control flow. */
+  const judgeOnce = async (
     markdown: string,
   ): Promise<{
     score: ArticleScore | null;
@@ -861,6 +1052,38 @@ export async function runScoredDraft(
       judgeProviderName = score.judge.providerName;
     }
     return { score, scoreError };
+  };
+
+  /** N independent judgments of the same draft, averaged.
+   *
+   *  The per-indicator scores are averaged — the engine computes the
+   *  weighted score from them, so averaging there is averaging the
+   *  score itself. The findings, comment and suggestions come from the
+   *  MEDIAN judgment: the middle one, not the luckiest and not the
+   *  unluckiest. A judgment that broke (parse breakdown) is dropped;
+   *  if none survives, the draft is unreviewed, exactly as before.
+   *
+   *  Every sample's tokens and telemetry are counted — an averaged
+   *  score that hides two calls' worth of spend would be a lie in the
+   *  run record. */
+  const judgeMarkdown = async (
+    markdown: string,
+  ): Promise<{
+    score: ArticleScore | null;
+    scoreError: string | undefined;
+  }> => {
+    const samples: ArticleScore[] = [];
+    let scoreError: string | undefined;
+    for (let sample = 0; sample < judgeSamples; sample++) {
+      const out = await judgeOnce(markdown);
+      if (out.score === null) {
+        scoreError = out.scoreError;
+        continue;
+      }
+      samples.push(out.score);
+    }
+    if (samples.length === 0) return { score: null, scoreError };
+    return { score: mergeScores(samples), scoreError: undefined };
   };
 
   /** Findings a surgical revision can act on: a verbatim quote to
@@ -918,6 +1141,10 @@ export async function runScoredDraft(
         score.passing &&
         score.computed.overall_score >= minScore,
       usage: draft.usage,
+      providerName: draft.providerName,
+      ...(draft.telemetry !== undefined
+        ? { telemetry: draft.telemetry }
+        : {}),
     };
   };
 
@@ -970,6 +1197,8 @@ export async function runScoredDraft(
         score.passing &&
         score.computed.overall_score >= minScore,
       usage: rev.usage,
+      providerName: rev.providerName,
+      ...(rev.telemetry !== undefined ? { telemetry: rev.telemetry } : {}),
     };
   };
 
@@ -1081,9 +1310,12 @@ export async function runScoredDraft(
           score.passing &&
           score.computed.overall_score >= minScore,
         usage: { input: 0, output: 0 },
+        // The seed is an article that already existed — no generation
+        // call was made for it, so there is no provider to name.
+        providerName: provider.name,
       };
       attempts.push(attempt);
-      opts.onAttempt?.(attempt, maxAttempts);
+      await opts.onAttempt?.(attempt, maxAttempts);
       if (score === null) break; // judge broke — no basis to iterate
       if (attempt.passing) break; // the seed already clears the bar
       if (seed.findings.length === 0) {
@@ -1110,25 +1342,45 @@ export async function runScoredDraft(
         continue;
       }
       attempts.push(rev);
-      opts.onAttempt?.(rev, maxAttempts);
+      await opts.onAttempt?.(rev, maxAttempts);
       if (rev.score === null) break; // judge broke — no basis to iterate
       if (rev.passing) break;
       if (attempts.length >= maxAttempts) break;
       const baseScore = reviseBase?.score?.computed.overall_score ?? -1;
-      if (rev.score.computed.overall_score > baseScore) {
-        // Still climbing — keep refining this lineage.
+      const gained = rev.score.computed.overall_score - baseScore;
+      const baseLoad = defectLoad(reviseBase?.score);
+      const revLoad = defectLoad(rev.score);
+      // Progress is "the defects shrank" OR "the score moved by more
+      // than the noise". The old test — "did the score go up?" — read
+      // the dice: a revision that genuinely improved by one point
+      // looked like a regression, and the loop threw the draft away
+      // for a blind rewrite that might roll higher (2026-11-13: the
+      // run passed on a +7.6 jump from exactly such a rewrite).
+      const improved =
+        gained > IMPROVEMENT_MARGIN ||
+        (Number.isFinite(baseLoad) && revLoad < baseLoad);
+      if (improved) {
+        // Still working — keep refining this lineage. A surgical
+        // revision preserves the prose that already passed; a blind
+        // rewrite throws it away.
         const nextFindings = quotableFindings(rev.score, rev.raw);
         if (nextFindings.length === 0) {
+          // The defects are gone but the score is still short — the
+          // judge found nothing left to grip. The escape hatch is the
+          // blind rewrite, and it carries the BEST attempt's feedback:
+          // the drafter needs to know what was wrong with the article,
+          // not only how low it scored.
           if (opts.noRegenerate === true) break;
           mode = "regenerate";
-          feedback = feedbackBlock(rev, minScore);
+          feedback = feedbackBlock(bestSoFar(), minScore);
         } else {
           reviseBase = await prepareRevision(rev, nextFindings);
         }
       } else {
-        // Revision plateaued or regressed — escape via regeneration.
-        // A seeded revision stops instead: the article on disk is the
-        // human's, and the best candidate is kept.
+        // Nothing improved: the defects did not shrink and the score
+        // did not move beyond the noise. Now a blind rewrite is the
+        // honest escape — and with averaged scores its luck is diluted
+        // too.
         if (opts.noRegenerate === true) break;
         mode = "regenerate";
         feedback = feedbackBlock(bestSoFar(), minScore);
@@ -1153,7 +1405,7 @@ export async function runScoredDraft(
       throw (settled[0] as PromiseRejectedResult).reason;
     attempts.push(...fulfilled);
     if (round === 1) round1Count = fulfilled.length;
-    for (const e of fulfilled) opts.onAttempt?.(e, maxAttempts);
+    for (const e of fulfilled) await opts.onAttempt?.(e, maxAttempts);
 
     const roundBest = fulfilled.reduce(betterScore, fulfilled[0]!);
 
@@ -1236,6 +1488,16 @@ export function renderArticleReviewYaml(
     `attempts_used: ${result.attempts.length}`,
     `passing: ${result.passing}`,
   ];
+  // The judge's spread on the winning draft: the score is the MEAN of
+  // these judgments, and a report that hides the spread makes a noisy
+  // score look certain.
+  const sampleScores = result.score?.samples ?? [];
+  if (sampleScores.length > 1) {
+    lines.push(
+      `judge_samples: ${sampleScores.length}`,
+      `judge_sample_scores: [${sampleScores.join(", ")}]`,
+    );
+  }
   if (result.score) {
     lines.push(
       `final_overall: ${result.score.computed.overall_score}`,

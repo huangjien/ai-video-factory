@@ -1,10 +1,11 @@
 import { describe, expect, it, beforeAll, afterAll, vi } from "vitest";
 import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
-import { mkdtemp, mkdir, rm, writeFile, readFile } from "node:fs/promises";
+import { mkdtemp, mkdir, rm, writeFile, readFile, readdir } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { initState, writeProjectState } from "@video/workflow";
+import { parse as parseYaml } from "yaml";
+import { initState, writeProjectState, type RunRecord } from "@video/workflow";
 import type { Provider } from "@video/llm";
 import {
   frontmatterValue,
@@ -663,5 +664,44 @@ describe("runDraft — the title card style stamp", () => {
       "utf8",
     );
     expect(article).toContain("title_style: brush");
+  }, 20_000);
+});
+
+describe("runDraft — run records", () => {
+  it("writes one run record per model call, with the wire telemetry", async () => {
+    const proj = path.join(projectsRoot, "projects", "dr-runs");
+    await mkdir(proj, { recursive: true });
+    await writeProjectState(proj, initState("dr-runs"));
+    const code = await runDraft({
+      topic: "dr-runs",
+      cwd: projectsRoot,
+      model: "glm",
+      noWeb: true,
+      noReview: true,
+      noAudioPlan: true,
+    });
+    expect(code).toBe(0);
+
+    const runsDir = path.join(proj, "runs");
+    const files = (await readdir(runsDir)).filter((f) => f.endsWith(".yaml"));
+    expect(files.length).toBeGreaterThan(0);
+    const records = await Promise.all(
+      files.map(async (f) =>
+        parseYaml(await readFile(path.join(runsDir, f), "utf8")) as RunRecord,
+      ),
+    );
+    const draft = records.find((r) => r.stage === "draft");
+    expect(draft).toBeDefined();
+    expect(draft?.provider).toBe("glm");
+    expect(draft?.model).toBe("glm-5.3");
+    expect(draft?.tokens).toEqual({ input: 5, output: 7 });
+    // The point of the record: what the call did on the wire.
+    expect(draft?.telemetry?.requests).toBe(1);
+    expect(draft?.telemetry?.streams).toBe(0);
+    expect(draft?.telemetry?.headers_timeout_retries).toBe(0);
+    // A MEASURED duration, not a constant: the fake server can answer
+    // inside one millisecond, so 0 is a legitimate measurement here.
+    expect(typeof draft?.duration_ms).toBe("number");
+    expect(draft?.duration_ms).toBeGreaterThanOrEqual(0);
   }, 20_000);
 });

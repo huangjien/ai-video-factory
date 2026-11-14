@@ -99,11 +99,23 @@ As a general guideline for natural narration:
 - English: approximately 130-155 spoken words per minute
 - Chinese: approximately 220-300 Chinese characters per minute
 
-Use the requested duration_target_sec to determine the approximate narration volume.
+Use the requested duration_target_sec to determine the narration volume.
 
-The generated narration should normally occupy approximately 55-70% of the available video duration, allowing room for natural pauses, transitions, visual beats, and editing. Generate content that is slightly shorter than the target so we never have to pad.
+THE NARRATION IS THE FILM. Every scene's duration is re-timed to its
+measured speech, so the finished film lasts exactly as long as the
+narration does — the durations you declare are a plan, not a floor.
+Write narration whose SPEECH TIME equals duration_target_sec: at the
+rate above that is 220-300 characters per minute times the duration in
+minutes (1,760-2,400 Chinese characters for a 480-second film, 660-900
+for 180 seconds). Aim for the middle-to-upper part of that range:
+writing 30% under the target produces a film 30% shorter than the one
+that was asked for.
 
-Do not artificially inflate length with filler.
+Each scene's declared duration should match the length of its own
+narration, so the plan and the speech agree.
+
+Do not artificially inflate length with filler. Do not under-write
+either.
 
 5. SECTIONS
 
@@ -181,6 +193,11 @@ Narration must:
 - avoid unnecessary parenthetical expressions
 - avoid dense lists unless the list itself is important
 - use natural transitions between scenes
+- fit the caption safe area: the burned caption IS this narration, and
+  it may wrap to at most 4 lines of 24 units (a CJK character is 1 unit,
+  ASCII half a unit) — so keep a scene's narration under about 90 CJK
+  characters. A longer one makes `video make` fail with a caption
+  overflow, and the film never renders.
 
 The narration should be written for speech, not for reading.
 
@@ -602,7 +619,65 @@ The complete set of scenes must cover the complete article.
 
 No major section should exist only in sections without corresponding scene narration.
 
-21. JSON VALIDITY
+21. RUNNABLE EXAMPLES, ONE NAME PER CONCEPT, SOURCES, CALIBRATION
+
+These rules exist because the quality judge files the same findings
+against drafts that were never asked for these things. They are not
+style preferences; they are the contract the judge scores against.
+
+A. RUNNABLE EXAMPLE
+
+When the article defines a PROTOCOL, SCHEMA, INTERFACE, CONFIGURATION,
+or FRAMEWORK — anything the reader is meant to implement, parse, or
+call — give ONE concrete, copy-pasteable example: a filled-in JSON or
+YAML instance, or a short code snippet, with the field names AND their
+types, plus one sentence on what happens when validation fails (which
+field is rejected, and what the runtime does next).
+
+A field LIST is not an example. "六个字段" is a list; a YAML block with
+values, types, and a failure rule is an example.
+
+B. ONE NAME PER CONCEPT
+
+Every concept keeps ONE name for the whole article — prose, tables,
+code blocks, and scene narration. If a second term is genuinely needed
+(a general concept and its specialization), say so in one sentence:
+"Objective 是 Goal 的可验收表达". Never let the prose say "Goal" and
+the example block say "Objective" without that sentence.
+
+C. THE NARRATION IS NOT A SECOND COPY
+
+A scene's narration carries what the viewer must HEAR, not a
+restatement of the section it came from. When a scene does mention a
+list, a rule set, or a set of components, it must match the prose
+exactly: same items, same names, no additions, no omissions. If the
+prose lists five components, a scene that lists components lists all
+five. If the prose says "默认禁止", a scene that says "禁止" is not
+contradicting it — but a scene that says "需要审批" IS.
+
+D. SOURCES
+
+For a named external work, standard, doctrine, paper, or product, give
+a locator a reader can check: title plus version, edition, chapter,
+section, or the official URL. When the article maps an external idea
+onto its own domain, MARK THE MAPPING AS THE AUTHOR'S ("本文把 X 归纳
+为…"), so it is not read as a claim about the source itself.
+
+E. CALIBRATED CLAIMS
+
+Do not write absolutes the evidence cannot carry. Prefer "很难" /
+"通常" / "在…的情况下" over "不可能" / "必然" / "永远", and "会限制"
+over "会变成". An absolute ("必然", "不可能", "完全", "always",
+"never", "every") needs evidence that supports it; when it does not,
+soften it.
+
+F. NO DANGLING PRONOUNS
+
+"它", "他", "这", "该" must have exactly one plausible antecedent in
+the same sentence. When in doubt, name the referent: "Agent 必须理解
+任务、认清边界" instead of "它必须理解任务".
+
+22. JSON VALIDITY
 
 Output JSON ONLY.
 
@@ -623,7 +698,7 @@ Escape internal double quotes correctly.
 
 Do not use trailing commas.
 
-22. FINAL VALIDATION BEFORE OUTPUT
+23. FINAL VALIDATION BEFORE OUTPUT
 
 Before producing the final JSON, silently verify all of the following:
 
@@ -643,7 +718,12 @@ Before producing the final JSON, silently verify all of the following:
 14. Scene order follows the article structure.
 15. The article contains sufficient information for the target duration.
 16. Scene durations add up to duration_target_sec ± 10% (the LLM is asked to produce content shorter than the target so we never pad; this is the tolerance).
-17. No unsupported facts have been invented.
-18. The ending provides genuine closure.
-19. There is no obvious filler.
-20. The output contains JSON and nothing else.
+17. No unsupported facts have been invented, and every named external source carries a checkable locator.
+18. Every protocol, schema, interface, or configuration the article defines has ONE runnable example with types and a failure rule.
+19. Every concept has ONE name, and every scene that mentions a list or a rule set matches the prose exactly.
+20. No absolute claim ("必然", "不可能", "完全", "always", "never") that the evidence does not support.
+21. No pronoun without exactly one plausible antecedent.
+22. The ending provides genuine closure.
+23. There is no obvious filler.
+24. Every scene's narration fits the caption safe area — at most 4 lines of 24 units (about 90 CJK characters).
+25. The output contains JSON and nothing else.

@@ -109,4 +109,47 @@ describe("MiniMaxProvider (todo 2) — platform.minimax.io docs", () => {
     const body = JSON.parse(lastBody ?? "{}");
     expect(body.model).toBe("MiniMax-M3");
   });
+
+  it("turns the model's reasoning off when the request asks for it", async () => {
+    // The judge asked for no thinking: MiniMax-M3 then skips the
+    // reasoning entirely (platform.minimax.io — "Thinking Control"),
+    // which is where 91% of the judge's output tokens used to go.
+    process.env["MINIMAX_API_KEY"] = "test-key";
+    const p = new MiniMaxProvider({ apiHost: baseUrl });
+    await p.chat({ ...baseReq, thinking: "disabled" });
+    const body = JSON.parse(lastBody ?? "{}");
+    expect(body.thinking).toEqual({ type: "disabled" });
+  });
+
+  it("sends no thinking field when the request does not ask", async () => {
+    process.env["MINIMAX_API_KEY"] = "test-key";
+    const p = new MiniMaxProvider({ apiHost: baseUrl });
+    await p.chat(baseReq);
+    const body = JSON.parse(lastBody ?? "{}");
+    expect(body).not.toHaveProperty("thinking");
+  });
+
+  it("records how many output tokens went into reasoning", async () => {
+    process.env["MINIMAX_API_KEY"] = "test-key";
+    responseBody = {
+      choices: [
+        { message: { content: "hello" }, index: 0, finish_reason: "stop" },
+      ],
+      usage: {
+        prompt_tokens: 12,
+        completion_tokens: 7,
+        completion_tokens_details: { reasoning_tokens: 900 },
+      },
+    };
+    const p = new MiniMaxProvider({ apiHost: baseUrl });
+    const r = await p.chat(baseReq);
+    expect(r.telemetry?.reasoningTokens).toBe(900);
+    responseBody = {
+      id: "x",
+      choices: [
+        { message: { content: "hello" }, index: 0, finish_reason: "stop" },
+      ],
+      usage: { prompt_tokens: 12, completion_tokens: 7 },
+    };
+  });
 });

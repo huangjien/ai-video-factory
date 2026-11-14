@@ -1,4 +1,4 @@
-import type { Provider } from "@video/llm";
+import type { Provider, ProviderTelemetry } from "@video/llm";
 import { callStructured, extractReplyBody } from "@video/llm";
 import { parse as parseYaml } from "yaml";
 import { buildMessages, type AudioPlanInput } from "./prompt.js";
@@ -29,6 +29,9 @@ export interface CallAudioPlanResult {
   /** Name of the provider that actually served the request
    * (primary or its fallback, per `chatWithFallback`). */
   providerName: string;
+  /** What the call did on the wire — requests, streams, discarded
+   *  header-timeout retries, wall clock. */
+  telemetry: ProviderTelemetry;
 }
 
 /** Render AudioConfig to YAML — keys in a stable order, comments off by default. */
@@ -110,5 +113,6 @@ export async function callAudioPlan(
     yaml: renderAudioConfig(r.data),
     usage: r.usage,
     providerName: r.providerName,
+    telemetry: r.telemetry,
   };
 }

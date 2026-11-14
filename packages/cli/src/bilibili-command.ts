@@ -76,6 +76,10 @@ function extractHook(proseBody: string): string {
 }
 
 export async function runBilibili(opts: BilibiliOptions): Promise<number> {
+  // The run record's duration is the WORK, not the wrapper: a
+  // `duration_ms: 0` in a run record reads as "instant" and
+  // hides the slow call that actually happened.
+  const startedAt = Date.now();
   const cwd = path.resolve(opts.cwd ?? ".");
   const resolved = resolveProjectDir(opts.project, opts.cwd);
   if (!resolved.ok) {
@@ -195,7 +199,7 @@ export async function runBilibili(opts: BilibiliOptions): Promise<number> {
       "bilibili/CHECKLIST.md",
     ],
     created_at: new Date().toISOString(),
-    duration_ms: 0,
+    duration_ms: Date.now() - startedAt,
     provider: result.providerName ?? chosenName,
     model: result.providerName ?? chosenName,
     prompt_hash: sha256OfMessages(result.messages),

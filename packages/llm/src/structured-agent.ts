@@ -1,5 +1,10 @@
 import { parse as parseYaml } from "yaml";
-import type { ChatMessage, Provider } from "./provider.js";
+import type {
+  ChatMessage,
+  Provider,
+  ProviderTelemetry,
+} from "./provider.js";
+import { addTelemetry, emptyTelemetry } from "./provider.js";
 import { chatWithFallback } from "./retry.js";
 import { stripReasoning } from "./stream.js";
 
@@ -37,6 +42,8 @@ export type SafeParseResult<T> =
 export interface StructuredAgentResult<T> {
   data: T;
   usage: { input: number; output: number };
+  /** What the calls did on the wire — summed across attempts. */
+  telemetry: ProviderTelemetry;
   /** Name of the provider that actually served the request
    * (primary or its fallback, per `chatWithFallback`). */
   providerName: string;
@@ -91,17 +98,21 @@ export interface StructuredCallOptions<T> {
   onFailure?:
     | ((errors: Error[], providerName: string, attempts: number) => Error)
     | undefined;
-  /** Extra ChatRequest fields (model / temperature / response_format). */
+  /** Extra ChatRequest fields (model / temperature / response_format /
+   *  thinking). */
   request?: {
     model?: string;
     temperature?: number;
     response_format?: { type: "json_object" | "text" };
+    thinking?: "enabled" | "disabled";
   };
 }
 
 export interface StructuredCallResult<T> {
   data: T;
   usage: { input: number; output: number };
+  /** What the calls did on the wire — summed across attempts. */
+  telemetry: ProviderTelemetry;
   providerName: string;
   /** The messages the call started from. */
   messages: ChatMessage[];
@@ -127,6 +138,7 @@ export async function callStructured<T>(
   let attemptProvider = opts.provider;
   let attemptFallback = opts.fallback ?? null;
   let usage = { input: 0, output: 0 };
+  let telemetry = emptyTelemetry();
   let made = 0;
   let providerName = opts.provider.name;
   const errors: Error[] = [];
@@ -143,16 +155,21 @@ export async function callStructured<T>(
       ...(opts.request?.response_format !== undefined
         ? { response_format: opts.request.response_format }
         : {}),
+      ...(opts.request?.thinking !== undefined
+        ? { thinking: opts.request.thinking }
+        : {}),
     });
     made = attempt + 1;
     providerName = out.provider;
     usage.input += out.response.usage.input;
     usage.output += out.response.usage.output;
+    telemetry = addTelemetry(telemetry, out.response.telemetry);
     try {
       const data = opts.parse(out.response.content, out.provider);
       return {
         data,
         usage,
+        telemetry,
         providerName: out.provider,
         messages: original,
         attempts: made,
@@ -208,6 +225,7 @@ export async function callStructuredAgent<T>(opts: {
   return {
     data: r.data,
     usage: r.usage,
+    telemetry: r.telemetry,
     providerName: r.providerName,
     messages: r.messages,
   };

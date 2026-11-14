@@ -1,10 +1,10 @@
 case: critical-finding-blocks-passing
 agent: article-review
-prompt_hash: sha256:9998856bd26bef0789535950158d023b71b00179d3c6affd40991807ec1dec1f
+prompt_hash: sha256:60067d1c60d0116b2b62d21c65ea1c43add36685bb0b669c93aa861b857d933c
 messages:
   - role: system
-    bytes: 11075
-    content_sha256: sha256:123265280a9304c7df1000b28bfea889fa53a35027e7045e8841944ec3ea9074
+    bytes: 14244
+    content_sha256: sha256:08da4e6d3e5cf6d0f7d58a1651f60a44653dd2dfc3c974e684b794a3d24b0baf
     blocks:
       - § A. Content Quality — weight 15
       - "Finding codes:"

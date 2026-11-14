@@ -26,13 +26,43 @@ export interface RunRecord {
   prompt_hash?: string | undefined;
   tokens?: { input: number; output: number } | undefined;
   estimated_cost_usd?: number | undefined;
+  /** Wire-level detail for a run that made model calls.
+   *
+   *  `headers_timeout_retries` is the field that earns its keep: it
+   *  counts requests the CLIENT threw away (the server took longer than
+   *  undici's default 300 s to send headers) and had to re-issue. A
+   *  run with that number above zero paid twice for one answer. */
+  telemetry?: {
+    requests: number;
+    streams: number;
+    headers_timeout_retries: number;
+    /** Output tokens the model spent THINKING rather than answering.
+     *  On a reasoning model this is usually the majority of the output —
+     *  the article judge's 91%. */
+    reasoning_tokens: number;
+  } | undefined;
 }
 
+/** Monotonic suffix for run ids written in the same second.
+ *
+ *  The suffix used to be random, so two runs written inside the same
+ *  second had no order between them — `listRuns` sorted by
+ *  `created_at` alone, and `lastSuccessfulStage` (the resume path)
+ *  could then return the WRONG stage. A counter keeps the write
+ *  order. */
+let runSeq = 0;
+
 export function formatRunId(stage: string, now = new Date()): string {
-  const seq = Math.floor(Math.random() * 1000)
-    .toString()
-    .padStart(3, "0");
+  runSeq = (runSeq + 1) % 1000;
+  const seq = runSeq.toString().padStart(3, "0");
   return `${stage}-${now.toISOString().replace(/\.\d+Z$/, "Z")}-${seq}`;
+}
+
+/** The order of two run ids written in the same second — the trailing
+ *  counter. Falls back to the whole id when it has no counter. */
+function seqOf(runId: string): number {
+  const m = /-(\d{3})$/.exec(runId);
+  return m === null ? -1 : Number(m[1]);
 }
 
 export async function writeRun(
@@ -57,7 +87,13 @@ export async function listRuns(projectRoot: string): Promise<RunRecord[]> {
       const text = await readFile(path.join(dir, e), "utf8");
       records.push(parseYaml(text) as RunRecord);
     }
-    return records.sort((a, b) => a.created_at.localeCompare(b.created_at));
+    return records.sort((a, b) => {
+      const byTime = a.created_at.localeCompare(b.created_at);
+      // Same millisecond: the write order is the run id's counter.
+      if (byTime !== 0) return byTime;
+      const bySeq = seqOf(a.run_id) - seqOf(b.run_id);
+      return bySeq !== 0 ? bySeq : a.run_id.localeCompare(b.run_id);
+    });
   } catch (err) {
     if ((err as NodeJS.ErrnoException).code === "ENOENT") return [];
     throw err;

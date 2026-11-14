@@ -1,10 +1,10 @@
 case: perfect-draft-grade-a
 agent: article-review
-prompt_hash: sha256:01e99794c45c82996cc3cec6ea26676e77fcf8bf8109d53109123a385a03fe7e
+prompt_hash: sha256:569d0c7badd780d4f432651774de8cf7433d12ba7e7610f7f0fb6a89f260b6c2
 messages:
   - role: system
-    bytes: 11075
-    content_sha256: sha256:123265280a9304c7df1000b28bfea889fa53a35027e7045e8841944ec3ea9074
+    bytes: 14244
+    content_sha256: sha256:08da4e6d3e5cf6d0f7d58a1651f60a44653dd2dfc3c974e684b794a3d24b0baf
     blocks:
       - § A. Content Quality — weight 15
       - "Finding codes:"

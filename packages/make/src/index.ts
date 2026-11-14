@@ -1638,7 +1638,14 @@ async function runRenderPreview(
   for (const warning of outcome.warnings) console.warn(warning);
   if (!outcome.ok) {
     for (const line of outcome.lines) console.error(line);
-    throw new Error(outcome.error !== "" ? outcome.error : "preview failed");
+    // The reason may live in the LINES (the storyboard approval gate
+    // does) rather than in `error` — a step that reports "preview
+    // failed" and nothing else sends the operator hunting.
+    const reason =
+      outcome.error !== ""
+        ? outcome.error
+        : (outcome.lines[0] ?? "preview failed");
+    throw new Error(reason);
   }
   return outcome.outputs;
 }

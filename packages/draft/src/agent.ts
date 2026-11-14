@@ -1,4 +1,4 @@
-import type { Provider } from "@video/llm";
+import type { Provider, ProviderTelemetry } from "@video/llm";
 import {
   callStructured,
   extractBalancedJson as extractBalancedJsonImpl,
@@ -38,6 +38,9 @@ export interface CallDraftResult {
   /** Name of the provider that actually served the request
    * (primary or its fallback, per `chatWithFallback`). */
   providerName: string;
+  /** What the call did on the wire — requests, streams, discarded
+   *  header-timeout retries, wall clock. */
+  telemetry: ProviderTelemetry;
 }
 
 export interface RawArticle {
@@ -107,7 +110,7 @@ export async function callDraft(
     },
   });
   const markdown = renderArticleMd(input, r.data);
-  return { markdown, raw: r.data, usage: r.usage, providerName: r.providerName };
+  return { markdown, raw: r.data, usage: r.usage, providerName: r.providerName, telemetry: r.telemetry };
 }
 
 /** Compose article.md from a structured RawArticle — guaranteed shape; the

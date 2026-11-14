@@ -59,6 +59,10 @@ function safeGitHead(cwd: string): string {
 }
 
 export async function runStoryboard(opts: StoryboardOptions): Promise<number> {
+  // The run record's duration is the WORK, not the wrapper: a
+  // `duration_ms: 0` in a run record reads as "instant" and
+  // hides the slow call that actually happened.
+  const startedAt = Date.now();
   const cwd = path.resolve(opts.cwd ?? ".");
   const slug = slugifyProjectName(opts.topic);
   const projectRoot = path.join(cwd, "projects", slug);
@@ -181,7 +185,7 @@ export async function runStoryboard(opts: StoryboardOptions): Promise<number> {
     input_files: [],
     output_files: ["storyboard/storyboard.yaml"],
     created_at: new Date().toISOString(),
-    duration_ms: 0,
+    duration_ms: Date.now() - startedAt,
     provider: result.providerName,
     model: servedModel,
     prompt_hash: sha256OfMessages(result.messages),

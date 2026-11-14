@@ -351,3 +351,45 @@ describe("draftCliOptsToDraftOptions — --ask/--no-ask folding", () => {
     expect("noAsk" in bare).toBe(false);
   });
 });
+
+describe("draftCliOptsToDraftOptions — --judge-samples", () => {
+  it("passes the judge's sample count through", () => {
+    const program = new Command();
+    registerDraft(program);
+    const draft = program.commands.find((c) => c.name() === "draft");
+    if (!draft) throw new Error("draft command not registered");
+    draft.parseOptions(["e2e-check", "--judge-samples", "3"]);
+    const cli = draft.opts() as Parameters<
+      typeof draftCliOptsToDraftOptions
+    >[0];
+    expect(cli.judgeSamples).toBe(3);
+    expect(draftCliOptsToDraftOptions(cli)).toMatchObject({
+      judgeSamples: 3,
+    });
+  });
+
+  it("leaves the count unset when the flag is absent", () => {
+    // The default lives in runDraft (2 samples), not in the flag
+    // mapping — an absent flag must not pin the count to 1.
+    const mapped = draftCliOptsToDraftOptions({});
+    expect(mapped.judgeSamples).toBeUndefined();
+  });
+});
+
+describe("draftCliOptsToDraftOptions — --candidates", () => {
+  it("passes the candidate count through", () => {
+    // The flag was registered but never mapped — every long film ran
+    // the auto default (2 parallel candidates = 2× the generation
+    // spend) no matter what the user asked for.
+    const program = new Command();
+    registerDraft(program);
+    const draft = program.commands.find((c) => c.name() === "draft");
+    if (!draft) throw new Error("draft command not registered");
+    draft.parseOptions(["e2e-check", "--candidates", "1"]);
+    const cli = draft.opts() as Parameters<
+      typeof draftCliOptsToDraftOptions
+    >[0];
+    expect(cli.candidates).toBe(1);
+    expect(draftCliOptsToDraftOptions(cli)).toMatchObject({ candidates: 1 });
+  });
+});

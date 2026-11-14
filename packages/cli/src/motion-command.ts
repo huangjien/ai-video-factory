@@ -111,6 +111,10 @@ export interface MotionOptions {
 }
 
 export async function runMotion(opts: MotionOptions): Promise<number> {
+  // The run record's duration is the WORK, not the wrapper: a
+  // `duration_ms: 0` in a run record reads as "instant" and
+  // hides the slow call that actually happened.
+  const startedAt = Date.now();
   const resolved = resolveProjectDir(opts.project, opts.cwd);
   if (!resolved.ok) {
     console.error(resolved.message);
@@ -310,7 +314,7 @@ export async function runMotion(opts: MotionOptions): Promise<number> {
     input_files: [STORYBOARD_REL],
     output_files: [STORYBOARD_REL],
     created_at: new Date().toISOString(),
-    duration_ms: 0,
+    duration_ms: Date.now() - startedAt,
     provider: opts.baseline
       ? "baseline"
       : providerNames.size === 1

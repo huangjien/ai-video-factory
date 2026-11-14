@@ -101,4 +101,12 @@ if (process.argv.length <= 2) {
   program.help({ error: false });
 }
 
-await program.parseAsync(process.argv);
+try {
+  await program.parseAsync(process.argv);
+} finally {
+  // Close the shared LLM connection pool (packages/llm/src/http.ts).
+  // An idle pooled socket can otherwise hold the event loop open and
+  // delay the exit by a second or two.
+  const { closeLlmHttp } = await import("@video/llm");
+  await closeLlmHttp();
+}

@@ -2,32 +2,32 @@ schema: prompt-evals-report/1
 cases:
   - case: critical-finding-blocks-passing
     agent: article-review
-    prompt_hash: sha256:9998856bd26bef0789535950158d023b71b00179d3c6affd40991807ec1dec1f
+    prompt_hash: sha256:60067d1c60d0116b2b62d21c65ea1c43add36685bb0b669c93aa861b857d933c
     structural: pass
     judged: skipped
   - case: missing-h-flagged
     agent: article-review
-    prompt_hash: sha256:0dec96a385691d088b73bc3ed5d0c53ad28813bdf65c236f8bcc7eb1864480d4
+    prompt_hash: sha256:26e13880dca6ca15b0da9777a529fecd711f76f8c133b69b42c612da2456ee35
     structural: pass
     judged: skipped
   - case: perfect-draft-grade-a
     agent: article-review
-    prompt_hash: sha256:01e99794c45c82996cc3cec6ea26676e77fcf8bf8109d53109123a385a03fe7e
+    prompt_hash: sha256:569d0c7badd780d4f432651774de8cf7433d12ba7e7610f7f0fb6a89f260b6c2
     structural: pass
     judged: skipped
   - case: feedback-revision-addresses-web-context
     agent: draft
-    prompt_hash: sha256:2f088604a0e93407354aab79e27121768b7d82d7e8e3b5371763656db2496fa6
+    prompt_hash: sha256:be280b2e1ae5d641da0f41ea45eed720a117c284c2e3cd3c52b8316a7194751b
     structural: pass
     judged: skipped
   - case: history-topic-opens-with-tension
     agent: draft
-    prompt_hash: sha256:4ef17d4c98b3d63db8ff6efd99fac10c4d20d90d426b2771e8be81adf6b6228d
+    prompt_hash: sha256:36120b235d965f83e45f85523ff535f2274d6977c76f5679a4f310fe0dbaf36f
     structural: pass
     judged: skipped
   - case: user-idea-seed-preserved
     agent: draft
-    prompt_hash: sha256:e38e2b5688ed37f91f8ca88f376da4296cfc8f3cd3dcb6e7902a9623bee21886
+    prompt_hash: sha256:a7a96533aca95b3ba325870166830d514a1351c5d688e8cc39e006045c4f7e49
     structural: pass
     judged: skipped
   - case: era-poor-scene-stays-in-tang

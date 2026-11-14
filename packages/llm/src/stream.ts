@@ -1,4 +1,5 @@
 import type { ChatResponse, Usage } from "./provider.js";
+import { llmFetch } from "./http.js";
 
 /**
  * Streaming chat, for requests the server would otherwise buffer.
@@ -61,7 +62,7 @@ export async function chatStream(opts: {
   body: Record<string, unknown>;
   timeoutMs: number;
 }): Promise<ChatResponse> {
-  const res = await fetch(opts.url, {
+  const res = await llmFetch(opts.url, {
     method: "POST",
     headers: { ...opts.headers, Accept: "text/event-stream" },
     body: JSON.stringify({ ...opts.body, stream: true }),

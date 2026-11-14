@@ -1,10 +1,10 @@
 case: missing-h-flagged
 agent: article-review
-prompt_hash: sha256:0dec96a385691d088b73bc3ed5d0c53ad28813bdf65c236f8bcc7eb1864480d4
+prompt_hash: sha256:26e13880dca6ca15b0da9777a529fecd711f76f8c133b69b42c612da2456ee35
 messages:
   - role: system
-    bytes: 11075
-    content_sha256: sha256:123265280a9304c7df1000b28bfea889fa53a35027e7045e8841944ec3ea9074
+    bytes: 14244
+    content_sha256: sha256:08da4e6d3e5cf6d0f7d58a1651f60a44653dd2dfc3c974e684b794a3d24b0baf
     blocks:
       - § A. Content Quality — weight 15
       - "Finding codes:"

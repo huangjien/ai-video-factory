@@ -1,3 +1,6 @@
+import type { ProviderTelemetry } from "./provider.js";
+import { addTelemetry, emptyTelemetry } from "./provider.js";
+
 /** Bounded retry policy per doc §62.1:
  * validation failures are NEVER retried; transient (network / 5xx / timeouts)
  * up to 3 attempts with backoff. The `isRetriable` predicate defaults to
@@ -21,19 +24,65 @@ export async function withRetry<T>(
   const sleeps = opts.sleeps ?? [1000, 2000, 4000];
   const isRetriable = opts.isRetriable ?? (() => true);
   let lastErr: unknown;
+  // The requests the FAILED attempts burned. A discarded request is
+  // still money and still wall-clock time, so it is carried into the
+  // surviving response instead of vanishing with the error.
+  let discarded = emptyTelemetry();
   for (let attempt = 0; attempt <= sleeps.length; attempt += 1) {
     try {
-      return await fn();
+      const out = await fn();
+      return mergeTelemetry(out, discarded);
     } catch (err) {
       lastErr = err;
-      if (!isRetriable(err)) throw err;
+      discarded = addTelemetry(discarded, errorTelemetry(err));
+      if (!isRetriable(err)) {
+        setErrorTelemetry(err, discarded);
+        throw err;
+      }
       if (attempt === sleeps.length) break;
       const ms = sleeps[attempt];
       if (ms === undefined) break;
       await new Promise((r) => setTimeout(r, ms));
     }
   }
-  throw lastErr instanceof Error ? lastErr : new Error(String(lastErr));
+  const finalErr =
+    lastErr instanceof Error ? lastErr : new Error(String(lastErr));
+  // Hand the accumulated cost to whoever handles the failure (the
+  // failover path) — the error is the only carrier left.
+  setErrorTelemetry(finalErr, discarded);
+  throw finalErr;
+}
+
+/** Put the accumulated cost on the error. The sum already contains
+ *  this attempt's own telemetry, so nothing is counted twice. */
+function setErrorTelemetry(err: unknown, total: ProviderTelemetry): void {
+  if (err === null || typeof err !== "object") return;
+  (err as { telemetry?: ProviderTelemetry }).telemetry = total;
+}
+
+/** The telemetry a failed attempt attached to its error, if any. */
+function errorTelemetry(err: unknown): ProviderTelemetry | undefined {
+  if (err === null || typeof err !== "object") return undefined;
+  const t = (err as { telemetry?: ProviderTelemetry }).telemetry;
+  return t === undefined ? undefined : t;
+}
+
+/** Fold the cost of discarded attempts into the surviving result.
+ *  A result with no telemetry of its own stays untouched — mock
+ *  providers must not grow a field they never had. */
+function mergeTelemetry<T>(value: T, discarded: ProviderTelemetry): T {
+  if (
+    discarded.requests === 0 &&
+    discarded.streams === 0 &&
+    discarded.headersTimeoutRetries === 0 &&
+    discarded.durationMs === 0
+  ) {
+    return value;
+  }
+  if (value === null || typeof value !== "object") return value;
+  const own = (value as { telemetry?: ProviderTelemetry }).telemetry;
+  const merged = addTelemetry(discarded, own);
+  return { ...(value as object), telemetry: merged } as T;
 }
 
 /** True for transient failures a bounded retry can fix: network errors,
@@ -119,13 +168,17 @@ export async function chatWithFallback(
 ): Promise<{
   provider: string;
   response: import("./provider.js").ChatResponse;
+  /** True when the primary could not serve the request and the fallback
+   *  did — the run record says so, because a failover also explains a
+   *  long call (the primary burned its retry budget first). */
+  failover: boolean;
 }> {
   try {
     const response = await withRetry(() => primary.chat(req), {
       sleeps: opts.sleeps,
       isRetriable: isTransientError,
     });
-    return { provider: primary.name, response };
+    return { provider: primary.name, response, failover: false };
   } catch (err) {
     if (!fallback || !isFallbackEligible(err)) throw err;
     // Strip `model`: the fallback must use its own default model.
@@ -137,6 +190,16 @@ export async function chatWithFallback(
       ...(req.response_format ? { response_format: req.response_format } : {}),
     };
     const response = await fallback.chat(fallbackReq);
-    return { provider: fallback.name, response };
+    // The primary's discarded requests are part of this call's cost:
+    // the caller paid for them in time and in tokens.
+    const discarded = errorTelemetry(err);
+    const merged =
+      discarded === undefined
+        ? response
+        : ({
+            ...response,
+            telemetry: addTelemetry(discarded, response.telemetry),
+          } satisfies typeof response);
+    return { provider: fallback.name, response: merged, failover: true };
   }
 }

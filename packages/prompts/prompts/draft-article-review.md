@@ -17,8 +17,10 @@ with, not by what reads well in print.
    sections, paragraphs, and key evidence. Do not score yet.
 
 3. REVIEW EACH DIMENSION INDEPENDENTLY — score every indicator
-   0–5 (definition in §Scoring). For each non-zero / non-five
-   score, capture a `finding` with a real quote and a real fix.
+   0–5 (definition in §Scoring). For every indicator you score
+   BELOW 4, capture a `finding` with a real quote and a real fix
+   (same rule as §Findings — a 4 is "strong, at most one minor
+   quirk", not a defect).
 
 4. CHECK EVIDENCE & DEDUPLICATE — for every finding, verify the
    quoted text actually appears in the article and that the
@@ -30,6 +32,55 @@ with, not by what reads well in print.
 
 6. EMIT JSON — one JSON object, nothing else. No prose, no fence,
    no preamble, no commentary.
+
+# THE WRITER'S CONTRACT — score against THIS, not a stricter one
+
+The drafter was given a specific contract. A finding that the contract
+does not ask for is a finding the writer could not have avoided, and it
+drags the score down for nothing. Before filing a FORMAT_VIOLATION, a
+CONTENT_GAP or a CONSISTENCY_CONTRADICTION, check it against this list.
+
+- **Scene durations are contractually ±10% of `duration_target_sec`.**
+  The writer is told to aim slightly UNDER the target so the film is
+  never padded. A sum inside that band is NOT a defect — do not file a
+  FORMAT_VIOLATION for it. Only a deviation OUTSIDE the band is.
+- **The article opens with a YAML frontmatter block.** It is machine
+  metadata (project, language, duration target, voice, styles), not
+  article prose: do not score it as content and do not quote it as
+  evidence of a content defect. You MAY check the scene durations
+  against the declared target, with the ±10% tolerance above.
+- **A `visual:` line is an ART-DIRECTION line**, not prose: a specific
+  subject, a named action or visible state, a spatial anchor, and one
+  style keyword, 80-220 characters. Judge it against THAT contract.
+  Rich material detail is what the contract asks for — do not file it
+  as prose verbosity.
+- **The writer must supply a runnable example** — a filled-in JSON or
+  YAML instance, or a short code snippet, with field types and one
+  sentence on the validation-failure behaviour — whenever the article
+  defines a protocol, schema, interface, configuration, or framework.
+  A field LIST is not an example; do not file a CONTENT_GAP for a
+  missing example when the article gives one.
+- **One name per concept.** The writer is told that a concept keeps one
+  name across prose, tables, examples, and narration, and that a second
+  term must be declared as its specialization. File a
+  CONSISTENCY_CONTRADICTION only when the article really does use two
+  names for one thing WITHOUT declaring the relationship — not when it
+  declares it, and not when the article deliberately distinguishes a
+  general concept from its specialization.
+- **The narration is not a second copy.** The writer is told that a scene
+  narration carries what the viewer must hear, and that a scene which
+  mentions a list or a rule set must match the prose exactly (same
+  items, same names, no additions, no omissions). File a
+  CONSISTENCY_CONTRADICTION when the scene's version of a rule or list
+  really differs from the prose — not when the scene simply says less.
+- **Sources and mappings.** The writer is told to give a checkable
+  locator for a named external source and to mark an author-made
+  mapping as the author's ("本文把 X 归纳为…"). A finding about a
+  missing source is valid only when the article asserts an external
+  fact WITHOUT a locator AND without marking it as its own mapping.
+- **Calibrated claims.** The writer is told to avoid absolutes the
+  evidence cannot carry. "必然" / "不可能" / "always" / "never" are
+  defects only when the article's own evidence contradicts them.
 
 # SCORING — the 0–5 indicator scale
 

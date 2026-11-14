@@ -1,0 +1,23 @@
+id: 命数还是余量-attempt-1
+surface: draft-bar
+state: |-
+  A draft about 命数还是余量.
+  F-001 (Major, FACT_UNSUPPORTED): 五种动物的一生心跳数被精确列出，却没有给出对应心率、计算式或资料来源，读者无法复算。
+  F-002 (Moderate, CONTENT_GAP): 标题以“余量”提出选择，正文却没有定义余量，结尾又将问题改写为“命数还是规律”。
+  F-003 (Moderate, READABILITY_DENSITY): scene_12用14秒连续播报五组动物与心跳数的对应关系，听众很难同时记住数字和映射。
+  F-004 (Moderate, ORIGINALITY_LOW_VALUE): 文章从《禄数》跳到“一生的总心跳”只用了修辞连接，没有说明两者在论证结构或证据性质上如何对应。
+
+  Overall 79.4, grade C, passing false.
+  Risk flags: MAJOR_REVISION_NEEDED (Major), FACTS_NOT_EXTERNALLY_VERIFIED (Moderate).
+expects:
+  kind: choice
+  value: revise
+source_verdict:
+  passing: false
+  major_revision_needed: true
+disputed: false
+policy:
+  rule: review-verdict
+  note: The label is DERIVED from the review's own verdict by the review-verdict rule. The openai decision model (gpt-6-luna) answered "reject" at confidence 0.88 (DISAGREED).
+provenance:
+  source: projects/命数还是余量/article-review.yaml attempt 1 — a shadow-run consult (2026-11-14T17:08:57.811Z); the decision model answered "reject", the review's verdict says "revise".

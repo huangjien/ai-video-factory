@@ -1,0 +1,24 @@
+id: 扁平化组织与任务式指挥-attempt-1
+surface: draft-bar
+state: |-
+  A draft about 扁平化组织与任务式指挥.
+  F-001 (Moderate, LOGIC_GAP): The script labels three doctrinal illustrations as cases and says they solve organizational problems, but it provides no outcome or comparative evidence for those solutions.
+  F-002 (Moderate, LANGUAGE_AMBIGUITY): The definition permits formal hierarchy to remain unchanged, while the later taxonomy assigns flattening a structure problem without identifying which structural variable changes.
+  F-003 (Minor, LOGIC_OVERGENERALIZATION): The hook's 不请示任何人 claim presents unbounded autonomy, whereas the later script requires shared intent, authorization boundaries, and disciplined initiative.
+  F-004 (Minor, LANGUAGE_GRAMMAR): The missing 在…中 construction leaves 传统层级组织命令 as an ambiguous noun phrase.
+  F-005 (Minor, READABILITY_DENSITY): Scene 9 asks viewers to retain seven translated doctrine labels in 16 seconds before the next scene expands only one of them.
+  F-006 (Moderate, FACT_UNSUPPORTED): The exact 13-person squad and uniform four-person fire-team role mix are asserted without an inline source, so the text cannot establish that this is the representative configuration it labels typical.
+
+  Overall 87.6, grade B, passing false.
+  Risk flags: FACTS_NOT_EXTERNALLY_VERIFIED (Moderate).
+expects:
+  kind: choice
+  value: revise
+source_verdict:
+  passing: false
+disputed: false
+policy:
+  rule: review-verdict
+  note: The label is DERIVED from the review's own verdict by the review-verdict rule. The openai decision model (gpt-6-luna) answered "reject" at confidence 0.35 (DISAGREED).
+provenance:
+  source: projects/扁平化组织与任务式指挥/article-review.yaml attempt 1 — a shadow-run consult (2026-11-14T17:08:40.366Z); the decision model answered "reject", the review's verdict says "revise".

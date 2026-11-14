@@ -1,0 +1,20 @@
+id: 因果律-en-attempt-2
+surface: draft-bar
+state: |-
+  A draft about 因果律-en.
+
+  No findings.
+
+  Overall 93.2, grade A, passing true.
+  Risk flags: FACTS_NOT_EXTERNALLY_VERIFIED (Minor).
+expects:
+  kind: choice
+  value: pass
+source_verdict:
+  passing: true
+disputed: false
+policy:
+  rule: review-verdict
+  note: The label is DERIVED from the review's own verdict by the review-verdict rule. The openai decision model (gpt-6-luna) answered "pass" at confidence 0.8 (agreed).
+provenance:
+  source: projects/因果律-en/article-review.yaml attempt 2 — a shadow-run consult (2026-11-14T17:08:26.229Z); the decision model answered "pass", the review's verdict says "pass".

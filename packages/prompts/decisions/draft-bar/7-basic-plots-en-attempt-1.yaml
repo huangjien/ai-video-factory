@@ -1,0 +1,21 @@
+id: 7-basic-plots-en-attempt-1
+surface: draft-bar
+state: |-
+  A draft about 7-basic-plots-en.
+  F-001 (Moderate, READABILITY_DENSITY): Scenes 19 and 20 read fourteen abstract conflict labels aloud in roughly twenty-eight seconds, and section 5 carries the same density in print.
+  F-002 (Minor, CONSISTENCY_CONTRADICTION): Scene 10 denies the prize's value while scene 12 says 'The quest wins a prize,' without marking that one line concerns narrative value and the other the hero's gain.
+  F-003 (Moderate, FACT_UNSUPPORTED): The Jessamyn West attribution and her seven types carry section 5's argument but appear with no source, and this pass had no external material to confirm them.
+
+  Overall 89.6, grade B, passing false.
+  Risk flags: FACTS_NOT_EXTERNALLY_VERIFIED (Minor).
+expects:
+  kind: choice
+  value: revise
+source_verdict:
+  passing: false
+disputed: false
+policy:
+  rule: review-verdict
+  note: The label is DERIVED from the review's own verdict by the review-verdict rule. The openai decision model (gpt-6-luna) answered "reject" at confidence 0.37 (DISAGREED).
+provenance:
+  source: projects/7-basic-plots-en/article-review.yaml attempt 1 — a shadow-run consult (2026-11-14T17:09:04.154Z); the decision model answered "reject", the review's verdict says "revise".

@@ -1,0 +1,21 @@
+id: software-engineers-cognitive-journey-attempt-3
+surface: draft-bar
+state: |-
+  A draft about software-engineers-cognitive-journey.
+  F-001 (Minor, FACT_UNSUPPORTED): The claim that Plato's cave is the 'oldest warning' is an uncited and overbroad historical superlative.
+  F-002 (Moderate, LOGIC_OVERGENERALIZATION): The categorical verdict that PHP is 'a no' for any ten-year platform under strict regulation is not entailed by the ledger's contextual reasoning.
+  F-003 (Minor, LOGIC_GAP): The phrase 'answered an industry pain decades before one existed' is temporally incoherent and does not clearly explain lambda calculus's relationship to software-industry needs.
+
+  Overall 89.6, grade B, passing false.
+  Risk flags: FACTS_NOT_EXTERNALLY_VERIFIED (Moderate).
+expects:
+  kind: choice
+  value: revise
+source_verdict:
+  passing: false
+disputed: false
+policy:
+  rule: review-verdict
+  note: The label is DERIVED from the review's own verdict by the review-verdict rule. The openai decision model (gpt-6-luna) answered "revise" at confidence 0.72 (agreed).
+provenance:
+  source: projects/software-engineers-cognitive-journey/article-review.yaml attempt 3 — a shadow-run consult (2026-11-14T17:09:23.346Z); the decision model answered "revise", the review's verdict says "revise".

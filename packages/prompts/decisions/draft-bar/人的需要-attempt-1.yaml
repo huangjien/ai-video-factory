@@ -1,0 +1,23 @@
+id: 人的需要-attempt-1
+surface: draft-bar
+state: |-
+  A draft about 人的需要.
+  F-001 (Minor, LENGTH_VIOLATION): The hook is capped at 20 seconds, but scene_1's 11 seconds plus scene_2's 10 seconds totals 21 seconds.
+  F-002 (Moderate, LOGIC_OVERGENERALIZATION): The article presents Maslow's proposed ordering as a universal rule without identifying it as a theoretical model with contested empirical support.
+  F-003 (Moderate, ORIGINALITY_LOW_VALUE): The central taxonomy and most examples restate the widely circulated Maslow summary without adding a study, counterexample, or method for diagnosing a person's currently dominant need.
+  F-004 (Moderate, FACT_UNSUPPORTED): The sentence asserts that Maslow's theory arose from real people without identifying any documented cases, observations, or source, leaving the claimed empirical grounding unsubstantiated.
+  F-005 (Minor, FACT_INCORRECT): Under the caption “马斯洛，1943,” the white-haired elder appears anachronistic because Maslow was about 35 in 1943.
+
+  Overall 83.2, grade B, passing false.
+  Risk flags: FACTS_NOT_EXTERNALLY_VERIFIED (Moderate).
+expects:
+  kind: choice
+  value: revise
+source_verdict:
+  passing: false
+disputed: false
+policy:
+  rule: review-verdict
+  note: The label is DERIVED from the review's own verdict by the review-verdict rule. The openai decision model (gpt-6-luna) answered "reject" at confidence 0.66 (DISAGREED).
+provenance:
+  source: projects/人的需要/article-review.yaml attempt 1 — a shadow-run consult (2026-11-14T17:08:27.917Z); the decision model answered "reject", the review's verdict says "revise".

@@ -1,0 +1,22 @@
+id: 认知变化的来源-attempt-4
+surface: draft-bar
+state: |-
+  A draft about 认知变化的来源.
+  F-001 (Minor, CONSISTENCY_CONTRADICTION): The scene_4 caption and section title promise 四种定义 but the spoken narration names only three roles, dropping 财务看到收入损失.
+  F-002 (Moderate, STRUCTURE_TRANSITION): The narration jumps from methodology logic straight into the 2021 knowledge-payment boom with no bridging clause.
+  F-003 (Moderate, LOGIC_OVERGENERALIZATION): Calling Descartes' decomposition 正是测试驱动开发的前提 states an identity that overstates the historical and logical lineage.
+  F-004 (Moderate, LOGIC_GAP): The causal leap from epistemology's subject-object distinction to code reading like natural language is asserted without any mechanism.
+
+  Overall 81.8, grade B, passing false.
+  Risk flags: FACTS_NOT_EXTERNALLY_VERIFIED (Minor).
+expects:
+  kind: choice
+  value: revise
+source_verdict:
+  passing: false
+disputed: false
+policy:
+  rule: review-verdict
+  note: The label is DERIVED from the review's own verdict by the review-verdict rule. The openai decision model (gpt-6-luna) answered "reject" at confidence 0.58 (DISAGREED).
+provenance:
+  source: projects/认知变化的来源/article-review.yaml attempt 4 — a shadow-run consult (2026-11-14T17:08:39.880Z); the decision model answered "reject", the review's verdict says "revise".

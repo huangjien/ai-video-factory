@@ -1,0 +1,23 @@
+id: 康威定律-attempt-1
+surface: draft-bar
+state: |-
+  A draft about 康威定律.
+  F-001 (Minor, CONTENT_REDUNDANCY): 正文第1节开头与Hook近乎逐字重复（scene_1念白即Hook，正文又写了一遍）。
+  F-002 (Moderate, FACT_UNSUPPORTED): 支撑定律成立机制的关键经验断言未给出任何研究名称或出处。
+  F-003 (Moderate, FACT_UNSUPPORTED): 微软内核重组案例无年份、无来源，细节无法由文内证据核实。
+  F-004 (Moderate, LANGUAGE_AMBIGUITY): '正则'是文献术语且未向听众定义，正文用'正则'而scene_7念白前半换成'清晰'，两处措辞不一致。
+  F-005 (Minor, LOGIC_OVERGENERALIZATION): '几乎必然成立'与第7节'不是铁律、只是启发式'的表述相互冲突。
+
+  Overall 80, grade B, passing true.
+  Risk flags: FACTS_NOT_EXTERNALLY_VERIFIED (Moderate).
+expects:
+  kind: choice
+  value: pass
+source_verdict:
+  passing: true
+disputed: false
+policy:
+  rule: review-verdict
+  note: The label is DERIVED from the review's own verdict by the review-verdict rule. The openai decision model (gpt-6-luna) answered "revise" at confidence 0.91 (DISAGREED).
+provenance:
+  source: projects/康威定律/article-review.yaml attempt 1 — a shadow-run consult (2026-11-14T17:08:30.085Z); the decision model answered "revise", the review's verdict says "pass".

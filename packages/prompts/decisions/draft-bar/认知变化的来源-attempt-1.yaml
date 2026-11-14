@@ -1,0 +1,24 @@
+id: 认知变化的来源-attempt-1
+surface: draft-bar
+state: |-
+  A draft about 认知变化的来源.
+  F-001 (Moderate, LOGIC_GAP): 从'需求源于生意变化'到'根源是认知'的推断全靠紧随其后的《教父》格言垫底，中间没有一句桥接论证。
+  F-002 (Moderate, LOGIC_OVERGENERALIZATION): 用'只有…才有资格'的排他式全称断言把认知与领导资格绑死，无任何限定。
+  F-003 (Moderate, STRUCTURE_REPETITION): 第 5 节'以生活为师'的结尾混入一段黑格尔'否定之否定'的小讲座，与生活实例无关且未回扣软件场景。
+  F-004 (Moderate, FACT_UNSUPPORTED): 这句'《教父》台词'是中文网络广为流传的归属，普遍被认为并未出现在电影或原著中，而正文与 scene_3 两次以确定口吻引用。
+  F-005 (Moderate, FACT_OVERCONFIDENCE): 给出的'纠偏'本身即通俗转述：黑格尔原文区分的是'合乎理性的'与'现实的'（Wirklichkeit），'凡是存在的都是现实的'仍是绕圈的简化，却被讲成定论。
+  F-006 (Moderate, FACT_OVERCONFIDENCE): 对奇门遁甲本质的个人化解读以'本质上也是'的定论口吻给出，无任何来源或'在我看来'式限定，scene_21 还将原样朗读。
+
+  Overall 77.6, grade C, passing false.
+  Risk flags: FACTS_NOT_EXTERNALLY_VERIFIED (Moderate).
+expects:
+  kind: choice
+  value: revise
+source_verdict:
+  passing: false
+disputed: false
+policy:
+  rule: review-verdict
+  note: The label is DERIVED from the review's own verdict by the review-verdict rule. The openai decision model (gpt-6-luna) answered "reject" at confidence 0.56 (DISAGREED).
+provenance:
+  source: projects/认知变化的来源/article-review.yaml attempt 1 — a shadow-run consult (2026-11-14T17:08:39.034Z); the decision model answered "reject", the review's verdict says "revise".

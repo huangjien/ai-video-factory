@@ -1,0 +1,31 @@
+id: minor-findings-only
+surface: draft-bar
+state: >-
+  A draft about 网络小说写作.
+
+  F-001 (Minor, LOGIC_OVERGENERALIZATION): The closing asserts that satisfying the three questions
+  automatically produces reader retention, ignoring genre taste, prose quality and market factors.
+
+  F-002 (Minor, LANGUAGE_AMBIGUITY): The narration drops the subject of the investigation (调查),
+  leaving "深处" dangling at the final link of the three-step chain.
+
+  F-003 (Minor, READABILITY_DENSITY): Five distinct ailments are packed into one 14-second narration
+  with no pause structure.
+
+
+  Overall 92.4, grade A, passing true.
+
+  Risk flags: FACTS_NOT_EXTERNALLY_VERIFIED (Minor).
+expects:
+  kind: choice
+  value: pass
+source_verdict:
+  critical: false
+  major_revision_needed: false
+  passing: true
+policy:
+  rule: review-verdict
+  note: "The draft's own review is the authority: a Critical finding or CRITICAL_BLOCKER rejects,
+    passing false revises, passing true passes."
+provenance:
+  source: projects/网络小说写作/article-review.yaml — the final attempt (overall 92.4, grade A, passing true).

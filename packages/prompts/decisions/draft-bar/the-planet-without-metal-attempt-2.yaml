@@ -1,0 +1,21 @@
+id: the-planet-without-metal-attempt-2
+surface: draft-bar
+state: |-
+  A draft about the-planet-without-metal.
+  F-001 (Major, LOGIC_GAP): The inference from no metal conductors to no wires or motors is not established because the article itself names carbon, brine, and graphite without comparing the power and scale they could support.
+  F-002 (Moderate, LOGIC_OVERGENERALIZATION): A single brittle-barrel failure mode is used to declare a permanent pre-gunpowder ceiling without testing reinforced, low-pressure, or alternative artillery designs.
+
+  Overall 84.8, grade B, passing false.
+  Risk flags: MAJOR_REVISION_NEEDED (Major), FACTS_NOT_EXTERNALLY_VERIFIED (Moderate).
+expects:
+  kind: choice
+  value: revise
+source_verdict:
+  passing: false
+  major_revision_needed: true
+disputed: false
+policy:
+  rule: review-verdict
+  note: The label is DERIVED from the review's own verdict by the review-verdict rule. The openai decision model (gpt-6-luna) answered "reject" at confidence 0.4 (DISAGREED).
+provenance:
+  source: projects/the-planet-without-metal/article-review.yaml attempt 2 — a shadow-run consult (2026-11-14T17:09:25.954Z); the decision model answered "reject", the review's verdict says "revise".

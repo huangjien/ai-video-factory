@@ -1,0 +1,25 @@
+id: 把软件团队也看做系统-attempt-4
+surface: draft-bar
+state: |-
+  A draft about 把软件团队也看做系统.
+  F-001 (Moderate, LOGIC_GAP): 文章把“独立实体协作”直接等同于团队必须服从分布式系统规律，并将其宣布为全文前提，却未说明团队与分布式系统在目标冲突、成员自主性、失败语义上的关键差异。
+  F-002 (Major, LOGIC_OVERGENERALIZATION): 认知差方向与政策执行结果被写成二元且绝对的因果关系，文章既未给出证据，也未处理反向或中间情形。
+  F-003 (Moderate, LOGIC_CONTRADICTION): 第五节把主从调度定义为“计划提前算好、逐层下发，不依赖观察结果来纠正”的开环系统，第四节却把“反馈失灵”列为该同一模型的三类故障之一。
+  F-004 (Moderate, FACT_UNSUPPORTED): 文章以具体人名与年份支撑管理幅度的定量结论，但未给出任何出处，该归属在文内无法核实。
+  F-005 (Moderate, FACT_UNSUPPORTED): 文章以一本具名书籍的开篇定义充当分布式系统的权威来源，却未给出作者与版本，该定义与常见教材表述的对应关系不明。
+  F-006 (Moderate, ORIGINALITY_LOW_VALUE): 该段的行动建议基本是常见管理常识换用系统术语重述，没有给出新工具、新数据或可验证的判断标准。
+
+  Overall 75, grade C, passing false.
+  Risk flags: MAJOR_REVISION_NEEDED (Major), FACTS_NOT_EXTERNALLY_VERIFIED (Moderate).
+expects:
+  kind: choice
+  value: revise
+source_verdict:
+  passing: false
+  major_revision_needed: true
+disputed: false
+policy:
+  rule: review-verdict
+  note: The label is DERIVED from the review's own verdict by the review-verdict rule. The openai decision model (gpt-6-luna) answered "reject" at confidence 0.79 (DISAGREED).
+provenance:
+  source: projects/把软件团队也看做系统/article-review.yaml attempt 4 — a shadow-run consult (2026-11-14T17:08:32.178Z); the decision model answered "reject", the review's verdict says "revise".

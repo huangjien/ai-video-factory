@@ -1,0 +1,13 @@
+id: river-sampling-narrative
+surface: visual-class
+state: 黄昏的河边，一只手将透明玻璃瓶探入水中取样，水面涟漪一圈圈荡开，远处地平线上立着工厂的剪影
+expects:
+  kind: choice
+  value: AnimatedIllustration
+baseline: AnimatedIllustration
+provenance:
+  source: projects/3m与pfos的秘密/article.md scene_14 — a narrative shot with no structure to draw; the decision
+    layer must not over-route it.
+policy:
+  rule: photo
+  note: The scene describes a photograph with nothing to draw.

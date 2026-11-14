@@ -1,0 +1,23 @@
+id: 领域建模-设计软件的骨相-attempt-1
+surface: draft-bar
+state: |-
+  A draft about 领域建模-设计软件的骨相.
+  F-001 (Major, LOGIC_CONTRADICTION): 结尾断言领域模型通常就是数据库表映射，与前文“领域模型指导数据库设计”和“先隔离技术复杂度”的论述正面冲突。
+  F-002 (Moderate, LANGUAGE_AMBIGUITY): “同一个词能通行”和“每个虚线区域”均未给出判定标准，没有清楚说明限界上下文由模型语义而非图形区域划分。
+  F-003 (Moderate, READABILITY_DENSITY): 这段把多种建模方法压进一个认识论公式，既未用具体事件演示，也未交代它与标准 DDD 方法论的关系。
+  F-004 (Moderate, FACT_OVERCONFIDENCE): 把关联命名为空间成员确实能显式化权限语义，但“立刻消失”掩盖了用户与空间之间仍存在多对多关系且持久化通常仍需关联表。
+
+  Overall 71, grade C, passing false.
+  Risk flags: MAJOR_REVISION_NEEDED (Major), FACTS_NOT_EXTERNALLY_VERIFIED (Moderate).
+expects:
+  kind: choice
+  value: revise
+source_verdict:
+  passing: false
+  major_revision_needed: true
+disputed: false
+policy:
+  rule: review-verdict
+  note: The label is DERIVED from the review's own verdict by the review-verdict rule. The openai decision model (gpt-6-luna) answered "reject" at confidence 0.8 (DISAGREED).
+provenance:
+  source: projects/领域建模-设计软件的骨相/article-review.yaml attempt 1 — a shadow-run consult (2026-11-14T17:08:23.502Z); the decision model answered "reject", the review's verdict says "revise".

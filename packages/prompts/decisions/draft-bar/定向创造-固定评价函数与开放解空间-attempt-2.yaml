@@ -1,0 +1,22 @@
+id: 定向创造-固定评价函数与开放解空间-attempt-2
+surface: draft-bar
+state: |-
+  A draft about 定向创造-固定评价函数与开放解空间.
+  F-001 (Major, LOGIC_GAP): “对所有问题取平均”只能说明跨问题平均表现，不能推出固定目标上多采样与少采样的期望收益完全相同。
+  F-002 (Major, LOGIC_CONTRADICTION): 结尾先把实现维度称为“完全敞开”，紧接着又定义为“选择性的敞开”，两者给技术管理者的是相反指令。
+  F-003 (Moderate, LOGIC_OVERGENERALIZATION): 文章以“任何”和“唯一”把迭代式进化框架无条件推广到全部创造过程，未说明问题框定、硬约束或一次性设计的例外。
+  F-004 (Moderate, LOGIC_OVERGENERALIZATION): 单次移除评价函数可能同时改变选择压力与搜索行为，因此“结果没变差，它就没用”不是充分推论。
+  F-005 (Major, FACT_UNSUPPORTED): 所引FunSearch的采样器、CPU评估器、采样量、运行时长及数学下界进展均未附论文、官方材料或文章内证据。
+
+  Overall 79.2, grade C, passing false.
+expects:
+  kind: choice
+  value: revise
+source_verdict:
+  passing: false
+disputed: false
+policy:
+  rule: review-verdict
+  note: The label is DERIVED from the review's own verdict by the review-verdict rule. The openai decision model (gpt-6-luna) answered "reject" at confidence 0.93 (DISAGREED).
+provenance:
+  source: projects/定向创造-固定评价函数与开放解空间/article-review.yaml attempt 2 — a shadow-run consult (2026-11-14T17:08:25.077Z); the decision model answered "reject", the review's verdict says "revise".

@@ -4,7 +4,8 @@
   "files": [
     "dist",
     "prompts",
-    "evals"
+    "evals",
+    "decisions"
   ],
   "publishConfig": {
     "access": "public"

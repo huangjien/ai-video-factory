@@ -1,0 +1,16 @@
+id: two-overlapping-rings
+surface: visual-class
+state: 两枚半透明圆环在浅灰背景上缓缓靠近，左环泛着冷蓝光，右环泛着暖橙光，两者的重合区又窄又暗，边缘浮着一圈警示的橙色；居中对称构图
+expects:
+  kind: choice
+  value: VennDiagram
+baseline: AnimatedIllustration
+provenance:
+  source: projects/AI时代的DevOps团队/article.md scene_10 — two rings with a narrow dark intersection, which
+    the keyword classifier falls through on.
+disputed: true
+dispute: 'The scene describes a structure as a photograph: an intersection the viewer must see (VennDiagram)
+  or a photographed pair of rings (AnimatedIllustration). Both rules fire.'
+policy:
+  rule: structure-over-photo
+  note: The scene describes a structure the viewer must see, so the structure component wins over a photograph.

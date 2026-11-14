@@ -1,0 +1,52 @@
+id: grade-d-many-moderate
+surface: draft-bar
+state: >-
+  A draft about 软件架构和实现.
+
+  F-001 (Moderate, CONTENT_GAP): 保险案例被点名却从未展开（无领域对象、无渠道差异、无策略落点），使全文最深的一处论证停留在结论句。
+
+  F-002 (Moderate, CONTENT_GAP): 微服务只出现这一次，且全文没有把分层、六边形、事件驱动、模块化单体等风格做对比，也没把任何选择对应到性能、可维护性等质量属性。
+
+  F-003 (Moderate, LOGIC_GAP): 拆分结论仅由'职权不同'推出，正文未权衡耦合与一致性代价，而场景脚本自己承认'耦合很强，合并能少掉分布式事务'，正文对这一反论据毫无回应。
+
+  F-004 (Moderate, LOGIC_CONTRADICTION): 正文把架构定义为'决策做完之后的事'，而钩子、scene_3 与 scene_30
+  均定义为'决策之和'，同一核心术语出现两种命题。
+
+  F-005 (Moderate, LOGIC_OVERGENERALIZATION): 从服务边界跳到组织管理没有任何机制说明，且'权责利'把逐利语义搬进技术边界论证。
+
+  F-006 (Moderate, STRUCTURE_ORDER):
+  脚本在'原则'与'命名'之间插入了一个新的组织/并行论点（scene_28），而八个正文小节里没有对应段落，该论点既无铺垫也未被展开。
+
+  F-007 (Moderate, LANGUAGE_AMBIGUITY): '缺了 Service 的 MVC 并不就机械地等于两层'没有交代前提与推理关系，听者无法确定'缺了
+  Service'与'层数'之间是什么关系。
+
+  F-008 (Moderate, READABILITY_ASSUMPTION):
+  结尾例子提到'一场建模之争'与'两派'，却从未说明双方是谁、各自主张什么，这个用来证明'命名即设计'的例子本身悬空。
+
+  F-009 (Moderate, READABILITY_DENSITY): 四种机制（陈旧度度量、幂等重试、补偿对账、冲突率监控）外加人工干预被塞进一个 15 秒场景，且没有配一个失败场景。
+
+  F-010 (Moderate, FACT_INCORRECT): TCP/IP
+  模型的通行分层是应用层/传输层/网际层/网络接口层，'用户层、揽收层、运输层'是寄信比喻的层名，文中把比喻层名当成了协议分层。
+
+  F-011 (Moderate, CONSISTENCY_CONTRADICTION): 先说'只有两样'，随后又加入第三类（原则与技术规范），而 scene_2 与标题都按'三样'来数。
+
+  F-012 (Major, INSTRUCTION_MISMATCH): 受委托主题是'软件架构和实现'，而'实现'在 420 秒里只以这一句前端约定加一句
+  Controller/Service/Repository 命名规则呈现，全片没有代码、契约、迁移、测试或工具链落点。
+
+
+  Overall 69, grade D, passing false.
+
+  Risk flags: MAJOR_REVISION_NEEDED (Major), FACTS_NOT_EXTERNALLY_VERIFIED (Moderate).
+expects:
+  kind: choice
+  value: revise
+source_verdict:
+  critical: false
+  major_revision_needed: true
+  passing: false
+policy:
+  rule: review-verdict
+  note: "The draft's own review is the authority: a Critical finding or CRITICAL_BLOCKER rejects,
+    passing false revises, passing true passes."
+provenance:
+  source: projects/软件架构和实现/article-review.yaml — attempt 6 (overall 69, grade D, 11 Moderate + 1 Major).

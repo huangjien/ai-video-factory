@@ -1,0 +1,19 @@
+id: ai-era-software-engineering-11-shifts-en-attempt-1
+surface: draft-bar
+state: |-
+  A draft about ai-era-software-engineering-11-shifts-en.
+  F-001 (Minor, LANGUAGE_AMBIGUITY): The spoken line embeds a quoted policy rule without any spoken marker, so it momentarily parses as a statement of fact rather than an example rule.
+
+  Overall 92.8, grade A, passing true.
+  Risk flags: FACTS_NOT_EXTERNALLY_VERIFIED (Moderate).
+expects:
+  kind: choice
+  value: pass
+source_verdict:
+  passing: true
+disputed: false
+policy:
+  rule: review-verdict
+  note: The label is DERIVED from the review's own verdict by the review-verdict rule. The openai decision model (gpt-6-luna) answered "revise" at confidence 0.52 (DISAGREED).
+provenance:
+  source: projects/ai-era-software-engineering-11-shifts-en/article-review.yaml attempt 1 — a shadow-run consult (2026-11-14T17:09:08.199Z); the decision model answered "revise", the review's verdict says "pass".

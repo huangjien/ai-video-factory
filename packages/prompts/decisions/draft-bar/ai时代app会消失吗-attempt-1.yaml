@@ -1,0 +1,21 @@
+id: ai时代app会消失吗-attempt-1
+surface: draft-bar
+state: |-
+  A draft about ai时代app会消失吗.
+  F-001 (Moderate, LOGIC_OVERGENERALIZATION): 总使用时长和消费增长只能说明移动端使用未整体萎缩，不能证明增量由生成式AI造成，也不能证明现有App未被替代。
+  F-002 (Moderate, LANGUAGE_AMBIGUITY): 文章把可安装的App客户端、应用界面和后台服务当成同一对象来描述。
+  F-003 (Moderate, FACT_UNSUPPORTED): scene_1把马斯克的预测表述为“只剩一个 AI 入口”，而正文转述的是“人类消费的大多数内容由 AI 生成”，且两处均未提供播客名称、期次或链接。
+
+  Overall 88.6, grade B, passing false.
+  Risk flags: FACTS_NOT_EXTERNALLY_VERIFIED (Moderate).
+expects:
+  kind: choice
+  value: revise
+source_verdict:
+  passing: false
+disputed: false
+policy:
+  rule: review-verdict
+  note: The label is DERIVED from the review's own verdict by the review-verdict rule. The openai decision model (gpt-6-luna) answered "reject" at confidence 0.45 (DISAGREED).
+provenance:
+  source: projects/ai时代app会消失吗/article-review.yaml attempt 1 — a shadow-run consult (2026-11-14T17:09:10.514Z); the decision model answered "reject", the review's verdict says "revise".

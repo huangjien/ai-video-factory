@@ -169,3 +169,33 @@ export {
   type EmitContext,
   type TimelineAnimation,
 } from "./animation-emitter.js";
+export type { DecisionCandidate } from "./decision-candidate.js";
+export {
+  parseDecisionLog,
+  type DecisionLogRow,
+} from "./decision-log.js";
+export {
+  consultVisualDecisions,
+  harvestDecisionCandidates,
+  sha256,
+  type HarvestOptions,
+  createDecisionProvider,
+  decisionLogPath,
+  resolveDecisionMode,
+  runVisualDecisionShadow,
+  visualDecisionQuestion,
+  type ConsultOptions,
+  type DecisionMode,
+  type VisualDecisionRow,
+  type VisualDecisionScene,
+} from "./visual-decision.js";
+export {
+  buildDraftBarState,
+  consultDraftDecision,
+  draftBarDecisionQuestion,
+  harvestDraftBarCandidates,
+  runDraftDecisionShadow,
+  verdictFactsFromAttempt,
+  type DraftBarAttemptFacts,
+  type DraftDecisionRow,
+} from "./draft-decision.js";

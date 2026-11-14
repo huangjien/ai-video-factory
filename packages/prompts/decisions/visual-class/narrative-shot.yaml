@@ -1,0 +1,13 @@
+id: narrative-shot
+surface: visual-class
+state: 少年立在崖边望向远方
+expects:
+  kind: choice
+  value: AnimatedIllustration
+baseline: AnimatedIllustration
+provenance:
+  source: packages/draft/src/visual-classifier.test.ts — "still falls through to the image path for an
+    ordinary narrative shot".
+policy:
+  rule: photo
+  note: The scene describes a photograph with nothing to draw.

@@ -1,0 +1,19 @@
+id: 从-prompt-engineering-到-agent-engineering-attempt-3
+surface: draft-bar
+state: |-
+  A draft about 从-prompt-engineering-到-agent-engineering.
+
+  No findings.
+
+  Overall n/a, grade n/a, passing false.
+expects:
+  kind: choice
+  value: revise
+source_verdict:
+  passing: false
+disputed: false
+policy:
+  rule: review-verdict
+  note: The label is DERIVED from the review's own verdict by the review-verdict rule. The openai decision model (gpt-6-luna) answered "reject" at confidence 0.64 (DISAGREED).
+provenance:
+  source: projects/从-prompt-engineering-到-agent-engineering/article-review.yaml attempt 3 — a shadow-run consult (2026-11-14T17:08:27.341Z); the decision model answered "reject", the review's verdict says "revise".

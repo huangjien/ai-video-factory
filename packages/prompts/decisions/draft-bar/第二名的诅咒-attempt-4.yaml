@@ -1,0 +1,23 @@
+id: 第二名的诅咒-attempt-4
+surface: draft-bar
+state: |-
+  A draft about 第二名的诅咒.
+  F-001 (Moderate, READABILITY_PACING): Scene 9 packs ~68 spoken characters into a 13-second slot (~5.2 chars/sec) and scenes 8, 13 and 14 are similarly ~5-6 chars/sec, above comfortable Mandarin narration (~4-4.5 chars/sec).
+  F-002 (Minor, LANGUAGE_VERBOSITY): The word '遗憾' recurs twice within one breath and the colon clause restates the clause before it.
+  F-003 (Minor, LANGUAGE_GRAMMAR): Applying the passive '被考砸' to '自我怀疑' literally says the doubt gets wrecked, the opposite of the intended meaning that self-worth is wrecked.
+  F-004 (Minor, LANGUAGE_AMBIGUITY): '看到领先' does not say whose lead is seen — the viewer's own lead over third place or the leader's lead.
+  F-005 (Minor, CONTENT_GAP): Scene 11 raises an identity/self-worth spiral, but the remedy scenes (12-14) only replace metrics and never return to that thread.
+
+  Overall 81, grade B, passing false.
+  Risk flags: FACTS_NOT_EXTERNALLY_VERIFIED (Minor).
+expects:
+  kind: choice
+  value: revise
+source_verdict:
+  passing: false
+disputed: false
+policy:
+  rule: review-verdict
+  note: The label is DERIVED from the review's own verdict by the review-verdict rule. The openai decision model (gpt-6-luna) answered "revise" at confidence 0.76 (agreed).
+provenance:
+  source: projects/第二名的诅咒/article-review.yaml attempt 4 — a shadow-run consult (2026-11-14T17:08:49.709Z); the decision model answered "revise", the review's verdict says "revise".

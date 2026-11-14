@@ -1,0 +1,21 @@
+id: ai时代的devops团队-attempt-1
+surface: draft-bar
+state: |-
+  A draft about AI时代的DevOps团队.
+  F-001 (Moderate, CONTENT_GAP): MCP与代理路线只写了只读、审批和回滚，未覆盖日志与配置泄露、最小权限凭据、提示词注入和访问审计等安全边界。
+  F-002 (Moderate, LOGIC_OVERGENERALIZATION): 该表述把AI辅助的跨平台排查能力扩张为所有人的普遍闭环结果，未保留前文所说的专家升级与例外场景。
+  F-003 (Moderate, FACT_UNSUPPORTED): 文章用半天量化旧流程成本，却未提供案例、样本或数据来源。
+
+  Overall 88, grade B, passing false.
+  Risk flags: FACTS_NOT_EXTERNALLY_VERIFIED (Moderate).
+expects:
+  kind: choice
+  value: revise
+source_verdict:
+  passing: false
+disputed: false
+policy:
+  rule: review-verdict
+  note: The label is DERIVED from the review's own verdict by the review-verdict rule. The openai decision model (gpt-6-luna) answered "revise" at confidence 0.91 (agreed).
+provenance:
+  source: projects/AI时代的DevOps团队/article-review.yaml attempt 1 — a shadow-run consult (2026-11-14T17:09:11.084Z); the decision model answered "revise", the review's verdict says "revise".

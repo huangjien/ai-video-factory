@@ -1,0 +1,20 @@
+id: 陆军组织单位-attempt-2
+surface: draft-bar
+state: |-
+  A draft about 陆军组织单位.
+  F-001 (Moderate, FACT_UNSUPPORTED): 国际比较段的具体数字仅以[w1]、[w2]、[w4]、[w7]和[w9]占位符指向并未提供的来源，缺少年份与军兵种口径。
+  F-002 (Moderate, LOGIC_OVERGENERALIZATION): 由西班牙和瑞典两个例子推出“现代军队”普遍模块化的趋势，证据范围不足以支撑全球性结论。
+
+  Overall 90.2, grade A, passing true.
+  Risk flags: FACTS_NOT_EXTERNALLY_VERIFIED (Moderate).
+expects:
+  kind: choice
+  value: pass
+source_verdict:
+  passing: true
+disputed: false
+policy:
+  rule: review-verdict
+  note: The label is DERIVED from the review's own verdict by the review-verdict rule. The openai decision model (gpt-6-luna) answered "revise" at confidence 0.93 (DISAGREED).
+provenance:
+  source: projects/陆军组织单位/article-review.yaml attempt 2 — a shadow-run consult (2026-11-14T17:08:42.484Z); the decision model answered "revise", the review's verdict says "pass".

@@ -1,0 +1,20 @@
+id: 任务式指挥与agent设计-attempt-4
+surface: draft-bar
+state: |-
+  A draft about 任务式指挥与agent设计.
+  F-001 (Moderate, CONSISTENCY_CONTRADICTION): 正文明确列出三个前提，但 scene_5 改述为纪律、能力、互信、共同理解和可验证结果，未说明两套清单的对应关系。
+  F-002 (Moderate, CONSISTENCY_CONTRADICTION): 六维表使用 Goal 作为 Mission Orders 的对应字段，协议与 YAML 改用 Objective，却未声明二者同义或上下位关系。
+
+  Overall 85.2, grade B, passing false.
+  Risk flags: FACTS_NOT_EXTERNALLY_VERIFIED (Moderate).
+expects:
+  kind: choice
+  value: revise
+source_verdict:
+  passing: false
+disputed: false
+policy:
+  rule: review-verdict
+  note: The label is DERIVED from the review's own verdict by the review-verdict rule. The openai decision model (gpt-6-luna) answered "revise" at confidence 0.88 (agreed).
+provenance:
+  source: projects/任务式指挥与agent设计/article-review.yaml attempt 4 — a shadow-run consult (2026-11-14T17:09:06.636Z); the decision model answered "revise", the review's verdict says "revise".

@@ -15,86 +15,43 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { parse as parseYaml } from "yaml";
 
-/** packages/prompts/{src|dist} → ../prompts (same either way). */
-function promptsDir(): string {
-  const here = path.dirname(fileURLToPath(import.meta.url));
-  return path.resolve(here, "..", "prompts");
-}
+import { promptsDir, stripTrailingNewline } from "./prompt-loader.js";
 
-/** Templates historically had no trailing newline; editors add one. */
-function stripTrailingNewline(text: string): string {
-  return text.endsWith("\n") ? text.slice(0, -1) : text;
-}
-
-const cache = new Map<string, string>();
-
-/**
- * Load a `.md` prompt by name (stem only — `loadPrompt("storyboard")` reads
- * `prompts/storyboard.md`). Cached per process. Throws with the absolute
- * path when the file is missing, so a renamed/typo'd name is debuggable
- * from the stack alone.
- */
-export function loadPrompt(name: string): string {
-  const cached = cache.get(name);
-  if (cached !== undefined) {
-    return cached;
-  }
-  const file = path.join(promptsDir(), `${name}.md`);
-  let raw: string;
-  try {
-    raw = readFileSync(file, "utf8");
-  } catch (err) {
-    throw new Error(`prompt file not found: ${file} (name: "${name}")`, {
-      cause: err,
-    });
-  }
-  const content = stripTrailingNewline(raw);
-  cache.set(name, content);
-  return content;
-}
-
-/**
- * Replace `{{placeholder}}` tokens in a loaded template. Throws on a token
- * with no provided value — a half-filled prompt reaching the LLM is worse
- * than a loud failure here.
- */
-export function fillPrompt(
-  template: string,
-  vars: Record<string, string>,
-): string {
-  return template.replace(/\{\{(\w+)\}\}/g, (token, key: string) => {
-    const value = vars[key];
-    if (value === undefined) {
-      throw new Error(`fillPrompt: no value for placeholder ${token}`);
-    }
-    return value;
-  });
-}
-
-/** Absolute path of a prompt file (for `video prompts path`/`show`). */
-export function promptFilePath(name: string): string {
-  return path.join(promptsDir(), `${name}.md`);
-}
-
-/** All registered prompt file names, sorted (extension included). */
-export function listPromptFiles(): string[] {
-  return readdirSync(promptsDir()).sort();
-}
-
-/** Test/inspection hook: names loaded so far in this process. The registry
- *  coverage test (packages/cli/src/prompt-registry.test.ts) imports every
- *  loader site and asserts this equals the files on disk — so an orphan
- *  prompt file (added, never loaded) or a dangling reference (deleted,
- *  still called) fails the suite instead of surfacing at render time. */
-export function loadedPromptNames(): string[] {
-  return [...cache.keys()].sort();
-}
-
-/** Raw file content by exact filename (extension included). `show`-style
- * access for structured files (yaml/json) that `loadPrompt` cannot serve. */
-export function readPromptFile(file: string): string {
-  return readFileSync(path.join(promptsDir(), file), "utf8");
-}
+export {
+  fillPrompt,
+  listPromptFiles,
+  loadedPromptNames,
+  loadPrompt,
+  promptFilePath,
+  promptsDir,
+  readPromptFile,
+  stripTrailingNewline,
+} from "./prompt-loader.js";
+export {
+  DECISION_QUESTIONS,
+  listDecisionSurfaces,
+  loadDecisionQuestion,
+  type DecisionQuestionSpec,
+  type DecisionSurface,
+} from "./decision-questions.js";
+export {
+  DECISION_POLICY_RULES,
+  decisionsDir,
+  listDecisionCaseIds,
+  listDecisionCases,
+  listDecisionSurfacesWithCases,
+  loadDecisionCase,
+  loadDecisionPrices,
+  parseDecisionCase,
+  verdictToLabel,
+  type DecisionCaseFixture,
+  type DecisionCaseRef,
+  type DecisionExpectation,
+  type DecisionPolicyRule,
+  type DecisionPrice,
+  type DecisionPriceTable,
+  type DecisionSourceVerdict,
+} from "./decision-evals.js";
 
 export interface ImageStylePreset {
   /** Extra system rules for the prompt-expanding LLM. */

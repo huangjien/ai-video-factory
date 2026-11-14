@@ -1,0 +1,21 @@
+id: swat组织单位-attempt-1
+surface: draft-bar
+state: |-
+  A draft about swat组织单位.
+  F-001 (Moderate, FACT_UNSUPPORTED): “1965年”和“美国第一支”属于可核查的关键历史断言，但“维基百科等公开资料”没有提供可定位来源，现有材料不足以确认该年份。
+  F-002 (Minor, FACT_UNSUPPORTED): 精确的人数区间和上级层级未绑定任何机构或来源，虽有后文免责声明，仍可能被普通观众理解为通行标准。
+  F-003 (Moderate, LOGIC_OVERGENERALIZATION): “每一名”和“远超常规警力”把一般性的训练与分工优势扩大成了未经比较验证的绝对结论。
+
+  Overall 89.4, grade B, passing false.
+  Risk flags: FACTS_NOT_EXTERNALLY_VERIFIED (Moderate).
+expects:
+  kind: choice
+  value: revise
+source_verdict:
+  passing: false
+disputed: false
+policy:
+  rule: review-verdict
+  note: The label is DERIVED from the review's own verdict by the review-verdict rule. The openai decision model (gpt-6-luna) answered "revise" at confidence 0.45 (agreed).
+provenance:
+  source: projects/swat组织单位/article-review.yaml attempt 1 — a shadow-run consult (2026-11-14T17:09:24.267Z); the decision model answered "revise", the review's verdict says "revise".

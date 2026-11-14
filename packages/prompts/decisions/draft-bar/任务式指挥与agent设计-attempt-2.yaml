@@ -1,0 +1,27 @@
+id: 任务式指挥与agent设计-attempt-2
+surface: draft-bar
+state: |-
+  A draft about 任务式指挥与agent设计.
+  F-001 (Moderate, CONTENT_GAP): 文章断言 Mission Brief 是运行时可读、可验证、可执行的标准输入协议，却始终没有给出该协议的字段格式、样例或一次真实解析过程。
+  F-002 (Moderate, LANGUAGE_VERBOSITY): 这六项在正文第 3 节之后，又在 scene_9、scene_10、scene_17 中以不同措辞各念一遍，属同一内容的重复枚举。
+  F-003 (Minor, CONTENT_GAP): 这个 Jenkins 案例只列出约束与权限档位，没有交代故障本身、Agent 的调查路径、审批环节和最终验收结果。
+  F-004 (Minor, CONSISTENCY_CONTRADICTION): 第 8 节列出五件套组件含 Evaluator，而对应分镜 scene_33 只提运行时、策略引擎、权限系统和审计日志，漏掉评估器。
+  F-005 (Minor, STRUCTURE_IMBALANCE): 该段把信任与任务评估这一新话题直接接在六维清单与军事映射之后，使同一段落承担三个中心。
+  F-006 (Minor, LANGUAGE_AMBIGUITY): “它”的先行词在句面上更贴近前一分句的“工具清单”，而不是“Agent”。
+  F-007 (Minor, LOGIC_OVERGENERALIZATION): 以“不可能”断言中央在信息不完整时必然无法掌握全部现场，是比论证所需更强的绝对判断。
+  F-008 (Minor, READABILITY_DENSITY): 一句话里并置“权限四类”和“自主权 L0–L3”两套互不相同的分类维度，听众容易把二者混为一谈。
+  F-009 (Minor, ORIGINALITY_LOW_VALUE): 信任升级指标沿用通用可靠性清单，没有给出阈值、观察窗口或把多项指标合成升级判定的规则。
+
+  Overall 83, grade B, passing false.
+  Risk flags: FACTS_NOT_EXTERNALLY_VERIFIED (Moderate).
+expects:
+  kind: choice
+  value: revise
+source_verdict:
+  passing: false
+disputed: false
+policy:
+  rule: review-verdict
+  note: The label is DERIVED from the review's own verdict by the review-verdict rule. The openai decision model (gpt-6-luna) answered "revise" at confidence 0.76 (agreed).
+provenance:
+  source: projects/任务式指挥与agent设计/article-review.yaml attempt 2 — a shadow-run consult (2026-11-14T17:09:05.828Z); the decision model answered "revise", the review's verdict says "revise".

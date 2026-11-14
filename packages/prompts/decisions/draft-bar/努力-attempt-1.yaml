@@ -1,0 +1,28 @@
+id: 努力-attempt-1
+surface: draft-bar
+state: |-
+  A draft about 努力.
+  F-001 (Major, LENGTH_VIOLATION): 元数据声明240秒，而20个场景合计252秒，既高于任务规定的180秒，也与自身元数据不一致。
+  F-002 (Moderate, READABILITY_EXPECTATION): 钩子承诺解释压力、作息和拖延为何同时报警，后文只用一段带过便转向一般性的励志讨论。
+  F-003 (Moderate, FACT_UNSUPPORTED): “两周”是具体健康判断阈值，但文章未给出来源，也未说明它适用于何种症状或人群。
+  F-004 (Moderate, STRUCTURE_TRANSITION): 文章从压力、睡眠与专业求助突然切到资源、人脉和运气，缺少一句说明两段如何共同支撑“区分真努力”。
+  F-005 (Moderate, ORIGINALITY_LOW_VALUE): 全文以泛化的“加班—积累”隐喻为主，没有把代码、评审、运维或技术债等开发者反馈闭环纳入论证。
+  F-006 (Moderate, CONTENT_GAP): 三项标准只被列出，文章没有定义“反馈、积累、产出”如何观察，也没有用具体工作情境检验它们。
+  F-007 (Moderate, LOGIC_GAP): 文章把“三项全缺”直接等同于没有成长，却没有处理基础建设、维护工作或长周期学习可能延迟显现的边界情形。
+  F-008 (Moderate, LANGUAGE_VERBOSITY): “专注当下动作、不要执着结果”的同一主张在第4、5、7节被多次重述。
+  F-009 (Moderate, LOGIC_OVERGENERALIZATION): “只要……就已经”把个人记录直接推成相对多数人的领先地位，缺少比较依据且语气过度确定。
+
+  Overall 67.4, grade D, passing false.
+  Risk flags: MAJOR_REVISION_NEEDED (Major), FACTS_NOT_EXTERNALLY_VERIFIED (Moderate).
+expects:
+  kind: choice
+  value: revise
+source_verdict:
+  passing: false
+  major_revision_needed: true
+disputed: false
+policy:
+  rule: review-verdict
+  note: The label is DERIVED from the review's own verdict by the review-verdict rule. The openai decision model (gpt-6-luna) answered "reject" at confidence 0.82 (DISAGREED).
+provenance:
+  source: projects/努力/article-review.yaml attempt 1 — a shadow-run consult (2026-11-14T17:08:34.442Z); the decision model answered "reject", the review's verdict says "revise".

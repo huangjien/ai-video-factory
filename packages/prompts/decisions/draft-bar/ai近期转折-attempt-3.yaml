@@ -1,0 +1,20 @@
+id: ai近期转折-attempt-3
+surface: draft-bar
+state: |-
+  A draft about ai近期转折.
+  F-001 (Major, FACT_UNSUPPORTED): 这组量化效果没有给出团队、产品、案例链接、样本量或测量口径。
+
+  Overall 90.4, grade A, passing true.
+  Risk flags: MAJOR_REVISION_NEEDED (Major), FACTS_NOT_EXTERNALLY_VERIFIED (Moderate).
+expects:
+  kind: choice
+  value: revise
+source_verdict:
+  passing: true
+  major_revision_needed: true
+disputed: false
+policy:
+  rule: review-verdict
+  note: The label is DERIVED from the review's own verdict by the review-verdict rule. The openai decision model (gpt-6-luna) answered "reject" at confidence 0.33 (DISAGREED).
+provenance:
+  source: projects/ai近期转折/article-review.yaml attempt 3 — a shadow-run consult (2026-11-14T17:09:09.926Z); the decision model answered "reject", the review's verdict says "revise".

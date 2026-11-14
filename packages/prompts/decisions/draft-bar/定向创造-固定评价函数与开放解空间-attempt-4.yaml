@@ -1,0 +1,28 @@
+id: 定向创造-固定评价函数与开放解空间-attempt-4
+surface: draft-bar
+state: |-
+  A draft about 定向创造-固定评价函数与开放解空间.
+  F-001 (Major, LOGIC_CAUSALITY): 文章把“解空间被压成引擎一格”写成兰利失败的原因，却没有区分史实与作者事后解读。
+  F-002 (Moderate, LOGIC_GAP): “无判据”组没有独立评分基准，而以判据分数分布作比较还可能形成循环验证。
+  F-003 (Moderate, LOGIC_OVERGENERALIZATION): 路线图的详细程度与可探索空间并不必然反比，结果导向或保留分支的路线图也可能扩大探索。
+  F-004 (Moderate, LOGIC_OVERGENERALIZATION): 反馈可以经由选择和继承改变下一代，而不必直接改变生成器的输入。
+  F-005 (Moderate, STRUCTURE_TRANSITION): scene_16把租金称为“第三个补丁”，但前文没有建立两个对应的补丁编号。
+  F-006 (Major, FACT_UNSUPPORTED): FunSearch的采样器、评估器与总采样量被精确陈述，却没有给出论文标识、链接或片尾出处。
+  F-007 (Minor, LANGUAGE_AMBIGUITY): “每轮固定判据”与“重新校准真实目标”没有说明固定发生在单次运行、单个版本还是整个项目周期。
+  F-008 (Minor, READABILITY_DENSITY): scene_18在14秒内同时塞入运行机制、Cap set名称、二十年下界和外部复核，专名与数字密度偏高。
+  F-009 (Minor, FACT_OVERCONFIDENCE): 莱特兄弟“判断动力已够用”的内在动机被写成确定史实，却未标明这是作者解释还是同期记录。
+
+  Overall 86.2, grade B, passing false.
+  Risk flags: MAJOR_REVISION_NEEDED (Major), FACTS_NOT_EXTERNALLY_VERIFIED (Major).
+expects:
+  kind: choice
+  value: revise
+source_verdict:
+  passing: false
+  major_revision_needed: true
+disputed: false
+policy:
+  rule: review-verdict
+  note: The label is DERIVED from the review's own verdict by the review-verdict rule. The openai decision model (gpt-6-luna) answered "reject" at confidence 0.64 (DISAGREED).
+provenance:
+  source: projects/定向创造-固定评价函数与开放解空间/article-review.yaml attempt 4 — a shadow-run consult (2026-11-14T17:08:25.457Z); the decision model answered "reject", the review's verdict says "revise".

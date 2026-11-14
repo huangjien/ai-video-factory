@@ -1,0 +1,26 @@
+id: 人的需要-attempt-3
+surface: draft-bar
+state: |-
+  A draft about 人的需要.
+  F-001 (Minor, CONTENT_OFF_TOPIC): 生理、安全、归属和自我实现各节都反复转入员工激励管理，使个人需要主线多次让位给职场应用。
+  F-002 (Moderate, FACT_UNSUPPORTED): 核心五分法被写成马斯洛的“发现”，正文却未提供原始文献、发表年代或经验依据。
+  F-003 (Moderate, LOGIC_OVERGENERALIZATION): 文章把社交、友谊和爱情一概解释为归属需要，并把孤独直接定义为匮乏，未排除偏好独处等其他解释。
+  F-004 (Moderate, CONSISTENCY_CONTRADICTION): 正文先说层级并非人人按固定顺序前进，结尾却称其为“完整路径”并用“先、再、最后”排成唯一顺序。
+  F-005 (Minor, LANGUAGE_AMBIGUITY): 这一名词堆叠没有说明谁采取什么行动，普通观众难以形成具体画面。
+  F-006 (Minor, LANGUAGE_VERBOSITY): “建立感情的联系或关系”重复表达了同一个概念。
+  F-007 (Moderate, ORIGINALITY_TEMPLATE): 用“普通人的一天”逐项对应五种需要是常见科普模板，观察角度主要仍在复述既有框架。
+  F-008 (Moderate, ORIGINALITY_LOW_VALUE): 归属需要被转译为社交机会和集体活动等通用管理建议，没有增加新证据、案例或反常识结论。
+
+  Overall 81.8, grade B, passing false.
+  Risk flags: FACTS_NOT_EXTERNALLY_VERIFIED (Moderate).
+expects:
+  kind: choice
+  value: revise
+source_verdict:
+  passing: false
+disputed: false
+policy:
+  rule: review-verdict
+  note: The label is DERIVED from the review's own verdict by the review-verdict rule. The openai decision model (gpt-6-luna) answered "reject" at confidence 0.69 (DISAGREED).
+provenance:
+  source: projects/人的需要/article-review.yaml attempt 3 — a shadow-run consult (2026-11-14T17:08:28.866Z); the decision model answered "reject", the review's verdict says "revise".

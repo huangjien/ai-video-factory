@@ -1,0 +1,21 @@
+id: ai时代app会消失吗-attempt-2
+surface: draft-bar
+state: |-
+  A draft about ai时代app会消失吗.
+  F-001 (Moderate, LOGIC_CAUSALITY): 报告中的两类增长被直接用来推出“AI正在制造新的App使用需求”，但同步增长并不能单独证明AI造成了新增需求。
+  F-002 (Minor, LANGUAGE_AMBIGUITY): “它凭什么选择某个服务——……——将决定……”把反问直接嵌入主谓结构，语法承接不清，听感上不易判断什么在决定分发结果。
+  F-003 (Minor, FACT_UNSUPPORTED): 关键数字仅以报告名概括，未给出原文、页码或统计口径，本次无法核验“480亿小时”和“3.6倍”的准确性及可比性。
+
+  Overall 96, grade A, passing true.
+  Risk flags: FACTS_NOT_EXTERNALLY_VERIFIED (Moderate).
+expects:
+  kind: choice
+  value: pass
+source_verdict:
+  passing: true
+disputed: false
+policy:
+  rule: review-verdict
+  note: The label is DERIVED from the review's own verdict by the review-verdict rule. The openai decision model (gpt-6-luna) answered "revise" at confidence 0.94 (DISAGREED).
+provenance:
+  source: projects/ai时代app会消失吗/article-review.yaml attempt 2 — a shadow-run consult (2026-11-14T17:09:10.652Z); the decision model answered "revise", the review's verdict says "pass".

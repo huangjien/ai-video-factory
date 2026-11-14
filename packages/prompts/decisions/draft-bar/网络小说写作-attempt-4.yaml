@@ -1,0 +1,21 @@
+id: 网络小说写作-attempt-4
+surface: draft-bar
+state: |-
+  A draft about 网络小说写作.
+  F-001 (Minor, LOGIC_OVERGENERALIZATION): The closing asserts that satisfying the three questions automatically produces reader retention, ignoring genre taste, prose quality and market factors.
+  F-002 (Minor, LANGUAGE_AMBIGUITY): The narration drops the subject of the investigation (调查), leaving "深处" dangling at the final link of the three-step chain.
+  F-003 (Minor, READABILITY_DENSITY): Five distinct ailments are packed into one 14-second narration with no pause structure.
+
+  Overall 92.4, grade A, passing true.
+  Risk flags: FACTS_NOT_EXTERNALLY_VERIFIED (Minor).
+expects:
+  kind: choice
+  value: pass
+source_verdict:
+  passing: true
+disputed: false
+policy:
+  rule: review-verdict
+  note: The label is DERIVED from the review's own verdict by the review-verdict rule. The openai decision model (gpt-6-luna) answered "revise" at confidence 0.97 (DISAGREED).
+provenance:
+  source: projects/网络小说写作/article-review.yaml attempt 4 — a shadow-run consult (2026-11-14T17:09:01.426Z); the decision model answered "revise", the review's verdict says "pass".

@@ -1,0 +1,21 @@
+id: 海军组织单位-attempt-2
+surface: draft-bar
+state: |-
+  A draft about 海军组织单位.
+  F-001 (Major, LOGIC_CONTRADICTION): 第3节把“编队”放入固定单位的上行层级，但第2、6、7节又把“编队”定义为按任务组成的作战单位，核心分类因此含混。
+  F-002 (Moderate, CONSISTENCY_CONTRADICTION): 该句把驱逐舰和护卫舰都写成航母编队的必备条件，与前文“具体组成完全取决于国家、任务、威胁环境和可用兵力”的限定相冲突。
+
+  Overall 79.6, grade C, passing false.
+  Risk flags: MAJOR_REVISION_NEEDED (Major), FACTS_NOT_EXTERNALLY_VERIFIED (Moderate).
+expects:
+  kind: choice
+  value: revise
+source_verdict:
+  passing: false
+  major_revision_needed: true
+disputed: false
+policy:
+  rule: review-verdict
+  note: The label is DERIVED from the review's own verdict by the review-verdict rule. The openai decision model (gpt-6-luna) answered "reject" at confidence 0.76 (DISAGREED).
+provenance:
+  source: projects/海军组织单位/article-review.yaml attempt 2 — a shadow-run consult (2026-11-14T17:08:41.282Z); the decision model answered "reject", the review's verdict says "revise".

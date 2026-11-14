@@ -1,0 +1,21 @@
+id: 软件工程中的政治-attempt-4
+surface: draft-bar
+state: |-
+  A draft about 软件工程中的政治.
+  F-001 (Moderate, STRUCTURE_ORDER): 职业生态位与蜕壳的比喻无铺垫地接在规则与秩序段落末尾，成为该段第三个话题。
+  F-002 (Minor, LANGUAGE_AMBIGUITY): scene_20 末句把“人为切割我们”的洞察压缩成三个短句，主语与合谋关系需回放才能还原。
+  F-003 (Minor, FACT_UNSUPPORTED): “制胜联盟”出自《独裁者手册》的选举人理论，《君主论》并无此术语，双书并列归属很可能不严谨。
+
+  Overall 78.4, grade C, passing false.
+  Risk flags: FACTS_NOT_EXTERNALLY_VERIFIED (Minor).
+expects:
+  kind: choice
+  value: revise
+source_verdict:
+  passing: false
+disputed: false
+policy:
+  rule: review-verdict
+  note: The label is DERIVED from the review's own verdict by the review-verdict rule. The openai decision model (gpt-6-luna) answered "reject" at confidence 0.37 (DISAGREED).
+provenance:
+  source: projects/软件工程中的政治/article-review.yaml attempt 4 — a shadow-run consult (2026-11-14T17:08:44.758Z); the decision model answered "reject", the review's verdict says "revise".

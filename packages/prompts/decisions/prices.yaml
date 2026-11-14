@@ -1,0 +1,26 @@
+# Provider prices for the decision bench — per 1,000 tokens.
+#
+# The bench reads this table to fill its cost column. A price that is
+# `null` means UNKNOWN, and the bench prints `n/a` for it — never `0`.
+# A fabricated zero is how a report ends up claiming a provider is free.
+#
+# Fill these from the provider's own pricing page, and re-run the bench
+# when a price changes. The numbers are per 1,000 tokens; a provider that
+# charges per decision (a flat rate) needs its own row, not a token rate.
+#
+#   schema: decision-prices/1
+#   prices:
+#     <provider>:
+#       <model>:
+#         input_per_1k: <number|null>
+#         output_per_1k: <number|null>
+schema: decision-prices/1
+prices:
+  openai:
+    gpt-6-luna:
+      input_per_1k: null
+      output_per_1k: null
+  minimax:
+    MiniMax-M3.1-Flash:
+      input_per_1k: null
+      output_per_1k: null

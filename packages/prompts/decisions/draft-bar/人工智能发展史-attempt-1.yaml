@@ -1,0 +1,20 @@
+id: 人工智能发展史-attempt-1
+surface: draft-bar
+state: |-
+  A draft about 人工智能发展史.
+  F-001 (Moderate, CONTENT_GAP): 时间线从1997年的深蓝直接跳到2012年的AlexNet，未交代2000年代统计学习和深度学习复兴为何促成转折。
+  F-002 (Moderate, LOGIC_CAUSALITY): “有了更强的学习方法”把学习路线直接写成深蓝挑战人类的原因，而下一场又说明深蓝依靠搜索和专用硬件取胜。
+
+  Overall 87, grade B, passing false.
+  Risk flags: FACTS_NOT_EXTERNALLY_VERIFIED (Moderate).
+expects:
+  kind: choice
+  value: revise
+source_verdict:
+  passing: false
+disputed: false
+policy:
+  rule: review-verdict
+  note: The label is DERIVED from the review's own verdict by the review-verdict rule. The openai decision model (gpt-6-luna) answered "revise" at confidence 0.27 (agreed).
+provenance:
+  source: projects/人工智能发展史/article-review.yaml attempt 1 — a shadow-run consult (2026-11-14T17:08:37.932Z); the decision model answered "revise", the review's verdict says "revise".

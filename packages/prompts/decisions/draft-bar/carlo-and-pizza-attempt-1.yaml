@@ -1,0 +1,22 @@
+id: carlo-and-pizza-attempt-1
+surface: draft-bar
+state: |-
+  A draft about carlo-and-pizza.
+  F-001 (Minor, LENGTH_VIOLATION): Summing all 30 scene durations yields 540 seconds, against the commissioned 600-second target.
+  F-002 (Moderate, FACT_UNSUPPORTED): The specific 2026-01-29 OpenClaw rename date and the Clawd/Moltbot/OpenClaw chain are post-training and could not be corroborated in this pass.
+  F-003 (Minor, FACT_UNSUPPORTED): The 2025-10-16 launch date and the December 2025 open-standard release are post-training and unverified in this pass.
+  F-004 (Minor, CONTENT_REDUNDANCY): The 'MCP is not an agent, does not guarantee the right tool choice' point is restated in section 4, scene 15 narration, and again in section 7, with nearly identical wording.
+
+  Overall 87.6, grade B, passing false.
+  Risk flags: FACTS_NOT_EXTERNALLY_VERIFIED (Major), INSTRUCTION_COMPLIANCE_UNASSESSED (Minor).
+expects:
+  kind: choice
+  value: revise
+source_verdict:
+  passing: false
+disputed: false
+policy:
+  rule: review-verdict
+  note: The label is DERIVED from the review's own verdict by the review-verdict rule. The openai decision model (gpt-6-luna) answered "revise" at confidence 0.38 (agreed).
+provenance:
+  source: projects/carlo-and-pizza/article-review.yaml attempt 1 — a shadow-run consult (2026-11-14T17:09:13.055Z); the decision model answered "revise", the review's verdict says "revise".

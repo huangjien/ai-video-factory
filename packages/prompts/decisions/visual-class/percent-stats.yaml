@@ -1,0 +1,12 @@
+id: percent-stats
+surface: visual-class
+state: 增长 百分比 统计数据
+expects:
+  kind: choice
+  value: StatGrid
+baseline: StatGrid
+provenance:
+  source: packages/draft/src/visual-classifier.test.ts — "matches percent/statistics keywords to StatGrid".
+policy:
+  rule: structure-over-photo
+  note: The scene describes a structure the viewer must see, so the structure component wins over a photograph.

@@ -1,0 +1,24 @@
+id: 3m与pfos的秘密-attempt-4
+surface: draft-bar
+state: |-
+  A draft about 3m与pfos的秘密.
+  F-001 (Major, FACT_OVERCONFIDENCE): scene_15删去正文中的“研究提示”和“可能”等限定，把关联性结果改写成确定性因果。
+  F-002 (Major, LOGIC_CONTRADICTION): 正文先承认Johnson旧识尚待档案证实，随即将其及Hansen得知真相写成既定事实，scene_17还删除了这一限定。
+  F-003 (Moderate, LOGIC_CAUSALITY): 文章把化学物难以降解直接推成停产后仍会持续累积，却未交代持续排放、暴露或体内代谢平衡这一必要条件。
+  F-004 (Major, FACT_UNSUPPORTED): 核心指控仅以泛称媒体和未具名内部报告支撑，缺少可供观众追溯的文章、日期及档案标识。
+  F-005 (Moderate, LOGIC_OVERGENERALIZATION): 有限普通人群样本只能支持广泛暴露的判断，不能证明PFOS实际进入“每个人”的血液。
+
+  Overall 81, grade B, passing false.
+  Risk flags: MAJOR_REVISION_NEEDED (Major), FACTS_NOT_EXTERNALLY_VERIFIED (Moderate).
+expects:
+  kind: choice
+  value: revise
+source_verdict:
+  passing: false
+  major_revision_needed: true
+disputed: false
+policy:
+  rule: review-verdict
+  note: The label is DERIVED from the review's own verdict by the review-verdict rule. The openai decision model (gpt-6-luna) answered "reject" at confidence 0.77 (DISAGREED).
+provenance:
+  source: projects/3m与pfos的秘密/article-review.yaml attempt 4 — a shadow-run consult (2026-11-14T17:09:03.595Z); the decision model answered "reject", the review's verdict says "revise".

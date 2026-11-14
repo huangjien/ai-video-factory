@@ -1,0 +1,23 @@
+id: 低利率与长期游戏-attempt-1
+surface: draft-bar
+state: |-
+  A draft about 低利率与长期游戏.
+  F-001 (Major, LOGIC_CAUSALITY): 脚本仅凭现金收益低就断言延迟回报的职业更值得押注，并直接把这一逻辑落到学医，既缺少现值比较、职业风险与训练成本，也没有充分兑现为何学医的钩子。
+  F-002 (Major, LOGIC_OVERGENERALIZATION): 结尾把拥挤程度直接等同于回报水平，把少有人走直接等同于超额回报，未给出成立的机制与适用条件。
+  F-003 (Major, FACT_UNSUPPORTED): 五年期定存与一年期定存的比较没有日期、机构、产品类型或计算口径，且利息与利率的口径不清，无法由文内材料核实。
+  F-004 (Moderate, ORIGINALITY_LOW_VALUE): 手术与辨病例子只用微小优势累积十年复述常识，没有具体投入量、可衡量结果或选择方法。
+
+  Overall 73.2, grade C, passing false.
+  Risk flags: MAJOR_REVISION_NEEDED (Major), FACTS_NOT_EXTERNALLY_VERIFIED (Major).
+expects:
+  kind: choice
+  value: revise
+source_verdict:
+  passing: false
+  major_revision_needed: true
+disputed: false
+policy:
+  rule: review-verdict
+  note: The label is DERIVED from the review's own verdict by the review-verdict rule. The openai decision model (gpt-6-luna) answered "reject" at confidence 0.93 (DISAGREED).
+provenance:
+  source: projects/低利率与长期游戏/article-review.yaml attempt 1 — a shadow-run consult (2026-11-14T17:08:51.392Z); the decision model answered "reject", the review's verdict says "revise".

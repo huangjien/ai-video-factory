@@ -1,0 +1,21 @@
+id: conflicts-resolution-en-attempt-2
+surface: draft-bar
+state: |-
+  A draft about conflicts-resolution-en.
+  F-001 (Moderate, CONTENT_GAP): The three-way taxonomy never tells viewers how to distinguish a values conflict from an interests conflict, even though the later diagnostic is framed around interests.
+  F-002 (Moderate, LOGIC_OVERGENERALIZATION): The article presents an overlapping heuristic as an almost universal and exhaustive taxonomy without evidence.
+  F-003 (Moderate, FACT_UNSUPPORTED): The attribution treats a five-item strategy list as support for a broader distinction and a four-strategy count, but the supplied text does not show that the source makes either claim.
+
+  Overall 82.2, grade B, passing false.
+  Risk flags: FACTS_NOT_EXTERNALLY_VERIFIED (Moderate).
+expects:
+  kind: choice
+  value: revise
+source_verdict:
+  passing: false
+disputed: false
+policy:
+  rule: review-verdict
+  note: The label is DERIVED from the review's own verdict by the review-verdict rule. The openai decision model (gpt-6-luna) answered "revise" at confidence 0.69 (agreed).
+provenance:
+  source: projects/conflicts-resolution-en/article-review.yaml attempt 2 — a shadow-run consult (2026-11-14T17:09:16.173Z); the decision model answered "revise", the review's verdict says "revise".

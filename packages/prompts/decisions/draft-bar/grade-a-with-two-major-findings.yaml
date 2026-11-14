@@ -1,0 +1,22 @@
+id: grade-a-with-two-major-findings
+surface: draft-bar
+state: |-
+  A draft about 命数还是余量.
+  F-001 (Major, LOGIC_GAP): 判据没有界定“总额”的对象，也未证明两种模型会给出互斥预测，因为固定寿命终点与固定生理预算都可能在消耗速度变化时产生不同的剩余时间。
+  F-002 (Major, FACT_UNSUPPORTED): 五种动物的心率与寿命仅以“公开生理资料”笼统归因，未给出具体物种、资料出处或适用条件，核心数值无法核验。
+
+  Overall 91.6, grade A, passing true.
+  Risk flags: MAJOR_REVISION_NEEDED (Major), FACTS_NOT_EXTERNALLY_VERIFIED (Moderate).
+expects:
+  kind: choice
+  value: revise
+source_verdict:
+  critical: false
+  major_revision_needed: true
+  passing: true
+policy:
+  rule: review-verdict
+  note: "The draft's own review is the authority: a Critical finding or CRITICAL_BLOCKER rejects,
+    passing false revises, passing true passes."
+provenance:
+  source: projects/命数还是余量/article-review.yaml — attempt 4 (overall 91.6, grade A, passing true, 2 Major).

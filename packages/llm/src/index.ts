@@ -44,3 +44,25 @@ export {
 } from "./structured-agent.js";
 export { GLMProvider, type GLMProviderOptions } from "./glm.js";
 export { MiniMaxProvider, type MiniMaxProviderOptions } from "./minimax.js";
+export {
+  buildDecisionFunction,
+  clampProbability,
+  deriveValueFromDistribution,
+  functionNameFor,
+  stateToText,
+  validateQuestion,
+  winnerKey,
+  OpenAIDecisionProvider,
+  MiniMaxDecisionProvider,
+  type ConfidenceSource,
+  type DecisionAnswer,
+  type DecisionError,
+  type DecisionFunctionSchema,
+  type DecisionKind,
+  type DecisionProvider,
+  type DecisionQuestion,
+  type DecisionRequest,
+  type DecisionValue,
+  type MiniMaxDecisionProviderOptions,
+  type OpenAIDecisionProviderOptions,
+} from "./decision/index.js";

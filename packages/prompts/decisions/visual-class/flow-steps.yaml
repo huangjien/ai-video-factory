@@ -1,0 +1,12 @@
+id: flow-steps
+surface: visual-class
+state: 流水线 步骤 流程
+expects:
+  kind: choice
+  value: FlowChart
+baseline: FlowChart
+provenance:
+  source: packages/draft/src/visual-classifier.test.ts — "matches network/flow/pipeline to FlowChart".
+policy:
+  rule: structure-over-photo
+  note: The scene describes a structure the viewer must see, so the structure component wins over a photograph.

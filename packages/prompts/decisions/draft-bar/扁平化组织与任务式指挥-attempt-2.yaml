@@ -1,0 +1,20 @@
+id: 扁平化组织与任务式指挥-attempt-2
+surface: draft-bar
+state: |-
+  A draft about 扁平化组织与任务式指挥.
+  F-001 (Moderate, FACT_UNSUPPORTED): 该句把美国陆军的正式条令归属和七项原则作为事实陈述，却未给出任何官方来源。
+  F-002 (Moderate, LOGIC_OVERGENERALIZATION): 该句把决策权下放、分散执行和班组模块化并列为同一种扁平化路径，却没有统一的比较维度。
+
+  Overall 90.6, grade A, passing true.
+  Risk flags: FACTS_NOT_EXTERNALLY_VERIFIED (Moderate).
+expects:
+  kind: choice
+  value: pass
+source_verdict:
+  passing: true
+disputed: false
+policy:
+  rule: review-verdict
+  note: The label is DERIVED from the review's own verdict by the review-verdict rule. The openai decision model (gpt-6-luna) answered "revise" at confidence 0.67 (DISAGREED).
+provenance:
+  source: projects/扁平化组织与任务式指挥/article-review.yaml attempt 2 — a shadow-run consult (2026-11-14T17:08:40.534Z); the decision model answered "revise", the review's verdict says "pass".

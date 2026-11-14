@@ -1,0 +1,24 @@
+id: 3m与pfos的秘密-attempt-2
+surface: draft-bar
+state: |-
+  A draft about 3m与pfos的秘密.
+  F-001 (Moderate, FACT_UNSUPPORTED): 文章把停产归因于环保署压力并给出“全美唯一”结论，却没有提供公告标题、日期或链接，读者无法核验这一监管时间线。
+  F-002 (Major, FACT_UNSUPPORTED): Johnson早在七十年代已知PFOS会结合人体蛋白并累积，是“3M早已知情”结论的关键，但正文没有交代这条信息的可追溯来源。
+  F-003 (Moderate, CONTENT_GAP): 文章只说3M生产多种含氟产品，却未说明PFOS具体进入哪些产品以及工人和普通人的暴露路径。
+  F-004 (Moderate, CONSISTENCY_CONTRADICTION): scene_14把正文“几乎不分解、不排出”改成“不会消失”和“分解不掉”，既造成内部限定不一致，也把持久性说成绝对值。
+  F-005 (Moderate, READABILITY_PACING): scene_16在14秒内连续报出四项健康影响和PFBS问题，而画面只呈现孕妇，无法同步承载全部信息。
+
+  Overall 77.2, grade C, passing false.
+  Risk flags: MAJOR_REVISION_NEEDED (Major), FACTS_NOT_EXTERNALLY_VERIFIED (Moderate), INSTRUCTION_COMPLIANCE_UNASSESSED (Moderate).
+expects:
+  kind: choice
+  value: revise
+source_verdict:
+  passing: false
+  major_revision_needed: true
+disputed: false
+policy:
+  rule: review-verdict
+  note: The label is DERIVED from the review's own verdict by the review-verdict rule. The openai decision model (gpt-6-luna) answered "reject" at confidence 0.58 (DISAGREED).
+provenance:
+  source: projects/3m与pfos的秘密/article-review.yaml attempt 2 — a shadow-run consult (2026-11-14T17:09:02.921Z); the decision model answered "reject", the review's verdict says "revise".

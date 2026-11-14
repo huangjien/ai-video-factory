@@ -1,0 +1,16 @@
+id: scene-boundaries-missed
+surface: qa-triage
+state: 'warn · sceneBoundaries · only 7/20 expected scene cuts detected (transitions and slow scenes blur
+  pixel deltas)
+
+  fix: Check qa/contact-sheet.png; if scenes truly ran together, verify per-scene durations in the storyboard.'
+expects:
+  kind: choice
+  value: review
+provenance:
+  source: projects/网络小说写作/qa/render-report.json (2026-10-24) — the sceneBoundaries warning on a 221 s
+    render.
+policy:
+  rule: qa-finding-level
+  note: 'The level the QA check raised decides: an error finding blocks, a warn finding asks for a human,
+    a clean render ships.'

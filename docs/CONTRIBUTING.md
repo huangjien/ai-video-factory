@@ -101,6 +101,20 @@ PR and push to `main`. See `.github/workflows/test.yml`.
 - After a phase ships, merge the branch to `main` with `--no-ff`, then tag `v<X>.<Y>` (or `v<X>.<Y>.<N>` for sub-releases).
 - Tags are immutable; new work creates a new tag.
 - Bump the version in the merge commit message and tag message.
+- **A minor bump is not shipped until it is tagged and released.** When the
+  minor component changes (`v0.9` → `v0.10`), the release is finished only
+  after all three of these exist:
+  1. `git tag -a v<X>.<Y> -m "<summary>" <release-commit>` — an annotated tag
+     on the `main` commit that carries the new version.
+  2. `git push origin v<X>.<Y>` — the tag is on `origin`.
+  3. `gh release create v<X>.<Y> --title "v<X>.<Y> — <summary>" --notes-file <RELEASES.md section>`
+     — a GitHub Release whose body is the matching `## v<X>.<Y>` section of
+     `docs/RELEASES.md`.
+- Patch tags (`v0.9.1`) are optional: tag them when the change is
+  user-visible, skip them for internal churn.
+- Keep the three version sources in the release commit — `package.json`,
+  `packages/cli/package.json`, and `packages/cli/src/version.ts` (`VERSION`)
+  must carry the same number the tag names.
 
 ### Testing
 
@@ -215,3 +229,9 @@ This keeps `main` clean, forces every change through the CI gate, and preserves 
 6. Tag the merge commit: `git tag -a v<X>.<Y> -m "<summary>"`.
 7. Push `main` + tags: `git push origin main v<X>.<Y>`.
 8. Update RELEASES.md with a brief summary of what shipped.
+9. **Minor bump → publish the GitHub Release:**
+   `gh release create v<X>.<Y> --title "v<X>.<Y> — <summary>" --notes-file <the section you just wrote>`.
+   A minor bump is not shipped until the tag is pushed **and** the GitHub
+   Release exists.
+10. Verify: `git ls-remote --tags origin | grep v<X>.<Y>` and
+    `gh release view v<X>.<Y>` both resolve.

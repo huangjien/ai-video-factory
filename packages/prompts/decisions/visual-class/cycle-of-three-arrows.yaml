@@ -1,0 +1,16 @@
+id: cycle-of-three-arrows
+surface: visual-class
+state: 由构建、反馈、调整三段箭头首尾相接组成的环在画面中央快速旋转，外圈几张便利贴正被一阵风吹散，暖米色底
+expects:
+  kind: choice
+  value: CycleDiagram
+baseline: AnimatedIllustration
+provenance:
+  source: projects/ai-era-software-engineering-11-shifts/article.md scene_12 — a ring of three arrows
+    (build → feedback → adjust) that the keyword classifier falls through on.
+disputed: true
+dispute: 'The scene describes a structure as a photograph: a cycle the viewer must see (CycleDiagram)
+  or a photographed animation (AnimatedIllustration). Both rules fire.'
+policy:
+  rule: structure-over-photo
+  note: The scene describes a structure the viewer must see, so the structure component wins over a photograph.

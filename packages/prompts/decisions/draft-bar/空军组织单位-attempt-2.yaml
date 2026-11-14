@@ -1,0 +1,25 @@
+id: 空军组织单位-attempt-2
+surface: draft-bar
+state: |-
+  A draft about 空军组织单位.
+  F-001 (Moderate, CONTENT_GAP): The unit ladder is characterised only by aircraft counts, with no worked example of what a squadron actually contains or what its personnel do.
+  F-002 (Moderate, LOGIC_CONTRADICTION): 大队 is used both as the tier above 中队 and as a functional unit placed inside a 大队, so the chain of command cannot be reconstructed.
+  F-003 (Moderate, LOGIC_CAUSALITY): The list conflates base-survivability assets (air defence) with the drivers of sortie generation and asserts every item as directly decisive.
+  F-004 (Moderate, READABILITY_EXPECTATION): Western-derived unit figures are voiced as general facts while the article's caveat that these terms are illustrative of Western practice arrives only in scene 15.
+  F-005 (Moderate, ORIGINALITY_LOW_VALUE): This passage states generic air-combat constraints without a single concrete detail that would inform an ordinary audience.
+  F-006 (Minor, FACT_UNSUPPORTED): The narration appeals to unnamed authority for a quotable-sounding claim that no source or concrete observation supports.
+  F-007 (Minor, LANGUAGE_AMBIGUITY): The referent of 长成这样 is never stated, so the listener cannot tell what is being explained when the reason list begins.
+
+  Overall 75, grade C, passing false.
+  Risk flags: FACTS_NOT_EXTERNALLY_VERIFIED (Minor).
+expects:
+  kind: choice
+  value: revise
+source_verdict:
+  passing: false
+disputed: false
+policy:
+  rule: review-verdict
+  note: The label is DERIVED from the review's own verdict by the review-verdict rule. The openai decision model (gpt-6-luna) answered "reject" at confidence 0.83 (DISAGREED).
+provenance:
+  source: projects/空军组织单位/article-review.yaml attempt 2 — a shadow-run consult (2026-11-14T17:08:59.421Z); the decision model answered "reject", the review's verdict says "revise".

@@ -1,0 +1,20 @@
+id: 任务式指挥与agent设计-attempt-3
+surface: draft-bar
+state: |-
+  A draft about 任务式指挥与agent设计.
+  F-001 (Moderate, CONTENT_GAP): 文章把 Mission Brief 称为“结构化协议”，却只列出字段名称，没有给出可验证的数据结构、字段类型、继承规则或失败语义。
+  F-002 (Moderate, LANGUAGE_AMBIGUITY): 正文同时使用“允许、需审批、禁止”的操作许可分档和 L0–L3 的自主等级，却没有说明两者是彼此独立且需要组合判断的两条轴。
+
+  Overall 85.2, grade B, passing false.
+  Risk flags: FACTS_NOT_EXTERNALLY_VERIFIED (Minor).
+expects:
+  kind: choice
+  value: revise
+source_verdict:
+  passing: false
+disputed: false
+policy:
+  rule: review-verdict
+  note: The label is DERIVED from the review's own verdict by the review-verdict rule. The openai decision model (gpt-6-luna) answered "revise" at confidence 0.69 (agreed).
+provenance:
+  source: projects/任务式指挥与agent设计/article-review.yaml attempt 3 — a shadow-run consult (2026-11-14T17:09:06.240Z); the decision model answered "revise", the review's verdict says "revise".

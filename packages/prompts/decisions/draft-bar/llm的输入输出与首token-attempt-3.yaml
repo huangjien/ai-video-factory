@@ -1,0 +1,21 @@
+id: llm的输入输出与首token-attempt-3
+surface: draft-bar
+state: |-
+  A draft about llm的输入输出与首token.
+  F-001 (Moderate, LOGIC_CAUSALITY): 句子把Prefill与Decode的硬件差异直接称为输入输出Token分开计价的原因，缺少从技术成本差异到商业定价政策的关键限定。
+  F-002 (Moderate, LOGIC_OVERGENERALIZATION): 句子把主流API一律写成无状态且每次必须完整重传，未限定传统聊天补全接口，也未排除服务端会话或持久上下文存储。
+  F-003 (Moderate, FACT_UNSUPPORTED): 两个数量区间被称为“典型”，但没有来源、模型、工具配置或计算样本，无法由文内证据核验。
+
+  Overall 82.2, grade B, passing false.
+  Risk flags: FACTS_NOT_EXTERNALLY_VERIFIED (Moderate).
+expects:
+  kind: choice
+  value: revise
+source_verdict:
+  passing: false
+disputed: false
+policy:
+  rule: review-verdict
+  note: The label is DERIVED from the review's own verdict by the review-verdict rule. The openai decision model (gpt-6-luna) answered "revise" at confidence 0.48 (agreed).
+provenance:
+  source: projects/llm的输入输出与首token/article-review.yaml attempt 3 — a shadow-run consult (2026-11-14T17:09:19.379Z); the decision model answered "revise", the review's verdict says "revise".

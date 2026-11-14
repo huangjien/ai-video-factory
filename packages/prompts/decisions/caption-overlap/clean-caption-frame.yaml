@@ -1,0 +1,16 @@
+id: clean-caption-frame
+surface: caption-overlap
+state: Rendered frame 12 of 20. The caption sits alone in the bottom band; no other text is drawn in that
+  region. All 40 caption cues passed the bottom safe-area check.
+expects:
+  kind: noul
+  value: 'false'
+  probability:
+  - 0.0
+  - 0.2
+provenance:
+  source: projects/3m与pfos的秘密/qa/render-report.json (captions.ok, 40 cues) — a render whose captions clear
+    the safe area.
+policy:
+  rule: caption-band
+  note: Two pieces of text drawn in the bottom band at the same time.

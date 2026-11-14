@@ -1,0 +1,24 @@
+id: 矛盾的解决之道-attempt-1
+surface: draft-bar
+state: |-
+  A draft about 矛盾的解决之道.
+  F-001 (Major, LOGIC_GAP): 开篇以“大多数”这一量化断言支撑后文，却没有给出数据、案例边界或来源。
+  F-002 (Major, LOGIC_OVERGENERALIZATION): 文章把三个便于教学的冲突驱动因素写成近乎穷尽的分类，却没有说明互斥性、完整性或边界标准。
+  F-003 (Moderate, CONTENT_GAP): “设计一次交换”是解决价值观冲突的唯一具体指令，却没有说明交换什么、何时算成功或如何停止让步。
+  F-004 (Moderate, CONSISTENCY_CONTRADICTION): 结尾把三分法中的“价值观冲突”替换成“关系”，与正文将价值冲突归入交易和妥协的框架不一致。
+  F-005 (Moderate, FACT_UNSUPPORTED): 正文用[w1]和[w10]为《矛盾论》的具体归因背书，却没有提供可解析的来源信息。
+
+  Overall 78.6, grade C, passing false.
+  Risk flags: MAJOR_REVISION_NEEDED (Major), FACTS_NOT_EXTERNALLY_VERIFIED (Moderate).
+expects:
+  kind: choice
+  value: revise
+source_verdict:
+  passing: false
+  major_revision_needed: true
+disputed: false
+policy:
+  rule: review-verdict
+  note: The label is DERIVED from the review's own verdict by the review-verdict rule. The openai decision model (gpt-6-luna) answered "reject" at confidence 0.79 (DISAGREED).
+provenance:
+  source: projects/矛盾的解决之道/article-review.yaml attempt 1 — a shadow-run consult (2026-11-14T17:08:47.916Z); the decision model answered "reject", the review's verdict says "revise".

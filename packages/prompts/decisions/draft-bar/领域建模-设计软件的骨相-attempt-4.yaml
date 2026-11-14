@@ -1,0 +1,22 @@
+id: 领域建模-设计软件的骨相-attempt-4
+surface: draft-bar
+state: |-
+  A draft about 领域建模-设计软件的骨相.
+  F-002 (Moderate, LOGIC_CONTRADICTION): “工程师并没有创造新的东西”的绝对判断与同段“模型甚至有意识地偏离现实”相互冲突。
+  F-003 (Moderate, LOGIC_OVERGENERALIZATION): 这里把餐厅中的每个现实名词都要求映射成对象，缺少以行为、规则和统一语言筛选核心概念的准则。
+  F-004 (Moderate, READABILITY_PACING): 方法材料同时堆叠四种命名方法、三部分自定义公式和事件风暴机制，而 scene_22 仅分配 20 秒且还要容纳示例。
+  F-005 (Moderate, FACT_UNSUPPORTED): 文中把《武林外传》四个角色场景分别对应到四种领域语义，却未给出集数或出处，无法在本次内部核验中确认这些对应是否准确。
+
+  Overall 82.8, grade B, passing false.
+  Risk flags: FACTS_NOT_EXTERNALLY_VERIFIED (Moderate).
+expects:
+  kind: choice
+  value: revise
+source_verdict:
+  passing: false
+disputed: false
+policy:
+  rule: review-verdict
+  note: The label is DERIVED from the review's own verdict by the review-verdict rule. The openai decision model (gpt-6-luna) answered "reject" at confidence 0.6 (DISAGREED).
+provenance:
+  source: projects/领域建模-设计软件的骨相/article-review.yaml attempt 4 — a shadow-run consult (2026-11-14T17:08:24.117Z); the decision model answered "reject", the review's verdict says "revise".

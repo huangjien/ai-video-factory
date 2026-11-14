@@ -1,0 +1,20 @@
+id: 写好小说-attempt-1
+surface: draft-bar
+state: |-
+  A draft about 写好小说.
+  F-001 (Moderate, CONTENT_GAP): Scene 14 introduces target-reader feedback advice that does not appear anywhere in the body article's drafting plan (section 7).
+  F-002 (Minor, CONSISTENCY_CONTRADICTION): Body section 8 says '十点分别给读者' but enumerates only eight reader-needs (方向、在乎、入口、余味、继续、可信、惊奇、回报); scene 15 repeats the eight-item frame, contradicting the ten-point count.
+
+  Overall 80.4, grade B, passing false.
+  Risk flags: FACTS_NOT_EXTERNALLY_VERIFIED (Moderate).
+expects:
+  kind: choice
+  value: revise
+source_verdict:
+  passing: false
+disputed: false
+policy:
+  rule: review-verdict
+  note: The label is DERIVED from the review's own verdict by the review-verdict rule. The openai decision model (gpt-6-luna) answered "revise" at confidence 0.83 (agreed).
+provenance:
+  source: projects/写好小说/article-review.yaml attempt 1 — a shadow-run consult (2026-11-14T17:08:56.800Z); the decision model answered "revise", the review's verdict says "revise".

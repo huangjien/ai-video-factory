@@ -1,0 +1,23 @@
+id: clean-pass-no-findings
+surface: draft-bar
+state: |-
+  A draft about 7-basic-plots-en.
+
+  No findings.
+
+  Overall 92.8, grade A, passing true.
+  Risk flags: FACTS_NOT_EXTERNALLY_VERIFIED (Minor).
+expects:
+  kind: choice
+  value: pass
+source_verdict:
+  critical: false
+  major_revision_needed: false
+  passing: true
+policy:
+  rule: review-verdict
+  note: "The draft's own review is the authority: a Critical finding or CRITICAL_BLOCKER rejects,
+    passing false revises, passing true passes."
+provenance:
+  source: projects/7-basic-plots-en/article-review.yaml — attempt 2 (overall 92.8, grade A, passing
+    true, no findings).

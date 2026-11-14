@@ -15,6 +15,10 @@ import {
 } from "@video/llm";
 import { MiniMaxWebSearch, callResearch } from "@video/research";
 import {
+  decisionLogPath,
+  resolveDecisionMode,
+  runDraftDecisionShadow,
+  runVisualDecisionShadow,
 } from "@video/draft";
 import {
   applyRevisionToMarkdown,
@@ -871,6 +875,15 @@ export async function runDraft(opts: DraftOptions): Promise<number> {
         `  ! best draft scored ${result.score.total}/100 grade ${result.score.computed.grade} (bar: ${minScore}) — edit article.md or raise --max-attempts / lower --min-score`,
       );
     }
+    const decisionMode = resolveDecisionMode();
+    if (decisionMode === "on") {
+      console.error(
+        '  ! decision mode "on" is not enabled yet — the bench gate has not been cleared',
+      );
+      console.error(
+        "    (docs/v0.11-decision-provider-plan.md §7.5); running the shadow pass instead.",
+      );
+    }
     const reviewPath = path.join(projectRoot, "article-review.yaml");
     await writeFile(
       reviewPath,
@@ -882,6 +895,31 @@ export async function runDraft(opts: DraftOptions): Promise<number> {
       "utf8",
     );
     console.log(`✓ article review → ${reviewPath}`);
+
+    // v0.11: the draft-bar shadow pass. It asks a decision model what
+    // it thinks of each reviewed draft and records the answer beside the
+    // review's own verdict, in <project>/decision-log.jsonl. It changes
+    // nothing: the article and the review above are final.
+    if (decisionMode !== "off") {
+      const draftShadow = await runDraftDecisionShadow({
+        project: path.basename(projectRoot),
+        attempts: result.attempts.map((attempt) => ({
+          attempt: attempt.attempt,
+          overall: attempt.score?.computed.overall_score,
+          grade: attempt.score?.computed.grade,
+          passing: attempt.passing,
+          findings: attempt.score?.raw.findings,
+          risk_flags: attempt.score?.raw.risk_flags,
+        })),
+        mode: "shadow",
+        logPath: decisionLogPath(projectRoot),
+      });
+      if (draftShadow.consulted > 0) {
+        console.log(
+          `  decision shadow (draft): ${draftShadow.consulted} attempt(s) consulted, ${draftShadow.agreed} agreed with the review's verdict`,
+        );
+      }
+    }
 
     // In the seed mode the loop's markdown is a RE-RENDER of the
     // structured article (the renderer owns the shape, the file owns the
@@ -1027,6 +1065,36 @@ export async function runDraft(opts: DraftOptions): Promise<number> {
       };
     }
     await writeFile(storyboardPath, articleToStoryboardYaml(article), "utf8");
+
+    // v0.11 (T8): the shadow decision pass. It asks a decision model
+    // what it would answer for the scenes the KEYWORD classifier could
+    // not route, and records the answer beside the classifier's own in
+    // <project>/decision-log.jsonl. It changes nothing: the storyboard
+    // above is final. `DECISION_MODE=shadow` turns it on; the default
+    // is off.
+    const storyboardMode = resolveDecisionMode();
+    if (storyboardMode === "on") {
+      console.error(
+        '  ! decision mode "on" is not enabled yet — the bench gate has not been cleared',
+      );
+      console.error(
+        "    (docs/v0.11-decision-provider-plan.md §7.5); running the shadow pass instead.",
+      );
+    }
+    const shadow = await runVisualDecisionShadow({
+      scenes: article.scenes.map((scene) => ({
+        id: scene.id,
+        visual: scene.visual,
+        ...(scene.component !== undefined ? { component: scene.component } : {}),
+      })),
+      projectRoot,
+      mode: storyboardMode === "on" ? "shadow" : storyboardMode,
+    });
+    if (shadow.consulted > 0) {
+      console.log(
+        `  decision shadow: ${shadow.consulted} scene(s) consulted, ${shadow.agreed} agreed with the classifier`,
+      );
+    }
   } catch (err) {
     console.error(
       `  ! could not refresh storyboard.yaml from article.md: ${(err as Error).message}`,

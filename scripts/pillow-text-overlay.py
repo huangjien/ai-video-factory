@@ -354,22 +354,60 @@ def render_overlay(
 # ---- scene walking -----------------------------------------------------
 
 
+def _strip_line_comment(raw: str) -> str:
+    """Remove the trailing YAML comment of one line, respecting quotes.
+
+    The old version split on the FIRST '#', which cut inside a quoted
+    scalar: an on-screen line like
+
+        - text: "type: 'fault_injection' # string"
+
+    became an unterminated string, the WHOLE storyboard failed to
+    parse, and one scene's text broke the text-overlay step for the
+    entire film. A '#' only starts a comment outside quotes and only
+    when it follows whitespace."""
+    in_single = False
+    in_double = False
+    for i, ch in enumerate(raw):
+        if ch == "'" and not in_double:
+            in_single = not in_single
+        elif ch == '"' and not in_single:
+            in_double = not in_double
+        elif ch == "#" and not in_single and not in_double:
+            if i == 0 or raw[i - 1] in " \t":
+                return raw[:i].rstrip()
+    return raw
+
+
+def _strip_yaml_comments(text: str) -> str:
+    """Strip YAML comments without touching quoted scalars or the content
+    of a block scalar (`|` / `>`). A '#' inside a narration or a caption
+    is CONTENT, not a comment."""
+    out: list[str] = []
+    block_indent: int | None = None
+    for raw in text.splitlines():
+        indent = len(raw) - len(raw.lstrip(" "))
+        if block_indent is not None:
+            # Inside a block scalar: content until the indentation drops
+            # back to (or below) the key's own indentation.
+            if raw.strip() == "" or indent > block_indent:
+                out.append(raw)
+                continue
+            block_indent = None
+        stripped = _strip_line_comment(raw)
+        out.append(stripped)
+        if re.search(r":[\s]*[>|][-+]?\s*$", stripped):
+            block_indent = indent
+    return "\n".join(out)
+
+
 def parse_storyboard(path: Path) -> dict:
     """Tiny YAML reader — we only need top-level `scenes` and each scene's
     `id`, `caption`, `visual.props.caption`, and `captions.text`. Avoids
     pulling PyYAML to keep the dep surface minimal."""
     text = path.read_text(encoding="utf-8")
     # Strip comments to avoid "#Foo" lines that include ":"
-    lines = []
-    for raw in text.splitlines():
-        stripped = raw.split("#", 1)[0] if not raw.lstrip().startswith("#") else ""
-        # Preserve structure; we just remove the trailing # comment marker.
-        # Re-attach a newline so YAML line count is preserved.
-        if stripped != raw:
-            lines.append(stripped.rstrip())
-        else:
-            lines.append(raw)
-    cleaned = "\n".join(lines)
+    cleaned = _strip_yaml_comments(text)
     try:
         import yaml  # type: ignore
     except ImportError:

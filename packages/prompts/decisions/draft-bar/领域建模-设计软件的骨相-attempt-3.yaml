@@ -1,0 +1,24 @@
+id: 领域建模-设计软件的骨相-attempt-3
+surface: draft-bar
+state: |-
+  A draft about 领域建模-设计软件的骨相.
+  F-001 (Moderate, LENGTH_VIOLATION): Hook标注为“≤20s”，但其叙事由scene_1的12秒和scene_2的12秒承载，实际占24秒。
+  F-002 (Moderate, FACT_UNSUPPORTED): 文章将领域驱动设计断言为面向对象思想的子集，既未限定“思想”的范围，也没有给出可核验来源。
+  F-003 (Moderate, LOGIC_GAP): 文章从“删除菜品导致历史订单不可打开”直接跳到“暴露菜品一词二义”，把引用与生命周期问题混成了语义歧义证据。
+  F-004 (Moderate, LOGIC_CONTRADICTION): 正文称“多对多没有消失，只是被命名、被管理了”，但scene_20的口播断言“多对多消失了”，两种说法互相冲突。
+  F-005 (Moderate, READABILITY_DENSITY): 该句并列四种建模方法并抛出未定义的“主体加行为加客体等于现象”，对应scene_22还在15秒内继续解释事件风暴，听众缺少消化停顿。
+  F-006 (Moderate, LOGIC_OVERGENERALIZATION): 文章把领域模型绝对限定为“结构视角而非流程视角”，既忽略模型也可承载行为与流程语义，也与前文“承载逻辑与状态”的说法形成不严谨的二选一。
+
+  Overall 76, grade C, passing false.
+  Risk flags: FACTS_NOT_EXTERNALLY_VERIFIED (Moderate).
+expects:
+  kind: choice
+  value: revise
+source_verdict:
+  passing: false
+disputed: false
+policy:
+  rule: review-verdict
+  note: The label is DERIVED from the review's own verdict by the review-verdict rule. The openai decision model (gpt-6-luna) answered "reject" at confidence 0.77 (DISAGREED).
+provenance:
+  source: projects/领域建模-设计软件的骨相/article-review.yaml attempt 3 — a shadow-run consult (2026-11-14T17:08:23.865Z); the decision model answered "reject", the review's verdict says "revise".

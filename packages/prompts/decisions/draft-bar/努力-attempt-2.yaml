@@ -1,0 +1,26 @@
+id: 努力-attempt-2
+surface: draft-bar
+state: |-
+  A draft about 努力.
+  F-001 (Moderate, CONTENT_GAP): 三项周节奏本身可执行，却没有给出技能、复盘和里程碑在开发者工作中的具体实例。
+  F-002 (Moderate, LOGIC_OVERGENERALIZATION): 正文仅凭自我记录变长就直接断言胜过多数人，缺少群体基准或比较依据。
+  F-003 (Moderate, LANGUAGE_VERBOSITY): 第5节的“卡在哪一步—写进改进项”与第6、7节的复盘、里程碑和记录连续重复，后半程信息增量偏低。
+  F-004 (Moderate, READABILITY_EXPECTATION): 开场将状态指向压力、作息和拖延，但正文主体转向一般努力观，未兑现对这三项原因的诊断承诺。
+  F-005 (Minor, ORIGINALITY_CLICHE): 结尾用“答案会自己长出来”的熟悉箴言收束，延续了常见励志模板而缺少独有落点。
+  F-006 (Moderate, FACT_UNSUPPORTED): 正文把“两周没有改善”作为寻求专业帮助的明确阈值，却未给出医学来源、适用人群或例外条件。
+  F-007 (Major, LENGTH_VIOLATION): 20个场景的声明时长合计240秒，比frontmatter中的180秒目标多60秒。
+
+  Overall 72.2, grade C, passing false.
+  Risk flags: MAJOR_REVISION_NEEDED (Major), FACTS_NOT_EXTERNALLY_VERIFIED (Moderate).
+expects:
+  kind: choice
+  value: revise
+source_verdict:
+  passing: false
+  major_revision_needed: true
+disputed: false
+policy:
+  rule: review-verdict
+  note: The label is DERIVED from the review's own verdict by the review-verdict rule. The openai decision model (gpt-6-luna) answered "reject" at confidence 0.56 (DISAGREED).
+provenance:
+  source: projects/努力/article-review.yaml attempt 2 — a shadow-run consult (2026-11-14T17:08:34.669Z); the decision model answered "reject", the review's verdict says "revise".

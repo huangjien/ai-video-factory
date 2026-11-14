@@ -1,0 +1,21 @@
+id: 软件工程师的认知之旅-从争论到判断-attempt-2
+surface: draft-bar
+state: |-
+  A draft about 软件工程师的认知之旅-从争论到判断.
+  F-001 (Moderate, LOGIC_GAP): 钩子把PHP争论归因于“三个不同的问题”，但随后的例子只对比了评价“好坏”的两项标准，没有分别演示真假、好坏和对错。
+  F-002 (Moderate, FACT_UNSUPPORTED): 并发示例没有说明条件更新成立所需的原子性、事务边界、隔离级别和状态不变量。
+  F-003 (Moderate, ORIGINALITY_LOW_VALUE): 这一相关性提醒属于成熟工程师普遍掌握的常识，且没有通过新的案例或证据展示超出既有方法论的信息增量。
+
+  Overall 89, grade B, passing false.
+  Risk flags: FACTS_NOT_EXTERNALLY_VERIFIED (Moderate).
+expects:
+  kind: choice
+  value: revise
+source_verdict:
+  passing: false
+disputed: false
+policy:
+  rule: review-verdict
+  note: The label is DERIVED from the review's own verdict by the review-verdict rule. The openai decision model (gpt-6-luna) answered "reject" at confidence 0.38 (DISAGREED).
+provenance:
+  source: projects/软件工程师的认知之旅-从争论到判断/article-review.yaml attempt 2 — a shadow-run consult (2026-11-14T17:08:22.312Z); the decision model answered "reject", the review's verdict says "revise".

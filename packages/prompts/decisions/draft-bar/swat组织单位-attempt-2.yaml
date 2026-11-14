@@ -1,0 +1,21 @@
+id: swat组织单位-attempt-2
+surface: draft-bar
+state: |-
+  A draft about swat组织单位.
+  F-001 (Moderate, FACT_UNSUPPORTED): 正文明确称这些层级和人数只是示意，但场景旁白仍以连续精确数字和“排”级单位呈现，且没有说明它们来自哪些机构。
+  F-002 (Moderate, LOGIC_CAUSALITY): 前文仅说明任务小组更灵活且成员训练更强，结论却把战斗力直接且排他地归因于组织结构。
+  F-003 (Moderate, FACT_UNSUPPORTED): 台词把“最早的SWAT”及其诞生原因说成确定史实，却没有给出具体机构、地区、年份或可追溯来源。
+
+  Overall 86.2, grade B, passing false.
+  Risk flags: FACTS_NOT_EXTERNALLY_VERIFIED (Moderate).
+expects:
+  kind: choice
+  value: revise
+source_verdict:
+  passing: false
+disputed: false
+policy:
+  rule: review-verdict
+  note: The label is DERIVED from the review's own verdict by the review-verdict rule. The openai decision model (gpt-6-luna) answered "revise" at confidence 0.72 (agreed).
+provenance:
+  source: projects/swat组织单位/article-review.yaml attempt 2 — a shadow-run consult (2026-11-14T17:09:24.452Z); the decision model answered "revise", the review's verdict says "revise".

@@ -1,0 +1,21 @@
+id: 矛盾的解决之道-attempt-2
+surface: draft-bar
+state: |-
+  A draft about 矛盾的解决之道.
+  F-001 (Major, LOGIC_CAUSALITY): “筹码总量不变”只能说明客观资源未变，不能推出沟通常常失效，因为沟通还能揭示底线并改变筹码的主观价值。
+  F-002 (Major, LOGIC_OVERGENERALIZATION): 文本把框架和风格偏好视为数十年经验形成的价值判断并据此认定其难以说服，却没有区分稳定原则与可复验的技术判断。
+
+  Overall 90.6, grade A, passing true.
+  Risk flags: MAJOR_REVISION_NEEDED (Major), FACTS_NOT_EXTERNALLY_VERIFIED (Moderate).
+expects:
+  kind: choice
+  value: revise
+source_verdict:
+  passing: true
+  major_revision_needed: true
+disputed: false
+policy:
+  rule: review-verdict
+  note: The label is DERIVED from the review's own verdict by the review-verdict rule. The openai decision model (gpt-6-luna) answered "revise" at confidence 0.77 (agreed).
+provenance:
+  source: projects/矛盾的解决之道/article-review.yaml attempt 2 — a shadow-run consult (2026-11-14T17:08:48.325Z); the decision model answered "revise", the review's verdict says "revise".

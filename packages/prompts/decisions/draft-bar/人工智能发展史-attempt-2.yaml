@@ -1,0 +1,21 @@
+id: 人工智能发展史-attempt-2
+surface: draft-bar
+state: |-
+  A draft about 人工智能发展史.
+  F-001 (Moderate, CONTENT_GAP): 结尾用“正在发生的事”概括ChatGPT之后的阶段，却没有给出任何具名里程碑，使现代AI史的落点停在预告而非历史。
+  F-002 (Moderate, FACT_OVERCONFIDENCE): 场景旁白把正文中的“有时就能完成新任务”强化为“它就能上手新任务”，抹去了GPT-3跨任务表现的条件性和不稳定性。
+  F-003 (Minor, FACT_OVERCONFIDENCE): 该“首次”表述没有限定为生成式聊天AI，若按AI整体理解则历史范围过宽。
+
+  Overall 86.8, grade B, passing false.
+  Risk flags: FACTS_NOT_EXTERNALLY_VERIFIED (Minor).
+expects:
+  kind: choice
+  value: revise
+source_verdict:
+  passing: false
+disputed: false
+policy:
+  rule: review-verdict
+  note: The label is DERIVED from the review's own verdict by the review-verdict rule. The openai decision model (gpt-6-luna) answered "revise" at confidence 0.97 (agreed).
+provenance:
+  source: projects/人工智能发展史/article-review.yaml attempt 2 — a shadow-run consult (2026-11-14T17:08:38.080Z); the decision model answered "revise", the review's verdict says "revise".

@@ -1,0 +1,20 @@
+id: ai近期转折-attempt-4
+surface: draft-bar
+state: |-
+  A draft about ai近期转折.
+  F-001 (Moderate, FACT_UNSUPPORTED): 文中以“公开复盘”概括一项量化成效，却未说明具体团队、复盘来源或“首次定位命中率”的测量口径。
+  F-002 (Moderate, ORIGINALITY_LOW_VALUE): DevOps案例停留在标准能力清单，没有给出具体工具、真实调用轨迹、基准或失败样本。
+
+  Overall 90.2, grade A, passing true.
+  Risk flags: FACTS_NOT_EXTERNALLY_VERIFIED (Moderate).
+expects:
+  kind: choice
+  value: pass
+source_verdict:
+  passing: true
+disputed: false
+policy:
+  rule: review-verdict
+  note: The label is DERIVED from the review's own verdict by the review-verdict rule. The openai decision model (gpt-6-luna) answered "revise" at confidence 0.93 (DISAGREED).
+provenance:
+  source: projects/ai近期转折/article-review.yaml attempt 4 — a shadow-run consult (2026-11-14T17:09:10.045Z); the decision model answered "revise", the review's verdict says "pass".

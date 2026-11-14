@@ -1,0 +1,23 @@
+id: 因果律-en-attempt-1
+surface: draft-bar
+state: |-
+  A draft about 因果律-en.
+  F-001 (Moderate, CONTENT_GAP): The developer-facing causal toolkit stops at RCTs and feature flags; causal graphs (DAGs), do-calculus, or libraries like DoWhy are never mentioned.
+  F-002 (Moderate, ORIGINALITY_LOW_VALUE): The article leans on the single most-cited confounding example in statistics education, self-labeled as 'classic'.
+  F-003 (Minor, FACT_UNSUPPORTED): The source is attributed to 'Jike' but the URL hosts on pattern.swarma.org, and Jike is never explained for an en-US audience.
+  F-004 (Minor, FACT_UNSUPPORTED): An English-language article cites the Chinese Wikipedia URL under an English entry title.
+  F-005 (Minor, LANGUAGE_AMBIGUITY): Scene 5's spoken opening 'For models' has no antecedent — models are never introduced in the piece.
+
+  Overall 89, grade B, passing false.
+  Risk flags: FACTS_NOT_EXTERNALLY_VERIFIED (Minor).
+expects:
+  kind: choice
+  value: revise
+source_verdict:
+  passing: false
+disputed: false
+policy:
+  rule: review-verdict
+  note: The label is DERIVED from the review's own verdict by the review-verdict rule. The openai decision model (gpt-6-luna) answered "revise" at confidence 0.38 (agreed).
+provenance:
+  source: projects/因果律-en/article-review.yaml attempt 1 — a shadow-run consult (2026-11-14T17:08:26.061Z); the decision model answered "revise", the review's verdict says "revise".

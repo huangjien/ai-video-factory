@@ -1,0 +1,15 @@
+id: duplicate-card-text
+surface: caption-overlap
+state: Rendered frame 9 of 25. A comparison card draws its own title while the caption overlay draws the
+  same sentence underneath it, so the frame shows the same text twice in the bottom band.
+expects:
+  kind: noul
+  value: 'true'
+  probability:
+  - 0.8
+  - 1.0
+provenance:
+  source: docs/RELEASES.md v0.9.1 — the designed card that printed its own text twice.
+policy:
+  rule: caption-band
+  note: Two pieces of text drawn in the bottom band at the same time.

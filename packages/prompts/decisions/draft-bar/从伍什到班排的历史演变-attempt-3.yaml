@@ -1,0 +1,24 @@
+id: 从伍什到班排的历史演变-attempt-3
+surface: draft-bar
+state: |-
+  A draft about 从伍什到班排的历史演变.
+  F-001 (Major, LOGIC_GAP): 核心古今对比把“武器与通信进入编制”直接推成“班成为可独立执行任务的战术单元”，但中间的任务授权、协同机制和历史比较并未证明。
+  F-002 (Moderate, LOGIC_OVERGENERALIZATION): “世界各国收敛”被写成全球性结论，却没有界定比较范围、给出跨国样本或承认反例。
+  F-003 (Moderate, CONSISTENCY_CONTRADICTION): scene_1把“今天的步兵连”称为最基层单位，与标题、Hook及scene_15反复采用的“步兵班”口径冲突。
+  F-004 (Moderate, CONTENT_GAP): 晚清新军到现代班排的桥梁被压成一句“取代”式断言，缺少年代、制度步骤和“中国军队”的范围界定。
+  F-005 (Moderate, LOGIC_OVERGENERALIZATION): 文章把汉代乡里、后世保甲与什伍写成两千年一贯的同一基层底色，混淆了制度承继与功能相似。
+
+  Overall 73.8, grade C, passing false.
+  Risk flags: MAJOR_REVISION_NEEDED (Major), FACTS_NOT_EXTERNALLY_VERIFIED (Moderate).
+expects:
+  kind: choice
+  value: revise
+source_verdict:
+  passing: false
+  major_revision_needed: true
+disputed: false
+policy:
+  rule: review-verdict
+  note: The label is DERIVED from the review's own verdict by the review-verdict rule. The openai decision model (gpt-6-luna) answered "reject" at confidence 0.72 (DISAGREED).
+provenance:
+  source: projects/从伍什到班排的历史演变/article-review.yaml attempt 3 — a shadow-run consult (2026-11-14T17:08:37.159Z); the decision model answered "reject", the review's verdict says "revise".

@@ -51,6 +51,7 @@ import {
 } from "@video/audio-assets";
 import {
   GeminiImageProvider,
+  MiniMaxH3ImageProvider,
   MiniMaxImageProvider,
   MockImageProvider,
   OpenAIImageProvider,
@@ -314,7 +315,13 @@ export interface MakeOptions {
    * (hosted AI image APIs), "mock" (deterministic placeholder), or
    * "none" (skip image generation; scenes fall back to
    * AnimatedIllustration shapes). */
-  imageProvider?: "minimax" | "openai" | "gemini" | "mock" | "none";
+  imageProvider?:
+    | "minimax"
+    | "minimax-h3"
+    | "openai"
+    | "gemini"
+    | "mock"
+    | "none";
   /** Local music library for real BGM — a directory containing
    * `{tag}.wav` (or any .wav whose name contains the tag). Without it
    * the audio-assets step writes a mock silent placeholder. */
@@ -772,10 +779,11 @@ export async function syncStoryboardFromArticle(
  * in seconds.
  */
 const DEFAULT_IMAGE_PROVIDER:
-  "minimax" | "openai" | "gemini" | "mock" | "none" = "minimax";
+  "minimax" | "minimax-h3" | "openai" | "gemini" | "mock" | "none" = "minimax";
 
 const IMAGE_PROVIDER_VALUES = [
   "minimax",
+  "minimax-h3",
   "openai",
   "gemini",
   "mock",
@@ -786,7 +794,7 @@ const IMAGE_PROVIDER_VALUES = [
  *  `image_provider:` may hold anything. Narrows without a cast. */
 function isKnownImageProvider(
   value: string | undefined,
-): value is "minimax" | "openai" | "gemini" | "mock" | "none" {
+): value is "minimax" | "minimax-h3" | "openai" | "gemini" | "mock" | "none" {
   return (
     value !== undefined &&
     (IMAGE_PROVIDER_VALUES as readonly string[]).includes(value)
@@ -807,9 +815,16 @@ function isKnownImageProvider(
  */
 export function resolveImageProvider(
   fake: boolean | undefined,
-  explicit: "minimax" | "openai" | "gemini" | "mock" | "none" | undefined,
+  explicit:
+    | "minimax"
+    | "minimax-h3"
+    | "openai"
+    | "gemini"
+    | "mock"
+    | "none"
+    | undefined,
   articleDefault?: string,
-): "minimax" | "openai" | "gemini" | "mock" | "none" {
+): "minimax" | "minimax-h3" | "openai" | "gemini" | "mock" | "none" {
   if (explicit !== undefined) return explicit;
   if (fake) return "none";
   // `article.md` is the source of truth for durable project config: a
@@ -854,6 +869,8 @@ export async function generateSceneVisuals(
   let provider: ImageProvider;
   if (opts.provider === "minimax") {
     provider = new MiniMaxImageProvider();
+  } else if (opts.provider === "minimax-h3") {
+    provider = new MiniMaxH3ImageProvider();
   } else if (opts.provider === "openai") {
     provider = new OpenAIImageProvider();
   } else if (opts.provider === "gemini") {
@@ -896,11 +913,28 @@ export async function generateSceneVisuals(
   const emit = opts.onEvent ?? noopEmit;
   const total = article.scenes.length;
 
-  for (let i = 0; i < article.scenes.length; i++) {
+  // Image generation is the slowest stage of an image-mode film: the LLM
+  // prompt expansion plus the image call take ~90 s a scene, and 42 scenes
+  // serially is an hour of waiting. The work per scene is independent —
+  // its own file, its own API calls — and the provider tolerates
+  // concurrent requests (measured: two image calls in 15 s), so the
+  // scenes run in a small pool. `IMAGE_POOL` sets its width.
+  const poolSize = Math.max(
+    1,
+    Math.min(8, Number(process.env["IMAGE_POOL"] ?? 4) || 4),
+  );
+
+  /** One scene's image: cache check → prompt expansion → generation.
+   *  Returns the scene's own log lines and the image path it produced. */
+  const sceneJob = async (
+    i: number,
+  ): Promise<{ lines: string[]; generated: string | null }> => {
+    const lines: string[] = [];
     const scene = article.scenes[i]!;
     const visual = scene.visual ?? "";
-    if (!visual || visual.trim().length === 0) continue;
-    if (selfRendered.has(i + 1)) continue;
+    if (!visual || visual.trim().length === 0)
+      return { lines, generated: null };
+    if (selfRendered.has(i + 1)) return { lines, generated: null };
 
     const imagePath = path.join(imageDir, `scene_${i + 1}.jpg`);
     const cacheKey = imageCacheKey({
@@ -927,11 +961,10 @@ export async function generateSceneVisuals(
         sidecar === null && bakeDigestFor(i + 1, bakeManifest) === "";
       if (sidecar?.cacheKey === cacheKey || adoptable) {
         if (sidecar === null) writeImageCacheSidecar(imagePath, cacheKey);
-        generatedImages.push(imagePath);
-        continue;
+        return { lines, generated: imagePath };
       }
       await rm(imagePath, { force: true });
-      outputs.push(
+      lines.push(
         `scene_${i + 1}: stale image (visual/style changed) — regenerating`,
       );
     }
@@ -969,7 +1002,7 @@ export async function generateSceneVisuals(
           },
         );
         promptForImage = prompt;
-        outputs.push(
+        lines.push(
           `assets/images/scene_${i + 1}.prompt.txt (LLM-expanded, style=${imageStyle})`,
         );
       } catch (err) {
@@ -977,7 +1010,7 @@ export async function generateSceneVisuals(
         // stall the whole render. The style suffix still applies — the
         // image model must see the style contract on every path.
         promptForImage = `${visual}\n${stylePromptSuffix(imageStyle)}`;
-        outputs.push(
+        lines.push(
           `scene_${i + 1}: prompt expansion failed, using raw visual — ${(err as Error).message.slice(0, 60)}`,
         );
       }
@@ -1002,8 +1035,8 @@ export async function generateSceneVisuals(
         ...itemAt,
         elapsedSec: elapsedSinceSec(itemT0),
       });
-      outputs.push(`assets/images/scene_${i + 1}.jpg`);
-      generatedImages.push(imagePath);
+      lines.push(`assets/images/scene_${i + 1}.jpg`);
+      return { lines, generated: imagePath };
     } catch (err) {
       // Non-fatal: scene falls back to AnimatedIllustration.
       emit({
@@ -1013,10 +1046,32 @@ export async function generateSceneVisuals(
         elapsedSec: elapsedSinceSec(itemT0),
         message: (err as Error).message,
       });
-      outputs.push(
+      lines.push(
         `scene_${i + 1}: image gen failed — ${(err as Error).message.slice(0, 60)}`,
       );
     }
+    return { lines, generated: null };
+  }
+
+  // Run the jobs in a pool, then flatten the results in SCENE order so
+  // the log reads the same as a serial run.
+  const results = new Array<{ lines: string[]; generated: string | null }>(
+    article.scenes.length,
+  );
+  let nextIndex = 0;
+  const worker = async (): Promise<void> => {
+    for (;;) {
+      const index = nextIndex++;
+      if (index >= article.scenes.length) return;
+      results[index] = await sceneJob(index);
+    }
+  };
+  const workers = Math.min(poolSize, Math.max(1, article.scenes.length));
+  await Promise.all(Array.from({ length: workers }, () => worker()));
+  for (const r of results) {
+    if (r === undefined) continue;
+    outputs.push(...r.lines);
+    if (r.generated !== null) generatedImages.push(r.generated);
   }
 
   if (bakeManifest) {

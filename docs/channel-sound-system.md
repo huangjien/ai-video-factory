@@ -23,15 +23,16 @@
 | 题材族 | 曲目 | 索引原文依据 | 已用于 |
 |---|---|---|---|
 | 方法论 / 思维模型 | `classical-gymnopedie-no-3`、`ambient-take-your-pick` | "Quiet, reflective, philosophical or historical narration" / "wide, unobtrusive bed" | 软件架构和实现、领域建模 |
-| 军事 / 历史 | `war-endless-storm`、`chinese-lau-tzu-ehru` | "Open conflict — an army, a siege, a standoff" / "Chinese historical or period scenes" | 从伍什到班排、任务式指挥 |
-| 技术 / 工程 / Agent | `electronic-nekozilla`、`inspiring-flowing-energy`、`corporate-synesthesia` | "Tech/futuristic explainers and build-ups" / "Forward motion — a build, a turning point" / "polished, modern bed" | 任务式指挥与 Agent 设计 |
+| 军事 / 历史 | `war-endless-storm`、`chinese-lau-tzu-ehru`、`medieval-adventure-beyond` | "Open conflict — an army, a siege, a standoff" / "Chinese historical or period scenes" / "Journey and quest narratives - a caravan, a voyage, an expedition" | 从伍什到班排、任务式指挥 |
+| 技术 / 工程 / Agent | `electronic-nekozilla`、`inspiring-flowing-energy`、`corporate-synesthesia` | "Tech/futuristic explainers and build-ups" / "Forward motion — a build, a turning point" / "polished, modern bed" | 扁平化组织与任务式指挥 |
 | 轻松 / 科普 | `cheerful-smile-ikson`、`upbeat-your-love`、`hiphop-groomin` | "upbeat without being frantic" / "Beat-driven, casual explainers" | — |
 
-## 选曲的三条硬约束
+## 选曲的四条硬约束
 
 1. **`quiet_master: true` 的曲子不要做正文底**——混音器对所有窗口施加**同一个固定底音量**，安静的曲子会被人声淹没（`japanese-yugen` -22 LUFS、`chinese-lau-tzu-ehru` -17 LUFS 只适合片段/历史场景）。
-2. **时长不够会循环**——`needs_loop_under_300s: true` 的曲子会在片长超过曲长时循环；8 分钟以上的片子优先选 ≥300s 的曲子（如 `epic-phoenix` 413s、`dramatic-this-too-shall-pass` 448s、`medieval-adventure-beyond` 309s）。
-3. **`avoid_when` 优先于 `use_when`**——例如 `trailer-silhouette-of-war` 索引明写 *"the percussion fights the voice"*，解说不适合。
+2. **时长不够会循环**——`needs_loop_under_300s: true` 的曲子会在片长超过曲长时循环；8 分钟以上的片子优先选 ≥300s 的曲子（如 `dramatic-this-too-shall-pass` 448s、`hopeful-resolutions` 328s、`medieval-adventure-beyond` 309s）。
+3. **循环点要听不见**——曲子开头和结尾都接近静音时，循环缝就听不出来（`epic-phoenix`、`medieval-adventure-beyond` 都是这种）。反之，开头很响、结尾突然静音的曲子（如 `electronic-nekozilla`、`ambient-take-your-pick`）每循环一次就会“炸”一下。
+4. **`avoid_when` 优先于 `use_when`**——例如 `trailer-silhouette-of-war` 索引明写 *"the percussion fights the voice"*，解说不适合。
 
 ## 实现：`audio-config.yaml` 的 `bgm_tracks`
 
@@ -39,7 +40,7 @@
 voice: Chinese (Mandarin)_Male_Announcer
 bgm_tracks:
   - { track: epic-the-epic-hero, until_sec: 12 }    # 片头动机
-  - { track: epic-phoenix, until_sec: 470 }         # 正文（until_sec = 总长 − 片尾长度）
+  - { track: medieval-adventure-beyond, until_sec: 470 }  # 正文（until_sec = 总长 − 片尾长度）
   - { track: epic-the-epic-hero }                   # 片尾回扣（末窗省略 until_sec = 跑到结尾）
 bgm_fade_in_sec: 2
 bgm_fade_out_sec: 3

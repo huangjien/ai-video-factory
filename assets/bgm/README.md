@@ -2,7 +2,7 @@
 
 This directory is the project's **single source of truth for BGM music**.
 Every video we generate picks its background music from here (no live
-generation, no outside download). The 35 tracks cover distinct types / modes
+generation, no outside download). The 34 tracks cover distinct types / modes
 so the audio-plan agent can pick a mood without overlap.
 
 ## Naming convention
@@ -32,7 +32,6 @@ The slug is a lowercased, hyphen-joined token from the original track title.
 | `travel-sunset-paradise` | travel / vacation | Sunset Paradise | Wonki | AZQONwyI5IE |
 | `upbeat-your-love` | upbeat / forward-moving | Your Love | Niwel (NCS) | PuCWn_OVga8 |
 | `epic-the-epic-hero` | epic / trailer build | The Epic Hero | Keys of Moon | ETbsXdqgcTM |
-| `epic-phoenix` | epic / long arc | Phoenix | Scott Buckley | 4HhM66X978U |
 | `trailer-silhouette-of-war` | trailer / conflict | Silhouette of War | Keys of Moon | Lzofxb1vATw |
 | `war-endless-storm` | war / open conflict | Endless Storm | Makai Symphony | TNs5JFYaTMk |
 | `sad-lonesome-journey` | sad / melancholy | Lonesome Journey | Keys of Moon | p5cWMxzzMdA |
@@ -89,15 +88,35 @@ raised bed to be audible at all; the loud end (`war-endless-storm`,
 `dynamic_range_lu` above ~8 means the track breathes, so the bed swells in
 the gaps between narration — fine under sparse narration, wrong under dense
 explanatory text. The 2026-11-11 additions reach 21.6 LU
-(`samurai-a-just-ronin`) and 19.7 LU (`epic-phoenix`).
+(`samurai-a-just-ronin`) and 16.2 LU (`medieval-adventure-beyond`).
 
 `needs_loop_under_300s` marks tracks shorter than a typical runtime. They
 loop, and a track that does not resolve at its end (`upbeat-your-love`) makes
 the seam audible; `chill-slow-times-over-here`, `classical-gymnopedie-no-3`
 and `peaceful-sleeping-sheep` run long enough not to. Five tracks added on
-2026-11-11 also run long enough not to: `epic-phoenix` (413s),
-`dramatic-this-too-shall-pass` (448s), `hopeful-resolutions` (328s),
-`samurai-a-just-ronin` (381s) and `medieval-adventure-beyond` (309s).
+2026-11-11 also run long enough not to: `dramatic-this-too-shall-pass` (448s),
+`hopeful-resolutions` (328s), `samurai-a-just-ronin` (381s) and
+`medieval-adventure-beyond` (309s).
+
+`medieval-adventure-beyond` is also the cleanest loop in the library: it
+starts and ends on silence, so the 1.4x repeat under an 8-minute body is
+inaudible (`epic-phoenix` had the same property — see the removal note
+below).
+
+## Removed tracks
+
+`epic-phoenix` (Phoenix, Scott Buckley) was deleted on 2026-11-14 after the
+video it scored — 任务式指挥与 Agent 设计 (YouTube `5D0s18diEf4` /
+`jJ7JfM2NEkM`) — drew a copyright claim. The mp3, its `.license.txt` and its
+`music.json` entry are gone; both language versions of the film were re-cut
+with `medieval-adventure-beyond` instead and re-published.
+
+The root cause is the SOURCE, not the track: every track here was pulled
+from a YouTube "no copyright" repost channel, so the original artist's
+Content ID fingerprint still matches the repost and the claim lands on us.
+A track's `.license.txt` saying "no-copyright" is not evidence — only the
+licensor's own terms are. Prefer a track that another shipped film already
+uses without a claim, and add its licence to the video description.
 
 ## Adding a track
 
@@ -113,7 +132,7 @@ yt-dlp -x --audio-format mp3 --audio-quality 192K \
   "https://www.youtube.com/watch?v=<id>"
 ```
 
-A 192 kbps mp3 keeps the whole library (35 tracks) at ~190 MB; the original
+A 192 kbps mp3 keeps the whole library (34 tracks) at ~170 MB; the original
 `AudioAssetError("directory not found")` is the easiest way to spot a
 track that's missing during a refetch.
 

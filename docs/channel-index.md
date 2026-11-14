@@ -12,7 +12,7 @@
 | 3 | 领域建模，设计软件的骨相 | 一家餐厅停电教我的 DDD：从朴素模型驱动到领域模型、限界上下文、聚合 | [BV1oMWk6gEah](https://www.bilibili.com/video/BV1oMWk6gEah) | [IvZhb30U6Rk](https://youtu.be/IvZhb30U6Rk) · [BV1oMWk6gEzP](https://www.bilibili.com/video/BV1oMWk6gEzP) |
 | 4 | 从伍什到班排的历史演变 | 五人与十人沿用了三千年：编制、指挥跨度，以及"兵种分野"之外的另一半 | [BV1TwWD67ESL](https://www.bilibili.com/video/BV1TwWD67ESL) | [wDro6UEv1lw](https://youtu.be/wDro6UEv1lw) · [BV1A3WD63EAp](https://www.bilibili.com/video/BV1A3WD63EAp) |
 | 5 | 扁平化组织与任务式指挥 | 向军队学任务式指挥：减的是决策层级，不是组织层级 | [BV1JKWY6DEwL](https://www.bilibili.com/video/BV1JKWY6DEwL) | [yQ_U4VAX2gs](https://youtu.be/yQ_U4VAX2gs) · [BV1M8WY6NEeo](https://www.bilibili.com/video/BV1M8WY6NEeo) |
-| 6 | 任务式指挥与 Agent 设计 | 别微操 Agent：把意图、边界、授权和可验证验收写成任务协议 | [BV1J7Wz6qE5z](https://www.bilibili.com/video/BV1J7Wz6qE5z) | [5D0s18diEf4](https://youtu.be/5D0s18diEf4) · [BV13eWz6dEn2](https://www.bilibili.com/video/BV13eWz6dEn2) |
+| 6 | 任务式指挥与 Agent 设计 | 别微操 Agent：把意图、边界、授权和可验证验收写成任务协议 | [BV11xsG6gEm4](https://www.bilibili.com/video/BV11xsG6gEm4) | [L7_ah0zHruI](https://youtu.be/L7_ah0zHruI) · [BV11xsG6gEw2](https://www.bilibili.com/video/BV11xsG6gEw2) |
 
 > 上表各格的中英文链接：英文版的 YouTube 链接见 `docs/channel-sound-system.md` 之外的各项目 `bilibili/PUBLISHED.md`（每支的完整四平台编号都在那里）。
 

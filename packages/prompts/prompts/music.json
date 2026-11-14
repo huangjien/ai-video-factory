@@ -242,20 +242,6 @@
     "quiet_master": false,
     "wide_dynamics": false
   },
-  "epic-phoenix": {
-    "track": "Phoenix",
-    "artist": "Scott Buckley",
-    "file": "epic-phoenix.mp3",
-    "duration_sec": 413,
-    "loudness_lufs_i": -12.0,
-    "dynamic_range_lu": 19.7,
-    "use_when": "Long-form epic arcs - a battle, a rise to power, a crescendo across five minutes or more.",
-    "avoid_when": "Dense explanatory narration; 19.7 LU of range means the bed swells hard in the gaps.",
-    "note": "Longest new track and one of the widest dynamic ranges in the library - mix with care.",
-    "needs_loop_under_300s": false,
-    "quiet_master": false,
-    "wide_dynamics": true
-  },
   "trailer-silhouette-of-war": {
     "track": "Silhouette of War",
     "artist": "Keys of Moon",

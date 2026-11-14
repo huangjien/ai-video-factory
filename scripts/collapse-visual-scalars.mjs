@@ -13,7 +13,7 @@
  * Usage: node scripts/collapse-visual-scalars.mjs <article.md>
  */
 import { readFileSync, writeFileSync } from "node:fs";
-import YAML from "/Users/huangjien/workspace/ai-video-factory/node_modules/.pnpm/yaml@2.9.1/node_modules/yaml/dist/index.js";
+import YAML from "yaml";
 
 const file = process.argv[2];
 const md = readFileSync(file, "utf8");
@@ -30,7 +30,7 @@ const doc = YAML.parseDocument(block);
 const items = doc.get("scenes")?.items ?? [];
 
 const edits = [];
-items.forEach((item, i) => {
+items.forEach((item) => {
   const node = item?.get?.("visual", true);
   if (!node?.range) return;
   const [start, valueEnd] = node.range;

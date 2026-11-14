@@ -3,7 +3,7 @@
  * Usage: NODE_PATH=... node scripts/visual-trigger-scan.mjs <article.md>
  */
 import { readFileSync } from "node:fs";
-import YAML from "/Users/huangjien/workspace/ai-video-factory/node_modules/.pnpm/yaml@2.9.1/node_modules/yaml/dist/index.js";
+import YAML from "yaml";
 
 const RULES = [
   ["QuoteBlock", /\b(quote|quoted|cited|excerpt|excerpts|attributed|says|said|remark|remarks|statement)\b/i],

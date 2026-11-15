@@ -15,6 +15,51 @@ video research → script → storyboard → audio (TTS) → audio-asset (BGM+SF
        video review                          → Content/Visual/Technical review YAMLs
 ```
 
+## v0.11 (2026-11-15) — Decision layer, MiniMax H3 Image, structured components removed
+
+Three features, one breaking change.
+
+**Decision layer (advisory, default on).** A provider-agnostic decision
+runtime (`@video/llm` `decision/*`) whose contract is a System One
+decision — `choice` / `score` / `noul` with a confidence. OpenAI's
+**Decisions API** (`gpt-6-luna`) is the measured default: 0.924 over the
+197-case labeled corpus, Brier 0.000 on every run, 219 ms p50 (§7.5/§7.8
+of `docs/v0.11-decision-provider-plan.md`). Wired surfaces: the draft
+loop's draft-bar verdict consult, and a per-finding advisory in
+`video qa` reports. `DECISION_MODE=off|shadow|on` (default on);
+everything degrades to the deterministic path. Tooling: `video decision
+bench` (accuracy/calibration/latency/cost per surface),
+`video decision harvest` + `video decision backfill` (the 176-case
+draft-bar corpus is derived from shipped review artifacts — no human
+labelling), and a 197-case corpus under `packages/prompts/decisions/`
+with a labelling policy whose rules are loader-enforced.
+
+**MiniMax H3 Image (`minimax-h3`).** Next-gen image provider with
+generation AND reference-image editing (`video thumbnail --provider
+minimax-h3 --reference <img>`). Exact-pixel output (native 1080p scene
+images — image-01 capped 16:9 at 1280×720). `constraintGuard` keeps the
+prompt's hard constraints (palette hex, no-text band) alive through the
+API's prompt enhancement: markers auto-extracted, dropped markers
+trigger one verbatim re-generation. ~$0.02/image at 1K (pricing §16).
+Default image provider is UNCHANGED (`minimax` image-01).
+
+**BREAKING — the 14 structured scene components are removed.** FlowChart,
+Timeline, MapInsert, Callout, QuoteBlock, StatGrid, BarChart, Leaderboard,
+Checklist, BigIdea, PyramidDiagram, VennDiagram, CycleDiagram, Terminal.
+Measured: 13% of shipped scenes (194/1496), concentrated in early
+hand-authored dev projects; 81%+ of scenes render as photos; the keyword
+router and the decision model agreed on every structural scene (routing
+was a confirmation surface). The classifier reduces to a Title gate +
+AnimatedIllustration fall-through; the visual-class decision surface is
+retired. Old storyboards referencing removed components render those
+scenes as skipped (not fatal) — re-run `video draft` to regenerate.
+`examples/` and the `benchmark-v01` fixture are converted.
+
+**Also in v0.11** — the two streams documented below as Unreleased at
+the time of writing (BGM library + Bilibili packaging + en-US captions;
+Voicebox + MiniMax TTS providers), plus the prompt-evals harness
+(`video prompts eval`, documented in v0.10's plan).
+
 ## v0.9.1 (2026-10-18) — TTS providers, draft quality bar, Ask gate, visual cache key
 
 Consolidates two Unreleased streams (Voicebox + MiniMax TTS providers, preflight policy, draft quality bar 90/A with 8 attempts, ask-gate tts question) and the v0.9 visual-cache hardening into a single release.
@@ -231,7 +276,7 @@ Measured on the replay of the 2026-11-13 topic: the judge-shaped call
 (29 KB article + 11 KB rubric) that took **523.5 s** — 300.1 s discarded,
 223 s real — now completes in one request.
 
-## Unreleased — BGM library, Bilibili packaging, en-US captions
+## v0.11 (continued) — BGM library, Bilibili packaging, en-US captions
 
 **BGM is a local library, not a service.** `assets/bgm/` is the single source
 of truth for background music (17 tracks, `<mood>-<slug>.mp3` + a sibling
@@ -279,7 +324,7 @@ language-aware so an English title is no longer cut mid-word
 matched by index, which with 7 sections across 25 scenes put one scene's
 content on another scene's card.
 
-## Unreleased — Voicebox + MiniMax TTS providers (cloned voices)
+## v0.11 (continued) — Voicebox + MiniMax TTS providers (cloned voices)
 
 `video make` can narrate through a local [Voicebox](https://voicebox.sh)
 server: set `tts_provider: voicebox` + `voice: <profile>` in `article.md`

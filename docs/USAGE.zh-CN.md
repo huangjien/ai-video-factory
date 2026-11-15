@@ -463,6 +463,13 @@ article 的旁白改了、而按 id 同步的分镜文本还是旧的。
 编排器尊重它，生成过程则从解析出的配置确定性地产出。仓库自带一份默认值——
 "AI 视频工厂"和一个占位图标。
 
+这个图标是**每一场**右下角的水印，所以背景必须**透明**——不透明的方块会
+压在每一帧的角上。仓库自带的图标是抠掉青绿色背景的 RGBA PNG；如果你要换
+图标，跑一次 `python3 scripts/make-brand-icon-transparent.py` 重新抠图（它
+先拟合背景渐变，再对边缘像素做去色，不会留下色边）。
+`packages/video-renderer/src/brand-icon-alpha.test.ts` 会在图标丢掉 alpha
+通道时让构建失败。
+
 具名 BGM 曲目来自 `assets/bgm/` 里的精选库，`music.json` 为它记录实测时长、
 响度、动态范围和场景备注。
 

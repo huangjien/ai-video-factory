@@ -15,6 +15,32 @@ video research → script → storyboard → audio (TTS) → audio-asset (BGM+SF
        video review                          → Content/Visual/Technical review YAMLs
 ```
 
+## v0.11.2 (2026-11-15) — the brand icon's background is transparent
+
+The corner watermark (`brand.yaml` → `assets/brand/icon.png`) shipped as
+an RGB PNG with no alpha channel: the avatar was drawn on a solid teal
+gradient, so every scene carried an **opaque teal square** in its
+bottom-right corner.
+
+The icon is now RGBA with the background cut out. Two things made the cut
+non-trivial, and both are handled by
+`scripts/make-brand-icon-transparent.py`:
+
+- a plain flood fill leaks nowhere useful — the anti-aliased pixels along
+  the silhouette are far from the seed colour in at least one channel, so
+  they wall off the teal wedge behind the shoulders. The script fits the
+  smooth background GRADIENT instead (a cubic per channel, mean residual
+  ~2.7 units) and derives the alpha from each pixel's distance to it;
+- colour-keying the background leaves a teal halo, so the edge pixels are
+  UNMULTIPLIED against the fitted field — the artwork keeps its own
+  colour and no fringe survives.
+
+Measured on the shipped icon: 39.0% transparent, 0.78% feathered (the
+1-2 px silhouette edge), 60.2% opaque artwork.
+`packages/video-renderer/src/brand-icon-alpha.test.ts` fails the build if
+the icon loses its alpha channel, its corners stop being transparent, or
+the avatar stops being opaque.
+
 ## v0.11.1 (2026-11-15) — English videos: a real subtitle, and no lost text
 
 Two defects, found on the shipped en-US films.

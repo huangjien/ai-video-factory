@@ -536,6 +536,14 @@ channel name and icon. The orchestrator respects it, and generation runs
 deterministically off the resolved config. It ships with a default — "AI
 视频工厂" and a placeholder icon.
 
+The icon is the corner watermark on EVERY scene, so it must have a
+**transparent background** — an opaque square would sit in the corner of
+every frame. The shipped icon is an RGBA PNG with the teal background
+removed; if you replace it, run `python3 scripts/make-brand-icon-transparent.py`
+to cut the background out again (it fits the gradient, then un-mixes the
+edge pixels so no fringe survives). `packages/video-renderer/src/brand-icon-alpha.test.ts`
+fails the build if the icon loses its alpha channel.
+
 Named BGM tracks come from the curated library in `assets/bgm/`, which
 `music.json` indexes with measured duration, loudness, dynamic range, and
 scenario notes.

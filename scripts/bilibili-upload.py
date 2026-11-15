@@ -14,6 +14,7 @@ exit codes: 0 成功 / 1 参数或包缺失 / 2 登录态缺失（先 --login）
 import argparse
 import json
 import os
+import re
 import subprocess
 import sys
 import time
@@ -151,18 +152,45 @@ def main() -> int:
 
     import stream_gears
 
+    # The BV 号 only appears in the uploader's log line, and a piped or
+    # truncated output loses it — the id was unrecoverable once the
+    # upload finished. Tee the uploader's output into the project and
+    # pull the id out of it.
+    log_dir = REPO / "projects" / args.project / "bilibili"
+    log_dir.mkdir(parents=True, exist_ok=True)
+    log_path = log_dir / "upload.log"
+    saved_out, saved_err = os.dup(1), os.dup(2)
+    log_fd = os.open(str(log_path), os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o644)
+    os.dup2(log_fd, 1)
+    os.dup2(log_fd, 2)
     t0 = time.time()
-    stream_gears.upload(
-        [fields["video"]],
-        str(COOKIE),
-        title=fields["title"],
-        tid=fields["tid"],
-        tag=fields["tag"],
-        copyright=fields["copyright"],
-        desc=fields["desc"],
-        cover=fields["cover"],
-    )
-    print(f"投稿成功（{time.time() - t0:.0f}s）— BV 号请看上方 ResponseData 日志，或在创作中心查看")
+    try:
+        stream_gears.upload(
+            [fields["video"]],
+            str(COOKIE),
+            title=fields["title"],
+            tid=fields["tid"],
+            tag=fields["tag"],
+            copyright=fields["copyright"],
+            desc=fields["desc"],
+            cover=fields["cover"],
+        )
+    finally:
+        os.dup2(saved_out, 1)
+        os.dup2(saved_err, 2)
+        os.close(saved_out)
+        os.close(saved_err)
+        os.close(log_fd)
+    elapsed = time.time() - t0
+    bvid = ""
+    m = re.search(r"(BV[0-9A-Za-z]{10})", log_path.read_text(errors="replace"))
+    if m:
+        bvid = m.group(1)
+        (log_dir / "bvid.txt").write_text(bvid + "\n", encoding="utf-8")
+    if bvid:
+        print(f"投稿成功（{elapsed:.0f}s）— {bvid}  https://www.bilibili.com/video/{bvid}")
+    else:
+        print(f"投稿成功（{elapsed:.0f}s）— BV 号见 {log_path}，或在创作中心查看")
     return 0
 
 

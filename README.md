@@ -241,6 +241,7 @@ against their own API key.
 | `--image-provider` | Needs             | Latency           | Notes                                      |
 | ------------------ | ----------------- | ----------------- | ------------------------------------------ |
 | `minimax`          | `MINIMAX_API_KEY` | seconds per scene | default for `video make` / `video visuals` |
+| `minimax-h3`       | `MINIMAX_API_KEY` | seconds per scene | MiniMax-H3-Image: next-gen model, generation + reference-image edit (`video thumbnail --reference <img>`); ~$0.02/image at 1K — see docs/v0.11-decision-provider-plan.md §16 for pricing |
 | `openai`           | `OPENAI_API_KEY`  | seconds per scene |                                            |
 | `gemini`           | `GEMINI_API_KEY`  | seconds per scene |                                            |
 | `mock`             | nothing           | instant           | deterministic placeholders                 |

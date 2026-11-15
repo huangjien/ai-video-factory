@@ -851,7 +851,13 @@ export async function generateSceneVisuals(
   projectRoot: string,
   article: ParsedArticle,
   opts: {
-    provider: "minimax" | "openai" | "gemini" | "mock" | "none";
+    provider:
+      | "minimax"
+      | "minimax-h3"
+      | "openai"
+      | "gemini"
+      | "mock"
+      | "none";
     onEvent?: ProgressEmit | undefined;
   },
 ): Promise<string[]> {

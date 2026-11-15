@@ -29,4 +29,9 @@ export default function setup(): void {
   for (const name of HARNESS_MARKERS) {
     delete process.env[name];
   }
+  // The decision layer (v0.11) defaults to `on` in production, which
+  // makes `video draft` consult the decision provider. Tests must stay
+  // hermetic — no networked calls — so the suite pins the mode off.
+  // A test that exercises the decision layer sets DECISION_MODE itself.
+  process.env["DECISION_MODE"] = "off";
 }

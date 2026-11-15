@@ -6,10 +6,14 @@ import path from "node:path";
 const writeQaArtifacts = vi.fn();
 const loadOrCompileStoryboard = vi.fn();
 
-vi.mock("@video/qa", () => ({
-  writeQaArtifacts: (...a: unknown[]) =>
-    (writeQaArtifacts as (...x: unknown[]) => unknown)(...a),
-}));
+vi.mock("@video/qa", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@video/qa")>();
+  return {
+    ...actual,
+    writeQaArtifacts: (...a: unknown[]) =>
+      (writeQaArtifacts as (...x: unknown[]) => unknown)(...a),
+  };
+});
 vi.mock("@video/video-renderer", () => ({
   loadOrCompileStoryboard: (...a: unknown[]) =>
     (loadOrCompileStoryboard as (...x: unknown[]) => unknown)(...a),

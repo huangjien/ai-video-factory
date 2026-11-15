@@ -25,7 +25,13 @@ import { resolveProjectDir } from "./project-path.js";
 export interface VisualsOptions {
   project: string;
   cwd?: string;
-  imageProvider?: "minimax" | "openai" | "gemini" | "mock" | "none";
+  imageProvider?:
+    | "minimax"
+    | "minimax-h3"
+    | "openai"
+    | "gemini"
+    | "mock"
+    | "none";
   fake?: boolean;
   rejectScene?: number;
   reason?: string;
@@ -169,7 +175,7 @@ export function registerVisuals(program: Command): void {
     .option("--cwd <dir>", "base directory for the project")
     .option(
       "--image-provider <provider>",
-      "image provider: minimax (default) | openai | gemini | mock | none",
+      "image provider: minimax (default) | minimax-h3 | openai | gemini | mock | none",
     )
     .option("--fake", "skip generation (contact sheet over existing images)")
     .option(
@@ -194,7 +200,13 @@ export function registerVisuals(program: Command): void {
         project: string,
         opts: {
           cwd?: string;
-          imageProvider?: "minimax" | "openai" | "gemini" | "mock" | "none";
+          imageProvider?:
+            | "minimax"
+            | "minimax-h3"
+            | "openai"
+            | "gemini"
+            | "mock"
+            | "none";
           fake?: boolean;
           reject?: number;
           reason?: string;

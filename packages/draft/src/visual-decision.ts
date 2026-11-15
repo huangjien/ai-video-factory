@@ -43,12 +43,17 @@ import { candidateId, type DecisionCandidate } from "./decision-candidate.js";
 
 export type DecisionMode = "off" | "shadow" | "on";
 
-/** The mode from the environment. Default `off` — the pipeline behaves
- *  exactly as it does today until somebody asks for the shadow pass. */
+/** The mode from the environment. Default **`on`** — the bench gate
+ *  cleared on 2026-11-14 (0.924 ≥ 0.9, brier 0.000; §7.5 of the plan
+ *  doc), so every draft now consults the decision provider and records
+ *  the answers beside the baselines. `on` and `shadow` behave
+ *  identically today — no acting surface is wired — and the env var
+ *  exists for the day one ships, and for turning the layer off
+ *  (`off`) without a code change. */
 export function resolveDecisionMode(
   env: NodeJS.ProcessEnv = process.env,
 ): DecisionMode {
-  const raw = (env["DECISION_MODE"] ?? "off").trim().toLowerCase();
+  const raw = (env["DECISION_MODE"] ?? "on").trim().toLowerCase();
   if (raw === "off" || raw === "shadow" || raw === "on") return raw;
   throw new Error(
     `unknown DECISION_MODE "${raw}" — expected off | shadow | on`,
@@ -201,6 +206,7 @@ export async function consultVisualDecisions(
       error,
     });
   }
+  warnIfQuotaExhausted(rows.map((row) => row.error));
   if (opts.logPath !== undefined && rows.length > 0) {
     await appendDecisionLog(opts.logPath, rows);
   }
@@ -226,6 +232,30 @@ export async function appendDecisionLog(
 /** Where a project's decision log lives. */
 export function decisionLogPath(projectRoot: string): string {
   return `${projectRoot}/decision-log.jsonl`;
+}
+
+/** True for an error that means "the provider's quota/rate limit is
+ *  exhausted" — as opposed to a one-off timeout or a malformed answer.
+ *  MiniMax's monthly plan returns 429 with error 2056 when the month's
+ *  budget is spent; the layer degrades either way, but the operator
+ *  should know WHICH degradation they are looking at. */
+export function isQuotaError(message: string | null | undefined): boolean {
+  if (!message) return false;
+  return /429|rate.?limit|usage limit|quota/i.test(message);
+}
+
+/** Print one stderr line when the consults hit the provider's quota.
+ *  The layer keeps running (the deterministic path never needed the
+ *  provider), but a silent stop of the shadow log looks like a bug —
+ *  this says what it is. */
+export function warnIfQuotaExhausted(
+  errors: (string | null | undefined)[],
+): void {
+  if (errors.some((e) => isQuotaError(e))) {
+    console.error(
+      "  ! decision provider quota/rate limit exhausted — the shadow pass degraded to the deterministic path for the affected calls",
+    );
+  }
 }
 
 /**
@@ -256,6 +286,12 @@ export async function runVisualDecisionShadow(opts: {
         ? { model: env["DECISION_MODEL"] }
         : {}),
     });
+  if (!provider.available()) {
+    console.error(
+      `  decision shadow skipped: ${provider.name} key not set (${provider.name === "openai" ? "OPENAI_API_KEY" : "MINIMAX_API_KEY"})`,
+    );
+    return { consulted: 0, agreed: 0, mode };
+  }
   const rows = await consultVisualDecisions({
     scenes: opts.scenes,
     provider,

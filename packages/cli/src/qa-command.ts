@@ -1,7 +1,13 @@
 import type { Command } from "commander";
 import { existsSync } from "node:fs";
 import path from "node:path";
-import { writeQaArtifacts } from "@video/qa";
+import {
+  decisionLogPath,
+  runQaDecisionAdvisory,
+  writeQaAdvisoryReport,
+  writeQaArtifacts,
+} from "@video/qa";
+import { resolveDecisionMode } from "@video/llm";
 import { resolveProjectDir, resolveProjectRoot } from "./project-path.js";
 import { loadOrCompileStoryboard } from "@video/video-renderer";
 import { MARK_FAIL, MARK_OK, brandBannerLine, channelHeader } from "./ui.js";
@@ -43,9 +49,34 @@ export async function runQa(opts: QaOptions): Promise<number> {
   }
 
   const { renderPlan } = await loadOrCompileStoryboard(root);
-  const report = await writeQaArtifacts(root, renderPlan, video);
-  const errors = report.findings.filter((f) => f.level === "error");
-  const warns = report.findings.filter((f) => f.level === "warn");
+  let report = await writeQaArtifacts(root, renderPlan, video);
+
+  // v0.11 (D3): the QA triage advisory. One consult per finding, on the
+  // report AS WRITTEN; the advisory fields are attached by re-writing
+  // the report, and the consults land in <root>/decision-log.jsonl.
+  // Advisory never gates — `--strict` reads `level` below. The default
+  // mode is `on` (the bench gate cleared); DECISION_MODE=off skips.
+  const decisionMode = resolveDecisionMode();
+  const advisory = await runQaDecisionAdvisory({
+    project: path.basename(root),
+    report,
+    mode: decisionMode,
+    logPath: decisionLogPath(root),
+  });
+  report = advisory.report;
+  if (advisory.consulted > 0) {
+    await writeQaAdvisoryReport(
+      path.join(root, "qa", "render-report.json"),
+      report,
+    );
+  }
+
+  const errors = report.findings.filter(
+    (f: { level: string }) => f.level === "error",
+  );
+  const warns = report.findings.filter(
+    (f: { level: string }) => f.level === "warn",
+  );
 
   console.log(brandBannerLine());
   console.log(
@@ -66,9 +97,20 @@ export async function runQa(opts: QaOptions): Promise<number> {
       const tag = f.level === "error" ? MARK_FAIL : "!";
       console.log(`  ${tag} [${f.level}] ${f.check}: ${f.message}`);
       if (f.fix) console.log(`         fix: ${f.fix}`);
+      if (f.advisory) {
+        console.log(
+          `         ↳ decision advisory: ${f.advisory} (${f.advisory_confidence?.toFixed(2) ?? "?"})`,
+        );
+      }
     }
   }
   console.log("");
+  if (advisory.consulted > 0) {
+    console.log(
+      `  decision advisory: ${advisory.consulted} finding(s) consulted, ${advisory.agreed} agreed with the level rule`,
+    );
+    console.log("");
+  }
   console.log(`  details: qa/render-report.json + qa/contact-sheet.png`);
 
   const strict = opts.strict !== false;

@@ -10,6 +10,12 @@ export interface ImageRequest {
   prompt: string;
   width: number;
   height: number;
+  /** Reference images for edit-capable providers (v0.11: MiniMax H3
+   *  Image). Absent ⇒ plain text-to-image. `base64` is the raw Base64
+   *  body without the `data:` prefix; `contentType` is `image/jpeg`-style
+   *  (lowercase — the H3 API requires the lowercase format in the data
+   *  URI). Providers that do not support references ignore the field. */
+  referenceImages?: { base64: string; contentType: string }[];
 }
 
 export interface ImageResult {

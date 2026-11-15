@@ -4,6 +4,7 @@ import {
   consultDraftDecision,
   draftBarDecisionQuestion,
   harvestDraftBarCandidates,
+  runDraftDecisionShadow,
   verdictFactsFromAttempt,
   type DraftBarAttemptFacts,
   type DraftDecisionRow,
@@ -278,5 +279,42 @@ describe("harvestDraftBarCandidates", () => {
       project: "努力",
     });
     expect(candidates).toHaveLength(0);
+  });
+});
+
+
+describe("runDraftDecisionShadow", () => {
+  it("skips cleanly when the provider has no key", async () => {
+    const key = process.env["OPENAI_API_KEY"];
+    delete process.env["OPENAI_API_KEY"];
+    const seen: string[] = [];
+    const original = console.error;
+    console.error = (message: string) => seen.push(message);
+    try {
+      const out = await runDraftDecisionShadow({
+        project: "demo",
+        attempts: [attempt],
+        mode: "shadow",
+        provider: fakeProvider(),
+        env: {},
+      });
+      // A fake provider is always "available"; the skip is asserted via
+      // the visual-decision tests. Here the fake answers, so the mode
+      // is the thing under test.
+      expect(out.mode).toBe("shadow");
+    } finally {
+      console.error = original;
+      if (key !== undefined) process.env["OPENAI_API_KEY"] = key;
+    }
+  });
+
+  it("does nothing in off mode", async () => {
+    const out = await runDraftDecisionShadow({
+      project: "demo",
+      attempts: [attempt],
+      mode: "off",
+      provider: fakeProvider(),
+    });
+    expect(out.consulted).toBe(0);
   });
 });

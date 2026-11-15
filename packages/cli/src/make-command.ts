@@ -21,7 +21,13 @@ export interface MakeOptions {
   lang?: string;
   /** Image provider for scene visuals: minimax (real AI), openai, gemini,
    *  mock, or none. */
-  imageProvider?: "minimax" | "openai" | "gemini" | "mock" | "none";
+  imageProvider?:
+    | "minimax"
+    | "minimax-h3"
+    | "openai"
+    | "gemini"
+    | "mock"
+    | "none";
   /** Local music library dir — BGM tags resolve to {tag}.wav inside it. */
   bgmDir?: string;
   /** Local SFX library dir — same lookup rule as bgmDir. */
@@ -127,7 +133,7 @@ export function registerMake(program: Command): void {
     )
     .option(
       "--image-provider <provider>",
-      "image provider for scene visuals: minimax (image-01, default since v0.8.1; needs MINIMAX_API_KEY), openai (gpt-image-2.5-flare; needs OPENAI_API_KEY), gemini (gemini-3.1-flash-image; needs GEMINI_API_KEY), mock, none (--fake implies none)",
+      "image provider for scene visuals: minimax (image-01, default since v0.8.1; needs MINIMAX_API_KEY), minimax-h3 (MiniMax-H3-Image, generation + reference-image edit; needs MINIMAX_API_KEY), openai (gpt-image-2.5-flare; needs OPENAI_API_KEY), gemini (gemini-3.1-flash-image; needs GEMINI_API_KEY), mock, none (--fake implies none)",
     )
     .option(
       "--bgm-dir <dir>",
@@ -148,7 +154,13 @@ export function registerMake(program: Command): void {
         opts: {
           cwd?: string;
           fake?: boolean;
-          imageProvider?: "minimax" | "openai" | "gemini" | "mock" | "none";
+          imageProvider?:
+            | "minimax"
+            | "minimax-h3"
+            | "openai"
+            | "gemini"
+            | "mock"
+            | "none";
           bgmDir?: string;
           sfxDir?: string;
           dryRun?: boolean;

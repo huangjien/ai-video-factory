@@ -6,6 +6,9 @@ import {
   consultVisualDecisions,
   createDecisionProvider,
   decisionLogPath,
+  isQuotaError,
+  runVisualDecisionShadow,
+  warnIfQuotaExhausted,
   harvestDecisionCandidates,
   resolveDecisionMode,
   sha256,
@@ -51,16 +54,17 @@ const scenes: VisualDecisionScene[] = [
 ];
 
 describe("resolveDecisionMode", () => {
-  it("defaults to off", () => {
-    expect(resolveDecisionMode({})).toBe("off");
+  // The bench gate cleared (0.924 ≥ 0.9), so the default flipped to on.
+  it("defaults to on", () => {
+    expect(resolveDecisionMode({})).toBe("on");
   });
 
   it("reads shadow", () => {
     expect(resolveDecisionMode({ DECISION_MODE: "shadow" })).toBe("shadow");
   });
 
-  it("reads on", () => {
-    expect(resolveDecisionMode({ DECISION_MODE: "on" })).toBe("on");
+  it("reads off", () => {
+    expect(resolveDecisionMode({ DECISION_MODE: "off" })).toBe("off");
   });
 
   it("rejects an unknown mode", () => {
@@ -96,6 +100,47 @@ describe("visualDecisionQuestion", () => {
     const question = visualDecisionQuestion("scene-01");
     expect(question.options).toContain("FlowChart");
     expect(question.options).toContain("AnimatedIllustration");
+  });
+});
+
+describe("quota visibility", () => {
+  it("recognises MiniMax's monthly-quota error", () => {
+    expect(
+      isQuotaError(
+        'MiniMax API 429: {"error":{"type":"rate_limit_error","message":"Token Plan usage limit reached: Upgrade your Token Plan or purchase Credits for more usage. (2056)"}}',
+      ),
+    ).toBe(true);
+  });
+
+  it("does not mistake a timeout for a quota", () => {
+    expect(isQuotaError("AbortError: The operation was aborted")).toBe(false);
+    expect(isQuotaError(null)).toBe(false);
+    expect(isQuotaError(undefined)).toBe(false);
+  });
+
+  it("warns once when a consult hit the quota", () => {
+    const seen: string[] = [];
+    const original = console.error;
+    console.error = (message: string) => seen.push(message);
+    try {
+      warnIfQuotaExhausted([null, "MiniMax API 429: usage limit", null]);
+    } finally {
+      console.error = original;
+    }
+    expect(seen).toHaveLength(1);
+    expect(seen[0]).toContain("quota/rate limit exhausted");
+  });
+
+  it("stays silent when the errors are ordinary failures", () => {
+    const seen: string[] = [];
+    const original = console.error;
+    console.error = (message: string) => seen.push(message);
+    try {
+      warnIfQuotaExhausted([null, "no answer"]);
+    } finally {
+      console.error = original;
+    }
+    expect(seen).toHaveLength(0);
   });
 });
 
@@ -201,6 +246,26 @@ describe("consultVisualDecisions", () => {
     });
     const body = await readFile(logPath, "utf8");
     expect(body.trim().split("\n")).toHaveLength(1);
+  });
+
+  it("skips cleanly when the provider has no key", async () => {
+    const key = process.env["OPENAI_API_KEY"];
+    delete process.env["OPENAI_API_KEY"];
+    const seen: string[] = [];
+    const original = console.error;
+    console.error = (message: string) => seen.push(message);
+    try {
+      const out = await runVisualDecisionShadow({
+        scenes,
+        projectRoot: "/tmp",
+        mode: "shadow",
+      });
+      expect(out.consulted).toBe(0);
+      expect(seen.some((m) => m.includes("key not set"))).toBe(true);
+    } finally {
+      console.error = original;
+      if (key !== undefined) process.env["OPENAI_API_KEY"] = key;
+    }
   });
 
   it("does not fail when the log cannot be written", async () => {

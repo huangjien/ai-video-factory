@@ -198,6 +198,13 @@ export interface QaFinding {
   message: string;
   /** Concrete remediation — every T6.1 finding carries one. */
   fix?: string;
+  /** The decision layer's advisory verdict (v0.11, D3). Attached by
+   *  `runQaDecisionAdvisory` after the deterministic report is written;
+   *  absent on runs with DECISION_MODE=off or without a provider key.
+   *  NEVER read by the strict gate — `level` gates, the advisory
+   *  informs. */
+  advisory?: "pass" | "review" | "block";
+  advisory_confidence?: number;
 }
 
 export interface RenderReport {
@@ -394,3 +401,14 @@ export {
   type StaleRenderChecks,
   type SrtCue,
 } from "./checks.js";
+export {
+  buildQaState,
+  decisionLogPath,
+  qaDecisionQuestion,
+  qaFindingBaseline,
+  runQaDecisionAdvisory,
+  writeQaAdvisoryReport,
+  type QaAdvisoryOptions,
+  type QaAdvisoryResult,
+  type QaDecisionRow,
+} from "./qa-decision.js";

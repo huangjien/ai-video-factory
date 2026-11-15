@@ -81,6 +81,7 @@ describe("resolveImageProvider", () => {
   it("honors an explicit provider, including under --fake", () => {
     for (const explicit of [
       "minimax",
+      "minimax-h3",
       "openai",
       "gemini",
       "mock",
@@ -96,6 +97,17 @@ describe("resolveImageProvider", () => {
     // honor it without the flag being passed again.
     expect(resolveImageProvider(undefined, undefined, "gemini")).toBe("gemini");
     expect(resolveImageProvider(false, undefined, "mock")).toBe("mock");
+  });
+
+  it("honors image_provider: minimax-h3 from the article.md frontmatter", () => {
+    // `video draft --image-provider minimax-h3` stamps the frontmatter;
+    // `video make` must honor it without the flag.
+    expect(
+      resolveImageProvider(undefined, undefined, "minimax-h3"),
+    ).toBe("minimax-h3");
+    expect(resolveImageProvider(false, undefined, "minimax-h3")).toBe(
+      "minimax-h3",
+    );
   });
 
   it("precedence: flag > --fake > frontmatter > default", () => {

@@ -876,14 +876,6 @@ export async function runDraft(opts: DraftOptions): Promise<number> {
       );
     }
     const decisionMode = resolveDecisionMode();
-    if (decisionMode === "on") {
-      console.error(
-        '  ! decision mode "on" is not enabled yet — the bench gate has not been cleared',
-      );
-      console.error(
-        "    (docs/v0.11-decision-provider-plan.md §7.5); running the shadow pass instead.",
-      );
-    }
     const reviewPath = path.join(projectRoot, "article-review.yaml");
     await writeFile(
       reviewPath,
@@ -1070,17 +1062,10 @@ export async function runDraft(opts: DraftOptions): Promise<number> {
     // what it would answer for the scenes the KEYWORD classifier could
     // not route, and records the answer beside the classifier's own in
     // <project>/decision-log.jsonl. It changes nothing: the storyboard
-    // above is final. `DECISION_MODE=shadow` turns it on; the default
-    // is off.
+    // above is final. The default mode is `on` (the bench gate cleared —
+    // §7.5 of docs/v0.11-decision-provider-plan.md); DECISION_MODE=off
+    // turns the pass off.
     const storyboardMode = resolveDecisionMode();
-    if (storyboardMode === "on") {
-      console.error(
-        '  ! decision mode "on" is not enabled yet — the bench gate has not been cleared',
-      );
-      console.error(
-        "    (docs/v0.11-decision-provider-plan.md §7.5); running the shadow pass instead.",
-      );
-    }
     const shadow = await runVisualDecisionShadow({
       scenes: article.scenes.map((scene) => ({
         id: scene.id,

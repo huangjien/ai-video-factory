@@ -66,3 +66,12 @@ export {
   type MiniMaxDecisionProviderOptions,
   type OpenAIDecisionProviderOptions,
 } from "./decision/index.js";
+export {
+  createDecisionProvider,
+  decisionLogPath,
+  isQuotaError,
+  resolveDecisionMode,
+  warnIfQuotaExhausted,
+  type CreateDecisionProviderOptions,
+  type DecisionMode,
+} from "./decision/index.js";

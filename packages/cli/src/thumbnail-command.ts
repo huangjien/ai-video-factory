@@ -7,6 +7,7 @@ import { resolveProjectDir } from "./project-path.js";
 import { existsSync } from "node:fs";
 import {
   GeminiImageProvider,
+  MiniMaxH3ImageProvider,
   MiniMaxImageProvider,
   MockImageProvider,
   OpenAIImageProvider,
@@ -24,7 +25,16 @@ export interface ThumbnailOptions {
   cwd?: string | undefined;
   width?: number;
   height?: number;
-  providerName?: "mock" | "minimax" | "openai" | "gemini" | undefined;
+  providerName?:
+    | "mock"
+    | "minimax"
+    | "minimax-h3"
+    | "openai"
+    | "gemini"
+    | undefined;
+  /** Reference image for edit-capable providers (minimax-h3). Read from
+   *  disk, Base64-encoded, and sent as the edit's reference. */
+  referencePath?: string | undefined;
 }
 
 /**
@@ -83,11 +93,20 @@ function safeGitHead(cwd: string): string {
  */
 export async function generateThumbnailImage(opts: {
   projectRoot: string;
-  providerName?: "mock" | "minimax" | "openai" | "gemini" | undefined;
+  providerName?:
+    | "mock"
+    | "minimax"
+    | "minimax-h3"
+    | "openai"
+    | "gemini"
+    | undefined;
   width?: number | undefined;
   height?: number | undefined;
   /** Project label for log lines. */
   projectLabel: string;
+  /** Reference image for edit-capable providers (minimax-h3): the edit
+   *  re-renders the subject from this image instead of from text alone. */
+  referencePath?: string | undefined;
 }): Promise<string | null> {
   const projectRoot = opts.projectRoot;
   // The run record's duration is the WORK, not the wrapper: a
@@ -136,8 +155,27 @@ export async function generateThumbnailImage(opts: {
   // (each needs its own API key); `mock` (default) keeps the offline
   // deterministic path.
   let provider: ImageProvider;
+  let referenceImages: { base64: string; contentType: string }[] = [];
   if (opts.providerName === "minimax") {
     provider = new MiniMaxImageProvider();
+  } else if (opts.providerName === "minimax-h3") {
+    if (opts.referencePath !== undefined) {
+      // The H3 edit endpoint takes reference images as data URIs; the
+      // format in the URI must be lowercase (the API's documented shape).
+      const { readFile } = await import("node:fs/promises");
+      referenceImages = [
+        {
+          base64: (await readFile(opts.referencePath)).toString("base64"),
+          contentType: opts.referencePath.toLowerCase().endsWith(".png")
+            ? "image/png"
+            : "image/jpeg",
+        },
+      ];
+      console.log(
+        `  reference: ${path.basename(opts.referencePath)} (H3 edit mode)`,
+      );
+    }
+    provider = new MiniMaxH3ImageProvider();
   } else if (opts.providerName === "openai") {
     provider = new OpenAIImageProvider();
   } else if (opts.providerName === "gemini") {
@@ -147,7 +185,12 @@ export async function generateThumbnailImage(opts: {
   }
   let result;
   try {
-    result = await provider.generate({ prompt, width, height });
+    result = await provider.generate({
+      prompt,
+      width,
+      height,
+      ...(referenceImages.length > 0 ? { referenceImages } : {}),
+    });
   } catch (err) {
     console.error(
       `\u2717 ${provider.name} thumbnail generation failed:`,
@@ -249,7 +292,11 @@ export function registerThumbnail(program: Command): void {
     )
     .option(
       "--provider <name>",
-      "image provider: mock|minimax|openai|gemini (default mock — minimax needs MINIMAX_API_KEY; openai needs OPENAI_API_KEY; gemini needs GEMINI_API_KEY)",
+      "image provider: mock|minimax|minimax-h3|openai|gemini (default mock — minimax-h3 is MiniMax-H3-Image: generation + reference-image edit, needs MINIMAX_API_KEY)",
+    )
+    .option(
+      "--reference <path>",
+      "reference image for minimax-h3 edit mode: the thumbnail re-renders this image's subject (jpg/png)",
     )
     .action(
       async (
@@ -258,7 +305,8 @@ export function registerThumbnail(program: Command): void {
           cwd?: string;
           width?: number;
           height?: number;
-          provider?: "mock" | "minimax" | "openai" | "gemini";
+          provider?: "mock" | "minimax" | "minimax-h3" | "openai" | "gemini";
+          reference?: string;
         },
       ) => {
         process.exitCode = await runThumbnail({
@@ -268,6 +316,9 @@ export function registerThumbnail(program: Command): void {
           ...(opts.height !== undefined ? { height: opts.height } : {}),
           ...(opts.provider !== undefined
             ? { providerName: opts.provider }
+            : {}),
+          ...(opts.reference !== undefined
+            ? { referencePath: opts.reference }
             : {}),
         });
       },

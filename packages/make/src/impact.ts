@@ -50,7 +50,13 @@ import { resolveImageProvider, workspaceRootFor } from "./index.js";
  */
 
 export interface ImpactOptions {
-  imageProvider?: "minimax" | "openai" | "gemini" | "mock" | "none";
+  imageProvider?:
+    | "minimax"
+    | "minimax-h3"
+    | "openai"
+    | "gemini"
+    | "mock"
+    | "none";
   fake?: boolean;
 }
 

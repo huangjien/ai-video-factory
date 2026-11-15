@@ -142,7 +142,7 @@ Useful flags:
 | ------------------------------------------------------ | ----------------------------------------------------------------- |
 | `--dry-run`                                            | Print what would run and what would be skipped, without executing |
 | `--fake`                                               | Fully offline: silent placeholder audio and no AI images          |
-| `--image-provider mock\|minimax\|openai\|gemini\|none` | Choose the image backend; `minimax` is the default                |
+| `--image-provider mock\|minimax\|minimax-h3\|openai\|gemini\|none` | Choose the image backend; `minimax` is the default. `minimax-h3` is MiniMax-H3-Image (native 1080p, reference-image edit), ~\$0.02–0.05 per image |
 | `--bgm-dir <dir>`                                      | Use your own BGM library instead of the mock placeholder          |
 | `--sfx-dir <dir>`                                      | Use your own SFX library                                          |
 
@@ -624,7 +624,7 @@ Publishing metadata is not part of `video make`; invoke it separately.
 | Command                     | Output                                                                                              |
 | --------------------------- | --------------------------------------------------------------------------------------------------- |
 | `video youtube <project>`   | The YouTube package: title, description, chapters VTT, thumbnail prompt, Shorts hook                |
-| `video thumbnail <project>` | A 1280×720 thumbnail — mock by default, real AI with `--provider minimax`                           |
+| `video thumbnail <project>` | A 1280×720 thumbnail — mock by default, real AI with `--provider minimax` or `--provider minimax-h3 --reference <img>` (H3 edit mode: re-renders the reference's subject) |
 | `video shorts <project>`    | A vertical 9:16 clip extracted from `final-mixed.mp4`                                               |
 | `video bilibili <project>`  | The Bilibili package: title, 简介, tags, suggested 分区, cover brief, and a manual upload checklist |
 

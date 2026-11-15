@@ -208,6 +208,7 @@ describe("DRAFT_QUESTIONS", () => {
     expect(provider.type).toBe("choice");
     expect(provider.choices?.map((c) => c.value)).toEqual([
       "minimax",
+      "minimax-h3",
       "openai",
       "gemini",
       "mock",

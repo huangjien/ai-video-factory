@@ -132,9 +132,11 @@ describe("decision corpus", () => {
     expect(verdictToLabel({ passing: true })).toBe("pass");
     expect(verdictToLabel({ passing: false })).toBe("revise");
     expect(verdictToLabel({ passing: false, critical: true })).toBe("reject");
+    // The loop ships drafts that carry MAJOR_REVISION_NEEDED — the flag
+    // is advisory, so it must not turn a passing draft into a revise.
     expect(
       verdictToLabel({ passing: true, major_revision_needed: true }),
-    ).toBe("revise");
+    ).toBe("pass");
   });
 
   it("rejects a draft-bar label that disagrees with its own verdict", () => {

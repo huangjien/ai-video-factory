@@ -1,21 +1,26 @@
 id: 命数还是余量-attempt-4
 surface: draft-bar
-state: |-
-  A draft about 命数还是余量.
+state: 'A draft about 命数还是余量.
+
   F-001 (Major, LOGIC_GAP): 判据没有界定“总额”的对象，也未证明两种模型会给出互斥预测，因为固定寿命终点与固定生理预算都可能在消耗速度变化时产生不同的剩余时间。
+
   F-002 (Major, FACT_UNSUPPORTED): 五种动物的心率与寿命仅以“公开生理资料”笼统归因，未给出具体物种、资料出处或适用条件，核心数值无法核验。
 
+
   Overall 91.6, grade A, passing true.
-  Risk flags: MAJOR_REVISION_NEEDED (Major), FACTS_NOT_EXTERNALLY_VERIFIED (Moderate).
+
+  Risk flags: MAJOR_REVISION_NEEDED (Major), FACTS_NOT_EXTERNALLY_VERIFIED (Moderate).'
 expects:
   kind: choice
-  value: revise
+  value: pass
 source_verdict:
   passing: true
   major_revision_needed: true
 disputed: false
 policy:
   rule: review-verdict
-  note: The label is DERIVED from the review's own verdict by the review-verdict rule. The openai decision model (gpt-6-luna) answered "reject" at confidence 0.38 (DISAGREED).
+  note: The label is DERIVED from the review's own verdict by the review-verdict rule. The openai decision
+    model (gpt-6-luna) answered "reject" at confidence 0.38 (DISAGREED).
 provenance:
-  source: projects/命数还是余量/article-review.yaml attempt 4 — a shadow-run consult (2026-11-14T17:08:58.506Z); the decision model answered "reject", the review's verdict says "revise".
+  source: projects/命数还是余量/article-review.yaml attempt 4 — a shadow-run consult (2026-11-14T17:08:58.506Z);
+    the decision model answered "reject", the review's verdict says "revise".

@@ -1,21 +1,29 @@
 id: prompt-engineering-to-agent-engineering-attempt-2
 surface: draft-bar
-state: |-
-  A draft about prompt-engineering-to-agent-engineering.
-  F-001 (Major, LENGTH_VIOLATION): The 18 declared scene durations sum to 224 seconds, about 25 percent short of the 300-second target in the frontmatter.
-  F-002 (Major, FORMAT_VIOLATION): The scene list breaks off mid-record: scene_18's visual description ends mid-phrase and its narration field is absent.
+state: 'A draft about prompt-engineering-to-agent-engineering.
+
+  F-001 (Major, LENGTH_VIOLATION): The 18 declared scene durations sum to 224 seconds, about 25 percent
+  short of the 300-second target in the frontmatter.
+
+  F-002 (Major, FORMAT_VIOLATION): The scene list breaks off mid-record: scene_18''s visual description
+  ends mid-phrase and its narration field is absent.
+
 
   Overall 90.8, grade A, passing true.
-  Risk flags: MAJOR_REVISION_NEEDED (Major), FACTS_NOT_EXTERNALLY_VERIFIED (Minor).
+
+  Risk flags: MAJOR_REVISION_NEEDED (Major), FACTS_NOT_EXTERNALLY_VERIFIED (Minor).'
 expects:
   kind: choice
-  value: revise
+  value: pass
 source_verdict:
   passing: true
   major_revision_needed: true
 disputed: false
 policy:
   rule: review-verdict
-  note: The label is DERIVED from the review's own verdict by the review-verdict rule. The openai decision model (gpt-6-luna) answered "revise" at confidence 0.53 (agreed).
+  note: The label is DERIVED from the review's own verdict by the review-verdict rule. The openai decision
+    model (gpt-6-luna) answered "revise" at confidence 0.53 (agreed).
 provenance:
-  source: projects/prompt-engineering-to-agent-engineering/article-review.yaml attempt 2 — a shadow-run consult (2026-11-14T17:09:20.671Z); the decision model answered "revise", the review's verdict says "revise".
+  source: projects/prompt-engineering-to-agent-engineering/article-review.yaml attempt 2 — a shadow-run
+    consult (2026-11-14T17:09:20.671Z); the decision model answered "revise", the review's verdict says
+    "revise".

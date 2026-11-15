@@ -10,6 +10,12 @@ export {
   type MiniMaxImageProviderOptions,
 } from "./minimax-image.js";
 export {
+  MiniMaxH3ImageProvider,
+  MINIMAX_H3_MODELS,
+  type H3ReferenceImage,
+  type MiniMaxH3ImageProviderOptions,
+} from "./minimax-h3-image.js";
+export {
   OpenAIImageProvider,
   type OpenAIImageProviderOptions,
 } from "./openai-image.js";

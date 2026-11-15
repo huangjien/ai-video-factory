@@ -26,3 +26,12 @@ export {
   type DecisionFunctionSchema,
   type MiniMaxDecisionProviderOptions,
 } from "./minimax.js";
+export {
+  createDecisionProvider,
+  decisionLogPath,
+  isQuotaError,
+  resolveDecisionMode,
+  warnIfQuotaExhausted,
+  type CreateDecisionProviderOptions,
+  type DecisionMode,
+} from "./runtime.js";

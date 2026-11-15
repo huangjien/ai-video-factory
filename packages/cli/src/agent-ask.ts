@@ -165,6 +165,8 @@ const IMAGE_STYLE_CHOICES: readonly { value: string; note: string }[] =
  */
 const IMAGE_PROVIDER_NOTES: Record<string, string> = {
   minimax: "image-01; seconds per scene; needs MINIMAX_API_KEY",
+  "minimax-h3":
+    "MiniMax-H3-Image: next-gen, generation + reference-image edit; ~$0.02/image at 1K; needs MINIMAX_API_KEY",
   openai: "gpt-image-2.5-flare; needs OPENAI_API_KEY",
   gemini: "gemini-3.1-flash-image; needs GEMINI_API_KEY",
   mock: "deterministic placeholders; no API key, not shippable",
@@ -172,7 +174,7 @@ const IMAGE_PROVIDER_NOTES: Record<string, string> = {
 };
 
 const IMAGE_PROVIDER_CHOICES: readonly { value: string; note: string }[] = (
-  ["minimax", "openai", "gemini", "mock", "none"] as const
+  ["minimax", "minimax-h3", "openai", "gemini", "mock", "none"] as const
 ).map((value) => ({
   value,
   note: IMAGE_PROVIDER_NOTES[value] ?? value,

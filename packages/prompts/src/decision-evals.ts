@@ -324,14 +324,21 @@ export function parseDecisionCase(
 }
 
 /** The `draft-bar` rule, as code: the artifact's own verdict decides
- *  the label. A Critical finding or a CRITICAL_BLOCKER flag rejects; a
- *  MAJOR_REVISION_NEEDED flag revises; otherwise the review's `passing`
- *  flag decides. */
+ *  the label, and the verdict is the LOOP'S OWN GATE
+ *  (`passesBar` in packages/draft/src/article-review.ts) — a Critical
+ *  finding blocks, everything else follows the review's `passing`
+ *  flag. `MAJOR_REVISION_NEEDED` is ADVISORY: the loop ships drafts
+ *  that carry it (six shipped artifacts hold `passing: true` plus the
+ *  flag), so the rule must not read it as a revise.
+ *
+ *  (History: this rule first mapped the flag to `revise`. That misread
+ *  the loop and made six artifacts contradict themselves — a
+ *  `passing: true` draft labelled "revise". The fix aligned the rule
+ *  with `passesBar`; the labels moved with it, and the corpus's
+ *  ground truth is now exactly what the pipeline did.) */
 export function verdictToLabel(verdict: DecisionSourceVerdict): string {
   if (verdict.critical === true) return "reject";
-  if (verdict.major_revision_needed === true) return "revise";
-  if (verdict.passing) return "pass";
-  return "revise";
+  return verdict.passing ? "pass" : "revise";
 }
 
 export function loadDecisionCase(file: string): DecisionCaseFixture {

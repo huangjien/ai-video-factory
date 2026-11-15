@@ -35,7 +35,11 @@ import type {
   DecisionQuestion,
 } from "@video/llm";
 import { candidateId, type DecisionCandidate } from "./decision-candidate.js";
-import { createDecisionProvider, type DecisionMode } from "./visual-decision.js";
+import {
+  createDecisionProvider,
+  warnIfQuotaExhausted,
+  type DecisionMode,
+} from "@video/llm";
 
 /** The parts of a review attempt the state and the verdict need. This
  *  is the shape the `article-review.yaml` file holds, so the corpus
@@ -313,6 +317,12 @@ export async function runDraftDecisionShadow(opts: {
         ? { model: env["DECISION_MODEL"] }
         : {}),
     });
+  if (!provider.available()) {
+    console.error(
+      `  decision shadow (draft) skipped: ${provider.name} key not set (${provider.name === "openai" ? "OPENAI_API_KEY" : "MINIMAX_API_KEY"})`,
+    );
+    return { consulted: 0, agreed: 0, mode };
+  }
   const cap = Math.max(1, opts.maxConsults ?? 4);
   const rows: DraftDecisionRow[] = [];
   for (const attempt of opts.attempts.slice(0, cap)) {
@@ -325,6 +335,7 @@ export async function runDraftDecisionShadow(opts: {
       }),
     );
   }
+  warnIfQuotaExhausted(rows.map((row) => row.error));
   if (opts.logPath !== undefined && rows.length > 0) {
     try {
       const body = rows.map((row) => JSON.stringify(row)).join("\n") + "\n";

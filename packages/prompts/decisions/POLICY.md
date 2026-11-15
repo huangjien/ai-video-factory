@@ -155,25 +155,50 @@ recorded rather than hidden:
 - Five draft-bar cases that were marked `disputed` are settled by the
   verdict rule and are no longer disputed.
 
-## The offset was the wording's — fixed 2026-11-14
+## Two fixes moved the labels and the model (2026-11-14)
 
-The decision model used to answer **one notch stricter** than the
-review's verdict at every grade: `reject` where the review said `revise`,
-`revise` where the review said `pass`. The per-grade cross-tab showed the
-offset was uniform, which pointed at the wording rather than the model.
+**1. The offset was the wording's.** The model used to answer one notch
+stricter than the review's verdict at every grade. Four wordings were
+measured over the same 176 cases (`scripts/experiment-decision-question.mjs`);
+the severity-anchored one — which defines what a Major finding means —
+took draft-bar accuracy from 0.415 to 0.813, and its content is now the
+production wording (`decision-draft-bar.md`).
 
-`scripts/experiment-decision-question.mjs` tested four wordings. The
-winner (v3, severity-anchored) adds one sentence that defines the
-boundary: *"A Major finding means 'this part must be fixed'. On its own
-it does not mean 'rewrite the draft'."* Verdict accuracy on draft-bar
-went **0.415 → 0.813**, and its content is now the production wording
-(`decision-draft-bar.md`).
+**2. The rule misread the loop's gate.** The first `review-verdict` rule
+mapped `MAJOR_REVISION_NEEDED` to `revise` — but the loop's own gate
+(`passesBar`) blocks only on a Critical finding, and six shipped
+artifacts hold `passing: true` plus the flag. The rule now matches
+`passesBar`: Critical → `reject`, else the review's `passing` flag
+decides. Six labels moved (`revise` → `pass`), the loader re-derives and
+re-checks every one of them, and draft-bar went **0.813 → 0.926** — the
+bench gate (0.9) clears.
 
-The labels were never touched: they stay the artifact's own verdict, and
-the `review-verdict` rule is unchanged. Fixing the question moved the
-model; the corpus did not move.
+Neither fix touched a label by hand. The wording fix moved the model;
+the rule fix moved six labels that contradicted the artifact they cite.
 
-## Harvested cases## Harvested cases
+## The provider and the mode
+
+`openai` (the Decisions API, model `gpt-6-luna`) is the default for every
+surface, and the layer runs **on by default** (the bench gate cleared —
+0.924 ≥ 0.9). `DECISION_MODE=off|shadow|on`, `DECISION_PROVIDER` /
+`DECISION_MODEL` override per run; the vitest global setup pins the mode
+off so tests stay hermetic.
+
+**One acting surface is wired: the QA advisory.** `video qa` consults the
+model per finding and writes `advisory: pass|review|block` (plus a
+confidence) onto the finding in `qa/render-report.json`. It never gates —
+`--strict` reads the check's `level`, and the advisory's baseline IS the
+level mapping (the corpus measured the model agreeing with it 7/7). The
+decision and its revisit conditions are recorded in
+`docs/v0.11-decision-provider-plan.md` §15. `minimax` stays a measured
+alternative, not a default: its self-reported probability was not stable
+across runs (brier 0.006 → 0.941 over seven runs of the same corpus),
+and its monthly plan ran dry on 2026-11-14 under the measurement
+campaign's load — available most days, but a heavy bench spends the
+month's budget. When the quota is out the layer degrades to the
+deterministic path; the shadow rows carry the error.
+
+## Harvested cases
 
 `video decision backfill <project>` consults the decision model about a
 project's EXISTING review attempts (no draft is re-run), and

@@ -4,10 +4,10 @@ description: Operate the AI Video Factory monorepo — a pnpm TypeScript pipelin
 metadata:
   author: local
   source: internal://~/workspace/ai-video-factory
-  version: "0.11.0"  # mirrors packages/cli/src/version.ts — the doc reflects the BINARY version, the git/release tag is in docs/RELEASES.md
+  version: "0.11.1"  # mirrors packages/cli/src/version.ts — the doc reflects the BINARY version, the git/release tag is in docs/RELEASES.md
   last_reviewed: 2026-10-26
   local_only: true
-  shipped_versions: [v0.4, v0.5, v0.5.1, v0.5.2, v0.5.3, v0.6, v0.6.0, v0.7, v0.7.1, v0.8, v0.8.1, v0.9, v0.9.1, v0.10, v0.11]  # mirrors docs/RELEASES.md tag table
+  shipped_versions: [v0.4, v0.5, v0.5.1, v0.5.2, v0.5.3, v0.6, v0.6.0, v0.7, v0.7.1, v0.8, v0.8.1, v0.9, v0.9.1, v0.10, v0.11, v0.11.1]  # mirrors docs/RELEASES.md tag table
 ---
 
 # AI Video Factory

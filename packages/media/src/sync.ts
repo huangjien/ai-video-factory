@@ -285,6 +285,11 @@ export interface StoryboardSceneTiming {
   id: string;
   duration: number;
   narration: string;
+  /** The text the caption track burns — `captions.text` when the
+   *  storyboard sets one, else the narration. The compiler resolves
+   *  the SAME pair, so the SRT and the burned-in track cannot drift
+   *  (CS-07). */
+  captionText: string;
   /** CS-03: the spoken length when the scene holds silence after it. */
   speechSec?: number | undefined;
   /** The opening beat: silence BEFORE the voice. Cues start after it, so
@@ -310,16 +315,24 @@ export async function readSceneTimings(
       duration?: number;
       lead_in_sec?: number;
       narration?: { text?: string };
-      captions?: { speech_sec?: number };
+      captions?: { speech_sec?: number; text?: string };
     }[];
   };
   return (doc.scenes ?? [])
     .filter((s) => typeof s.id === "string" && typeof s.duration === "number")
-    .map((s) => ({
-      id: s.id as string,
-      duration: s.duration as number,
-      narration: s.narration?.text ?? "",
-      speechSec: s.captions?.speech_sec,
-      leadInSec: s.lead_in_sec,
-    }));
+    .map((s) => {
+      const narration = s.narration?.text ?? "";
+      // Same resolution as the compiler
+      // (packages/vdsl/src/compile.ts): an explicit captions.text wins,
+      // else the narration.
+      const captionText = s.captions?.text ?? narration;
+      return {
+        id: s.id as string,
+        duration: s.duration as number,
+        narration,
+        captionText,
+        speechSec: s.captions?.speech_sec,
+        leadInSec: s.lead_in_sec,
+      };
+    });
 }

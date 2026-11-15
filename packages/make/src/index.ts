@@ -1313,7 +1313,12 @@ export async function writeCaptionsSrt(
     // forward: the voice starts after it, so the text must too.
     const window = s.speechSec ?? s.duration;
     const leadIn = s.leadInSec ?? 0;
-    for (const cue of buildCaptionCues(s.narration, window)) {
+    // The SAME text the compiler burns (captions.text when set, else the
+    // narration) — CS-07: the SRT and the burned-in track must not
+    // drift apart. The writer used the narration unconditionally, so a
+    // storyboard with an explicit caption text produced two different
+    // tracks.
+    for (const cue of buildCaptionCues(s.captionText, window)) {
       index += 1;
       blocks.push(
         `${index}\n${formatSrtTime(sceneStart + leadIn + cue.startSec)} --> ${formatSrtTime(sceneStart + leadIn + cue.endSec)}\n${cue.lines.join("\n")}\n`,

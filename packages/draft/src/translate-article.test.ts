@@ -121,10 +121,12 @@ describe("translateArticle", () => {
       // Pinned visuals survive a hostile translation.
       expect(article).toContain("visual: 深蓝会议桌上的一份提案卡片，冷白顶灯");
       expect(article).toContain("visual: 一本摊开的技术书，细金线串起光点");
-      // Frontmatter rewrite.
+      // Frontmatter rewrite. The caption source is NOT switched for
+      // English: the label is already on screen (the Pillow banner at
+      // the top), so burning it again at the bottom repeated the frame
+      // and left no subtitle. A translation burns the narration.
       expect(article).toContain("language: en-US");
-      expect(article).toContain("captions_source: caption");
-      expect(article).not.toContain("captions_source: narration");
+      expect(article).not.toContain("captions_source");
       // Structure preserved.
       expect(article).toContain("id: scene_1");
       expect(article).toContain("id: scene_2");
@@ -323,8 +325,12 @@ scenes:
     }
   });
 
-  it("does not set captions_source for zh targets", () => {
-    expect(captionsSourceFor("en-US")).toBe("caption");
+  it("does not switch the caption source for any target", () => {
+    // The English auto-switch burned the scene's short label at the
+    // bottom — the same text the Pillow banner already puts at the top,
+    // so the frame repeated itself and showed no subtitle. A
+    // translation burns the narration, like the source language.
+    expect(captionsSourceFor("en-US")).toBeUndefined();
     expect(captionsSourceFor("zh-CN")).toBeUndefined();
   });
 

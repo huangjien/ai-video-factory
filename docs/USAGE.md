@@ -115,14 +115,16 @@ these keys in `article.md` change what the render produces:
 | `captions_source`         | What the caption overlay burns in: `narration` (default) or `caption`   |
 | `no_captions`             | When true, no caption overlay at all                                    |
 
-> **Use `captions_source: caption` for English articles.** The overlay is
-> validated against the bottom safe area — three lines of 24 CJK units, with
-> ASCII counting as half — which caps an English scene near 144 characters.
-> English narration runs 150–220 per scene, so the default `narration`
-> source fails validation on nearly every scene and the render is refused.
-> The `caption` source burns the scene's short `caption:` label instead,
-> which passes at any language and stops a designed card's own text from
-> being printed twice beneath itself.
+> **The caption overlay is checked per CUE, not per scene.** A long
+> narration is split into several two-line cues, so an English scene of
+> 150–220 characters renders fine: the overlay shows the narration in
+> sequence, and nothing is dropped. (Until 2026-11-15 the split silently
+> dropped the tail of any cue that wrapped past two lines, which is what
+> made the en-US films look cut short.) `captions_source: caption` burns
+> the scene's short `caption:` label instead of the narration — but that
+> label is ALREADY on screen as the Pillow key-info banner at the top of
+> the frame, so the bottom band would repeat the top. Leave it at
+> `narration`.
 
 ### 2.3 Approve
 
@@ -731,8 +733,11 @@ field. Re-run `video draft` to regenerate it, or fill it in by hand.
 
 ### The caption overlay fails validation on English content
 
-Set `captions_source: caption` in the article's frontmatter. See
-[section 2.2](#22-draft).
+An en-US scene that the overlay refuses is a cue that wrapped past two
+lines. Since 2026-11-15 the cue builder splits the tail into another cue
+instead of dropping it, so this should not happen; if it does, the scene's
+narration is longer than the scene's spoken window allows — shorten the
+narration or lengthen the scene. See [section 2.2](#22-draft).
 
 ### Edge TTS fails
 

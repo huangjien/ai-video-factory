@@ -136,4 +136,43 @@ scenes:
       await rm(dir, { recursive: true, force: true }).catch(() => {});
     }
   });
+
+  it("burns the same text the compiler burns (captions.text wins)", async () => {
+    // CS-07: the SRT and the burned-in track must not drift. The writer
+    // used the narration unconditionally, so a storyboard with an
+    // explicit captions.text produced two different tracks.
+    const dir = await mkdtemp(path.join(tmpdir(), "vf-srt-source-"));
+    try {
+      await mkdir(path.join(dir, "storyboard"), { recursive: true });
+      await mkdir(path.join(dir, "captions"), { recursive: true });
+      await writeFile(
+        path.join(dir, "storyboard", "storyboard.yaml"),
+        `schema_version: "0.2"
+scenes:
+  - id: scene-01
+    duration: 6.0
+    captions:
+      speech_sec: 6.0
+      source: caption
+      text: "The scene label the compiler burns"
+    narration:
+      text: "The narration the SRT used to write instead."
+    visual:
+      component: Title
+      props:
+        text: "a"
+`,
+        "utf8",
+      );
+      await writeCaptionsSrt(dir, "en-US");
+      const srt = await readFile(
+        path.join(dir, "captions", "en-US.srt"),
+        "utf8",
+      );
+      expect(srt).toContain("The scene label the compiler burns");
+      expect(srt).not.toContain("The narration the SRT used to write");
+    } finally {
+      await rm(dir, { recursive: true, force: true }).catch(() => {});
+    }
+  });
 });

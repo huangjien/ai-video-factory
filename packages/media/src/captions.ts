@@ -180,13 +180,36 @@ export function buildCaptionCues(
     const share = textUnits(group) / totalUnits;
     const endSec =
       i === groups.length - 1 ? durationSec : cursor + durationSec * share;
-    const cue: CaptionCue = {
-      lines: wrapText(group, maxUnits).slice(0, maxLines),
-      startSec: cursor,
-      endSec,
-    };
-    if (markers !== undefined) cue.markers = markers;
-    cues.push(cue);
+    // Wrap the group, then PACK the wrapped lines into cues of at most
+    // `maxLines`. A group can wrap to more lines than one cue holds:
+    // the greedy wrapper breaks at word boundaries, so a group that
+    // exactly fills the unit budget still needs a third line for the
+    // word that did not fit. Slicing the wrap to `maxLines` DROPPED that
+    // tail — the text loss the en-US film showed in 19 of 40 scenes.
+    // The extra lines become their own cue instead: the two-row limit
+    // still holds at any instant, and no text is ever lost.
+    const wrapped = wrapText(group, maxUnits);
+    const lineUnits = wrapped.map((line) => textUnits(line));
+    const groupUnits = lineUnits.reduce((sum, u) => sum + u, 0);
+    let groupCursor = cursor;
+    for (let j = 0; j < wrapped.length; j += maxLines) {
+      const lines = wrapped.slice(j, j + maxLines);
+      const cueUnits = lineUnits
+        .slice(j, j + maxLines)
+        .reduce((sum, u) => sum + u, 0);
+      const cueEnd =
+        groupUnits > 0
+          ? groupCursor + (endSec - cursor) * (cueUnits / groupUnits)
+          : endSec;
+      const cue: CaptionCue = {
+        lines,
+        startSec: groupCursor,
+        endSec: cueEnd,
+      };
+      if (markers !== undefined) cue.markers = markers;
+      cues.push(cue);
+      groupCursor = cueEnd;
+    }
     cursor = endSec;
   });
   return cues;

@@ -842,15 +842,14 @@ Seven quality wins shipped under the same human-gate principle:
   `--no-captions`. Captions follow narration timing via the existing
   `writeCaptionsSrt` step.
 - **Choosing what the caption overlay burns in** (`captions_source` in
-  `article.md` frontmatter, default `narration`). The overlay's text is
-  checked against the bottom safe area — 3 lines × 24 CJK units, and ASCII
-  counts 0.5, so an English scene is capped near 144 characters. English
-  narration runs 150-220 per scene, so `source: narration` fails validation
-  on nearly every scene of an en-US article and the video will not render.
-  Set `captions_source: caption` to burn the scene's short `caption:` label
-  instead: that passes the check at any language, and on a scene that is a
-  designed card it also stops the card's own text being printed twice under
-  itself. `no_captions: true` still turns the overlay off entirely.
+  `article.md` frontmatter, default `narration`). The overlay is checked
+  per CUE, and a long narration is split into several two-line cues, so an
+  English scene of 150-220 characters renders in full. `captions_source:
+  caption` burns the scene's short `caption:` label instead — but that
+  label already appears as the Pillow key-info banner at the top of the
+  frame, so the bottom band would repeat the top and the viewer would
+  get no subtitle. Leave it at `narration`. `no_captions: true` still
+  turns the overlay off entirely.
 - **Visual routing** (`packages/draft/src/visual-classifier.ts`): v0.12
   removed the 14 structured components — the first scene becomes the
   Title card and every other scene is `AnimatedIllustration` (the

@@ -141,4 +141,38 @@ describe("buildCaptionCues (CS-07)", () => {
       expect(input).toEqual(["词A", "词B"]);
     });
   });
+
+  it("keeps an English narration whole when it wraps past two lines", () => {
+    // Regression (2026-11-15): the wrap is greedy at word boundaries,
+    // so a group that exactly fills the unit budget can still need a
+    // third line. Slicing the wrap to two lines DROPPED that tail —
+    // 19 of the 40 scenes of an en-US film lost subtitle text. The
+    // extra lines become their own cue now.
+    const narration =
+      "December 1907, the U.S. Army posted a request for aircraft proposals. " +
+      "Acceptance had just three requirements: carry two people, stay aloft for one hour.";
+    const cues = buildCaptionCues(narration, 12);
+    const rejoined = cues
+      .flatMap((c) => c.lines)
+      .join("")
+      .replace(/\s/g, "");
+    expect(rejoined).toBe(narration.replace(/\s/g, ""));
+  });
+
+  it("keeps every cue within the two-line limit while keeping the text", () => {
+    const narration =
+      "December 1907, the U.S. Army posted a request for aircraft proposals. " +
+      "Acceptance had just three requirements: carry two people, stay aloft for one hour.";
+    const cues = buildCaptionCues(narration, 12);
+    for (const cue of cues) {
+      expect(cue.lines.length).toBeLessThanOrEqual(2);
+    }
+  });
+
+  it("splits the overflow into its own cue instead of clipping it", () => {
+    const narration = "a".repeat(300);
+    const cues = buildCaptionCues(narration, 20);
+    expect(cues.length).toBeGreaterThan(1);
+    expect(cues.flatMap((c) => c.lines).join("")).toHaveLength(300);
+  });
 });

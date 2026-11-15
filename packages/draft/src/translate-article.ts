@@ -91,9 +91,28 @@ export function hasL10n(projectRoot: string, lang: string): boolean {
   return existsSync(l10nArticlePath(projectRoot, lang));
 }
 
-/** en-* articles burn the short `caption:` label (safe-area rule). */
-export function captionsSourceFor(lang: string): "caption" | undefined {
-  return lang.toLowerCase().startsWith("en") ? "caption" : undefined;
+/**
+ * The caption source a translated article should use.
+ *
+ * Historically en-* articles were switched to the short `caption:`
+ * label ("safe-area rule"): the English narration was long, the
+ * safe-area check counted it against the SCENE rather than the cue,
+ * and the render was refused.
+ *
+ * Both premises are gone. The safe-area check is per CUE, and the cue
+ * builder splits a long narration into several two-line cues (it
+ * stopped dropping their tails in 2026-11-15). And the label was
+ * ALREADY on screen: the Pillow key-info banner bakes the same
+ * `caption:` label into the top of the frame — so burning it again at
+ * the bottom made the frame say the same thing twice and left the
+ * viewer with no subtitle at all.
+ *
+ * So a translation burns the NARRATION, exactly like the source
+ * language. Returns undefined for every language: the article's own
+ * `captions_source` (if any) is preserved by the frontmatter rewrite.
+ */
+export function captionsSourceFor(_lang: string): "caption" | undefined {
+  return undefined;
 }
 
 /** Rewrite frontmatter keys on the translated article text. When the voice

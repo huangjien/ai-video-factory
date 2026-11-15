@@ -15,6 +15,35 @@ video research → script → storyboard → audio (TTS) → audio-asset (BGM+SF
        video review                          → Content/Visual/Technical review YAMLs
 ```
 
+## v0.11.1 (2026-11-15) — English videos: a real subtitle, and no lost text
+
+Two defects, found on the shipped en-US films.
+
+**The bottom band repeated the top.** `video translate` switched en-US
+articles to `captions_source: caption`, so the burned-in track carried the
+scene's short `caption:` label — the SAME text the Pillow key-info banner
+already bakes into the top of the frame. The frame said the same thing
+twice and the viewer got no subtitle at all. A translation now burns the
+NARRATION, exactly like the source language; the label stays at the top
+where it belongs.
+
+**The cue builder dropped text.** `buildCaptionCues` wrapped a group and
+then sliced the wrap to two lines. The greedy wrapper breaks at word
+boundaries, so a group that exactly fills the unit budget can still need
+a third line — and that tail was silently dropped. Measured on the
+en-US film of 定向创造: **19 of 40 scenes lost subtitle text**. The
+overflow now becomes its own cue: the two-row limit still holds at any
+instant, and no text is lost (0 of 540 scenes across the 15 en-US
+projects, verified by compiling every shipped storyboard).
+
+Also: the SRT writer used the narration unconditionally while the
+compiler honoured `captions.text` — the two tracks could disagree (CS-07).
+Both now resolve the same text.
+
+Re-render an existing en-US film with `video make <project> --lang en-US`
+(the shipped l10n storyboards were patched in place). A new translation
+picks the fix up automatically.
+
 ## v0.11 (2026-11-15) — Decision layer, MiniMax H3 Image, structured components removed
 
 Three features, one breaking change.

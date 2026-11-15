@@ -208,11 +208,13 @@ describe("DRAFT_QUESTIONS", () => {
     expect(provider.type).toBe("choice");
     expect(provider.choices?.map((c) => c.value)).toEqual([
       "minimax",
-      "minimax-h3",
       "openai",
       "gemini",
       "mock",
       "none",
+      // MiniMax-H3 is deliberately LAST: fallback of last resort,
+      // never a default or an early pick (2026-11 policy).
+      "minimax-h3",
     ]);
     for (const c of provider.choices ?? []) {
       expect(c.note.length).toBeGreaterThan(0);

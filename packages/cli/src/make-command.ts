@@ -133,7 +133,7 @@ export function registerMake(program: Command): void {
     )
     .option(
       "--image-provider <provider>",
-      "image provider for scene visuals: minimax (image-01, default since v0.8.1; needs MINIMAX_API_KEY), minimax-h3 (MiniMax-H3-Image, generation + reference-image edit; needs MINIMAX_API_KEY), openai (gpt-image-2.5-flare; needs OPENAI_API_KEY), gemini (gemini-3.1-flash-image; needs GEMINI_API_KEY), mock, none (--fake implies none)",
+      "image provider for scene visuals: minimax (image-01, default since v0.8.1; needs MINIMAX_API_KEY), minimax-h3 (MiniMax-H3-Image; LAST-resort fallback, never default; needs MINIMAX_API_KEY), openai (gpt-image-2.5-flare; needs OPENAI_API_KEY), gemini (gemini-3.1-flash-image; needs GEMINI_API_KEY), mock, none (--fake implies none). On a per-scene failure the other configured providers are tried in order minimax → openai → gemini → minimax-h3",
     )
     .option(
       "--bgm-dir <dir>",

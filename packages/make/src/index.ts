@@ -841,12 +841,42 @@ export function resolveImageProvider(
  * description, it's skipped and the renderer falls back to
  * AnimatedIllustration geometric shapes.
  *
+ * 2026-11 policy (two halves):
+ * - Provider chain: the chosen provider is tried first; on failure the
+ *   other real providers take the scene, with MiniMax-H3 ALWAYS last —
+ *   H3 is the fallback of last resort, never a default.
+ * - No silent doodles: a real-provider run (minimax/minimax-h3/openai/
+ *   gemini) FAILS when any visual-bearing scene still lacks an image
+ *   after the chain. Only --fake/mock keeps the AnimatedIllustration
+ *   fallback (its documented no-network contract).
+ *
  * v0.4 (T3): when `--image-provider minimax`, the article's one-line
  * `visual:` is rewritten into a real image prompt (subject · lighting ·
  * composition · style) via `expandScenePrompt`. The expansion is cached
  * on disk so re-runs are free; the `.prompt.txt` sidecar next to each
  * JPG is auditable.
  */
+/**
+ * Try each provider in the chain in order; the first success wins.
+ * Each entry gets ONE generate call (its own internal retry policy
+ * still applies). Throws an aggregate error when every entry fails.
+ */
+async function generateWithChain(
+  chain: { name: string; provider: ImageProvider }[],
+  req: { prompt: string; width: number; height: number },
+): Promise<{ bytes: Uint8Array; servedBy: string }> {
+  const errors: string[] = [];
+  for (const { name, provider } of chain) {
+    try {
+      const result = await provider.generate(req);
+      return { bytes: result.bytes, servedBy: name };
+    } catch (err) {
+      errors.push(`${name}: ${(err as Error).message}`);
+    }
+  }
+  throw new Error(errors.join(" | ") || "no image provider available");
+}
+
 export async function generateSceneVisuals(
   projectRoot: string,
   article: ParsedArticle,
@@ -872,18 +902,43 @@ export async function generateSceneVisuals(
   const bakeManifest = await loadBakeManifest(imageDir);
 
   const isMock = opts.provider === "mock";
-  let provider: ImageProvider;
-  if (opts.provider === "minimax") {
-    provider = new MiniMaxImageProvider();
-  } else if (opts.provider === "minimax-h3") {
-    provider = new MiniMaxH3ImageProvider();
-  } else if (opts.provider === "openai") {
-    provider = new OpenAIImageProvider();
-  } else if (opts.provider === "gemini") {
-    provider = new GeminiImageProvider();
-  } else {
-    provider = new MockImageProvider();
-  }
+  const constructImageProvider = (
+    name:
+      | "minimax"
+      | "minimax-h3"
+      | "openai"
+      | "gemini"
+      | "mock"
+      | "none",
+  ): ImageProvider => {
+    if (name === "minimax") return new MiniMaxImageProvider();
+    if (name === "minimax-h3") return new MiniMaxH3ImageProvider();
+    if (name === "openai") return new OpenAIImageProvider();
+    if (name === "gemini") return new GeminiImageProvider();
+    return new MockImageProvider();
+  };
+  const provider = constructImageProvider(opts.provider);
+  // Fallback chain: chosen provider first, then the other real providers
+  // in fixed order — MiniMax-H3 deliberately LAST. Entries whose API key
+  // is absent are dropped (a guaranteed-failure attempt is pure latency).
+  const PROVIDER_ENV_KEYS: Record<string, string> = {
+    minimax: "MINIMAX_API_KEY",
+    "minimax-h3": "MINIMAX_API_KEY",
+    openai: "OPENAI_API_KEY",
+    gemini: "GEMINI_API_KEY",
+  };
+  const chain: { name: string; provider: ImageProvider }[] = isMock
+    ? [{ name: "mock", provider }]
+    : [
+        { name: opts.provider, provider },
+        ...IMAGE_PROVIDER_VALUES.filter(
+          (n) =>
+            n !== opts.provider &&
+            n !== "mock" &&
+            n !== "none" &&
+            process.env[PROVIDER_ENV_KEYS[n] ?? ""] !== undefined,
+        ).map((n) => ({ name: n, provider: constructImageProvider(n) })),
+      ];
   const reqSize = requestedImageSize(opts.provider);
   const reqWidth = reqSize.width;
   const reqHeight = reqSize.height;
@@ -932,14 +987,19 @@ export async function generateSceneVisuals(
 
   /** One scene's image: cache check → prompt expansion → generation.
    *  Returns the scene's own log lines and the image path it produced. */
+  const failedScenes: number[] = [];
   const sceneJob = async (
     i: number,
   ): Promise<{ lines: string[]; generated: string | null }> => {
     const lines: string[] = [];
     const scene = article.scenes[i]!;
     const visual = scene.visual ?? "";
-    if (!visual || visual.trim().length === 0)
+    if (!visual || visual.trim().length === 0) {
+      // A visual-bearing film with a missing visual line would render a
+      // self-drawn component — the thing real runs must never ship.
+      if (!isMock) failedScenes.push(i + 1);
       return { lines, generated: null };
+    }
     if (selfRendered.has(i + 1)) return { lines, generated: null };
 
     const imagePath = path.join(imageDir, `scene_${i + 1}.jpg`);
@@ -1023,17 +1083,17 @@ export async function generateSceneVisuals(
     }
 
     try {
-      const result = await heartbeat(
+      const { bytes, servedBy } = await heartbeat(
         itemLabel,
         () =>
-          provider.generate({
+          generateWithChain(chain, {
             prompt: promptForImage,
             width: reqWidth,
             height: reqHeight,
           }),
         emit,
       );
-      await writeFile(imagePath, result.bytes);
+      await writeFile(imagePath, bytes);
       writeImageCacheSidecar(imagePath, cacheKey);
       emit({
         kind: "done",
@@ -1041,10 +1101,15 @@ export async function generateSceneVisuals(
         ...itemAt,
         elapsedSec: elapsedSinceSec(itemT0),
       });
-      lines.push(`assets/images/scene_${i + 1}.jpg`);
+      lines.push(
+        `assets/images/scene_${i + 1}.jpg` +
+          (servedBy !== opts.provider ? ` (served by ${servedBy} fallback)` : ""),
+      );
       return { lines, generated: imagePath };
     } catch (err) {
-      // Non-fatal: scene falls back to AnimatedIllustration.
+      // Real runs: the post-pool guard below fails the step — no silent
+      // AnimatedIllustration fallback. Mock runs: non-fatal by contract.
+      failedScenes.push(i + 1);
       emit({
         kind: "fail",
         label: itemLabel,
@@ -1080,6 +1145,20 @@ export async function generateSceneVisuals(
     if (r.generated !== null) generatedImages.push(r.generated);
   }
 
+  // 2026-11 policy: a REAL-provider run never ships a self-drawn
+  // component in place of a missing image. The chain already gave every
+  // configured provider a chance; anything still missing fails the step
+  // loudly. --fake/mock keeps the AnimatedIllustration fallback (its
+  // documented no-network contract).
+  if (!isMock && failedScenes.length > 0) {
+    throw new Error(
+      `image generation failed for scene(s) ${failedScenes.join(", ")} ` +
+        `(tried: ${chain.map((c) => c.name).join(" → ")}) — refusing to ` +
+        `render a self-drawn fallback component. Fix the provider or ` +
+        `rate limit and re-run; cached scenes are free.`,
+    );
+  }
+
   if (bakeManifest) {
     const baked = await runBakeText({
       imagesDir: imageDir,
@@ -1104,8 +1183,10 @@ export async function generateSceneVisuals(
       `storyboard.yaml: ${switched}/${generatedImages.length} scenes switched to ImageBackground`,
     );
   }
-  if ("dispose" in provider && typeof provider.dispose === "function") {
-    (provider as { dispose: () => void }).dispose();
+  for (const { provider: p } of chain) {
+    if ("dispose" in p && typeof p.dispose === "function") {
+      (p as { dispose: () => void }).dispose();
+    }
   }
   return outputs;
 }

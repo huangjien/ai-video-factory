@@ -142,7 +142,7 @@ Useful flags:
 | ------------------------------------------------------ | ----------------------------------------------------------------- |
 | `--dry-run`                                            | Print what would run and what would be skipped, without executing |
 | `--fake`                                               | Fully offline: silent placeholder audio and no AI images          |
-| `--image-provider mock\|minimax\|minimax-h3\|openai\|gemini\|none` | Choose the image backend; `minimax` is the default. `minimax-h3` is MiniMax-H3-Image (native 1080p, reference-image edit), ~\$0.02–0.05 per image |
+| `--image-provider mock\|minimax\|minimax-h3\|openai\|gemini\|none` | Choose the image backend; `minimax` is the default. `minimax-h3` is MiniMax-H3-Image (native 1080p, reference-image edit), ~\$0.02–0.05 per image. 2026-11 policy: H3 is the LAST-resort fallback, never a default; per-scene failures walk the chain minimax → openai → gemini → minimax-h3 |
 | `--bgm-dir <dir>`                                      | Use your own BGM library instead of the mock placeholder          |
 | `--sfx-dir <dir>`                                      | Use your own SFX library                                          |
 

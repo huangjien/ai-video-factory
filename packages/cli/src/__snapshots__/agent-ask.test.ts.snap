@@ -130,10 +130,6 @@ exports[`emitQuestionsDoc > emits the full video-ask/1 envelope (snapshot) 1`] =
           "value": "minimax",
         },
         {
-          "note": "MiniMax-H3-Image: next-gen, generation + reference-image edit; ~$0.02/image at 1K; needs MINIMAX_API_KEY",
-          "value": "minimax-h3",
-        },
-        {
           "note": "gpt-image-2.5-flare; needs OPENAI_API_KEY",
           "value": "openai",
         },
@@ -148,6 +144,10 @@ exports[`emitQuestionsDoc > emits the full video-ask/1 envelope (snapshot) 1`] =
         {
           "note": "skip image generation; scenes render as vector shapes",
           "value": "none",
+        },
+        {
+          "note": "MiniMax-H3-Image: native 1080p; LAST-resort fallback, never the default; ~$0.02/image at 1K; needs MINIMAX_API_KEY",
+          "value": "minimax-h3",
         },
       ],
       "default": "minimax",

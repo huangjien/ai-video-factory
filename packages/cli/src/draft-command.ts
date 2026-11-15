@@ -1306,7 +1306,7 @@ export function registerDraft(program: Command): void {
     )
     .option(
       "--image-provider <provider>",
-      "scene-image provider stamped into article.md frontmatter: minimax (default; needs MINIMAX_API_KEY) | minimax-h3 (MiniMax-H3-Image, native 1080p; needs MINIMAX_API_KEY) | openai | gemini | mock | none (v0.7: also an agent-ask knob, video-ask/1)",
+      "scene-image provider stamped into article.md frontmatter: minimax (default; needs MINIMAX_API_KEY) | minimax-h3 (MiniMax-H3-Image, native 1080p; LAST-resort fallback, never default; needs MINIMAX_API_KEY) | openai | gemini | mock | none (v0.7: also an agent-ask knob, video-ask/1)",
       (v) => {
         const allowed = [
           "minimax",

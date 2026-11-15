@@ -3,7 +3,6 @@ import { mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { harvestProject, renderCandidateYaml } from "./decision-harvest.js";
-import { sha256 } from "@video/draft";
 
 const ARTICLE = `---
 project: demo
@@ -58,6 +57,56 @@ describe("renderCandidateYaml", () => {
 });
 
 describe("harvestProject", () => {
+  const REVIEW_YAML = `project: demo
+language: en-US
+threshold: 90
+attempts_used: 1
+passing: false
+attempts:
+  - attempt: 1
+    overall: 71.2
+    grade: C
+    coverage: 100
+    passing: false
+    findings:
+      - id: F-001
+        code: CONTENT_GAP
+        severity: Major
+        description: The promotion path is compressed into three words.
+    risk_flags:
+      - code: MAJOR_REVISION_NEEDED
+        severity: Major
+`;
+
+  async function projectWithLog(logRow: Record<string, unknown>): Promise<string> {
+    const dir = await mkdtemp(path.join(tmpdir(), "harvest-"));
+    await writeFile(path.join(dir, "article-review.yaml"), REVIEW_YAML, "utf8");
+    await writeFile(
+      path.join(dir, "decision-log.jsonl"),
+      JSON.stringify({
+        ts: "2026-11-14T00:00:00.000Z",
+        surface: "draft-bar",
+        project: "demo",
+        attempt: 1,
+        mode: "shadow",
+        provider: "openai",
+        model: "gpt-6-luna",
+        state_sha256: "a1b2c3d4e5f6a7b8",
+        answer: String(logRow["answer"] ?? "reject"),
+        confidence: 0.71,
+        confidence_source: "native",
+        verdict: { passing: false, major_revision_needed: true },
+        label: "revise",
+        agreed: false,
+        latency_ms: 300,
+        usage: { input: 100, output: 0 },
+        error: null,
+      }) + "\n",
+      "utf8",
+    );
+    return dir;
+  }
+
   it("reports no candidates when the project has no log", async () => {
     const dir = await mkdtemp(path.join(tmpdir(), "harvest-"));
     const { candidates, rows } = await harvestProject(dir, "demo");
@@ -65,125 +114,74 @@ describe("harvestProject", () => {
     expect(rows).toBe(0);
   });
 
-  it("turns a logged disagreement into a candidate", async () => {
-    const dir = await mkdtemp(path.join(tmpdir(), "harvest-"));
-    await writeFile(path.join(dir, "article.md"), ARTICLE, "utf8");
-    await writeFile(
-      path.join(dir, "decision-log.jsonl"),
-      `${JSON.stringify({
-        ts: "2026-11-14T00:00:00.000Z",
-        surface: "visual-class",
-        scene_id: "scene_01",
-        mode: "shadow",
-        provider: "openai",
-        model: "gpt-6-luna",
-        state_sha256: sha256("少年立在崖边望向远方"),
-        answer: "Checklist",
-        confidence: 0.71,
-        confidence_source: "native",
-        baseline: "AnimatedIllustration",
-        agreed: false,
-        latency_ms: 300,
-        usage: { input: 100, output: 0 },
-        error: null,
-      })}\n`,
-      "utf8",
-    );
+  it("turns a logged draft-bar consult into a candidate", async () => {
+    const dir = await projectWithLog({ answer: "reject" });
     const { candidates, rows } = await harvestProject(dir, "demo");
     expect(rows).toBe(1);
     expect(candidates).toHaveLength(1);
   });
 
-  it("recovers the state from the article, not the log", async () => {
+  it("derives the label from the review artifact, not the model", async () => {
+    const dir = await projectWithLog({ answer: "reject" });
+    const { candidates } = await harvestProject(dir, "demo");
+    expect(candidates[0]?.expects.value).toBe("revise");
+  });
+
+  it("rebuilds the state from the review artifact", async () => {
+    const dir = await projectWithLog({ answer: "reject" });
+    const { candidates } = await harvestProject(dir, "demo");
+    expect(candidates[0]?.state).toContain("A draft about demo");
+    expect(candidates[0]?.state).toContain("F-001");
+  });
+
+  it("marks the candidate undisputed (the rule decides, no human needed)", async () => {
+    const dir = await projectWithLog({ answer: "reject" });
+    const { candidates } = await harvestProject(dir, "demo");
+    expect(candidates[0]?.disputed).toBe(false);
+  });
+
+  it("records the model's disagreement in the policy note", async () => {
+    const dir = await projectWithLog({ answer: "reject" });
+    const { candidates } = await harvestProject(dir, "demo");
+    expect(candidates[0]?.policy.note).toContain("DISAGREED");
+  });
+
+  it("skips a row whose attempt is missing from the review", async () => {
     const dir = await mkdtemp(path.join(tmpdir(), "harvest-"));
-    await writeFile(path.join(dir, "article.md"), ARTICLE, "utf8");
+    await writeFile(path.join(dir, "article-review.yaml"), REVIEW_YAML, "utf8");
     await writeFile(
       path.join(dir, "decision-log.jsonl"),
-      `${JSON.stringify({
+      JSON.stringify({
         ts: "2026-11-14T00:00:00.000Z",
-        surface: "visual-class",
-        scene_id: "scene_01",
+        surface: "draft-bar",
+        project: "demo",
+        attempt: 9,
         mode: "shadow",
         provider: "openai",
         model: "gpt-6-luna",
-        state_sha256: sha256("少年立在崖边望向远方"),
-        answer: "Checklist",
+        state_sha256: "a1b2c3d4e5f6a7b8",
+        answer: "reject",
         confidence: 0.71,
         confidence_source: "native",
-        baseline: "AnimatedIllustration",
+        verdict: { passing: false },
+        label: "revise",
         agreed: false,
         latency_ms: 300,
         usage: { input: 100, output: 0 },
         error: null,
-      })}\n`,
+      }) + "\n",
       "utf8",
     );
-    const { candidates } = await harvestProject(dir, "demo");
-    expect(candidates[0]?.state).toBe("少年立在崖边望向远方");
-  });
-
-  it("keeps a logged agreement — a corpus needs both kinds of case", async () => {
-    const dir = await mkdtemp(path.join(tmpdir(), "harvest-"));
-    await writeFile(path.join(dir, "article.md"), ARTICLE, "utf8");
-    await writeFile(
-      path.join(dir, "decision-log.jsonl"),
-      `${JSON.stringify({
-        ts: "2026-11-14T00:00:00.000Z",
-        surface: "visual-class",
-        scene_id: "scene_01",
-        mode: "shadow",
-        provider: "openai",
-        model: "gpt-6-luna",
-        state_sha256: sha256("少年立在崖边望向远方"),
-        answer: "AnimatedIllustration",
-        confidence: 0.99,
-        confidence_source: "native",
-        baseline: "AnimatedIllustration",
-        agreed: true,
-        latency_ms: 300,
-        usage: { input: 100, output: 0 },
-        error: null,
-      })}\n`,
-      "utf8",
-    );
-    const { candidates } = await harvestProject(dir, "demo");
-    expect(candidates).toHaveLength(1);
-  });
-
-  it("does not throw when the project has no article", async () => {
-    const dir = await mkdtemp(path.join(tmpdir(), "harvest-"));
-    await writeFile(path.join(dir, "decision-log.jsonl"), "{}\n", "utf8");
     const { candidates } = await harvestProject(dir, "demo");
     expect(candidates).toHaveLength(0);
   });
 
-  it("renders a review queue whose labels are still proposals", async () => {
-    const dir = await mkdtemp(path.join(tmpdir(), "harvest-"));
-    await writeFile(path.join(dir, "article.md"), ARTICLE, "utf8");
-    await writeFile(
-      path.join(dir, "decision-log.jsonl"),
-      `${JSON.stringify({
-        ts: "2026-11-14T00:00:00.000Z",
-        surface: "visual-class",
-        scene_id: "scene_01",
-        mode: "shadow",
-        provider: "openai",
-        model: "gpt-6-luna",
-        state_sha256: sha256("少年立在崖边望向远方"),
-        answer: "Checklist",
-        confidence: 0.71,
-        confidence_source: "native",
-        baseline: "AnimatedIllustration",
-        agreed: false,
-        latency_ms: 300,
-        usage: { input: 100, output: 0 },
-        error: null,
-      })}\n`,
-      "utf8",
-    );
+  it("renders a review queue with the derived label", async () => {
+    const dir = await projectWithLog({ answer: "reject" });
     const { candidates } = await harvestProject(dir, "demo");
     const yaml = renderCandidateYaml(candidates);
-    expect(yaml).toContain("disputed: true");
-    expect(yaml).toContain("A human must rule");
+    expect(yaml).toContain("value: revise");
+    expect(yaml).toContain("review-verdict");
   });
 });
+

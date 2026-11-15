@@ -25,7 +25,6 @@ export type DecisionSurface =
   | "draft-bar-v2"
   | "draft-bar-v3"
   | "draft-bar-v4"
-  | "visual-class"
   | "motion-prescreen"
   | "caption-overlap";
 
@@ -123,30 +122,6 @@ export const DECISION_QUESTIONS: Record<
       reject: "sent back to be written again",
     },
     resultProperty: "verdict",
-  },
-  "visual-class": {
-    surface: "visual-class",
-    prompt: "decision-visual-class",
-    kind: "choice",
-    options: [
-      "Title",
-      "FlowChart",
-      "Timeline",
-      "Terminal",
-      "Callout",
-      "QuoteBlock",
-      "Checklist",
-      "BigIdea",
-      "StatGrid",
-      "BarChart",
-      "Leaderboard",
-      "PyramidDiagram",
-      "VennDiagram",
-      "CycleDiagram",
-      "MapInsert",
-      "AnimatedIllustration",
-    ],
-    resultProperty: "component",
   },
   "caption-overlap": {
     surface: "caption-overlap",

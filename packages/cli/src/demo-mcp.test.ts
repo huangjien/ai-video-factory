@@ -64,7 +64,7 @@ describe("Demo 1 — MCP Explainer end to end (T7.2, plan §35)", () => {
       path.join(EXAMPLE_DIR, "storyboard.yaml"),
       "utf8",
     );
-    expect(storyboard).toContain("FlowChart");
+    expect(storyboard).toContain("AnimatedIllustration");
 
     cwd = mkdtempSync(path.join(tmpdir(), "video-demo-mcp-"));
     await runNew({ projectId: "mcp-explainer", cwd });

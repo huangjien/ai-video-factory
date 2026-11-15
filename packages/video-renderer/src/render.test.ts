@@ -259,7 +259,7 @@ describe("resolveImageSources — every component gets a scene background", () =
   });
 
   it("binds the background for EVERY component, not just ImageBackground", async () => {
-    for (const component of ["FlowChart", "Terminal", "Checklist"]) {
+    for (const component of ["CodeBlock", "Paragraph", "DoodleScene"]) {
       const { plan } = projectWithImage("3", component);
       const resolved = await resolveImageSources(plan);
       expect(resolved.scenes[0]?.backgroundSrc).toMatch(/^data:image\/jpeg;/);

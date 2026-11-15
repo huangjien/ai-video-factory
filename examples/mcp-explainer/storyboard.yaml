@@ -1,116 +1,88 @@
-schema_version: "0.2"
-
-# Demo 1 — MCP Explainer (plan §17/§35): 45 seconds, 5 scenes,
-# diagram + whiteboard. Rendered deterministically by
-# packages/cli/src/demo-mcp-integration.test.ts — no LLM, no network.
-#
-# Narration WAVs (assets/audio/scene-0N.wav) are 9s each; the pipeline's
-# sync-durations step keeps the storyboard durations aligned to them.
-
+schema_version: '0.2'
 project:
   id: mcp-explainer
   language: zh-CN
   fps: 30
   width: 1280
   height: 720
-
 style:
   theme: dark-tech
-
 scenes:
-  - id: scene-01
-    duration: 9
-    narration:
-      text: "MCP，全称 Model Context Protocol，模型上下文协议。"
-      audio: "assets/audio/scene-01.wav"
-    visual:
-      component: Title
-      renderer: remotion
-      props:
-        text: "MCP"
-        subtext: "Model Context Protocol"
-
-  - id: scene-02
-    duration: 9
-    narration:
-      text: "AI Agent 通过 MCP Client 连接到外部世界。"
-      audio: "assets/audio/scene-02.wav"
-    visual:
-      component: FlowChart
-      renderer: remotion
-      props:
-        nodes:
-          - "AI Agent"
-          - "MCP Client"
-        edges:
-          - [0, 1]
-    animation:
-      entrance: fade
-
-  - id: scene-03
-    duration: 9
-    narration:
-      text: "MCP Client 使用标准协议与 MCP Server 通信。"
-      audio: "assets/audio/scene-03.wav"
-    visual:
-      component: FlowChart
-      renderer: remotion
-      props:
-        nodes:
-          - "MCP Client"
-          - "MCP Server (JSON-RPC)"
-        edges:
-          - [0, 1]
-
-  - id: scene-04
-    duration: 9
-    narration:
-      text: "MCP Server 一端连接 GitHub、Jenkins、数据库等各种工具。"
-      audio: "assets/audio/scene-04.wav"
-    visual:
-      component: FlowChart
-      renderer: remotion
-      props:
-        nodes:
-          - "MCP Server"
-          - "GitHub"
-          - "Jenkins"
-          - "Database"
-        edges:
-          - [0, 1]
-          - [0, 2]
-          - [0, 3]
-        direction: "top-down"
-
-  - id: scene-05
-    duration: 9
-    narration:
-      text: "最终，Agent 收到结构化的结果，任务完成。"
-      audio: "assets/audio/scene-05.wav"
-    visual:
-      component: DoodleScene
-      renderer: canvas
-      props:
-        background: paper
-        seed: 42
-        strokes:
-          - id: result-ring
-            shape: circle
-            x: 960
-            y: 380
-            size: 180
-            color: "#3FB68B"
-            width: 8
-          - id: check-1
-            shape: zigzag
-            x: 900
-            y: 380
-            size: 40
-            color: "#3FB68B"
-            width: 8
-          - id: spark
-            shape: star
-            x: 520
-            y: 260
-            size: 90
-            color: "#F0B429"
+- id: scene-01
+  duration: 9
+  narration:
+    text: MCP，全称 Model Context Protocol，模型上下文协议。
+    audio: assets/audio/scene-01.wav
+  visual:
+    component: Title
+    renderer: remotion
+    props:
+      text: MCP
+      subtext: Model Context Protocol
+- id: scene-02
+  duration: 9
+  narration:
+    text: AI Agent 通过 MCP Client 连接到外部世界。
+    audio: assets/audio/scene-02.wav
+  visual:
+    component: AnimatedIllustration
+    renderer: remotion
+    props:
+      text: process diagram
+      visual: process diagram
+  animation:
+    entrance: fade
+- id: scene-03
+  duration: 9
+  narration:
+    text: MCP Client 使用标准协议与 MCP Server 通信。
+    audio: assets/audio/scene-03.wav
+  visual:
+    component: AnimatedIllustration
+    renderer: remotion
+    props:
+      text: process diagram
+      visual: process diagram
+- id: scene-04
+  duration: 9
+  narration:
+    text: MCP Server 一端连接 GitHub、Jenkins、数据库等各种工具。
+    audio: assets/audio/scene-04.wav
+  visual:
+    component: AnimatedIllustration
+    renderer: remotion
+    props:
+      text: process diagram
+      visual: process diagram
+- id: scene-05
+  duration: 9
+  narration:
+    text: 最终，Agent 收到结构化的结果，任务完成。
+    audio: assets/audio/scene-05.wav
+  visual:
+    component: DoodleScene
+    renderer: canvas
+    props:
+      background: paper
+      seed: 42
+      strokes:
+      - id: result-ring
+        shape: circle
+        x: 960
+        y: 380
+        size: 180
+        color: '#3FB68B'
+        width: 8
+      - id: check-1
+        shape: zigzag
+        x: 900
+        y: 380
+        size: 40
+        color: '#3FB68B'
+        width: 8
+      - id: spark
+        shape: star
+        x: 520
+        y: 260
+        size: 90
+        color: '#F0B429'

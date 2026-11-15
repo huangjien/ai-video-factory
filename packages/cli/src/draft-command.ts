@@ -14,12 +14,8 @@ import {
   type ProviderTelemetry,
 } from "@video/llm";
 import { MiniMaxWebSearch, callResearch } from "@video/research";
-import {
-  decisionLogPath,
-  resolveDecisionMode,
-  runDraftDecisionShadow,
-  runVisualDecisionShadow,
-} from "@video/draft";
+import { runDraftDecisionShadow } from "@video/draft";
+import { decisionLogPath, resolveDecisionMode } from "@video/llm";
 import {
   applyRevisionToMarkdown,
   articleMdToRawArticle,
@@ -1058,28 +1054,6 @@ export async function runDraft(opts: DraftOptions): Promise<number> {
     }
     await writeFile(storyboardPath, articleToStoryboardYaml(article), "utf8");
 
-    // v0.11 (T8): the shadow decision pass. It asks a decision model
-    // what it would answer for the scenes the KEYWORD classifier could
-    // not route, and records the answer beside the classifier's own in
-    // <project>/decision-log.jsonl. It changes nothing: the storyboard
-    // above is final. The default mode is `on` (the bench gate cleared —
-    // §7.5 of docs/v0.11-decision-provider-plan.md); DECISION_MODE=off
-    // turns the pass off.
-    const storyboardMode = resolveDecisionMode();
-    const shadow = await runVisualDecisionShadow({
-      scenes: article.scenes.map((scene) => ({
-        id: scene.id,
-        visual: scene.visual,
-        ...(scene.component !== undefined ? { component: scene.component } : {}),
-      })),
-      projectRoot,
-      mode: storyboardMode === "on" ? "shadow" : storyboardMode,
-    });
-    if (shadow.consulted > 0) {
-      console.log(
-        `  decision shadow: ${shadow.consulted} scene(s) consulted, ${shadow.agreed} agreed with the classifier`,
-      );
-    }
   } catch (err) {
     console.error(
       `  ! could not refresh storyboard.yaml from article.md: ${(err as Error).message}`,

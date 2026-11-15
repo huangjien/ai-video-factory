@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { DEFAULT_VISUAL_COMPONENT } from "./visual-classifier.js";
 import { parse as parseYaml } from "yaml";
 import {
   ArticleFrontmatterSchema,
@@ -391,14 +392,14 @@ describe("articleToStoryboardYaml (VDSL sync)", () => {
     const withComponent: ParsedArticle = {
       ...fixture,
       scenes: fixture.scenes.map((s, i) =>
-        i === 0 ? { ...s, component: "BigIdea" } : s,
+        i === 0 ? { ...s, component: "AnimatedIllustration" } : s,
       ),
     };
     const yaml = articleToStoryboardYaml(withComponent);
     const parsed = parseYaml(yaml) as {
       scenes: { visual: { component: string } }[];
     };
-    expect(parsed.scenes[0]?.visual.component).toBe("BigIdea");
+    expect(parsed.scenes[0]?.visual.component).toBe("AnimatedIllustration");
   });
 
   it("unknown component name warns and falls back to keyword classification", () => {
@@ -678,7 +679,7 @@ describe("articleToStoryboardYaml — theme + captions flags", () => {
     it("still lets the classifier win under a profile", () => {
       const article = withProfile({ channel_profile: "chinese-storybook" });
       article.scenes[0]!.visual = "timeline of three eras";
-      expect(componentsOf(article)[0]).toBe("Timeline");
+      expect(componentsOf(article)[0]).toBe(DEFAULT_VISUAL_COMPONENT);
     });
   });
 });
@@ -779,8 +780,8 @@ ${sceneLines.map((l) => `  ${l}`).join("\n")}
     expect(yaml).toContain("hold_after_sec: 2.5");
   });
 
-  it("writes a block sequence for a list-of-strings prop", () => {
-    // The FIRST scene always becomes the Title card, so the pyramid
+  it("writes an AnimatedIllustration scene with text and visual props", () => {
+    // The FIRST scene always becomes the Title card, so the illustration
     // scene has to be the second one.
     const yaml = articleToStoryboardYaml(
       articleWithScene([
@@ -796,11 +797,11 @@ ${sceneLines.map((l) => `  ${l}`).join("\n")}
         "  narration: 旁白",
       ]),
     );
-    expect(yaml).toContain("levels:");
-    expect(yaml).toMatch(/^\s+- /m);
+    expect(yaml).toContain("component: AnimatedIllustration");
+    expect(yaml).toContain("text:");
   });
 
-  it("writes an empty props object for a scene with no props", () => {
+  it("falls a map-style scene through to the illustration builder", () => {
     const yaml = articleToStoryboardYaml(
       articleWithScene([
         "- id: scene_1",
@@ -815,7 +816,7 @@ ${sceneLines.map((l) => `  ${l}`).join("\n")}
         "  narration: 旁白",
       ]),
     );
-    expect(yaml).toContain("props: {}");
+    expect(yaml).toContain("component: AnimatedIllustration");
   });
 });
 
@@ -990,14 +991,13 @@ describe("articleToStoryboardYaml — visual_mode: image", () => {
       ...noisyFixture,
       frontmatter: { ...noisyFixture.frontmatter, visual_mode: "image" },
       scenes: [
-        { ...noisyFixture.scenes[0]!, component: "Callout" },
+        { ...noisyFixture.scenes[0]!, component: "AnimatedIllustration" },
         noisyFixture.scenes[1]!,
       ],
     });
     const parsed = parseYaml(yaml) as {
       scenes: { id: string; visual: { component: string } }[];
     };
-    expect(parsed.scenes[0]!.visual.component).toBe("Callout");
-    expect(parsed.scenes[1]!.visual.component).toBe("AnimatedIllustration");
+    expect(parsed.scenes[0]!.visual.component).toBe("AnimatedIllustration");
   });
 });

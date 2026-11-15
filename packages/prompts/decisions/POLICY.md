@@ -74,46 +74,6 @@ encode.
 
 ---
 
-## visual-class — which component renders the scene
-
-Two rules, and the order between them is the whole disagreement.
-
-Rule **`structure-over-photo`** — when the scene describes a STRUCTURE
-the viewer must SEE to understand it, pick the component that draws
-that structure, even when the scene is described as a photograph:
-
-| the scene shows | the component |
-|---|---|
-| stages that feed each other | `FlowChart` |
-| events in order along a rail | `Timeline` |
-| a ring of arrows, a loop that repeats | `CycleDiagram` |
-| two rings with an intersection | `VennDiagram` |
-| layers stacked widest at the base | `PyramidDiagram` |
-| items to work through | `Checklist` |
-| a ranked list | `Leaderboard` |
-| values compared by length | `BarChart` |
-| numbers side by side | `StatGrid` |
-| a command line | `Terminal` |
-| someone else's words | `QuoteBlock` |
-| one claim to remember | `Callout` |
-| the point of the scene, stated | `BigIdea` |
-
-Rule **`photo`** — when the scene describes a photograph with nothing to
-draw, pick `AnimatedIllustration`.
-
-Rule **`thesis`** — when the scene's point is a statement and no
-structure has to be seen, pick `BigIdea`. A bare mention of a structure
-is not a structure to show: a scene that says "the checklist keeps
-growing" but lists no items has nothing for `Checklist` to render.
-
-**The disputed band.** A scene that describes a STRUCTURE *as a
-photograph* fires both rules. Which one wins is a production decision —
-whether a video shows a diagram or a photo of the idea — so those cases
-stay `disputed: true`, with the note saying which structure was read
-into it.
-
----
-
 ## caption-overlap — a yes/no question
 
 Rule **`caption-band`**. The statement is: *two pieces of text are drawn
@@ -211,8 +171,9 @@ derivation when it loads it. The corpus loader also rejects a case whose
 id is not unique, which is why the id keeps every script's letters (a
 CJK project name must not collapse to an empty string).
 
-For `visual-class` the label is PROPOSED and the case stays disputed: a
-human rules on whether the scene shows a structure or a photograph.
+The per-project `decision-candidates.yaml` queue is only produced for
+`draft-bar` today; the labels are derived from the review's own verdict,
+so a harvested case needs no human ruling.
 
 ## Adding a case
 

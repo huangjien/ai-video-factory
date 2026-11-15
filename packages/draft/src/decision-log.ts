@@ -1,19 +1,18 @@
 /**
  * The decision log — one JSONL row per consult, appended per project.
  *
- * Both surfaces write to the same file and tell each other apart by the
- * `surface` field: `visual-class` rows come from the keyword
- * classifier's fall-through, `draft-bar` rows from the draft loop's
- * reviewed attempts.
+ * The rows tell each other apart by the `surface` field — `draft-bar`
+ * rows come from the draft loop's reviewed attempts. (The visual-class
+ * surface was retired with structured routing in v0.12; its rows may
+ * still exist in older logs and are simply ignored.)
  *
  * The rows are a union, so the reader narrows by `surface` — the two
  * row types are imported as TYPES only, which keeps this module free of
  * a runtime cycle.
  */
 import type { DraftDecisionRow } from "./draft-decision.js";
-import type { VisualDecisionRow } from "./visual-decision.js";
 
-export type DecisionLogRow = VisualDecisionRow | DraftDecisionRow;
+export type DecisionLogRow = DraftDecisionRow;
 
 /** Read a decision log back. A truncated last line (a killed run) is
  *  skipped, not fatal. */

@@ -21,22 +21,19 @@
 import type { Command } from "commander";
 import { readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { stringify as yamlStringify } from "yaml";
-import { parse as parseYaml } from "yaml";
+import { parse as parseYaml, stringify as yamlStringify } from "yaml";
 import {
-  createDecisionProvider,
-  decisionLogPath,
-  harvestDecisionCandidates,
   harvestDraftBarCandidates,
-  parseArticleWithRecovery,
   parseDecisionLog,
   runDraftDecisionShadow,
   type DecisionCandidate,
   type DraftBarAttemptFacts,
   type DraftDecisionRow,
-  type VisualDecisionRow,
-  type VisualDecisionScene,
 } from "@video/draft";
+import {
+  createDecisionProvider,
+  decisionLogPath,
+} from "@video/llm";
 import { resolveProjectDir } from "./project-path.js";
 
 /** The candidate file as YAML — the same shape a corpus case has, so a
@@ -89,36 +86,14 @@ export async function harvestProject(
     attempts = [];
   }
 
-  const articlePath = path.join(projectRoot, "article.md");
-  let scenes: VisualDecisionScene[] = [];
-  try {
-    const { article } = parseArticleWithRecovery(await readFile(articlePath, "utf8"));
-    scenes = article.scenes.map((scene) => ({
-      id: scene.id,
-      visual: scene.visual,
-      ...(scene.component !== undefined ? { component: scene.component } : {}),
-    }));
-  } catch {
-    scenes = [];
-  }
-  const visualRows = rows.filter(
-    (row): row is VisualDecisionRow => row.surface === "visual-class",
-  );
   const draftRows = rows.filter(
     (row): row is DraftDecisionRow => row.surface === "draft-bar",
   );
-  const candidates = [
-    ...harvestDecisionCandidates({
-      rows: visualRows,
-      scenes,
-      project: projectName,
-    }),
-    ...harvestDraftBarCandidates({
-      rows: draftRows,
-      attempts,
-      project: projectName,
-    }),
-  ];
+  const candidates = harvestDraftBarCandidates({
+    rows: draftRows,
+    attempts,
+    project: projectName,
+  });
   return { candidates, rows: rows.length };
 }
 

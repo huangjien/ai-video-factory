@@ -210,7 +210,7 @@ describe("runDecisionBench", () => {
     expect(report.providers[0]?.baselineAccuracy).not.toBeNull();
   });
 
-  it("counts the disputed cases in the corpus", async () => {
+  it("counts the disputed cases in the corpus (0 since draft-bar labels are derived)", async () => {
     const report = await runDecisionBench({
       providers: [
         fakeProvider("a", (req) => ({
@@ -220,7 +220,9 @@ describe("runDecisionBench", () => {
       ],
       minAccuracy: 0,
     });
-    expect(report.providers[0]?.disputed).toBeGreaterThan(0);
+    // The visual-class disputed band retired with structured routing;
+    // every remaining label is derived by a policy rule.
+    expect(report.providers[0]?.disputed).toBe(0);
   });
 
   it("renders a table with one row per provider", async () => {

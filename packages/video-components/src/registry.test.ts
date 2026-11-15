@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { REGISTRY } from "./registry.js";
 
+/** LLM outputs drift around strict schemas — alias preprocessing plus
+ *  `.passthrough()` let the renderer survive the drift instead of
+ *  failing a whole video. These tests pin that behavior for the
+ *  components that still ship (v0.12 removed the structured/diagram
+ *  components — see docs/v0.11-decision-provider-plan.md). */
 describe("REGISTRY accepts LLM-drifted component props (loose schemas)", () => {
   function validate(component: string, props: unknown) {
     const entry = REGISTRY[component as keyof typeof REGISTRY];
@@ -21,141 +26,21 @@ describe("REGISTRY accepts LLM-drifted component props (loose schemas)", () => {
     expect(r.success).toBe(true);
   });
 
-  it("FlowChart accepts extra props (e.g. layout)", () => {
-    const r = validate("FlowChart", {
-      nodes: ["a"],
-      edges: [],
-      layout: "horizontal",
-    });
-    expect(r.success).toBe(true);
-  });
-
-  it("Callout accepts icon/content as alias for kind/text", () => {
-    // LLM sends icon+content; we coerce: icon="info", content="text" default
-    const r = validate("Callout", {
-      icon: "info",
-      content: "important message",
-    });
-    expect(r.success).toBe(true);
-  });
-
-  it("Callout accepts the canonical kind/text fields", () => {
-    const r = validate("Callout", { kind: "warning", text: "watch out" });
-    expect(r.success).toBe(true);
-  });
-
-  it("Callout falls back to defaults when LLM omits fields", () => {
-    // Just an empty object — kind defaults to "info", text to ""
-    const r = validate("Callout", {});
-    expect(r.success).toBe(true);
-    if (r.success) {
-      expect(r.data.kind).toBe("info");
-      expect(r.data.text).toBe("");
-    }
-  });
-
   it("EndCard accepts cta_text/cta_url/disclaimer (alias for cta + ignore)", () => {
     const r = validate("EndCard", {
-      title: "Done",
+      title: "Sub",
       cta_text: "Subscribe",
       cta_url: "https://example.com",
-      disclaimer: "Legal text",
-    });
-    expect(r.success).toBe(true);
-  });
-});
-
-describe("v0.4.2 component schemas", () => {
-  function validate(component: string, props: unknown) {
-    const entry = REGISTRY[component as keyof typeof REGISTRY];
-    if (!entry) throw new Error(`unknown component ${component}`);
-    return entry.propsSchema.safeParse(props);
-  }
-
-  it("QuoteBlock aliases text/content → quote and citation → author", () => {
-    const r = validate("QuoteBlock", {
-      text: "Stay hungry",
-      citation: "Jobs",
+      disclaimer: "not a field",
     });
     expect(r.success).toBe(true);
     if (r.success) {
-      expect(r.data.quote).toBe("Stay hungry");
-      expect(r.data.author).toBe("Jobs");
+      expect(r.data.cta).toBe("Subscribe");
     }
   });
 
-  it("StatGrid requires stats but tolerates extra props", () => {
-    expect(
-      validate("StatGrid", { stats: [{ value: "5x", label: "faster" }] })
-        .success,
-    ).toBe(true);
-    expect(
-      validate("StatGrid", { stats: [{ value: "5x" }], note: "hi" }).success,
-    ).toBe(true);
-    expect(validate("StatGrid", {}).success).toBe(false);
-  });
-
-  it("BarChart requires bars; entries default missing fields", () => {
-    const r = validate("BarChart", { bars: [{ label: "a" }] });
-    expect(r.success).toBe(true);
-    if (r.success) {
-      expect(r.data.bars[0].value).toBe(0);
-    }
-  });
-
-  it("Leaderboard / Checklist / BigIdea / Pyramid / Venn / Cycle parse", () => {
-    expect(validate("Leaderboard", { entries: [{ name: "A" }] }).success).toBe(
-      true,
-    );
-    expect(validate("Checklist", { items: [{ text: "a" }] }).success).toBe(
-      true,
-    );
-    expect(validate("BigIdea", { text: "less is more" }).success).toBe(true);
-    expect(validate("PyramidDiagram", { levels: ["a"] }).success).toBe(true);
-    expect(validate("VennDiagram", { sets: ["a", "b"] }).success).toBe(true);
-    expect(validate("CycleDiagram", { stages: ["a", "b", "c"] }).success).toBe(
-      true,
-    );
-  });
-});
-
-describe("MapInsert props (CS-14 — the one component that is strict)", () => {
-  function validate(props: unknown) {
-    const entry = REGISTRY["MapInsert" as keyof typeof REGISTRY];
-    if (!entry) throw new Error("MapInsert is not registered");
-    return entry.propsSchema.safeParse(props);
-  }
-
-  it("accepts reviewable structured geometry", () => {
-    expect(
-      validate({
-        landforms: [{ d: "M0 0 L10 10", kind: "river" }],
-        routes: [{ d: "M0 0 L20 20" }],
-        markers: [{ x: 5, y: 5, kind: "battle" }],
-      }).success,
-    ).toBe(true);
-  });
-
-  it("accepts the empty prop set the drafter emits", () => {
-    expect(validate({}).success).toBe(true);
-  });
-
-  it("rejects a readable place name — there is no field for one", () => {
-    // CS-14: 禁止可读地名. Every other component here is deliberately
-    // loose because the storyboard LLM invents props; this one is strict
-    // because a `label` would put text on a map that is supposed to be
-    // geometry the renderer draws and the narrator names out loud.
-    expect(validate({ label: "changan" }).success).toBe(false);
-    expect(validate({ routes: [{ d: "M0 0", name: "x" }] }).success).toBe(
-      false,
-    );
-    expect(validate({ markers: [{ x: 1, y: 2, text: "x" }] }).success).toBe(
-      false,
-    );
-  });
-
-  it("rejects malformed coordinates rather than rendering them", () => {
-    expect(validate({ markers: [{ x: "5", y: 5 }] }).success).toBe(false);
-    expect(validate({ routes: [{}] }).success).toBe(false);
+  it("rejects a component missing its required text", () => {
+    expect(validate("Title", { subtitle: "no text" }).success).toBe(false);
+    expect(validate("Paragraph", { align: "left" }).success).toBe(false);
   });
 });

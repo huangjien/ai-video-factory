@@ -23,6 +23,11 @@ exist on disk.
 | Path | What | Source of truth |
 |---|---|---|
 | `<surface>/<case-id>.yaml` | One labeled case (state, expects, provenance, policy rule) | the artifact named in `provenance.source` |
+
+Surfaces today: `qa-triage`, `draft-bar`, `caption-overlap`,
+`motion-prescreen`. (The `visual-class` surface was retired with
+structured routing in v0.12 — see
+`docs/v0.11-decision-provider-plan.md` §7.5.)
 | `POLICY.md` | The labelling rules, per surface | — |
 | `prices.yaml` | Provider per-token prices for the bench's cost column | the provider's pricing page |
 

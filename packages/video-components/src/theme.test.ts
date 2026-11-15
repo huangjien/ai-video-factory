@@ -19,33 +19,19 @@ describe("Todo 7 — theme tokens", () => {
     expect(ratio).toBeGreaterThan(7);
   });
 
-  it("registry exports the 23 components", () => {
+  it("registry exports the 9 components (v0.12 — structured components removed)", () => {
     expect(COMPONENT_NAMES.sort()).toEqual(
       [
-        "AnimatedIllustration",
-        "Callout",
-        "Character",
-        "CodeBlock",
-        "DoodleScene",
-        "EndCard",
-        "FlowChart",
-        "Image",
-        "ImageBackground",
-        "Paragraph",
-        "Terminal",
-        "Timeline",
-        "Title",
-        "QuoteBlock",
-        "StatGrid",
-        "BarChart",
-        "Leaderboard",
-        "Checklist",
-        "BigIdea",
-        "PyramidDiagram",
-        "VennDiagram",
-        "CycleDiagram",
-        "MapInsert",
-      ].sort(),
+      "AnimatedIllustration",
+      "Character",
+      "CodeBlock",
+      "DoodleScene",
+      "EndCard",
+      "Image",
+      "ImageBackground",
+      "Paragraph",
+      "Title"
+      ],
     );
   });
 

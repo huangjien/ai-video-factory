@@ -75,7 +75,6 @@ export const DECISION_POLICY_RULES: Record<
   "draft-bar-v2": ["review-verdict"],
   "draft-bar-v3": ["review-verdict"],
   "draft-bar-v4": ["review-verdict"],
-  "visual-class": ["structure-over-photo", "photo", "thesis"],
   "motion-prescreen": ["motion-specificity"],
   "caption-overlap": ["caption-band"],
 };

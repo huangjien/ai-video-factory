@@ -313,29 +313,24 @@ three clauses:
      Chinese cues). The keyword MUST appear inside the visual
      line, not only in the narration.
 
-Style keywords — include exactly one in every visual line. The
-classifier picks a VDSL component from the keyword; the renderer
-ignores the rest of the line beyond it.
+Style keywords — include exactly one in every visual line when the
+scene's substance has that SHAPE. The keyword steers the generated
+image's composition (process flow, chronology, comparison, ranked
+list…); it no longer routes to a diagram component — every scene
+renders as a generated illustration or photo.
 
-- network / nodes / pipeline / edges / 流程 / 流水线 / 节点     → FlowChart
-- code / terminal / command / script / 代码 / 命令 / 终端       → Terminal
-- timeline / chronology / years / decades / 时间线 / 历史 / 年表 → Timeline
-- formula / equation / derivation / 公式 / 推导 / 表达式        → Callout (formula)
-- quote / cited / excerpt / 引用 / 引文 / 名言                  → QuoteBlock
-- cycle / loop / iteration / flywheel / 循环 / 闭环 / 迭代     → CycleDiagram
-- rank / leaderboard / top-N / champion / 排名 / 榜单           → Leaderboard
-- chart / distribution / breakdown / 柱状图 / 分布 / 占比       → BarChart
-- stat / percent / metric / growth / 百分比 / 关键数据          → StatGrid
-- list / checklist / bullets / pitfalls / 列表 / 要点 / 清单    → Checklist
-- pyramid / hierarchy / layers / 金字塔 / 层级                  → PyramidDiagram
-- venn / overlap / 维恩 / 交集 / 重叠                           → VennDiagram
-- takeaway / key insight / 核心观点 / 一句话                     → BigIdea
-- database / table / schema / sql / 字段 / 列存                  → Callout
-- (no keyword match — fall through)                              → AnimatedIllustration
+- process / steps / pipeline / flow / 流程 / 流水线 / 步骤
+- chronology / years / timeline / 时间线 / 历史 / 年表
+- comparison / vs / trade-off / 对比 / 两者 / 权衡
+- ranked list / top-N / 排名 / 榜单
+- numbers / percent / metric / 数据 / 百分比 / 指标
+- checklist / bullets / 清单 / 要点
+- quote / cited / 引用 / 名言
+- one core idea / takeaway / 核心观点 / 一句话
 
 The keyword MATCHES THE SCENE'S ACTUAL CONTENT. If the narration
-contrasts two states, embed "compare" or "vs"; if it lists steps,
-embed "pipeline" or "nodes"; if it cites a year, embed "timeline".
+contrasts two states, embed "compare" or "vs"; if it cites a year,
+embed the year. One keyword per scene.
 
 The visual MUST match the narration's substance. Contradicting the
 narration (showing a chart while the narration talks about history)
@@ -365,24 +360,18 @@ What the visual MUST NOT contain:
 - more than one style keyword (one keyword wins, pick the strongest)
 - any text the viewer must read (the caption is for that)
 
-## 10a. COMPONENT FIELD (optional, sparse)
+## 10a. COMPONENT FIELD (rare, omit by default)
 
-Each scene MAY carry a `component:` field naming the component the scene
-renders as — a full-screen statement card, a quote card, a pyramid. Set it
-ONLY when the scene IS that component:
+Each scene MAY carry a `component:` field naming the registered
+component the scene renders as. Only two names remain routable:
 
-- a scene whose whole point is one statement → `component: BigIdea`
-- a quoted saying with attribution → `component: QuoteBlock`
+- `Title` — a section opener (the first scene becomes one automatically).
+- `AnimatedIllustration` — the default: a generated illustration or photo.
 
-Allowed names (registered components): Title, BigIdea, QuoteBlock, StatGrid,
-BarChart, Leaderboard, Checklist, Timeline, FlowChart, Terminal, Callout,
-PyramidDiagram, VennDiagram, CycleDiagram, MapInsert, AnimatedIllustration.
-
-Omit the field for every ordinary scene — those become generated
-illustrations, which is the default look of a film. The field routes the
-scene deterministically; do not ALSO embed keywords for it in the
-`visual:` line (that convention is retired for films that set
-`component:`).
+Omit the field for every scene — generated illustrations are the look of
+a film. Set it only to pin a scene that the model would otherwise
+misread, and never ALSO embed a style keyword in the `visual:` line when
+you set it.
 
 The visual should directly support the narration but need not repeat
 it. The narration carries numbers, names, steps, and facts. The

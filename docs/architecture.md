@@ -173,6 +173,6 @@ Unwired renderer/component combinations fail loudly at render time.
 
 | Demo | Example | Exercises |
 |---|---|---|
-| MCP Explainer (45 s) | `examples/mcp-explainer` | full pipeline, FlowChart diagrams, canvas, QA, final gate |
+| MCP Explainer (45 s) | `examples/mcp-explainer` | full pipeline, illustrated scenes, canvas, QA, final gate |
 | AI Concept (60 s) | `examples/ai-concept` | hand-drawn canvas, beat-sync (100 BPM grid) |
-| DevOps Architecture (90 s) | `examples/devops-architecture` | diagrams, cut/fade transitions, timeline choreography |
+| DevOps Architecture (90 s) | `examples/devops-architecture` | illustrated scenes, cut/fade transitions |

@@ -851,10 +851,11 @@ Seven quality wins shipped under the same human-gate principle:
   instead: that passes the check at any language, and on a scene that is a
   designed card it also stops the card's own text being printed twice under
   itself. `no_captions: true` still turns the overlay off entirely.
-- **Visual variety** (`packages/draft/src/visual-classifier.ts`): the
-  article's `visual:` field is now classified into the right VDSL
-  component (FlowChart / Terminal / Timeline / Callout /
-  Illustration) instead of every scene being `AnimatedIllustration`.
+- **Visual routing** (`packages/draft/src/visual-classifier.ts`): v0.12
+  removed the 14 structured components — the first scene becomes the
+  Title card and every other scene is `AnimatedIllustration` (the
+  keyword-routing era ended: it appeared in only 13% of shipped scenes
+  and mis-routed more than it helped).
 - **Image prompt expansion** (any non-mock provider — `minimax` is the default):
   the article's 80-char `visual:` is rewritten into a 2-3 sentence
   prompt (subject · environment · lighting · composition · style)

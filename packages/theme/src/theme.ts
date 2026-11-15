@@ -6,7 +6,7 @@ import { z } from "zod";
  *
  * A theme is a flat token set consumed by every rendering layer:
  *   - `colors.background` — Root's wrap layer and DoodleScene's dark mode
- *   - `colors.surface`    — node/panel fills (FlowChart, Terminal, …)
+ *   - `colors.surface`    — node/panel fills (CodeBlock, …)
  *   - `colors.primary`    — main text/ink on the background
  *   - `colors.secondary`  — muted text (captions labels, edge labels)
  *   - `colors.accent`     — arrows, links, highlights that must pop
@@ -270,7 +270,7 @@ export const sunsetPopTheme: Theme = {
 
 /** Terminal vintage — phosphor green on dark gray. Old-CRT nostalgia
  * for dev tutorials, security/retro topics, hacker-history explainers.
- * Pairs naturally with `Terminal` / `CodeBlock` scenes. */
+ * Pairs naturally with `CodeBlock` scenes. */
 export const terminalVintageTheme: Theme = {
   colors: {
     background: "#0E1410",

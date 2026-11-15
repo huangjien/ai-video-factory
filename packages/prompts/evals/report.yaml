@@ -17,17 +17,17 @@ cases:
     judged: skipped
   - case: feedback-revision-addresses-web-context
     agent: draft
-    prompt_hash: sha256:9fe2b59a862a77486e49a8d2485ef3287bc7c71933307e6e4c1cc5e73ff3406d
+    prompt_hash: sha256:89ba5de0995b10179ccdf3d2b56a0075eb753594159283d9caa0011f52c97dac
     structural: pass
     judged: skipped
   - case: history-topic-opens-with-tension
     agent: draft
-    prompt_hash: sha256:f867f6af943a2c78a23df2cefc9cd4e3dbc4b51836a4b3e2beea2f5c870205ed
+    prompt_hash: sha256:4a01d40b6c202b1a2c91b76a4af19f8fe71dcaf70a92e43e3fc06a014bfc54bc
     structural: pass
     judged: skipped
   - case: user-idea-seed-preserved
     agent: draft
-    prompt_hash: sha256:24d2b2252a062436f8225a4f66eac812ef9aea7f8583b5c2cb7d6eeed06f6027
+    prompt_hash: sha256:204489a833763f7b82afa6785c58cde5d45cb3cefe1eb653b5c6eb21896f4139
     structural: pass
     judged: skipped
   - case: era-poor-scene-stays-in-tang
@@ -37,11 +37,11 @@ cases:
     judged: skipped
   - case: script-and-research-context-order
     agent: storyboard
-    prompt_hash: sha256:1da40735c667c59a1c16836b05cc16d5c36e8d73cc470ab8e01f05036e1891ff
+    prompt_hash: sha256:1ca51c6ff21e164e192338a1ae05ae4f66278dd8f6baf703ff98ee7d50a7486f
     structural: pass
     judged: skipped
   - case: xuanwumen-scene-count-fits-180s
     agent: storyboard
-    prompt_hash: sha256:741ae5dbd74b4a542a2b5c2aff0609675ffe28c21c577bf4dab6c620f7b9f3e2
+    prompt_hash: sha256:ba77abf643ff0938478cdd3d5f8b1acc9c8562603cd7a1b96287cdb790c2fcb8
     structural: pass
     judged: skipped

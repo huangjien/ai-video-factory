@@ -155,6 +155,8 @@ export async function runQaDecisionAdvisory(
     let confidence: number | null = null;
     let confidenceSource: string | null = null;
     let model = "";
+    // The SERVING provider — see draft-decision.ts.
+    let servingProvider = provider.name;
     let usage = { input: 0, output: 0 };
     let error: string | null = null;
     try {
@@ -169,6 +171,8 @@ export async function runQaDecisionAdvisory(
         confidence = result.confidence;
         confidenceSource = result.confidenceSource;
         model = result.model;
+        // The SERVING provider — see draft-decision.ts.
+        servingProvider = result.provider;
         usage = result.usage;
       }
     } catch (err) {
@@ -181,7 +185,7 @@ export async function runQaDecisionAdvisory(
       check: finding.check,
       level: finding.level,
       mode,
-      provider: provider.name,
+      provider: servingProvider,
       model,
       state_sha256: createHash("sha256").update(state).digest("hex"),
       answer,

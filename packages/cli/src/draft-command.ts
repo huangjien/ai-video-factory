@@ -114,8 +114,9 @@ export interface DraftOptions {
   visualMode?: "image" | "components";
   /** Scene-image provider — written into the article.md frontmatter
    *  (`image_provider:`) so `video make` picks it up. minimax (default)
-   *  | openai | gemini | mock | none. Also a video-ask/1 knob: passing
-   *  it explicitly marks the image_provider question as specified. */
+   *  | minimax-h3 (MiniMax-H3-Image, native 1080p) | openai | gemini
+   *  | mock | none. Also a video-ask/1 knob: passing it explicitly marks
+   *  the image_provider question as specified. */
   imageProvider?: string;
   /** CS-01: channel grammar profile stamped into article.md frontmatter
    *  (`channel_profile:`) and carried to storyboard `style.channel_profile`
@@ -1305,9 +1306,16 @@ export function registerDraft(program: Command): void {
     )
     .option(
       "--image-provider <provider>",
-      "scene-image provider stamped into article.md frontmatter: minimax (default; needs MINIMAX_API_KEY) | openai | gemini | mock | none (v0.7: also an agent-ask knob, video-ask/1)",
+      "scene-image provider stamped into article.md frontmatter: minimax (default; needs MINIMAX_API_KEY) | minimax-h3 (MiniMax-H3-Image, native 1080p; needs MINIMAX_API_KEY) | openai | gemini | mock | none (v0.7: also an agent-ask knob, video-ask/1)",
       (v) => {
-        const allowed = ["minimax", "openai", "gemini", "mock", "none"];
+        const allowed = [
+          "minimax",
+          "minimax-h3",
+          "openai",
+          "gemini",
+          "mock",
+          "none",
+        ];
         if (!allowed.includes(v)) {
           throw new Error(
             `--image-provider must be ${allowed.join("|")}, got: ${v}`,

@@ -178,6 +178,10 @@ export async function consultDraftDecision(opts: {
   let confidence: number | null = null;
   let confidenceSource: string | null = null;
   let model = "";
+  // The SERVING provider — a fallback chain answers with the provider
+  // that actually served the call, so a fallback run is visible in the
+  // corpus instead of averaged into the primary's score.
+  let servingProvider = opts.provider.name;
   let usage = { input: 0, output: 0 };
   let error: string | null = null;
   try {
@@ -203,7 +207,7 @@ export async function consultDraftDecision(opts: {
     project: opts.project,
     attempt: opts.attempt.attempt,
     mode: opts.mode,
-    provider: opts.provider.name,
+    provider: servingProvider,
     model,
     state_sha256: sha256Text(state),
     answer,

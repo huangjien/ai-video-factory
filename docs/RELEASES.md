@@ -27,7 +27,9 @@ decision — `choice` / `score` / `noul` with a confidence. OpenAI's
 of `docs/v0.11-decision-provider-plan.md`). Wired surfaces: the draft
 loop's draft-bar verdict consult, and a per-finding advisory in
 `video qa` reports. `DECISION_MODE=off|shadow|on` (default on);
-everything degrades to the deterministic path. Tooling: `video decision
+the provider is a chain — OpenAI first, MiniMax second on an
+availability failure — and every log row records the provider that
+served it; everything degrades to the deterministic path. Tooling: `video decision
 bench` (accuracy/calibration/latency/cost per surface),
 `video decision harvest` + `video decision backfill` (the 176-case
 draft-bar corpus is derived from shipped review artifacts — no human

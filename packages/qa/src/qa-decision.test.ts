@@ -9,6 +9,7 @@ import {
   runQaDecisionAdvisory,
   type QaDecisionRow,
 } from "./qa-decision.js";
+import { createDecisionProvider } from "@video/llm";
 import type { QaFinding, RenderReport } from "./index.js";
 import type { DecisionProvider, DecisionRequest } from "@video/llm";
 
@@ -206,9 +207,11 @@ describe("runQaDecisionAdvisory", () => {
     expect(out.report.findings[0]?.advisory).toBeUndefined();
   });
 
-  it("skips cleanly when the provider has no key", async () => {
+  it("skips cleanly when NO provider has a key", async () => {
     const key = process.env["OPENAI_API_KEY"];
+    const minimaxKey = process.env["MINIMAX_API_KEY"];
     delete process.env["OPENAI_API_KEY"];
+    delete process.env["MINIMAX_API_KEY"];
     const seen: string[] = [];
     const original = console.error;
     console.error = (message: string) => seen.push(message);
@@ -222,6 +225,25 @@ describe("runQaDecisionAdvisory", () => {
       expect(seen.some((m) => m.includes("key not set"))).toBe(true);
     } finally {
       console.error = original;
+      if (key !== undefined) process.env["OPENAI_API_KEY"] = key;
+      if (minimaxKey !== undefined) {
+        process.env["MINIMAX_API_KEY"] = minimaxKey;
+      }
+    }
+  });
+
+  it("falls back to the second provider when the first has no key", async () => {
+    const key = process.env["OPENAI_API_KEY"];
+    delete process.env["OPENAI_API_KEY"];
+    try {
+      const out = await runQaDecisionAdvisory({
+        project: "demo",
+        report: report([finding]),
+        mode: "shadow",
+        provider: createDecisionProvider({ provider: "auto" }),
+      });
+      expect(out.consulted).toBe(1);
+    } finally {
       if (key !== undefined) process.env["OPENAI_API_KEY"] = key;
     }
   });

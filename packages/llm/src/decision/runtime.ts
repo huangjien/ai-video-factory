@@ -8,7 +8,11 @@
  */
 import { MiniMaxDecisionProvider } from "./minimax.js";
 import { OpenAIDecisionProvider } from "./openai.js";
-import type { DecisionProvider } from "./contract.js";
+import type {
+  DecisionAnswer,
+  DecisionProvider,
+  DecisionRequest,
+} from "./contract.js";
 
 export type DecisionMode = "off" | "shadow" | "on";
 
@@ -31,16 +35,92 @@ export function resolveDecisionMode(
 }
 
 export interface CreateDecisionProviderOptions {
+  /** `auto` (default) = the fallback chain; `openai` / `minimax` = that
+   *  provider alone. */
   provider?: string | undefined;
+  /** Override the PRIMARY provider's model. */
   model?: string | undefined;
+  /** Override the FALLBACK provider's model (chain only). */
+  fallbackModel?: string | undefined;
 }
 
-/** The provider the layer consults. Default: the OpenAI Decisions API —
- *  the bench's winner on every measured axis (§15 of the plan doc). */
+/**
+ * An ordered chain of providers: the first that can serve answers.
+ *
+ * The layer consults a provider on every draft, so provider AVAILABILITY
+ * is a production concern, not an edge case — MiniMax's monthly plan ran
+ * out mid-measurement (2026-11-15) and OpenAI's plan can too. The chain
+ * turns "the whole layer went quiet" into "the second provider answered".
+ *
+ * Two rules keep the chain honest:
+ *
+ *  1. **Fall through only on an availability failure** — an error, a
+ *     timeout, an exhausted quota. A provider that ANSWERED but whose
+ *     answer was unusable is a quality signal; falling back there would
+ *     hide it behind a better-looking answer and spend a second call.
+ *     (Both providers set `lastError` whenever they return null, so in
+ *     practice a null answer IS an availability failure.)
+ *  2. **The answer names the provider that served it.** Every log row
+ *     records the SERVING provider, so a fallback run is visible in the
+ *     corpus instead of being averaged into the primary's score.
+ */
+export class FallbackDecisionProvider implements DecisionProvider {
+  readonly name: string;
+  /** The last failure from the chain — the reason the answer is null. */
+  lastError: Error | null = null;
+  private readonly providers: DecisionProvider[];
+
+  constructor(providers: DecisionProvider[]) {
+    if (providers.length === 0) {
+      throw new Error("FallbackDecisionProvider needs at least one provider");
+    }
+    this.providers = providers;
+    this.name =
+      providers.length === 1
+        ? providers[0]!.name
+        : providers.map((p) => p.name).join("→");
+  }
+
+  /** The providers, in the order they are tried. */
+  get chain(): readonly DecisionProvider[] {
+    return this.providers;
+  }
+
+  available(): boolean {
+    return this.providers.some((p) => p.available());
+  }
+
+  async decide(req: DecisionRequest): Promise<DecisionAnswer | null> {
+    this.lastError = null;
+    for (const provider of this.providers) {
+      // A provider without a key cannot serve — skip it without a call.
+      if (!provider.available()) continue;
+      const answer = await provider.decide(req);
+      if (answer !== null) {
+        this.lastError = provider.lastError;
+        return answer;
+      }
+      // No error recorded → the provider answered with something
+      // unusable. That is a quality signal, not an outage: stop here.
+      if (provider.lastError === null) return null;
+      this.lastError = provider.lastError;
+    }
+    return null;
+  }
+}
+
+/** The provider the layer consults.
+ *
+ *  Default: the CHAIN — OpenAI's Decisions API first (the bench's
+ *  winner on every measured axis, §15), MiniMax second (the measured
+ *  fallback: 0.797 on the same corpus, brier 0.007, and available on
+ *  every day its monthly plan has budget). `DECISION_PROVIDER=openai`
+ *  or `=minimax` pins a single provider.
+ */
 export function createDecisionProvider(
   opts: CreateDecisionProviderOptions = {},
 ): DecisionProvider {
-  const name = (opts.provider ?? "openai").trim().toLowerCase();
+  const name = (opts.provider ?? "auto").trim().toLowerCase();
   if (name === "openai") {
     return new OpenAIDecisionProvider(
       opts.model !== undefined ? { model: opts.model } : {},
@@ -51,7 +131,21 @@ export function createDecisionProvider(
       opts.model !== undefined ? { model: opts.model } : {},
     );
   }
-  throw new Error(`unknown decision provider "${name}" — openai | minimax`);
+  if (name === "auto") {
+    return new FallbackDecisionProvider([
+      new OpenAIDecisionProvider(
+        opts.model !== undefined ? { model: opts.model } : {},
+      ),
+      new MiniMaxDecisionProvider(
+        opts.fallbackModel !== undefined
+          ? { model: opts.fallbackModel }
+          : {},
+      ),
+    ]);
+  }
+  throw new Error(
+    `unknown decision provider "${name}" — auto | openai | minimax`,
+  );
 }
 
 /** True for an error that means "the provider's quota/rate limit is

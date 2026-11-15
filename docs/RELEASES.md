@@ -23,7 +23,7 @@ Three features, one breaking change.
 runtime (`@video/llm` `decision/*`) whose contract is a System One
 decision — `choice` / `score` / `noul` with a confidence. OpenAI's
 **Decisions API** (`gpt-6-luna`) is the measured default: 0.924 over the
-197-case labeled corpus, Brier 0.000 on every run, 219 ms p50 (§7.5/§7.8
+187-case labeled corpus, Brier 0.000 on every run, 149 ms p50 (§7.5/§7.8
 of `docs/v0.11-decision-provider-plan.md`). Wired surfaces: the draft
 loop's draft-bar verdict consult, and a per-finding advisory in
 `video qa` reports. `DECISION_MODE=off|shadow|on` (default on);
@@ -31,7 +31,7 @@ everything degrades to the deterministic path. Tooling: `video decision
 bench` (accuracy/calibration/latency/cost per surface),
 `video decision harvest` + `video decision backfill` (the 176-case
 draft-bar corpus is derived from shipped review artifacts — no human
-labelling), and a 197-case corpus under `packages/prompts/decisions/`
+labelling), and a 187-case corpus under `packages/prompts/decisions/`
 with a labelling policy whose rules are loader-enforced.
 
 **MiniMax H3 Image (`minimax-h3`).** Next-gen image provider with

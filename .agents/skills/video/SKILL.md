@@ -27,6 +27,7 @@ A pnpm TypeScript monorepo. Two human-edit files (`article.md`, `audio-config.ya
 - Prefer `video draft` and `video make` for the standard create-and-render path; use focused commands only when the requested stage is clear.
 - Ask before a paid generation only when an important choice is genuinely unspecified and the ask protocol is available; otherwise honor explicit flags and project frontmatter.
 - Never hand-edit derived `storyboard.yaml`; change `article.md` and regenerate it.
+- 中文视频投稿 bilibili 时，同步出一份 zhihu 手动上传包（知乎无公开 API）：复用 `bilibili/package.yaml` 的标题/简介/标签/封面与 `output/final-mixed.mp4`，投稿完成后提醒人工传 zhihu.com 创作中心；英文视频不做这一步（用户未要求）。⚠️ 脚本自动化已于 2026-11-15 尝试并搁置：Playwright 能过登录/选文件/拿到 oauth token 与上传权限（rights is_pass=true），但知乎上传器始终静默不发上传请求 — 真实 Chrome、隐藏 webdriver、headed 均无效，无报错可修（取证在 projects/<id>/bilibili/zhihu-debug/）。`scripts/zhihu-upload.py` 保留作参考但不可用。
 
 ## On-demand material
 

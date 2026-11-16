@@ -87,6 +87,32 @@ Full command set:
 
 Every command accepts `--cwd <dir>` (default `projects/`). Every step writes `runs/<id>.yaml` and updates `state.yaml`.
 
+### Zhihu companion upload (Chinese videos, standing rule 2026-11-15)
+
+When a CHINESE video is submitted to bilibili, also hand the owner a Zhihu
+manual-upload kit in the same session — the owner asked for this as a
+standing convention. Zhihu exposes no upload API.
+
+1. Reuse `bilibili/package.yaml` fields as-is — title / 简介 / tags / cover
+   (`youtube/thumbnail.jpg`) all transfer to Zhihu unchanged, plus
+   `output/final-mixed.mp4` (Zhihu accepts 1080p MP4 ≤4h ≤20GB; no
+   transcode needed). Entry: zhihu.com → 创作中心 → 发视频.
+2. Suggest answering an existing AI失业/结构性失业 question with the video
+   via 视频回答 — question pages carry long-tail search traffic the video
+   feed does not.
+3. EN videos are exempt — the owner asked only for Chinese ones.
+
+**Automation shelved 2026-11-15** (owner canceled after ~8 failed
+iterations). What worked: storage_state login (z_c0 is a session cookie —
+导出 storage_state 才能跨进程存活), navigating to `www.zhihu.com/upload-video`
+(creator.zhihu.com 不存在；发视频入口在新标签页打开该 URL)。What did NOT:
+after file-chooser set_files the app hashes the file (blob reads) and gets
+`oauth/sign_in` token + `creator/rights is_pass=true`, then **silently never
+issues the upload request** — no error, no toast; real Chrome
+(channel=chrome), hiding navigator.webdriver, headed mode all ineffective.
+Forensics: `projects/<id>/bilibili/zhihu-debug/`;参考脚本
+`scripts/zhihu-upload.py`（登录与字段解析可用，发布流程不可用）。
+
 ### Channel profiles are the narrative-grammar extension point (zero code)
 
 Cross-video story grammar — narrator voice, pacing, arc, plot engine —

@@ -27,9 +27,9 @@ contracts, not prose.
 7. Frontmatter: set `language: {{TARGET_LANG}}`. Keep every other
    frontmatter key with its value unchanged (the caller fixes `voice:`
    and `captions_source:` itself).
-8. Translated narration stays within ±30% of the source length. Never
-   summarize, never expand, never drop a sentence — the scene count and
-   pacing depend on complete narration.
+8. Keep each scene's narration short enough for the caption block: four
+   lines of 24 units, at most 185 characters of Latin text. Keep every
+   fact — drop filler words, never drop meaning.
 9. Natural spoken register for {{TARGET_LANG}}: narration is
    text-to-speech input. No markdown, no quotation marks around it, no
    speaker labels, no parenthetical stage directions.

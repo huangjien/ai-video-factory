@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { buildCaptionCues, MAX_CAPTION_LINES, wrapText } from "./captions.js";
+import {
+  buildCaptionCues,
+  captionBlockLineCount,
+  MAX_CAPTION_LINES,
+  wrapText,
+} from "./captions.js";
 
 describe("wrapText (CJK-aware, unit = 1 zh char)", () => {
   it("short zh text stays one line", () => {
@@ -174,5 +179,16 @@ describe("buildCaptionCues (CS-07)", () => {
     const cues = buildCaptionCues(narration, 20);
     expect(cues.length).toBeGreaterThan(1);
     expect(cues.flatMap((c) => c.lines).join("")).toHaveLength(300);
+  });
+});
+
+describe("captionBlockLineCount (scene caption safe area)", () => {
+  it("counts the lines a scene narration wraps to", () => {
+    // 4 lines x 24 units = 96 zh units is the scene budget; a Latin
+    // scene fits it at ~192 characters.
+    expect(captionBlockLineCount("字".repeat(96))).toBe(4);
+    expect(captionBlockLineCount("字".repeat(97))).toBe(5);
+    expect(captionBlockLineCount("a".repeat(192))).toBe(4);
+    expect(captionBlockLineCount("a".repeat(193))).toBe(5);
   });
 });

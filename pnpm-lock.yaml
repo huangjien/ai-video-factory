@@ -355,6 +355,9 @@ importers:
       '@video/llm':
         specifier: workspace:*
         version: link:../llm
+      '@video/media':
+        specifier: workspace:*
+        version: link:../media
       '@video/prompts':
         specifier: workspace:*
         version: link:../prompts

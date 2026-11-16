@@ -66,6 +66,28 @@ export interface CaptionCue {
  *  two rows (CS-07 acceptance: "任何时刻最多显示两行"). */
 export const MAX_CAPTION_LINES = 2;
 
+/** One caption line's width, in zh units (§21.1/§62.4). A CJK char is
+ *  1 unit, an ASCII char 0.5 — so a line holds 24 CJK chars or ~48
+ *  Latin chars. */
+export const CAPTION_LINE_UNITS = 24;
+
+/** How many lines ONE scene's caption block may wrap to (§62.4:
+ *  "字幕位于安全区域，且不溢出画面"). The renderer draws a single timed
+ *  cue at a time (at most MAX_CAPTION_LINES rows), but the safe-area
+ *  rule is stated per scene: the narration of a scene has to fit four
+ *  lines. Chinese narration fits it by construction — English needs
+ *  ~1.6× the characters for the same content, so a translated scene
+ *  must be tightened or the render is rejected. */
+export const CAPTION_BLOCK_MAX_LINES = 4;
+
+/** How many lines `text` wraps to inside the scene caption block.
+ *  Shared by the VDSL validator and the article translator so both
+ *  measure the SAME thing — a translator that cannot see the limit
+ *  cannot respect it. */
+export function captionBlockLineCount(text: string): number {
+  return wrapText(text, CAPTION_LINE_UNITS).length;
+}
+
 const SENTENCE_END = /[。！？!?…]+["'』」）)]*$/;
 const CLAUSE_END = /[，、；：,;:]+["'』」）)]*$/;
 

@@ -92,6 +92,79 @@ async function makeProject(): Promise<string> {
   return root;
 }
 
+/** A canonical article with `n` scenes — the fixture a long film needs
+ *  (the batching test needs more than one batch of overflow). */
+function canonicalWithScenes(n: number): string {
+  const scenes = Array.from({ length: n }, (_, i) => {
+    const id = i + 1;
+    return `  - id: scene_${id}
+    duration: 10
+    caption: 标题${id}
+    visual: 视觉描述${id}
+    narration: |
+      第${id}段的旁白内容。`;
+  }).join("\n");
+  return `---
+project: 测试项目
+language: zh-CN
+duration_target_sec: ${n * 10}
+voice: narrator-zh
+image_style: editorial
+---
+
+# 测试项目
+
+## Scenes
+
+\`\`\`yaml
+scenes:
+${scenes}
+\`\`\`
+`;
+}
+
+/** The English translation of that article — every narration over the
+ *  caption budget, which is what forces the condensation call. */
+function translatedWithScenes(n: number, long: (i: number) => string): string {
+  const scenes = Array.from({ length: n }, (_, i) => {
+    const id = i + 1;
+    return `  - id: scene_${id}
+    duration: 10
+    caption: Title ${id}
+    visual: 视觉描述${id}
+    narration: |
+      ${long(id)}`;
+  }).join("\n");
+  return `---
+project: 测试项目
+language: zh-CN
+duration_target_sec: ${n * 10}
+voice: narrator-zh
+---
+
+# Test project
+
+## Scenes
+
+\`\`\`yaml
+scenes:
+${scenes}
+\`\`\`
+`;
+}
+
+async function makeProjectWithScenes(n: number): Promise<string> {
+  const root = await mkdtemp(path.join(tmpdir(), "vidtranslate-"));
+  await writeFile(
+    path.join(root, "article.md"),
+    canonicalWithScenes(n),
+    "utf8",
+  );
+  await writeFile(path.join(root, "audio-config.yaml"), AUDIO_CONFIG, "utf8");
+  await mkdir(path.join(root, "assets", "images"), { recursive: true });
+  return root;
+}
+
 describe("translate prompt — name localization rule", () => {
   it("instructs the model to localize placeholder names, never transliterate", () => {
     const prompt = loadPrompt("translate-article");
@@ -99,6 +172,14 @@ describe("translate prompt — name localization rule", () => {
     expect(prompt).toContain("never transliterate");
     expect(prompt).toContain("小王");
     expect(prompt).toContain("Elon Musk");
+  });
+
+  it("pins the caption-budget rule and the condensation contract", () => {
+    expect(loadPrompt("translate-article")).toContain("caption block");
+    const condense = loadPrompt("translate-condense");
+    expect(condense).toContain("scene_id:");
+    expect(condense).toContain("185");
+    expect(condense).toContain("{{SCENES_JSON}}");
   });
 });
 
@@ -323,6 +404,262 @@ scenes:
     } finally {
       await rm(root, { recursive: true, force: true });
     }
+  });
+
+  it("condenses over-budget narrations instead of a full rewrite", async () => {
+    const root = await makeProject();
+    // A Latin translation of the same content needs ~1.6x the characters
+    // of the source, so a faithful translation overflows the four-line
+    // caption block. The loop must re-ask ONLY for the over-budget
+    // narration (condensation call) and splice the shorter text back.
+    const overlong = TRANSLATED().replace(
+      "Narration for the first scene.",
+      "In the occupations most exposed to automation, employment for people aged twenty-two to twenty-five runs about nineteen percent below the baseline the trend would predict, according to research based on United States payroll records.",
+    );
+    const condensation =
+      "scene_1: Employment for people aged twenty-two to twenty-five runs nineteen percent below trend, per US payroll research.";
+    let calls = 0;
+    try {
+      const res = await translateArticle({
+        projectRoot: root,
+        targetLang: "en-US",
+        provider: fakeProvider(() => {
+          calls += 1;
+          return calls === 1 ? overlong : condensation;
+        }),
+        voice: "en-US-ChristopherNeural",
+        maxAttempts: 2,
+      });
+      expect(calls).toBe(2);
+      const article = readFileSync(res.articlePath, "utf8");
+      expect(article).toContain(
+        "Employment for people aged twenty-two to twenty-five runs nineteen percent below trend",
+      );
+      expect(article).not.toContain(
+        "according to research based on United States payroll records",
+      );
+      // The untouched scene survives byte-for-byte.
+      expect(article).toContain("Narration for the second scene.");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("trims a scene the model refuses to shorten instead of failing the film", async () => {
+    // One stubborn scene must not cost the whole translation: when even
+    // a single-scene ask will not fit the caption block, the narration
+    // is cut at a clause boundary and the trim is reported.
+    const root = await makeProject();
+    const overlong = TRANSLATED().replace(
+      "Narration for the first scene.",
+      "In the occupations most exposed to automation, employment for people aged twenty-two to twenty-five runs about nineteen percent below the baseline the trend would predict, according to research based on United States payroll records.",
+    );
+    const stillOverlong =
+      "scene_1: In the occupations most exposed to automation, employment for people aged twenty-two to twenty-five runs about nineteen percent below the baseline the trend would predict, according to research based on United States payroll records.";
+    const warnings: string[] = [];
+    const originalWarn = console.warn;
+    console.warn = (msg: string) => {
+      warnings.push(String(msg));
+    };
+    let calls = 0;
+    try {
+      const res = await translateArticle({
+        projectRoot: root,
+        targetLang: "en-US",
+        provider: fakeProvider(() => {
+          calls += 1;
+          return calls === 1 ? overlong : stillOverlong;
+        }),
+        voice: "en-US-ChristopherNeural",
+        maxAttempts: 1,
+      });
+      const article = readFileSync(res.articlePath, "utf8");
+      // The trimmed narration fits the caption block and the loss is
+      // reported, never silent.
+      expect(article).not.toContain(
+        "according to research based on United States payroll records",
+      );
+      expect(warnings.join("\n")).toContain("trimmed");
+      expect(warnings.join("\n")).toContain("scene_1");
+    } finally {
+      console.warn = originalWarn;
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("names the real cause when the model returns empty content", async () => {
+    const root = await makeProject();
+    try {
+      await expect(
+        translateArticle({
+          projectRoot: root,
+          targetLang: "en-US",
+          provider: fakeProvider(() => ""),
+          voice: "en-US-ChristopherNeural",
+          maxAttempts: 1,
+        }),
+      ).rejects.toThrow(/came back empty/);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("batches the condensation call so a long film cannot exhaust the reasoning budget", async () => {
+    // 20 over-budget narrations in ONE condensation call made the model
+    // reason for 250k chars and never close its <think> block — the
+    // answer came back empty and the translation failed. The ask must
+    // be split: one call per batch of scenes.
+    const root = await makeProjectWithScenes(20);
+    const long = (n: number) =>
+      `In the occupations most exposed to automation, employment for people aged twenty-two to twenty-five runs about nineteen percent below the baseline the trend would predict, according to research based on United States payroll records, part ${n}.`;
+    const batches: string[][] = [];
+    let translateCalls = 0;
+    const provider: Provider = {
+      name: "fake",
+      chat: async ({ messages }) => {
+        const prompt = messages.map((m) => m.content).join("\n");
+        if (prompt.includes("Condense translated narration")) {
+          const asked = [...prompt.matchAll(/^(scene_\d+):/gm)].map(
+            (m) => m[1]!,
+          );
+          batches.push(asked);
+          return {
+            content: asked
+              .map(
+                (id) =>
+                  `${id}: Employment for people aged twenty-two to twenty-five runs nineteen percent below trend, per US payroll research, part ${id.slice(-2)}.`,
+              )
+              .join("\n"),
+            usage: { input: 1, output: 1 },
+          };
+        }
+        translateCalls += 1;
+        return {
+          content: translatedWithScenes(20, long),
+          usage: { input: 1, output: 1 },
+        };
+      },
+    };
+    try {
+      const res = await translateArticle({
+        projectRoot: root,
+        targetLang: "en-US",
+        provider,
+        voice: "en-US-ChristopherNeural",
+        maxAttempts: 1,
+      });
+      expect(translateCalls).toBe(1);
+      // 20 scenes / batch size 8 → 3 condensation calls, each asking for
+      // at most 8 scenes (the ask must stay small enough to answer).
+      expect(batches.length).toBe(3);
+      expect(batches.map((b) => b.length)).toEqual([8, 8, 4]);
+      const article = readFileSync(res.articlePath, "utf8");
+      expect(article).toContain(
+        "Employment for people aged twenty-two to twenty-five runs nineteen percent below trend",
+      );
+      expect(article).not.toContain(
+        "according to research based on United States payroll records",
+      );
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("re-asks a scene in a smaller batch when the first condensation call comes back empty", async () => {
+    // The model can outrun its reasoning budget on a batch and answer
+    // nothing. The scene must not be lost: the ask is retried smaller,
+    // down to one scene, where the model always answers.
+    const root = await makeProject();
+    const overlong = TRANSLATED().replace(
+      "Narration for the first scene.",
+      "In the occupations most exposed to automation, employment for people aged twenty-two to twenty-five runs about nineteen percent below the baseline the trend would predict, according to research based on United States payroll records.",
+    );
+    const condensation =
+      "scene_1: Employment for people aged twenty-two to twenty-five runs nineteen percent below trend, per US payroll research.";
+    const askedSizes: number[] = [];
+    let calls = 0;
+    try {
+      const res = await translateArticle({
+        projectRoot: root,
+        targetLang: "en-US",
+        provider: {
+          name: "fake",
+          chat: async ({ messages }) => {
+            calls += 1;
+            const prompt = messages.map((m) => m.content).join("\n");
+            if (!prompt.includes("Condense translated narration")) {
+              return { content: overlong, usage: { input: 1, output: 1 } };
+            }
+            const asked = [...prompt.matchAll(/^(scene_\d+):/gm)].map(
+              (m) => m[1]!,
+            );
+            askedSizes.push(asked.length);
+            // The first ask comes back empty; the retry answers.
+            if (calls === 2) {
+              return { content: "", usage: { input: 1, output: 1 } };
+            }
+            return {
+              content: asked.map(() => condensation).join("\n"),
+              usage: { input: 1, output: 1 },
+            };
+          },
+        },
+        voice: "en-US-ChristopherNeural",
+        maxAttempts: 1,
+      });
+      expect(calls).toBe(3);
+      expect(askedSizes).toEqual([1, 1]);
+      const article = readFileSync(res.articlePath, "utf8");
+      expect(article).toContain(
+        "Employment for people aged twenty-two to twenty-five runs nineteen percent below trend",
+      );
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("shows the model its own previous answer when a retry asks for less", async () => {
+    // Without the previous answer and its measured length, a re-ask
+    // reproduces the same length — the model has nothing to cut.
+    const root = await makeProject();
+    const overlong = TRANSLATED().replace(
+      "Narration for the first scene.",
+      "In the occupations most exposed to automation, employment for people aged twenty-two to twenty-five runs about nineteen percent below the baseline the trend would predict, according to research based on United States payroll records.",
+    );
+    const stillOverlong =
+      "scene_1: In the occupations most exposed to automation, employment for people aged twenty-two to twenty-five runs about nineteen percent below the baseline the trend would predict, according to research based on United States payroll records.";
+    const prompts: string[] = [];
+    try {
+      await translateArticle({
+        projectRoot: root,
+        targetLang: "en-US",
+        provider: {
+          name: "fake",
+          chat: async ({ messages }) => {
+            const prompt = messages.map((m) => m.content).join("\n");
+            if (prompt.includes("Condense translated narration")) {
+              prompts.push(prompt);
+              return {
+                content: stillOverlong,
+                usage: { input: 1, output: 1 },
+              };
+            }
+            return { content: overlong, usage: { input: 1, output: 1 } };
+          },
+        },
+        voice: "en-US-ChristopherNeural",
+        maxAttempts: 1,
+      });
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+    // The retry carries the previous answer back to the model...
+    expect(prompts.length).toBeGreaterThan(1);
+    expect(prompts[1]).toContain(
+      "In the occupations most exposed to automation, employment for people aged twenty-two to twenty-five runs about nineteen percent below the baseline",
+    );
+    // ...and states the limit it has to reach.
+    expect(prompts[1]).toContain("PREVIOUS answers");
   });
 
   it("does not switch the caption source for any target", () => {

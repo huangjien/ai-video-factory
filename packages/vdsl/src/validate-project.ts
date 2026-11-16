@@ -1,7 +1,11 @@
 import { existsSync } from "node:fs";
 import path from "node:path";
 import type { z } from "zod";
-import { wrapText } from "@video/media";
+import {
+  CAPTION_BLOCK_MAX_LINES,
+  CAPTION_LINE_UNITS,
+  captionBlockLineCount,
+} from "@video/media";
 import type { VdslError } from "./errors.js";
 import { lineOf, parseYaml } from "./parse.js";
 import type { Storyboard } from "./schema.js";
@@ -18,14 +22,16 @@ export interface ValidateProjectOptions {
   probeAudio?: (file: string) => Promise<number>;
 }
 
-const CAPTION_MAX_UNITS = 24;
-// 2026-10-18: bumped 3 → 4 lines. The storyboard LLM naturally produces
-// 70-80 zh-char narrations that wrap to 4 lines at 24 zh/line; rejecting
-// them blocked every make run. Four lines is the render captionStyle's
-// practical ceiling (bottom safe area overflows on the 4th line for
-// 4-character zh lines — acceptable for this project; revisit if a
-// shorter narration strategy lands).
-const CAPTION_MAX_LINES = 4;
+// The caption safe-area budget lives in @video/media (CAPTION_LINE_UNITS
+// / CAPTION_BLOCK_MAX_LINES) so the VDSL validator and the article
+// translator measure the same limit.
+//
+// 2026-10-18: the per-scene line cap was bumped 3 → 4. The storyboard
+// LLM naturally produces 70-80 zh-char narrations that wrap to 4 lines at
+// 24 zh/line; rejecting them blocked every make run. Four lines is the
+// render captionStyle's practical ceiling (bottom safe area overflows on
+// the 4th line for 4-character zh lines — acceptable for this project;
+// revisit if a shorter narration strategy lands).
 const AUDIO_TOLERANCE_S = 0.05;
 
 /** Full project-level validation (§21.1 lines 926-930): registry membership,
@@ -172,13 +178,13 @@ export async function validateProject(
         ? scene.narration?.text
         : undefined);
     if (captionText !== undefined) {
-      const lines = wrapText(captionText, CAPTION_MAX_UNITS);
-      if (lines.length > CAPTION_MAX_LINES) {
+      const lineCount = captionBlockLineCount(captionText);
+      if (lineCount > CAPTION_BLOCK_MAX_LINES) {
         errors.push({
           file,
           field: `${base.join(".")}.captions`,
           line: line([...base, "captions"]),
-          message: `Captions wrap to ${lines.length} lines (max ${CAPTION_MAX_LINES} x ${CAPTION_MAX_UNITS} zh units) — exceeds the bottom safe area (§62.4 line 2300).`,
+          message: `Captions wrap to ${lineCount} lines (max ${CAPTION_BLOCK_MAX_LINES} x ${CAPTION_LINE_UNITS} zh units) — exceeds the bottom safe area (§62.4 line 2300).`,
           fix: "Shorten the caption text or split into more scenes.",
         });
       }

@@ -2,6 +2,9 @@ export {
   wrapText,
   buildCaptionCues,
   MAX_CAPTION_LINES,
+  CAPTION_LINE_UNITS,
+  CAPTION_BLOCK_MAX_LINES,
+  captionBlockLineCount,
   type CaptionCue,
 } from "./captions.js";
 export { probeAudioDuration, probeAudioDurationOrNull } from "./probe.js";

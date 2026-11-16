@@ -186,6 +186,14 @@ export async function runMotion(opts: MotionOptions): Promise<number> {
   const tokens = { input: 0, output: 0 };
   let lastMessages: { role: string; content: string }[] = [];
 
+  // v0.12 (P1): the motion pre-screen surface was wired here, then
+  // RETIRED on 2026-11-16 — it measured 47/92 = 0.511 (chance) over a
+  // balanced corpus built from 26 shipped storyboards, because the label
+  // (which elements the shipped plan animates) is not in the state the
+  // model sees. The surface keeps its question body and its corpus
+  // cases; the pipeline no longer spends a call on it. See
+  // `packages/prompts/src/decision-questions.ts` and
+  // `docs/v0.11-decision-provider-plan.md` §7.9.
   for (let i = 0; i < targets.length; i++) {
     const scene = targets[i]!;
     const baseline = planSceneMotion({

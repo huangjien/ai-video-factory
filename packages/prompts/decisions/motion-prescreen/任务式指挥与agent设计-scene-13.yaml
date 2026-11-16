@@ -1,0 +1,19 @@
+id: 任务式指挥与agent设计-scene-13
+surface: motion-prescreen
+state: |-
+  Scene scene-13 — 17.40s, component ImageBackground.
+  Narration: 成熟系统通常混合两者。CI/CD 正常步骤走 Workflow；根因未明、需跨系统取证时用 Mission Agent；生产变更仍要审批。选择依据是不确定性，不是 Agent 标签。
+  Scene elements: {"src":"/Users/huangjien/workspace/ai-video-factory/projects/任务式指挥与Agent设计/assets/images/scene_13.jpg","caption":"按不确定性选择架构","textOverlaySrc":"/Users/huangjien/workspace/ai-video-factory/projects/任务式指挥与agent设计/assets/images/text/scene_13.png"}
+
+  The plan without a second pass: draw on "scene-13" at 0.10s for 0.80s (easeOut); highlight on "scene-13" at 8.70s for 0.60s (easeInOut).
+expects:
+  kind: choice
+  value: keep
+baseline: keep
+policy:
+  rule: motion-specificity
+  note: The shipped plan animates the scene as a whole — the same shape the deterministic baseline
+    produces, so a second pass was not needed.
+provenance:
+  source: "projects/任务式指挥与agent设计/storyboard/storyboard.yaml — scene scene-13 (ImageBackground,
+    17.4s). The shipped motion plan targets: scene-13, scene-13."

@@ -15,6 +15,64 @@ video research → script → storyboard → audio (TTS) → audio-asset (BGM+SF
        video review                          → Content/Visual/Technical review YAMLs
 ```
 
+## v0.12 (2026-11-16) — the decision layer, everywhere it fits
+
+The decision provider layer had a contract (`choice` / `score` / `noul`
+with a confidence) and two wired surfaces. This release wires three more,
+fills in the bench's missing cost column, and **measures two candidates
+into cancellation** before writing a line of surface code for them.
+
+**The bench can rank providers now.** `packages/prompts/decisions/prices.yaml`
+was empty, so every cost column read `n/a` and the ranking rule never
+reached its tiebreaker. The prices are now filled from each provider's own
+pricing page (read 2026-11-16): `gpt-6-luna` $0.10/M input · $0.50/M
+output, `MiniMax-M3.1-Flash` $0.15/M · $0.60/M — **$0.000050 per
+decision** for the OpenAI provider. A full re-run of the corpus measured
+**174/187 = 0.930**, brier **0.000**, p50 210 ms, p95 488 ms; the shipped
+release note's 0.924 is corrected to the 0.930 that §7.5's table and the
+re-run agree on.
+
+**Three new surfaces, all advisory.** Each one is consulted, logged to
+`<project>/decision-log.jsonl` beside a deterministic baseline, and
+**never acts** — the pipeline's output is byte-identical with the layer
+on and off.
+
+| surface | where | measured (live API, 2026-11-16) |
+|---|---|---|
+| `caption-overlap` | `video qa` | 68/68 = **1.000**, brier **0.000** — including the two documented failures the deterministic caption check misses. |
+| `review-verdict` | `video review` | 27/27 = **1.000** against the review agent's own per-section verdict, where the field-status rule scores 0.926. |
+
+The `motion-prescreen` surface was wired, measured at chance (**47/92 =
+0.511** on a balanced corpus from 26 shipped storyboards — the label says
+which elements the shipped plan animates, and those are renderer-internal
+ids the model cannot see) and **retired**: it is not wired into any
+command and it does not gate the provider choice. The bench now gates over
+the ACTIVE surfaces and compares the baseline **per surface**, so a
+retired surface cannot drag the corpus-wide gate down. Over the active
+surfaces the OpenAI provider measures **265/278 = 0.953** and stays
+eligible.
+
+**Two candidates measured into cancellation.** The image-brief skip
+(`scripts/measure-image-brief-expansion.mjs`): the shipped `visual:`
+lines are already concrete prose (median 104 characters over 1189
+scenes) and the expander's real job is to translate and structure them
+into the six-part English brief — there is no bare-category population
+to skip, so the surface has no corpus. The article judge's per-dimension
+score (`scripts/measure-judge-dimension-scores.mjs`): a `score` decision
+agrees with the judge's own numbers (mean absolute error **0.366** on the
+0–5 scale, 53/56 within one point) but cannot replace the judge (it also
+returns findings and risk flags) and cannot save the judge's call.
+
+**Also:** the prompt-eval harness now reads each rubric axis through the
+Decisions API's `score` question, so an axis carries a calibrated
+confidence beside the chat judge's number; and `packages/llm/src/decision/consult.ts`
+collects the consult loop the surfaces used to copy.
+
+The corpus is **370 cases across 5 surfaces**, every one derived from a
+shipped artifact. The labelling rules are in
+`packages/prompts/decisions/POLICY.md`; the plan is in
+`docs/plans/v0.12/`.
+
 ## v0.11.2 (2026-11-15) — the brand icon's background is transparent
 
 The corner watermark (`brand.yaml` → `assets/brand/icon.png`) shipped as
@@ -77,8 +135,9 @@ Three features, one breaking change.
 **Decision layer (advisory, default on).** A provider-agnostic decision
 runtime (`@video/llm` `decision/*`) whose contract is a System One
 decision — `choice` / `score` / `noul` with a confidence. OpenAI's
-**Decisions API** (`gpt-6-luna`) is the measured default: 0.924 over the
-187-case labeled corpus, Brier 0.000 on every run, 149 ms p50 (§7.5/§7.8
+**Decisions API** (`gpt-6-luna`) is the measured default: 0.930 over the
+187-case labeled corpus, Brier 0.000 on every run, 149 ms p50, and
+$0.000050 per decision at the verified Standard-tier price (§7.5/§7.8
 of `docs/v0.11-decision-provider-plan.md`). Wired surfaces: the draft
 loop's draft-bar verdict consult, and a per-finding advisory in
 `video qa` reports. `DECISION_MODE=off|shadow|on` (default on);

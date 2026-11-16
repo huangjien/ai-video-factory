@@ -1,0 +1,43 @@
+id: 扁平化组织与任务式指挥-visual
+surface: review-verdict
+state: >-
+  The visual section of a review.
+
+
+  Fields:
+
+  - readability: warn — No rendered frames or images were supplied, so actual legibility and
+  composition cannot be inspected. The plan itself is favorable: headings are short (≤ ~12
+  characters, e.g., 扁平化：缩短决策路径), a high-con…
+
+  - density: ok — Each scene carries a single idea: roughly 55–75 narration characters per 13–16 s
+  scene, one illustration plus one short heading. The densest enumerations (seven principles in
+  scene-09, five costs in …
+
+  - pacing: warn — Scene durations (13–16 s) sum to 344 s against duration_target_sec 360 (≈ −4.4%);
+  the hook constraint ≤20 s is met (scene-01 is 14 s plus 1.2 s lead-in). All animation windows
+  close within their scen…
+
+  - visual_hierarchy: ok — A consistent hierarchy is planned across all 24 scenes: one centered
+  subject (占画面中部) with a foreground detail, a blank lower third reserved for captions, short
+  superimposed headings (props.text), and…
+
+  - caption_length: warn — Captions derive wholesale from narration (captions.source: narration on
+  every scene). Full-scene narration runs ≈55–75 characters over 13–16 s (≈4–5 chars/s), comfortable
+  for zh-CN at plan level, but…
+
+
+  No findings.
+expects:
+  kind: choice
+  value: warn
+baseline: warn
+source_verdict:
+  section_verdict: warn
+policy:
+  rule: section-verdict
+  note: The label is DERIVED from the review artifact's own `overall` verdict by the section-verdict
+    rule. The loader re-checks that derivation when the case is loaded.
+provenance:
+  source: projects/扁平化组织与任务式指挥/review/visual-review.yaml — the review agent's own verdict for the
+    visual section.

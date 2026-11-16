@@ -1,0 +1,23 @@
+id: 3m与pfos的秘密-scene-01
+surface: motion-prescreen
+state: >-
+  Scene scene-01 — 12.84s, component Title.
+
+  Narration: 1997年，在美国明尼苏达州的3M实验室，化学家Kris Hansen接手了一项看起来很普通的任务：测试人体血液是否被化学物质污染。
+
+  Scene elements: {"text":"1997年，3M的实验室","subtext":"血液中查出的PFOS：3M被封锁的秘密"}
+
+
+  The plan without a second pass: fade on "scene-01" at 0.10s for 0.50s (easeOut); highlight on
+  "scene-01" at 6.42s for 0.60s (easeInOut).
+expects:
+  kind: choice
+  value: refine
+baseline: keep
+policy:
+  rule: motion-specificity
+  note: The shipped plan animates a NAMED element of the scene — the baseline plan cannot know those
+    names, so the scene needed a second pass.
+provenance:
+  source: "projects/3m与pfos的秘密/storyboard/storyboard.yaml — scene scene-01 (Title, 12.84s). The
+    shipped motion plan targets: __title__."

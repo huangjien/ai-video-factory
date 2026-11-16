@@ -1,0 +1,19 @@
+id: 扁平化组织与任务式指挥-scene-06
+surface: motion-prescreen
+state: |-
+  Scene scene-06 — 17.37s, component ImageBackground.
+  Narration: 对比一下。详细命令说：沿东侧道路前进，十点抵达指定位置，遇敌后等待指示。任务命令说：十点前控制东侧高地，掩护主力安全通过，怎么走，你自己定。
+  Scene elements: {"src":"/Users/huangjien/workspace/ai-video-factory/projects/扁平化组织与任务式指挥/assets/images/scene_6.jpg","caption":"规定目标，而非规定路线","textOverlaySrc":"/Users/huangjien/workspace/ai-video-factory/projects/扁平化组织与任务式指挥/assets/images/text/scene_6.png"}
+
+  The plan without a second pass: draw on "scene-06" at 0.10s for 0.80s (easeOut); highlight on "scene-06" at 8.69s for 0.60s (easeInOut).
+expects:
+  kind: choice
+  value: keep
+baseline: keep
+policy:
+  rule: motion-specificity
+  note: The shipped plan animates the scene as a whole — the same shape the deterministic baseline
+    produces, so a second pass was not needed.
+provenance:
+  source: "projects/扁平化组织与任务式指挥/storyboard/storyboard.yaml — scene scene-06 (ImageBackground, 17.37s).
+    The shipped motion plan targets: scene-06, scene-06."

@@ -1,0 +1,19 @@
+id: 从伍什到班排的历史演变-scene-18
+surface: motion-prescreen
+state: |-
+  Scene scene-18 — 13.00s, component ImageBackground.
+  Narration: 古代的什靠什长和互保运转；现代的班靠指挥链、分工和通信。战斗力来源变了：从集体协同，变成专业、火力与信息。
+  Scene elements: {"src":"/Users/huangjien/workspace/ai-video-factory/projects/从伍什到班排的历史演变/assets/images/scene_18.jpg","caption":"从互保到指挥链","textOverlaySrc":"/Users/huangjien/workspace/ai-video-factory/projects/从伍什到班排的历史演变/assets/images/text/scene_18.png"}
+
+  The plan without a second pass: draw on "scene-18" at 0.10s for 0.80s (easeOut); highlight on "scene-18" at 6.50s for 0.60s (easeInOut).
+expects:
+  kind: choice
+  value: refine
+baseline: keep
+policy:
+  rule: motion-specificity
+  note: The shipped plan animates a NAMED element of the scene — the baseline plan cannot know those
+    names, so the scene needed a second pass.
+provenance:
+  source: "projects/从伍什到班排的历史演变/storyboard/storyboard.yaml — scene scene-18 (ImageBackground, 13s).
+    The shipped motion plan targets: node-0, node-1, node-2, __edges__."

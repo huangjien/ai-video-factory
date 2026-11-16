@@ -1,0 +1,53 @@
+id: fate-or-the-measure-of-a-life-content
+surface: review-verdict
+state: >-
+  The content section of a review.
+
+
+  Fields:
+
+  - accuracy: warn — No claims artifact exists (no 'video research' run), so factual assertions
+  cannot be verified against sources: Liaozhai tale details (script sections 1-3), animal heartbeat
+  totals (script section 4, …
+
+  - logic: ok — Narrative causal chain is coherent (prophecy, motivated denial, illness,
+  reinterpretation, modern analogy, philosophical close); the heartbeat section explicitly frames
+  its figures as 'estimates, not…
+
+
+  Findings:
+
+  - F001: [moderate] All specifics of the source tale are asserted without supporting evidence:
+  attribution to 'Strange Tales from a Chinese Studio, Volume Seven', tale title 'The Measure of
+  Fortune', the quantities of rice and flour, the i… (scenes scene-01 to scene-08; script sections
+  1-3)
+
+  - F002: [moderate] Heartbeat statistics (hamster about 710 million over three years, cat 1.18
+  billion, pig 920 million, elephant 1.1 billion, whale 840 million, humans 2.21 billion, the
+  'roughly one billion' pattern) are presented without… (scenes scene-09 to scene-13; script
+  sections 4-5)
+
+  - F003: [moderate] Attributions to external works are unverified: Emerson's essay 'Fate' is
+  characterized as asking how a person acts freely within unchosen conditions; script section 6
+  additionally references Joshua Rothman's New Yorker … (scene-15 narration; script section 6)
+
+  - F004: [moderate] Scene durations conflict between the script's scenes block and the storyboard
+  for 14 of 16 scenes; only scene-01/scene_1 (10s) and scene-16/scene_16 (15s) agree. (storyboard
+  scene-02 to scene-15 vs script scenes scene_2 to scene_15)
+
+  - F005: [minor] Scene identifier conventions differ across artifacts (zero-padded hyphenated vs
+  non-padded underscore); the 1:1 mapping is unambiguous but hinders automated cross-referencing.
+  (storyboard scene IDs scene-01 to scene-16 vs script scene IDs scene_1 to scene_…)
+expects:
+  kind: choice
+  value: warn
+baseline: warn
+source_verdict:
+  section_verdict: warn
+policy:
+  rule: section-verdict
+  note: The label is DERIVED from the review artifact's own `overall` verdict by the section-verdict
+    rule. The loader re-checks that derivation when the case is loaded.
+provenance:
+  source: projects/fate-or-the-measure-of-a-life/review/content-review.yaml — the review agent's own
+    verdict for the content section.

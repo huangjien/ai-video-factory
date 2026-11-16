@@ -1,0 +1,38 @@
+id: 扁平化组织与任务式指挥-technical
+surface: review-verdict
+state: >-
+  The technical section of a review.
+
+
+  Fields:
+
+  - resolution: ok — project.width 1920 and project.height 1080 (16:9) are internally valid and
+  unambiguous; no external output-resolution requirement was supplied to check against.
+
+  - fps: ok — project.fps 30 is internally valid and consistent with the second-based animation
+  timings (e.g., scene-02 level-0: start 7 s, duration 5.25 s); no target frame-rate specification
+  was supplied.
+
+  - audio: warn — The script frontmatter declares voice Chinese (Mandarin)_Male_Announcer and
+  tts_provider minimax, but no audio files or audio metadata were supplied; presence, duration,
+  synchronization, and defects …
+
+  - subtitle: warn — All 24 scenes declare captions (source: narration), so subtitles are planned
+  deliverables, but no subtitle artifact (e.g., SRT/ASS) exists in this draft package; format,
+  timing, synchronization, and …
+
+
+  No findings.
+expects:
+  kind: choice
+  value: warn
+baseline: warn
+source_verdict:
+  section_verdict: warn
+policy:
+  rule: section-verdict
+  note: The label is DERIVED from the review artifact's own `overall` verdict by the section-verdict
+    rule. The loader re-checks that derivation when the case is loaded.
+provenance:
+  source: projects/扁平化组织与任务式指挥/review/technical-review.yaml — the review agent's own verdict for the
+    technical section.

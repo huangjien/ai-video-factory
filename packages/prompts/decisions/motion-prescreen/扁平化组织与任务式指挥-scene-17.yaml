@@ -1,0 +1,19 @@
+id: 扁平化组织与任务式指挥-scene-17
+surface: motion-prescreen
+state: |-
+  Scene scene-17 — 14.00s, component ImageBackground.
+  Narration: 有效的分权必须配套：训练、纪律、共同认知、明确的任务边界，再加上反馈机制，让自主行动始终校准在共同意图上。
+  Scene elements: {"src":"/Users/huangjien/workspace/ai-video-factory/projects/扁平化组织与任务式指挥/assets/images/scene_17.jpg","caption":"分权需要配套机制","textOverlaySrc":"/Users/huangjien/workspace/ai-video-factory/projects/扁平化组织与任务式指挥/assets/images/text/scene_17.png"}
+
+  The plan without a second pass: draw on "scene-17" at 0.10s for 0.80s (easeOut); highlight on "scene-17" at 7.00s for 0.60s (easeInOut).
+expects:
+  kind: choice
+  value: keep
+baseline: keep
+policy:
+  rule: motion-specificity
+  note: The shipped plan animates the scene as a whole — the same shape the deterministic baseline
+    produces, so a second pass was not needed.
+provenance:
+  source: "projects/扁平化组织与任务式指挥/storyboard/storyboard.yaml — scene scene-17 (ImageBackground, 14s).
+    The shipped motion plan targets: scene-17, scene-17."

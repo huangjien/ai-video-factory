@@ -412,3 +412,13 @@ export {
   type QaAdvisoryResult,
   type QaDecisionRow,
 } from "./qa-decision.js";
+export {
+  buildCaptionOverlapState,
+  captionOverlapQuestion,
+  captionOverlapScenes,
+  consultCaptionOverlap,
+  runCaptionOverlapShadow,
+  type CaptionCue,
+  type CaptionDecisionRow,
+  type CaptionOverlapScene,
+} from "./caption-decision.js";

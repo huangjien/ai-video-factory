@@ -1,0 +1,63 @@
+id: 扁平化组织与任务式指挥-content
+surface: review-verdict
+state: >-
+  The content section of a review.
+
+
+  Fields:
+
+  - accuracy: warn — No claims artifact was supplied (no `video research` run for this project), so
+  the material factual assertions — the Prussian origin of Auftragstaktik (scene-05), the seven
+  Mission Command principles…
+
+  - logic: ok — The argument chain (command-delay problem → definition of flattening → military
+  layered model → Auftragstaktik → Mission Command → squad modularity → decision-layer vs
+  organization-layer distinction …
+
+
+  Findings:
+
+  - F001: [moderate] The narration asserts the Prussian army as the earliest practitioner of
+  Auftragstaktik — a material historical claim with no supplied source. It cannot be verified from
+  the provided artifacts and is reported as unverifi… (scene-05)
+
+  - F002: [moderate] The doctrinal attribution and the exact seven-principle enumeration are stated
+  as fact without any supplied source; unverifiable from the provided artifacts. (scene-09)
+
+  - F003: [moderate] A specific force-structure claim (13 = 1 leader + 3 teams × 4) is stated flatly
+  in narration. The article itself warns that 编制因年代和任务而异 and that 具体人数不应视为所有部队的统一标准, but no source
+  was supplied, so the figures remain unveri… (scene-11)
+
+  - F004: [moderate] The storyboard plans scene-01 as a Title component (text 等待命令，本身就是风险 plus three
+  bullets, no illustration), while the script plans the same scene as the illustrated brass-chain
+  visual quoted above. The two artifacts spec… (scene-01 (storyboard) vs scene_1 (script))
+
+  - F005: [moderate] The scene-11 prompt contradicts itself: the background clause specifies 纯色深绿
+  while the palette clause in the same string specifies 深蓝底. The green background also departs from
+  the 纯色深蓝 background of every other illustrat… (scene-11)
+
+  - F006: [minor] Scene identifiers use different delimiters in the two artifacts (hyphen in the
+  storyboard, underscore in the script). The 1:1 mapping is unambiguous to a human, but automated
+  cross-referencing or downstream pipelines th… (storyboard scene-01…scene-24 vs script
+  scene_1…scene_24)
+
+  - F007: [minor] The narration attributes institutionalization to 美军 (the US military in general)
+  while the article prose attributes it to 美国陆军 (the US Army); the scope of attribution differs
+  between the two artifacts for the same fact. (scene-09 (narration) vs article §3)
+
+  - F008: [minor] Several animation targets reference elements the scene's component or visual does
+  not define. Scene-05 targets event-开始/发展/转折/现在 on a static map illustration with no timeline;
+  scene-06 targets __quote__ and __author__ o… (scene-05, scene-06, scene-13, scene-24)
+expects:
+  kind: choice
+  value: warn
+baseline: warn
+source_verdict:
+  section_verdict: warn
+policy:
+  rule: section-verdict
+  note: The label is DERIVED from the review artifact's own `overall` verdict by the section-verdict
+    rule. The loader re-checks that derivation when the case is loaded.
+provenance:
+  source: projects/扁平化组织与任务式指挥/review/content-review.yaml — the review agent's own verdict for the
+    content section.

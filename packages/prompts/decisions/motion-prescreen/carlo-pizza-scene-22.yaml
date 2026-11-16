@@ -1,0 +1,19 @@
+id: carlo-pizza-scene-22
+surface: motion-prescreen
+state: |-
+  Scene scene-22 — 10.15s, component ImageBackground.
+  Narration: As integrations multiply, MCP, the Model Context Protocol, offers a common interface between AI applications and external capabilities.
+  Scene elements: {"src":"assets/images/scene_22.jpg","caption":"MCP standardizes external connections","kenBurnsScale":0.08,"textOverlaySrc":"/Users/huangjien/workspace/ai-video-factory/projects/carlo-pizza/assets/images/text/scene_22.png","text_overlay":"MCP: AI-app ↔ tool\nstandard interface"}
+
+  The plan without a second pass: draw on "scene-22" at 0.10s for 0.80s (easeOut); highlight on "scene-22" at 5.08s for 0.60s (easeInOut).
+expects:
+  kind: choice
+  value: refine
+baseline: keep
+policy:
+  rule: motion-specificity
+  note: The shipped plan animates a NAMED element of the scene — the baseline plan cannot know those
+    names, so the scene needed a second pass.
+provenance:
+  source: "projects/carlo-pizza/storyboard/storyboard.yaml — scene scene-22 (ImageBackground, 10.15s).
+    The shipped motion plan targets: __image__."

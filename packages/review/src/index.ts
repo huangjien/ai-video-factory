@@ -13,3 +13,15 @@ export {
   buildReviewMessages,
   type ReviewInput,
 } from "./prompt.js";
+export {
+  buildReviewVerdictState,
+  consultReviewVerdict,
+  reviewSectionFacts,
+  reviewVerdictQuestion,
+  sectionVerdictBaseline,
+  runReviewVerdictShadow,
+  type ReviewDecisionRow,
+  type ReviewFieldFacts,
+  type ReviewFindingFacts,
+  type ReviewSectionFacts,
+} from "./decision.js";

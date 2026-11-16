@@ -1,0 +1,63 @@
+id: 领域建模-设计软件的骨相-content
+surface: review-verdict
+state: >-
+  The content section of a review.
+
+
+  Fields:
+
+  - accuracy: warn — No claims artifact was supplied for this project, so factual assertions cannot
+  be verified against sources. The Martin Fowler attribution (scene-05) and the Evans claim (script
+  section 7) are unverif…
+
+  - logic: ok — Narration chain is internally coherent: anecdote (scene-01/02) -> design logic
+  (scene-03) -> transaction script pitfalls (scene-05/06) -> order aggregate derivation
+  (scene-07/09) -> bounded context (…
+
+
+  Findings:
+
+  - F001: [minor] The naming of the 'transaction script' pattern is attributed to Martin Fowler, but
+  no claims artifact or cited source was supplied; the attribution cannot be verified from the
+  provided evidence (this is not an assertion… (scene-05 narration)
+
+  - F002: [minor] Claim about what Evans did or did not prescribe regarding modeling process is
+  presented without any supporting source; unverifiable from supplied artifacts. (script section 7
+  (建模方法与元模型))
+
+  - F003: [moderate] The script's scene_1 specifies an AnimatedIllustration-style visual, while the
+  storyboard's scene-01 replaces it with a Title component (text '停电了，餐厅还在运转' plus four bullets) and
+  no illustration; the divergence between t… (scene-01 (storyboard) vs scene_1 (script))
+
+  - F004: [moderate] The script's scene_28 carries both an illustration description and component
+  BigIdea; the storyboard's scene-28 uses BigIdea props (text '骨相定，软件才立得住', kicker '核心观点') with no
+  illustration. It is unclear whether the closi… (scene-28 (storyboard) vs scene_28 (script))
+
+  - F005: [minor] Scene identifier schemes differ between artifacts: the storyboard uses hyphenated
+  zero-padded IDs ('scene-01'...'scene-28') while the script's embedded scene list uses underscored
+  non-padded IDs ('scene_1'...'scene_28')… (scene identifiers across storyboard and script)
+
+  - F006: [minor] Visual depicts three plaques while the narration and caption ('同福客栈的四个“菜”')
+  enumerate four models (食材/科目/订单项/上架商品); the count mismatch may lead viewers to map three objects
+  to four concepts. (scene-14 visual vs scene-14 narration)
+
+  - F007: [minor] Visual depicts four ticket cards but the narration names only three business
+  vouchers (菜单/订单/出餐小票); the fourth card has no narrated counterpart. (scene-23 visual vs scene-23
+  narration)
+
+  - F008: [minor] Visual depicts five checklist marks but the scene's narration enumerates only
+  three principles (聚合层级两到三级；先分而治之再抽象统一；架构师守核心并留决策记录); viewers may look for five items that are not
+  named here. (scene-27 visual vs scene-27 narration)
+expects:
+  kind: choice
+  value: warn
+baseline: warn
+source_verdict:
+  section_verdict: warn
+policy:
+  rule: section-verdict
+  note: The label is DERIVED from the review artifact's own `overall` verdict by the section-verdict
+    rule. The loader re-checks that derivation when the case is loaded.
+provenance:
+  source: projects/领域建模-设计软件的骨相/review/content-review.yaml — the review agent's own verdict for the
+    content section.

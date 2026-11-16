@@ -1,0 +1,39 @@
+id: 软件架构和实现-visual
+surface: review-verdict
+state: >-
+  The visual section of a review.
+
+
+  Fields:
+
+  - readability: warn —
+  未提供任何渲染帧，无法核实实际可读性。计划层面有利因素明确：所有插画均规定“不出现任何文字”并保留下三分之一留白（可推断用于字幕叠加），Title/BigIdea 文案均较短（约 13 字以内）。
+
+  - density: ok — 每场景一个插画加一组旁白（约 24–55 字对应 8–15 秒）；插画本身无文字、每场景仅一个琥珀色焦点元素，无信息过载的场景。
+
+  - pacing: ok — 35 个场景时长合计恰为 420 秒，与 script front matter 的 duration_target_sec: 420 完全一致；各场景旁白密度约
+  2.5–4 字/秒（如 scene-25 约 52 字/14 秒、scene-02 约 24 字/8 秒），处于中文旁白舒适区间；所有动画窗口均在各自场景时长内结束（最长如 scene-25 的
+  stage-2 于 14.0 秒结束，…
+
+  - visual_hierarchy: ok —
+  计划层面层级一致：每场景单一主体居中、唯一琥珀色焦点（“琥珀色只标……”）、统一扁平矢量规范（深蓝底、石板蓝主体、米白点缀、无渐变无纹理）、下三分之一留白供字幕；个别底色变化（scene-07
+  暖灰、scene-18 浅灰、scene-30 深绿）为主题性变化，不破坏层级。此为计划级评估，无渲染帧可验证执行效果。
+
+  - caption_length: ok — 35 个场景均声明 captions source: narration；单场景字幕约 24–55 个汉字、显示 8–15 秒（约 3–4
+  字/秒），低于中文常用阅读速度（约 5–7 字/秒）；未提供平台字幕规范，故不施加额外字符上限；字幕分段与烧录细节未进一步规定。
+
+
+  No findings.
+expects:
+  kind: choice
+  value: warn
+baseline: warn
+source_verdict:
+  section_verdict: warn
+policy:
+  rule: section-verdict
+  note: The label is DERIVED from the review artifact's own `overall` verdict by the section-verdict
+    rule. The loader re-checks that derivation when the case is loaded.
+provenance:
+  source: projects/软件架构和实现/review/visual-review.yaml — the review agent's own verdict for the visual
+    section.

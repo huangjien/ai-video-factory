@@ -1,0 +1,19 @@
+id: carlo-pizza-scene-34
+surface: motion-prescreen
+state: |-
+  Scene scene-34 — 15.18s, component ImageBackground.
+  Narration: A DevOps Skill might include an instruction file, failure references, and an evidence-collection utility. MCP supplies connectors. The Skill packages procedure and team knowledge.
+  Scene elements: {"src":"assets/images/scene_34.jpg","caption":"Reusable workflow knowledge","kenBurnsScale":0.08,"textOverlaySrc":"/Users/huangjien/workspace/ai-video-factory/projects/carlo-pizza/assets/images/text/scene_34.png","text_overlay":"Skill = SKILL.md · refs · scripts\n(team workflow in a folder)"}
+
+  The plan without a second pass: draw on "scene-34" at 0.10s for 0.80s (easeOut); highlight on "scene-34" at 7.59s for 0.60s (easeInOut).
+expects:
+  kind: choice
+  value: refine
+baseline: keep
+policy:
+  rule: motion-specificity
+  note: The shipped plan animates a NAMED element of the scene — the baseline plan cannot know those
+    names, so the scene needed a second pass.
+provenance:
+  source: "projects/carlo-pizza/storyboard/storyboard.yaml — scene scene-34 (ImageBackground, 15.18s).
+    The shipped motion plan targets: __image__."

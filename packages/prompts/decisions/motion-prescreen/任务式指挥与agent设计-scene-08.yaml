@@ -1,0 +1,19 @@
+id: 任务式指挥与agent设计-scene-08
+surface: motion-prescreen
+state: |-
+  Scene scene-08 — 20.00s, component ImageBackground.
+  Narration: Mission-oriented Brief 至少给出目的、目标、成功标准、硬软约束、权限、可用资源，以及验收与停止条件。它不规定先查日志还是先看提交，只要求调查服务于同一结果。
+  Scene elements: {"src":"/Users/huangjien/workspace/ai-video-factory/projects/任务式指挥与Agent设计/assets/images/scene_8.jpg","caption":"任务协议七项承诺","textOverlaySrc":"/Users/huangjien/workspace/ai-video-factory/projects/任务式指挥与agent设计/assets/images/text/scene_8.png"}
+
+  The plan without a second pass: draw on "scene-08" at 0.10s for 0.80s (easeOut); highlight on "scene-08" at 10.00s for 0.60s (easeInOut).
+expects:
+  kind: choice
+  value: keep
+baseline: keep
+policy:
+  rule: motion-specificity
+  note: The shipped plan animates the scene as a whole — the same shape the deterministic baseline
+    produces, so a second pass was not needed.
+provenance:
+  source: "projects/任务式指挥与agent设计/storyboard/storyboard.yaml — scene scene-08 (ImageBackground, 20s).
+    The shipped motion plan targets: scene-08, scene-08."

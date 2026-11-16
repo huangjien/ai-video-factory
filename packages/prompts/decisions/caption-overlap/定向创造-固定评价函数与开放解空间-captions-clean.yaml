@@ -1,0 +1,19 @@
+id: 定向创造-固定评价函数与开放解空间-captions-clean
+surface: caption-overlap
+state: 'Frame 1 of 40. The bottom band of the frame carries the timed caption. The caption runs 2
+  cue(s) from 00:00 to 00:22: "1907年12月，美国陆军贴出一份飞行器招标书。验收只 有三条：载两人，滞空一小时，时速不低于四十英里。" No other text
+  is drawn in that region.'
+expects:
+  kind: noul
+  value: "false"
+  probability:
+    - 0
+    - 0.2
+baseline: "false"
+policy:
+  rule: caption-band
+  note: The shipped render's caption check passed and the scene's own text sits ABOVE the caption
+    band, so the caption sits alone in the bottom band.
+provenance:
+  source: projects/定向创造-固定评价函数与开放解空间/qa/render-report.json (captions.ok, 80 cues) +
+    projects/定向创造-固定评价函数与开放解空间/captions/zh-CN.srt — the caption sits alone in the bottom band.

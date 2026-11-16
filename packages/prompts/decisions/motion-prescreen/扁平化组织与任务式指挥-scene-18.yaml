@@ -1,0 +1,19 @@
+id: 扁平化组织与任务式指挥-scene-18
+surface: motion-prescreen
+state: |-
+  Scene scene-18 — 17.38s, component ImageBackground.
+  Narration: 军队的答案是分层设计：战略层集中决策，定方向和风险边界；战术层适度授权，协调跨团队依赖；执行层高度自主，对结果负责。集中意图，分散执行。
+  Scene elements: {"src":"/Users/huangjien/workspace/ai-video-factory/projects/扁平化组织与任务式指挥/assets/images/scene_18.jpg","caption":"集中意图，分散执行","textOverlaySrc":"/Users/huangjien/workspace/ai-video-factory/projects/扁平化组织与任务式指挥/assets/images/text/scene_18.png"}
+
+  The plan without a second pass: draw on "scene-18" at 0.10s for 0.80s (easeOut); highlight on "scene-18" at 8.69s for 0.60s (easeInOut).
+expects:
+  kind: choice
+  value: keep
+baseline: keep
+policy:
+  rule: motion-specificity
+  note: The shipped plan animates the scene as a whole — the same shape the deterministic baseline
+    produces, so a second pass was not needed.
+provenance:
+  source: "projects/扁平化组织与任务式指挥/storyboard/storyboard.yaml — scene scene-18 (ImageBackground, 17.38s).
+    The shipped motion plan targets: scene-18, scene-18."

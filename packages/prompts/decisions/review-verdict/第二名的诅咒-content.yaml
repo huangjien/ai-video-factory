@@ -1,0 +1,47 @@
+id: 第二名的诅咒-content
+surface: review-verdict
+state: >-
+  The content section of a review.
+
+
+  Fields:
+
+  - accuracy: warn — No claims artifact was supplied (no video research run), so material factual
+  assertions cannot be verified; no factual errors were demonstrated. Key unverifiable items:
+  scene-06 attributes social com…
+
+  - logic: ok — Narrative chain is internally coherent: hook (scene-01) → exam/workplace pressure
+  (scene-02, scene-03) → structural analysis (scene-04, scene-05) → social comparison mechanism
+  (scene-06 to scene-08) …
+
+
+  Findings:
+
+  - F003: [moderate] Material factual attribution (费斯廷格, 1954, social comparison theory) is
+  presented without any supporting source and cannot be verified because no claims artifact exists.
+  (scene-06 narration; article.md section 3)
+
+  - F004: [minor] Sweeping empirical generalizations about reward systems and workplace
+  substitutability are asserted as typical facts without supporting evidence. (scene-04, scene-09
+  narration; article.md sections 2 and 4)
+
+  - F001: [major] Scene durations conflict between the storyboard and the script for 10 of 16
+  scenes, and the storyboard total (151.56s) falls 28.44s short of the declared duration_target_sec
+  of 180s. (storyboard scene-03, scene-05, scene-08, scene-09, scene-10, scene-11, scene-12…)
+
+  - F002: [minor] Scene identifiers use inconsistent formats across artifacts (zero-padded
+  hyphenated vs non-padded underscore), so cross-artifact correspondence is only inferable by
+  document order. (storyboard scene IDs (scene-01 to scene-16) vs article.md scene IDs (scene_1 to…)
+expects:
+  kind: choice
+  value: fail
+baseline: warn
+source_verdict:
+  section_verdict: fail
+policy:
+  rule: section-verdict
+  note: The label is DERIVED from the review artifact's own `overall` verdict by the section-verdict
+    rule. The loader re-checks that derivation when the case is loaded.
+provenance:
+  source: projects/第二名的诅咒/review/content-review.yaml — the review agent's own verdict for the content
+    section.

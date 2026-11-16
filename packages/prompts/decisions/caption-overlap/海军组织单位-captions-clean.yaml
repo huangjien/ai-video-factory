@@ -1,0 +1,19 @@
+id: 海军组织单位-captions-clean
+surface: caption-overlap
+state: 'Frame 1 of 20. The bottom band of the frame carries the timed caption. The caption runs 2
+  cue(s) from 00:00 to 00:13: "同样是几百人的战斗集体，陆军的营通常按人员规模编 组；而海军的一艘驱逐舰，本身就是一座会移动的作战" No other text is
+  drawn in that region.'
+expects:
+  kind: noul
+  value: "false"
+  probability:
+    - 0
+    - 0.2
+baseline: "false"
+policy:
+  rule: caption-band
+  note: The shipped render's caption check passed and the scene's own text sits ABOVE the caption
+    band, so the caption sits alone in the bottom band.
+provenance:
+  source: projects/海军组织单位/qa/render-report.json (captions.ok, 31 cues) +
+    projects/海军组织单位/captions/zh-CN.srt — the caption sits alone in the bottom band.

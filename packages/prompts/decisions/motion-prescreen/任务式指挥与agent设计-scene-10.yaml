@@ -1,0 +1,19 @@
+id: 任务式指挥与agent设计-scene-10
+surface: motion-prescreen
+state: |-
+  Scene scene-10 — 24.00s, component ImageBackground.
+  Narration: 看这份最小 YAML：purpose 与 goal 进入指令和上下文，constraints 交给 Policy Engine，authority 由权限系统检查，其余字段各自对应计量、验收与编排。它是可读取、可验证、可执行的任务协议。
+  Scene elements: {"src":"/Users/huangjien/workspace/ai-video-factory/projects/任务式指挥与Agent设计/assets/images/scene_10.jpg","caption":"YAML 到运行时组件","textOverlaySrc":"/Users/huangjien/workspace/ai-video-factory/projects/任务式指挥与agent设计/assets/images/text/scene_10.png"}
+
+  The plan without a second pass: draw on "scene-10" at 0.10s for 0.80s (easeOut); highlight on "scene-10" at 12.00s for 0.60s (easeInOut).
+expects:
+  kind: choice
+  value: keep
+baseline: keep
+policy:
+  rule: motion-specificity
+  note: The shipped plan animates the scene as a whole — the same shape the deterministic baseline
+    produces, so a second pass was not needed.
+provenance:
+  source: "projects/任务式指挥与agent设计/storyboard/storyboard.yaml — scene scene-10 (ImageBackground, 24s).
+    The shipped motion plan targets: scene-10, scene-10."

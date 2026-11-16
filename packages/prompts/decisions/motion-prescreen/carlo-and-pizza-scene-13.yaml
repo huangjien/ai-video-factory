@@ -1,0 +1,19 @@
+id: carlo-and-pizza-scene-13
+surface: motion-prescreen
+state: |-
+  Scene scene-13 — 35.76s, component FlowChart.
+  Narration: 现在 AI 能理解指令、读取资料、知道验收标准。但它仍可能只会告诉我们该做什么。Agent Engineering 关注的是：如何让模型在工具和运行环境支持下，主动执行完成任务所需的步骤。Carlo 的任务可以变成：读取偏好、查询菜单、检查配料和价格、筛选候选项、比较并验证、提交结果供确认。Function Calling 让模型以结构化方式请求程序调用。
+  Scene elements: {"text":"让 AI 采取行动","visual":"一条垂直流水线从画面顶部贯穿到底部,六个发光节点由细线串联,自上而下分别是读取偏好、查询菜单、检查配料、筛选、验证、确认,每个节点外圈有节奏感地呼吸;flowchart keyword,顶部到底部流向","nodes":["让 AI 采取行动","中间处理","结果"],"direction":"top-down"}
+
+  The plan without a second pass: draw on "scene-13" at 0.10s for 0.80s (easeOut); highlight on "scene-13" at 17.88s for 0.60s (easeInOut).
+expects:
+  kind: choice
+  value: refine
+baseline: keep
+policy:
+  rule: motion-specificity
+  note: The shipped plan animates a NAMED element of the scene — the baseline plan cannot know those
+    names, so the scene needed a second pass.
+provenance:
+  source: "projects/carlo-and-pizza/storyboard/storyboard.yaml — scene scene-13 (FlowChart, 35.76s).
+    The shipped motion plan targets: node-0, node-1, node-2, __edges__."

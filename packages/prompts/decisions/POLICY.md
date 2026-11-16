@@ -85,17 +85,100 @@ together, `false` when the caption sits alone.
 The expected band (e.g. `0.8 … 1.0`) is the confidence the answer
 should carry: a clear overlap is near-certain, a marginal one is not.
 
+**The corpus (2026-11-16).** 66 negatives are built from the shipped
+render reports and captions (`scripts/build-caption-overlap-corpus.mjs`):
+one per shipped film whose `captions` check passed, with the scene's own
+text and its position read from the storyboard (the CS-06 `overlay:`
+declares `top` or `bottom`; the baked PNG overlay is written above the
+band by `scripts/pillow-text-overlay.py`). The label is DERIVED from
+that position: `bottom` means the band holds two texts, `top` means the
+caption sits alone. The two positives are the documented failures — the
+v0.9.1 comparison card that printed its own text twice, and a real QA
+report's caption collision.
+
+**Measured 2026-11-16 (OpenAI Decisions API, `gpt-6-luna`, 68 cases):
+68/68 = 1.000, brier 0.000.** The deterministic baseline also scores
+1.000 on this corpus — 66 of the 68 cases are negatives and the caption
+check answers "no overlap" for all of them — so the surface's measured
+value is the two positives the check misses, not the headline number.
+
+---
+
+## review-verdict — `pass` / `warn` / `fail`
+
+Rule **`section-verdict`** (v0.12, P5). The `video review` agent writes
+three files per project — `content-review.yaml`, `visual-review.yaml`,
+`technical-review.yaml` — and each ends in an `overall` verdict:
+`pass` | `warn` | `fail`. That verdict is the ground truth.
+
+The state carries the section's fields and findings and **deliberately
+withholds the verdict**: the model has to read the findings and decide
+the verdict they earn. Carrying it would make the question "repeat what
+you were told".
+
+The label is DERIVED from the artifact and the loader re-checks that
+derivation:
+
+```yaml
+source_verdict:
+  section_verdict: warn
+```
+
+The deterministic baseline is the **field-status rule**
+(`sectionVerdictBaseline`): a failed field fails the section, a warned
+field (or a serious finding) warns it, a clean section passes. That
+rule is the same function the corpus is built with, so the two cannot
+drift.
+
+**Measured 2026-11-16 (OpenAI Decisions API, `gpt-6-luna`, 27 cases
+from the shipped review artifacts): 27/27 = 1.000.** The deterministic
+rule scores 0.926 — it answers `warn` for the two sections the review
+agent called `fail`. The corpus is lopsided (25 `warn`, 2 `fail`), so
+the majority class alone would score 0.926; the two `fail` sections are
+what the model actually earns.
+
 ---
 
 ## motion-prescreen — `keep` / `refine`
 
-Rule **`motion-specificity`**. Judge the plan against the scene it
-animates:
+Rule **`motion-specificity`** (rewritten 2026-11-16 — the rule used to
+be prose only; it is now derived from the shipped artifact, and the
+corpus is built from the shipped storyboards).
 
-- `keep` — the plan already gives the scene a clear motion that matches
-  its content, and a second pass would not change what the viewer sees.
-- `refine` — the plan is generic: the scene gets the same motion as its
-  neighbours, or the motion contradicts what the scene is about.
+The ground truth is the plan that actually shipped: every shipped
+storyboard carries the motion plan the pipeline produced for that scene,
+and that plan is the answer to "what did this scene need?".
+
+- `refine` — the shipped plan animates a **named element** of the
+  scene (`event-1979`, `__title__`, `line-0`). The baseline plan cannot
+  know those names, so the scene needed a second pass.
+- `keep` — the shipped plan animates the scene as a whole (every target
+  is the scene id): the same shape the deterministic baseline produces.
+
+The population is lopsided — 482 `refine` and 46 `keep` across the 528
+shipped scenes that carry a plan — so the corpus is **balanced 50/50 by
+construction** (`scripts/build-motion-prescreen-corpus.mjs`). A corpus
+that is 91% one class measures the majority class, not the model.
+
+The baseline (today's deterministic path) answers `keep` for every scene
+— the baseline plan IS what runs when nobody refines it — so the
+deterministic baseline scores 0.500 on the balanced corpus.
+
+**Measured 2026-11-16 (OpenAI Decisions API, `gpt-6-luna`, 92 cases):
+47/92 = 0.511 — chance.** The state (the scene, its narration, its
+props, and the baseline plan) does not carry the fact the label is
+derived from: in 475 of the 482 `refine` cases the named targets
+(`__title__`, `node-0`, `event-1979`) are renderer-internal ids that
+appear nowhere in the scene's props. The surface therefore stays in
+`shadow` — consulted and recorded, never acting — and the number above
+is its verdict.
+
+**RETIRED 2026-11-16 (v0.12 P1).** The surface is not wired into any
+command and it does not gate the provider choice; its cases stay as the
+durable copy of the measurement. A surface that measured at chance must
+not drag the corpus-wide gate down: the gate answers "can this provider
+carry the surfaces the pipeline actually consults?", and a retired
+surface is not one of them.
 
 ---
 
@@ -140,7 +223,7 @@ the rule fix moved six labels that contradicted the artifact they cite.
 
 `openai` (the Decisions API, model `gpt-6-luna`) is the default for every
 surface, and the layer runs **on by default** (the bench gate cleared —
-0.924 ≥ 0.9). `DECISION_MODE=off|shadow|on`, `DECISION_PROVIDER` /
+0.930 ≥ 0.9). `DECISION_MODE=off|shadow|on`, `DECISION_PROVIDER` /
 `DECISION_MODEL` override per run; the vitest global setup pins the mode
 off so tests stay hermetic.
 

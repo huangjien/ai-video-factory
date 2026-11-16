@@ -101,11 +101,15 @@ describe("isCorrect", () => {
   });
 
   it("scores within the tolerance", () => {
-    expect(isCorrect({ kind: "score", value: 2, tolerance: 0.6 }, 1.7)).toBe(true);
+    expect(isCorrect({ kind: "score", value: 2, tolerance: 0.6 }, 1.7)).toBe(
+      true,
+    );
   });
 
   it("scores outside the tolerance wrong", () => {
-    expect(isCorrect({ kind: "score", value: 2, tolerance: 0.6 }, 0.5)).toBe(false);
+    expect(isCorrect({ kind: "score", value: 2, tolerance: 0.6 }, 0.5)).toBe(
+      false,
+    );
   });
 
   it("reads the noul side from the probability", () => {
@@ -208,6 +212,42 @@ describe("runDecisionBench", () => {
       minAccuracy: 0,
     });
     expect(report.providers[0]?.baselineAccuracy).not.toBeNull();
+  });
+
+  it("gates over the ACTIVE surfaces only — a retired surface does not drag the gate down", async () => {
+    // The motion-prescreen surface was retired after it measured at
+    // chance. Its cases stay in the corpus (the measurement is the
+    // deliverable) but they must not decide whether the provider is
+    // eligible.
+    const report = await runDecisionBench({
+      providers: [oracleProvider("oracle")],
+      minAccuracy: 0,
+    });
+    const provider = report.providers[0];
+    expect(provider?.retiredCases).toBeGreaterThan(0);
+    expect(provider?.activeCases).toBe(
+      (provider?.total ?? 0) - (provider?.retiredCases ?? 0),
+    );
+    const retired = provider?.surfaces.find((s) => s.retired);
+    expect(retired).toBeDefined();
+    // The retired surface is reported with its own numbers.
+    expect(retired?.total).toBeGreaterThan(0);
+  });
+
+  it("compares the provider against the baseline PER SURFACE", async () => {
+    const report = await runDecisionBench({
+      providers: [
+        fakeProvider("weak", (req) => ({
+          kind: "choice",
+          option: req.question.options?.[0] ?? "",
+        })),
+      ],
+      minAccuracy: 0,
+    });
+    // The reason names the surface, not a corpus-wide number.
+    expect(report.providers[0]?.reasons.join(" ")).toMatch(
+      /surface|\w+: accuracy/,
+    );
   });
 
   it("counts the disputed cases in the corpus (0 since draft-bar labels are derived)", async () => {

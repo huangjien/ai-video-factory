@@ -1,0 +1,42 @@
+id: 努力-technical
+surface: review-verdict
+state: >-
+  The technical section of a review.
+
+
+  Fields:
+
+  - resolution: ok — project.width: 1920 and project.height: 1080 form a valid 16:9 HD specification
+  and are internally consistent; no external output requirement was supplied to check against.
+
+  - fps: ok — project.fps: 30; all 20 scene durations are integer seconds and animation cue times
+  (starts 0–6s, durations 0.6–1.0s) are representable at 30fps; no conflicting target frame rate is
+  declared.
+
+  - audio: warn — The script declares voice 'Chinese (Mandarin)_Male_Announcer' and tts_provider:
+  minimax, but no audio files or metadata were supplied; presence, total duration (expected ≈240s),
+  narration synchroniza…
+
+  - subtitle: warn — All 20 scenes set captions.source: narration, so a caption/subtitle track is
+  intended, but no subtitle file (e.g., SRT) or rendered output was supplied; format, timing,
+  segmentation, and text-narrati…
+
+
+  Findings:
+
+  - F004: [major] Broken reference in the storyboard spec (no rendering was executed): scene-14's
+  only two animations target `__quote__` and `__author__`, but its visual is an AnimatedIllustration
+  (whiteboard with sticky notes) that defi… (scene-14 (animations quote-card, quote-author))
+expects:
+  kind: choice
+  value: fail
+baseline: warn
+source_verdict:
+  section_verdict: fail
+policy:
+  rule: section-verdict
+  note: The label is DERIVED from the review artifact's own `overall` verdict by the section-verdict
+    rule. The loader re-checks that derivation when the case is loaded.
+provenance:
+  source: projects/努力/review/technical-review.yaml — the review agent's own verdict for the technical
+    section.

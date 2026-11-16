@@ -7,12 +7,20 @@ import { resolveProjectDir } from "./project-path.js";
 import { existsSync, readFileSync } from "node:fs";
 import {
   GLMProvider,
+  decisionLogPath,
   judgePickForName,
   loadProviderConfig,
   MiniMaxProvider,
   pickJudgeProvider,
+  resolveDecisionMode,
 } from "@video/llm";
-import { callReview, ReviewPackageSchema, type ReviewPackage } from "@video/review";
+import {
+  callReview,
+  ReviewPackageSchema,
+  reviewSectionFacts,
+  runReviewVerdictShadow,
+  type ReviewPackage,
+} from "@video/review";
 import { parseArticleWithRecovery } from "@video/draft";
 import { deriveStoryboardSync } from "@video/make";
 import { parse as parseYaml, stringify as yamlStringify } from "yaml";
@@ -332,6 +340,30 @@ export async function runReview(opts: ReviewOptions): Promise<number> {
     stringifyYaml({ technical: result.review.technical }),
     "utf8",
   );
+
+  // v0.12 (P5): the review-verdict shadow pass. One consult per review
+  // section — the decision model reads the section's findings and
+  // decides the verdict they earn. The answer lands in the decision
+  // log; the review YAMLs are NOT rewritten and nothing gates.
+  const decisionMode = resolveDecisionMode();
+  if (decisionMode !== "off") {
+    const shadow = await runReviewVerdictShadow({
+      project: opts.project,
+      sections: (["content", "visual", "technical"] as const).map(
+        (section) => ({
+          section: reviewSectionFacts(result.review, section),
+          baseline: result.review[section].overall,
+        }),
+      ),
+      mode: decisionMode,
+      logPath: decisionLogPath(projectRoot),
+    });
+    if (shadow.consulted > 0) {
+      console.log(
+        `  decision shadow (review): ${shadow.consulted} section(s) consulted, ${shadow.agreed} agreed with the review agent's verdict`,
+      );
+    }
+  }
 
   // Run record — model reflects the SERVING provider (may differ from the
   // chosen one after failover) and prompt_hash hashes the messages the

@@ -1,0 +1,42 @@
+id: 第二名的诅咒-visual
+surface: review-verdict
+state: >-
+  The visual section of a review.
+
+
+  Fields:
+
+  - readability: warn — No rendered frames, images, or text-overlay previews were supplied; the
+  textOverlaySrc PNGs referenced by scenes 02-16 were not attached, so actual rendered legibility
+  cannot be assessed. Planned on-…
+
+  - density: ok — Each scene carries one narration sentence (roughly 25-45 Chinese characters) plus
+  one short on-screen caption over 7.58-12s; a single idea per scene, uniform across all 16 scenes.
+
+  - pacing: warn — Scene durations (7.58-12s) are plausible relative to narration length, and the 8s
+  hook scene-01 satisfies the stated ≤20s hook constraint, but the timing conflict in F001
+  (storyboard total 151.56s vs…
+
+  - visual_hierarchy: ok — Planned hierarchy is uniform at spec level: ImageBackground with a single
+  text overlay plus narration-derived caption per scene (scenes 02-16); scene-01 uses a Title
+  component with text, subtext, and…
+
+  - caption_length: ok — All 16 scenes set captions.source: narration; the longest narration
+  (scene-07, about 40 characters) runs 12s, roughly 3.3 characters per second, within a comfortable
+  Mandarin reading rate; on-screen …
+
+
+  No findings.
+expects:
+  kind: choice
+  value: warn
+baseline: warn
+source_verdict:
+  section_verdict: warn
+policy:
+  rule: section-verdict
+  note: The label is DERIVED from the review artifact's own `overall` verdict by the section-verdict
+    rule. The loader re-checks that derivation when the case is loaded.
+provenance:
+  source: projects/第二名的诅咒/review/visual-review.yaml — the review agent's own verdict for the visual
+    section.

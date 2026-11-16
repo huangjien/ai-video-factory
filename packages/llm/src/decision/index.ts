@@ -11,10 +11,13 @@ export {
   type DecisionRequest,
   type DecisionValue,
 } from "./contract.js";
+export { deriveValueFromDistribution, winnerKey } from "./derive.js";
 export {
-  deriveValueFromDistribution,
-  winnerKey,
-} from "./derive.js";
+  appendDecisionRows,
+  consultDecision,
+  valueToString,
+  type DecisionConsult,
+} from "./consult.js";
 export {
   OpenAIDecisionProvider,
   type OpenAIDecisionProviderOptions,

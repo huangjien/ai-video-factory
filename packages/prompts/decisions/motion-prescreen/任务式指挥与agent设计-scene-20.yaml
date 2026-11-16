@@ -1,0 +1,19 @@
+id: 任务式指挥与agent设计-scene-20
+surface: motion-prescreen
+state: |-
+  Scene scene-20 — 16.12s, component ImageBackground.
+  Narration: 信任不能来自模型的自信语气，只能来自历史成功率、工具可靠性、结果准确率、规则遵守和错误恢复。权限升级须经策略审核，Agent 不能给自己加信任分。
+  Scene elements: {"src":"/Users/huangjien/workspace/ai-video-factory/projects/任务式指挥与Agent设计/assets/images/scene_20.jpg","caption":"信任必须可测量","textOverlaySrc":"/Users/huangjien/workspace/ai-video-factory/projects/任务式指挥与agent设计/assets/images/text/scene_20.png"}
+
+  The plan without a second pass: draw on "scene-20" at 0.10s for 0.80s (easeOut); highlight on "scene-20" at 8.06s for 0.60s (easeInOut).
+expects:
+  kind: choice
+  value: keep
+baseline: keep
+policy:
+  rule: motion-specificity
+  note: The shipped plan animates the scene as a whole — the same shape the deterministic baseline
+    produces, so a second pass was not needed.
+provenance:
+  source: "projects/任务式指挥与agent设计/storyboard/storyboard.yaml — scene scene-20 (ImageBackground,
+    16.12s). The shipped motion plan targets: scene-20, scene-20."

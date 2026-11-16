@@ -1,0 +1,19 @@
+id: 扁平化组织与任务式指挥-scene-14
+surface: motion-prescreen
+state: |-
+  Scene scene-14 — 18.54s, component ImageBackground.
+  Narration: 关键区别在这里：扁平化减掉的不一定是组织层级，而是决策必须经过的层级。班、排、连、营都还在，但排长可以在上级意图范围内自己拍板，决策路径就变短了。
+  Scene elements: {"src":"/Users/huangjien/workspace/ai-video-factory/projects/扁平化组织与任务式指挥/assets/images/scene_14.jpg","caption":"减决策层级，非组织层级","textOverlaySrc":"/Users/huangjien/workspace/ai-video-factory/projects/扁平化组织与任务式指挥/assets/images/text/scene_14.png"}
+
+  The plan without a second pass: draw on "scene-14" at 0.10s for 0.80s (easeOut); highlight on "scene-14" at 9.27s for 0.60s (easeInOut).
+expects:
+  kind: choice
+  value: keep
+baseline: keep
+policy:
+  rule: motion-specificity
+  note: The shipped plan animates the scene as a whole — the same shape the deterministic baseline
+    produces, so a second pass was not needed.
+provenance:
+  source: "projects/扁平化组织与任务式指挥/storyboard/storyboard.yaml — scene scene-14 (ImageBackground, 18.54s).
+    The shipped motion plan targets: scene-14, scene-14."

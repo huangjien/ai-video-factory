@@ -1,0 +1,19 @@
+id: 扁平化组织与任务式指挥-scene-23
+surface: motion-prescreen
+state: |-
+  Scene scene-23 — 14.00s, component ImageBackground.
+  Narration: 当 AI Agent 成为新的执行单元，这个问题会更尖锐：组织可能从管理人员的层级结构，转向管理目标、权限和 Agent 协作关系的网络结构。
+  Scene elements: {"src":"/Users/huangjien/workspace/ai-video-factory/projects/扁平化组织与任务式指挥/assets/images/scene_23.jpg","caption":"从管理层级到 Agent 网络","textOverlaySrc":"/Users/huangjien/workspace/ai-video-factory/projects/扁平化组织与任务式指挥/assets/images/text/scene_23.png"}
+
+  The plan without a second pass: draw on "scene-23" at 0.10s for 0.80s (easeOut); highlight on "scene-23" at 7.00s for 0.60s (easeInOut).
+expects:
+  kind: choice
+  value: keep
+baseline: keep
+policy:
+  rule: motion-specificity
+  note: The shipped plan animates the scene as a whole — the same shape the deterministic baseline
+    produces, so a second pass was not needed.
+provenance:
+  source: "projects/扁平化组织与任务式指挥/storyboard/storyboard.yaml — scene scene-23 (ImageBackground, 14s).
+    The shipped motion plan targets: scene-23, scene-23."

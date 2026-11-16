@@ -1,0 +1,43 @@
+id: 努力-content
+surface: review-verdict
+state: >-
+  The content section of a review.
+
+
+  Fields:
+
+  - accuracy: warn — No claims artifact exists (no `video research` run), so no factual claim was
+  independently verified; nothing supplied is demonstrably false. Framings such as scene-06
+  '想象一位同事…' and scene-18 '比如这个季度…'…
+
+  - logic: ok — The argument chain is coherent across all 20 scenes (stuck state → fatigue/burnout
+  check → effort as the controllable lever → overtime ≠ effort → feedback/accumulation/output test →
+  process over anxi…
+
+
+  Findings:
+
+  - F001: [moderate] A quoted maxim is presented without attribution or source, and no claims
+  artifact exists to verify wording or origin. This is unverifiable, not demonstrated false.
+  (scene-09 (narration))
+
+  - F002: [minor] A general psychological-wellbeing assertion made without supporting evidence; it
+  is hedged with '往往', so risk is low, but it cannot be verified absent a claims artifact. (scene-08
+  (narration))
+
+  - F003: [moderate] The storyboard's scene-01 does not implement the script's scene_1 visual (the
+  five-state handwritten note with 'list keyword'); it substitutes a Title component with text
+  '学不进，玩不尽兴' and subtext '你不是在努力，只是在吃苦'. This may … (scene-01 (storyboard) vs scene_1 (script Scenes
+  block))
+expects:
+  kind: choice
+  value: warn
+baseline: warn
+source_verdict:
+  section_verdict: warn
+policy:
+  rule: section-verdict
+  note: The label is DERIVED from the review artifact's own `overall` verdict by the section-verdict
+    rule. The loader re-checks that derivation when the case is loaded.
+provenance:
+  source: projects/努力/review/content-review.yaml — the review agent's own verdict for the content section.

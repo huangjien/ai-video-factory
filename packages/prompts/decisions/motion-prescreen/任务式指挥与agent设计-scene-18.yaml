@@ -1,0 +1,19 @@
+id: 任务式指挥与agent设计-scene-18
+surface: motion-prescreen
+state: |-
+  Scene scene-18 — 23.82s, component ImageBackground.
+  Narration: 自主度分四级：L0 观察，L1 建议，L2 审批后执行，L3 在授权范围内自主执行、验证和恢复。这是一套可用于工程设计的建议模型，并非通用行业标准。升级按操作和资源，不给整个 Agent 笼统的 Admin 权限。
+  Scene elements: {"src":"/Users/huangjien/workspace/ai-video-factory/projects/任务式指挥与Agent设计/assets/images/scene_18.jpg","caption":"自主程度逐级开放","textOverlaySrc":"/Users/huangjien/workspace/ai-video-factory/projects/任务式指挥与agent设计/assets/images/text/scene_18.png"}
+
+  The plan without a second pass: draw on "scene-18" at 0.10s for 0.80s (easeOut); highlight on "scene-18" at 11.91s for 0.60s (easeInOut).
+expects:
+  kind: choice
+  value: keep
+baseline: keep
+policy:
+  rule: motion-specificity
+  note: The shipped plan animates the scene as a whole — the same shape the deterministic baseline
+    produces, so a second pass was not needed.
+provenance:
+  source: "projects/任务式指挥与agent设计/storyboard/storyboard.yaml — scene scene-18 (ImageBackground,
+    23.82s). The shipped motion plan targets: scene-18, scene-18."

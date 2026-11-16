@@ -28,6 +28,11 @@ import {
 } from "@video/draft";
 import { stringify as yamlStringify } from "yaml";
 import {
+  decisionRubricScores,
+  rubricDecisionProvider,
+  type RubricDecisionScore,
+} from "./eval-decision.js";
+import {
   applyRecorded,
   buildEnvelope,
   evalSnapshotPath,
@@ -439,6 +444,9 @@ export interface JudgedResult {
    *  layer 2 is a full article/shotlist write, then a much cheaper rubric pass.
    *  Printed so the cost of a gate is visible before anyone wires one up. */
   timing?: { generationMs: number; judgeMs: number };
+  /** The Decisions API's score for each axis — beside the chat judge's
+   *  number, not instead of it (v0.12 P4). */
+  decisionScores?: RubricDecisionScore[];
 }
 
 export function verdictFor(
@@ -580,6 +588,20 @@ async function judgeCase(
       generationMs: afterGeneration - startedAt,
       judgeMs: Date.now() - afterGeneration,
     };
+    // v0.12 (P4): the Decisions API's score for each axis, beside the
+    // chat judge's number. The chat judge stays the source of the
+    // recorded baselines; the decision is the measurement — it shows
+    // which axes the judge was unsure about.
+    const decisionProvider = rubricDecisionProvider();
+    const decisionScores =
+      decisionProvider === null
+        ? undefined
+        : await decisionRubricScores({
+            agent: ref.agent,
+            axes,
+            output: generated.output,
+            provider: decisionProvider,
+          });
     const verdict = verdictFor(ref.fixture.expects, parsed.scores);
     const mark = verdict.status === "pass" ? "ok  " : "FAIL";
     return {
@@ -593,6 +615,7 @@ async function judgeCase(
       judgeModel: judgeProvider.name,
       comment: parsed.comment,
       timing,
+      ...(decisionScores !== undefined ? { decisionScores } : {}),
       line: `${mark} ${ref.agent}/${ref.fixture.id}  layer2 ${verdict.status} — ${verdict.detail}  [gen ${(timing.generationMs / 1000).toFixed(1)}s + judge ${(timing.judgeMs / 1000).toFixed(1)}s]`,
     };
   } catch (err) {
@@ -638,6 +661,22 @@ export function renderReportYaml(
               total: j.total,
               generation_model: j.generationModel,
               judge_model: j.judgeModel,
+              ...(j.decisionScores !== undefined
+                ? {
+                    decision_scores: Object.fromEntries(
+                      j.decisionScores.map((d) => [
+                        d.axis,
+                        {
+                          score: d.score,
+                          confidence: d.confidence,
+                          provider: d.provider,
+                          model: d.model,
+                          ...(d.error ? { error: d.error } : {}),
+                        },
+                      ]),
+                    ),
+                  }
+                : {}),
               ...(j.comment ? { comment: j.comment } : {}),
               ...(j.error ? { error: j.error } : {}),
             }

@@ -1,0 +1,19 @@
+id: 3m与pfos的秘密-captions-clean
+surface: caption-overlap
+state: 'Frame 1 of 21. The bottom band of the frame carries the timed caption. The caption runs 2
+  cue(s) from 00:00 to 00:13: "1997年，在美国明尼苏达州的3M实验室，化学家Kris Hansen接手了一项看起来很普通的任务：测试人体血液" No other
+  text is drawn in that region.'
+expects:
+  kind: noul
+  value: "false"
+  probability:
+    - 0
+    - 0.2
+baseline: "false"
+policy:
+  rule: caption-band
+  note: The shipped render's caption check passed and the scene's own text sits ABOVE the caption
+    band, so the caption sits alone in the bottom band.
+provenance:
+  source: projects/3m与pfos的秘密/qa/render-report.json (captions.ok, 40 cues) +
+    projects/3m与pfos的秘密/captions/zh-CN.srt — the caption sits alone in the bottom band.

@@ -1,0 +1,19 @@
+id: 扁平化组织与任务式指挥-scene-04
+surface: motion-prescreen
+state: |-
+  Scene scene-04 — 14.00s, component ImageBackground.
+  Narration: 现代军队并不追求层级越少越好，而是演化出更精细的模式：战略层面保持层级化，战术层面适当扁平化，执行层面交给基层自主。
+  Scene elements: {"src":"/Users/huangjien/workspace/ai-video-factory/projects/扁平化组织与任务式指挥/assets/images/scene_4.jpg","caption":"战略分层，战术扁平","textOverlaySrc":"/Users/huangjien/workspace/ai-video-factory/projects/扁平化组织与任务式指挥/assets/images/text/scene_4.png"}
+
+  The plan without a second pass: draw on "scene-04" at 0.10s for 0.80s (easeOut); highlight on "scene-04" at 7.00s for 0.60s (easeInOut).
+expects:
+  kind: choice
+  value: keep
+baseline: keep
+policy:
+  rule: motion-specificity
+  note: The shipped plan animates the scene as a whole — the same shape the deterministic baseline
+    produces, so a second pass was not needed.
+provenance:
+  source: "projects/扁平化组织与任务式指挥/storyboard/storyboard.yaml — scene scene-04 (ImageBackground, 14s).
+    The shipped motion plan targets: scene-04, scene-04."

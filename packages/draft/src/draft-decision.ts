@@ -30,10 +30,7 @@ import {
   verdictToLabel,
   type DecisionSourceVerdict,
 } from "@video/prompts";
-import type {
-  DecisionProvider,
-  DecisionQuestion,
-} from "@video/llm";
+import type { DecisionProvider, DecisionQuestion } from "@video/llm";
 import { candidateId, type DecisionCandidate } from "./decision-candidate.js";
 import {
   createDecisionProvider,
@@ -49,13 +46,16 @@ export interface DraftBarAttemptFacts {
   overall?: number | undefined;
   grade?: string | undefined;
   passing: boolean;
-  findings?: {
-    id?: string | undefined;
-    code?: string | undefined;
-    severity?: string | undefined;
-    description?: string | undefined;
-  }[] | undefined;
-  risk_flags?: { code?: string | undefined; severity?: string | undefined }[] | undefined;
+  findings?:
+    | {
+        id?: string | undefined;
+        code?: string | undefined;
+        severity?: string | undefined;
+        description?: string | undefined;
+      }[]
+    | undefined;
+  risk_flags?:
+    { code?: string | undefined; severity?: string | undefined }[] | undefined;
 }
 
 /** A draft-bar log row. */
@@ -74,7 +74,7 @@ export interface DraftDecisionRow {
   confidence: number | null;
   confidence_source: string | null;
   /** The review's own verdict facts, as the corpus records them. */
-  verdict: DecisionSourceVerdict;
+  verdict: DecisionSourceVerdict & { passing: boolean };
   /** The label the verdict rule derives. */
   label: string;
   /** Did the decision agree with the review's verdict? */
@@ -87,7 +87,7 @@ export interface DraftDecisionRow {
 /** The verdict facts a review attempt carries. */
 export function verdictFactsFromAttempt(
   attempt: DraftBarAttemptFacts,
-): DecisionSourceVerdict {
+): DecisionSourceVerdict & { passing: boolean } {
   const critical =
     (attempt.findings ?? []).some(
       (f) => (f.severity ?? "").toLowerCase() === "critical",
@@ -227,7 +227,6 @@ export function sha256Text(text: string): string {
   return createHash("sha256").update(text).digest("hex");
 }
 
-
 /**
  * Turn the shadow log's draft-bar rows into corpus candidates.
  *
@@ -285,7 +284,6 @@ export function harvestDraftBarCandidates(opts: {
   }
   return candidates;
 }
-
 
 /**
  * The draft-bar shadow pass, as the pipeline calls it: consult the

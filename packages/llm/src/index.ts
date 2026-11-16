@@ -45,17 +45,21 @@ export {
 export { GLMProvider, type GLMProviderOptions } from "./glm.js";
 export { MiniMaxProvider, type MiniMaxProviderOptions } from "./minimax.js";
 export {
+  appendDecisionRows,
   buildDecisionFunction,
   clampProbability,
+  consultDecision,
   deriveValueFromDistribution,
   functionNameFor,
   stateToText,
   validateQuestion,
+  valueToString,
   winnerKey,
   OpenAIDecisionProvider,
   MiniMaxDecisionProvider,
   type ConfidenceSource,
   type DecisionAnswer,
+  type DecisionConsult,
   type DecisionError,
   type DecisionFunctionSchema,
   type DecisionKind,

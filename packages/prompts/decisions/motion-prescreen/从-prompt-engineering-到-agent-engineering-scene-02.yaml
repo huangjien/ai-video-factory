@@ -1,0 +1,29 @@
+id: 从-prompt-engineering-到-agent-engineering-scene-02
+surface: motion-prescreen
+state: >-
+  Scene scene-02 — 11.59s, component Comparison.
+
+  Narration: 2026年的岗位描述里，热门词换成了Agent、Agent Runtime、Agent OS，还有Loop。变的不是时尚，是活儿本身。
+
+  Scene elements: {"text":"岗位描述换了词","visual":"两张招聘启事卡片左右并排立在暗灰地面上，左卡印着2023与提示词工程师字样，右卡印着2026与Agent
+  Runtime字样，中间一道琥珀色分割线缓缓亮起；compare
+  关键词，分屏构图","left":{"title":"左","items":["岗位描述换了词","2026年的岗位描述里，热门词换成了Agent、Agent Runtime、Agent
+  OS，还有Loop","变的不是时尚，是活儿本身"]},"right":{"title":"右","items":["2023年，Prompt
+  Engineer是AI行业最炙手可热的岗位，年薪百万不算新闻","到2026年，招聘描述里的热词已经换成Agent、Agent Runtime、Agent
+  OS和Loop","变的不是时尚，是工作对象：从一句话，变成一个系统"]}}
+
+
+  The plan without a second pass: fade on "scene-02" at 0.10s for 0.50s (easeOut); highlight on
+  "scene-02" at 5.79s for 0.60s (easeInOut).
+expects:
+  kind: choice
+  value: refine
+baseline: keep
+policy:
+  rule: motion-specificity
+  note: The shipped plan animates a NAMED element of the scene — the baseline plan cannot know those
+    names, so the scene needed a second pass.
+provenance:
+  source: "projects/从-prompt-engineering-到-agent-engineering/storyboard/storyboard.yaml — scene
+    scene-02 (Comparison, 11.59s). The shipped motion plan targets: __left__, __right__,
+    left-item-0, left-item-1, left-item-2, right-item-0, right-item-1, right-item-2."

@@ -10,7 +10,10 @@ import {
   parseDecisionCase,
   verdictToLabel,
 } from "./decision-evals.js";
-import { DECISION_QUESTIONS, listDecisionSurfaces } from "./decision-questions.js";
+import {
+  DECISION_QUESTIONS,
+  listDecisionSurfaces,
+} from "./decision-questions.js";
 import { listPromptFiles, loadedPromptNames } from "./index.js";
 
 describe("decision questions", () => {
@@ -38,7 +41,9 @@ describe("decision corpus", () => {
     const listed = listDecisionCases().map((ref) => ref.file);
     for (const surface of listDecisionSurfacesWithCases()) {
       for (const id of listDecisionCaseIds(decisionsDir(), surface)) {
-        expect(listed.some((f) => f.endsWith(`${surface}/${id}.yaml`))).toBe(true);
+        expect(listed.some((f) => f.endsWith(`${surface}/${id}.yaml`))).toBe(
+          true,
+        );
       }
     }
   });
@@ -134,9 +139,9 @@ describe("decision corpus", () => {
     expect(verdictToLabel({ passing: false, critical: true })).toBe("reject");
     // The loop ships drafts that carry MAJOR_REVISION_NEEDED — the flag
     // is advisory, so it must not turn a passing draft into a revise.
-    expect(
-      verdictToLabel({ passing: true, major_revision_needed: true }),
-    ).toBe("pass");
+    expect(verdictToLabel({ passing: true, major_revision_needed: true })).toBe(
+      "pass",
+    );
   });
 
   it("rejects a draft-bar label that disagrees with its own verdict", () => {
@@ -187,9 +192,24 @@ describe("decision prices", () => {
     expect(table.prices["openai"]).toBeDefined();
   });
 
-  it("leaves an unknown price null rather than zero", () => {
+  it("reads a verified price for every provider the bench measures", () => {
+    // P0 (v0.12): the prices were filled from each provider's own
+    // pricing page, so the bench's cost column is real. A price that
+    // cannot be verified stays `null` — the table below says which.
     const table = loadDecisionPrices();
-    const price = table.prices["openai"]?.["gpt-6-luna"];
+    for (const [provider, model] of [
+      ["openai", "gpt-6-luna"],
+      ["minimax", "MiniMax-M3.1-Flash"],
+    ] as const) {
+      const price = table.prices[provider]?.[model];
+      expect(price?.input_per_1k ?? null).toBeGreaterThan(0);
+      expect(price?.output_per_1k ?? null).toBeGreaterThan(0);
+    }
+  });
+
+  it("leaves an unknown model null rather than zero", () => {
+    const table = loadDecisionPrices();
+    const price = table.prices["openai"]?.["no-such-model"];
     expect(price?.input_per_1k ?? null).toBeNull();
   });
 });

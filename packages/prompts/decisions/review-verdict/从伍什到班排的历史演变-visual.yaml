@@ -1,0 +1,43 @@
+id: 从伍什到班排的历史演变-visual
+surface: review-verdict
+state: >-
+  The visual section of a review.
+
+
+  Fields:
+
+  - readability: warn — No rendered frames and no typography specifications were supplied. The plan
+  is favorable — every illustration scene specifies “画面下三分之一留白，不出现任何文字” (lower third reserved for
+  captions) and on-screen tit…
+
+  - density: ok — Each of the 27 scenes pairs one illustration, one title of 5–11 characters, and
+  roughly 32–57 characters of narration across 9–15s; no stacked text or multi-element layouts; the
+  lower third is kept c…
+
+  - pacing: ok — Scene durations (9–15s each) sum to exactly 360s, matching duration_target_sec:
+  360; narration density is roughly 3.2–4.1 characters/second for zh-CN, including scene-01's 1.2s
+  lead-in (38 characters…
+
+  - visual_hierarchy: ok — Every scene follows one priority scheme per the storyboard text: single
+  focal subject mid-frame, exactly one amber accent (“琥珀色只标…”)， a single light source, plain
+  deep-blue background, and a reserved…
+
+  - caption_length: ok — Scene titles are 5–11 characters. Subtitles derive from narration
+  (captions.source: narration) at 32–57 characters per scene over 9–15s, in short sentence-level
+  segments — comfortable reading time fo…
+
+
+  No findings.
+expects:
+  kind: choice
+  value: warn
+baseline: warn
+source_verdict:
+  section_verdict: warn
+policy:
+  rule: section-verdict
+  note: The label is DERIVED from the review artifact's own `overall` verdict by the section-verdict
+    rule. The loader re-checks that derivation when the case is loaded.
+provenance:
+  source: projects/从伍什到班排的历史演变/review/visual-review.yaml — the review agent's own verdict for the
+    visual section.

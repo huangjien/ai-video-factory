@@ -1,0 +1,39 @@
+id: 把软件团队也看做系统-technical
+surface: review-verdict
+state: >-
+  The technical section of a review.
+
+
+  Fields:
+
+  - resolution: ok — Storyboard declares project.width=1920 and project.height=1080, internally
+  valid and consistent across the project header; no external output target was supplied to compare
+  against.
+
+  - fps: ok — Storyboard declares project.fps=30; all scene durations are whole seconds and every
+  animation start+duration falls within its scene, so timing is consistent with 30fps. No target
+  frame-rate spec was …
+
+  - audio: warn — Frontmatter declares voice 'Chinese (Mandarin)_Male_Announcer' and tts_provider:
+  minimax, but no audio files, durations, waveforms, or synchronization metadata were supplied;
+  audio presence, clipping…
+
+  - subtitle: warn — No subtitle file (SRT/ASS or equivalent) was supplied, so format, timing, and
+  text consistency cannot be verified. Additionally, the caption source is contradictory between
+  artifacts (storyboard 'sou…
+
+
+  No findings.
+expects:
+  kind: choice
+  value: warn
+baseline: warn
+source_verdict:
+  section_verdict: warn
+policy:
+  rule: section-verdict
+  note: The label is DERIVED from the review artifact's own `overall` verdict by the section-verdict
+    rule. The loader re-checks that derivation when the case is loaded.
+provenance:
+  source: projects/把软件团队也看做系统/review/technical-review.yaml — the review agent's own verdict for the
+    technical section.

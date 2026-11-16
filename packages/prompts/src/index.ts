@@ -29,6 +29,7 @@ export {
 } from "./prompt-loader.js";
 export {
   DECISION_QUESTIONS,
+  isRetiredSurface,
   listDecisionSurfaces,
   loadDecisionQuestion,
   type DecisionQuestionSpec,

@@ -2,7 +2,9 @@ import type { Command } from "commander";
 import { existsSync } from "node:fs";
 import path from "node:path";
 import {
+  captionOverlapScenes,
   decisionLogPath,
+  runCaptionOverlapShadow,
   runQaDecisionAdvisory,
   writeQaAdvisoryReport,
   writeQaArtifacts,
@@ -71,6 +73,18 @@ export async function runQa(opts: QaOptions): Promise<number> {
     );
   }
 
+  // v0.12 (P2): the caption-overlap shadow pass. One consult per
+  // captioned frame — the deterministic caption check knows where the
+  // caption sits and cannot see what else is drawn in the same band.
+  // The answer lands in the decision log; the report is NOT rewritten
+  // and nothing gates.
+  const captionShadow = await runCaptionOverlapShadow({
+    project: path.basename(root),
+    scenes: captionOverlapScenes(renderPlan),
+    mode: decisionMode,
+    logPath: decisionLogPath(root),
+  });
+
   const errors = report.findings.filter(
     (f: { level: string }) => f.level === "error",
   );
@@ -108,6 +122,12 @@ export async function runQa(opts: QaOptions): Promise<number> {
   if (advisory.consulted > 0) {
     console.log(
       `  decision advisory: ${advisory.consulted} finding(s) consulted, ${advisory.agreed} agreed with the level rule`,
+    );
+    console.log("");
+  }
+  if (captionShadow.consulted > 0) {
+    console.log(
+      `  decision shadow (captions): ${captionShadow.consulted} frame(s) consulted, ${captionShadow.agreed} agreed with the caption check`,
     );
     console.log("");
   }

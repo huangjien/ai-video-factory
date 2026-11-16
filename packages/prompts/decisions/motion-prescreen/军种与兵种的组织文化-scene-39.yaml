@@ -1,0 +1,23 @@
+id: 军种与兵种的组织文化-scene-39
+surface: motion-prescreen
+state: >-
+  Scene scene-39 — 6.05s, component BigIdea.
+
+  Narration: 与其问哪个因素最重要，不如问：在这个案例里，哪个条件占上风。
+
+  Scene elements: {"text":"与其问哪个因素最重要，不如问：在这个案例里，哪个条件占上风","kicker":"核心观点"}
+
+
+  The plan without a second pass: fade on "scene-39" at 0.10s for 0.50s (easeOut); highlight on
+  "scene-39" at 3.02s for 0.60s (easeInOut).
+expects:
+  kind: choice
+  value: refine
+baseline: keep
+policy:
+  rule: motion-specificity
+  note: The shipped plan animates a NAMED element of the scene — the baseline plan cannot know those
+    names, so the scene needed a second pass.
+provenance:
+  source: "projects/军种与兵种的组织文化/storyboard/storyboard.yaml — scene scene-39 (BigIdea, 6.05s). The
+    shipped motion plan targets: __reveal__."

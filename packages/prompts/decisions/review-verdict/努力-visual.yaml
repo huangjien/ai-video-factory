@@ -1,0 +1,42 @@
+id: 努力-visual
+surface: review-verdict
+state: >-
+  The visual section of a review.
+
+
+  Fields:
+
+  - readability: warn — No rendered frames or images were supplied, so actual legibility cannot be
+  confirmed. At spec level, on-screen strings are short single-line captions (e.g., '反馈·积累·产出',
+  '机会来了，接得住吗', all ≤12 character…
+
+  - density: ok — Each scene pairs one illustration with one short overlay caption; narration runs
+  roughly 39–55 Chinese characters over 10–14s (≈3.3–4.2 chars/s, ≈200–250 chars/min), a comfortable
+  information load. N…
+
+  - pacing: ok — Scene durations of 10–14s sum to exactly 240s, matching `duration_target_sec: 240`;
+  narration length is proportionate to each duration (the scene-09 quote receives the longest slot
+  at 14s); the hook …
+
+  - visual_hierarchy: ok — At plan level every scene names one dominant focal subject lit against a
+  subdued ground (e.g., scene-03 黄铜筹码 under 暖白聚光) plus a single short caption; scene-01 defines a
+  two-level title/subtext hierar…
+
+  - caption_length: ok — Captions derive from narration (`captions.source: narration` on all 20
+  scenes). Per-scene narration of ≈39–55 characters over 10–14s yields ≈3.3–4.2 chars/s, within
+  comfortable zh-CN reading speed; o…
+
+
+  No findings.
+expects:
+  kind: choice
+  value: warn
+baseline: warn
+source_verdict:
+  section_verdict: warn
+policy:
+  rule: section-verdict
+  note: The label is DERIVED from the review artifact's own `overall` verdict by the section-verdict
+    rule. The loader re-checks that derivation when the case is loaded.
+provenance:
+  source: projects/努力/review/visual-review.yaml — the review agent's own verdict for the visual section.

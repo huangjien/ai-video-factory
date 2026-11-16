@@ -1,0 +1,28 @@
+id: conflicts-resolution-en-scene-11
+surface: motion-prescreen
+state: >-
+  Scene scene-11 — 14.58s, component FlowChart.
+
+  Narration: Notice what happened. The test converted no one's taste. It exposed a misunderstanding
+  wearing a values costume. Once the facts landed, talking was easy again.
+
+  Scene elements: {"text":"Untested fact, Opinion, Opinion, Misunderstanding found","visual":"A
+  small fact node glowing inside a tangled web of dim opinion lines, the whole network pulling
+  straight around it, a flow diagram of one fact node and many opinion edges","nodes":["Shipped both
+  designs behind a flag","Measured real users in production","The numbers changed everyone's
+  judgment"],"direction":"left-to-right"}
+
+
+  The plan without a second pass: draw on "scene-11" at 0.10s for 0.80s (easeOut); highlight on
+  "scene-11" at 7.29s for 0.60s (easeInOut).
+expects:
+  kind: choice
+  value: refine
+baseline: keep
+policy:
+  rule: motion-specificity
+  note: The shipped plan animates a NAMED element of the scene — the baseline plan cannot know those
+    names, so the scene needed a second pass.
+provenance:
+  source: "projects/conflicts-resolution-en/storyboard/storyboard.yaml — scene scene-11 (FlowChart,
+    14.58s). The shipped motion plan targets: node-0, node-1, node-2, __edges__."

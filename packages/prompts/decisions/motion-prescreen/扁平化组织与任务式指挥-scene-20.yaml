@@ -1,0 +1,19 @@
+id: 扁平化组织与任务式指挥-scene-20
+surface: motion-prescreen
+state: |-
+  Scene scene-20 — 19.35s, component ImageBackground.
+  Narration: 换成任务式思路：Manager 只定 SLA、优先级和风险边界。P1 故障五分钟内响应，值班工程师直接执行预批准的回滚；只有删数据、改安全策略这类高危操作，才需要额外授权。
+  Scene elements: {"src":"/Users/huangjien/workspace/ai-video-factory/projects/扁平化组织与任务式指挥/assets/images/scene_20.jpg","caption":"预批准回滚，五分钟响应","textOverlaySrc":"/Users/huangjien/workspace/ai-video-factory/projects/扁平化组织与任务式指挥/assets/images/text/scene_20.png"}
+
+  The plan without a second pass: draw on "scene-20" at 0.10s for 0.80s (easeOut); highlight on "scene-20" at 9.68s for 0.60s (easeInOut).
+expects:
+  kind: choice
+  value: keep
+baseline: keep
+policy:
+  rule: motion-specificity
+  note: The shipped plan animates the scene as a whole — the same shape the deterministic baseline
+    produces, so a second pass was not needed.
+provenance:
+  source: "projects/扁平化组织与任务式指挥/storyboard/storyboard.yaml — scene scene-20 (ImageBackground, 19.35s).
+    The shipped motion plan targets: scene-20, scene-20."

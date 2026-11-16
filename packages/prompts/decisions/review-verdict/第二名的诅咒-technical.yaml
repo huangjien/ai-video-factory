@@ -1,0 +1,38 @@
+id: 第二名的诅咒-technical
+surface: review-verdict
+state: >-
+  The technical section of a review.
+
+
+  Fields:
+
+  - resolution: ok — VDSL declares width 1920 and height 1080 (16:9), which is internally valid; no
+  external output specification was supplied that contradicts it.
+
+  - fps: warn — fps: 30 is declared, but 8 of 16 scene durations are not integer frame multiples at
+  30fps (e.g., scene-03 9.45s = 283.5 frames, scene-08 8.39s = 251.7 frames, scene-16 8.81s = 264.3
+  frames), leaving …
+
+  - audio: warn — Frontmatter declares tts_provider: minimax and a Mandarin male announcer voice,
+  but no audio tracks, per-scene audio durations, or media metadata were supplied; audio presence,
+  duration match to scen…
+
+  - subtitle: warn — All 16 scenes configure captions.source: narration, but no subtitle file (e.g.,
+  SRT/ASS) or rendered frames were supplied, so subtitle format, timing, synchronization, and text
+  consistency cannot be …
+
+
+  No findings.
+expects:
+  kind: choice
+  value: warn
+baseline: warn
+source_verdict:
+  section_verdict: warn
+policy:
+  rule: section-verdict
+  note: The label is DERIVED from the review artifact's own `overall` verdict by the section-verdict
+    rule. The loader re-checks that derivation when the case is loaded.
+provenance:
+  source: projects/第二名的诅咒/review/technical-review.yaml — the review agent's own verdict for the
+    technical section.

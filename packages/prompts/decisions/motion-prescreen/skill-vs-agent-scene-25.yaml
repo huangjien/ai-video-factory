@@ -1,0 +1,19 @@
+id: skill-vs-agent-scene-25
+surface: motion-prescreen
+state: |-
+  Scene scene-25 — 5.90s, component PyramidDiagram.
+  Narration: That's why the answer is both. Agents orchestrate the workflow.
+  Scene elements: {"levels":["Agents orchestra","skills package"]}
+
+  The plan without a second pass: fade on "scene-25" at 0.10s for 0.50s (easeOut).
+expects:
+  kind: choice
+  value: refine
+baseline: keep
+policy:
+  rule: motion-specificity
+  note: The shipped plan animates a NAMED element of the scene — the baseline plan cannot know those
+    names, so the scene needed a second pass.
+provenance:
+  source: "projects/skill-vs-agent/storyboard/storyboard.yaml — scene scene-25 (PyramidDiagram, 5.9s).
+    The shipped motion plan targets: level-0, level-1."

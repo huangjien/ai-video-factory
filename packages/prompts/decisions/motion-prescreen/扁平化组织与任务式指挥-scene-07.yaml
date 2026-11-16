@@ -1,0 +1,19 @@
+id: 扁平化组织与任务式指挥-scene-07
+surface: motion-prescreen
+state: |-
+  Scene scene-07 — 14.48s, component ImageBackground.
+  Narration: 差别在意外发生时显现。桥梁被炸毁，详细命令模式下，连队只能上报、待命；任务式指挥下，A连可以自主改道，只要高地仍然被拿下。
+  Scene elements: {"src":"/Users/huangjien/workspace/ai-video-factory/projects/扁平化组织与任务式指挥/assets/images/scene_7.jpg","caption":"桥断了，任务不变","textOverlaySrc":"/Users/huangjien/workspace/ai-video-factory/projects/扁平化组织与任务式指挥/assets/images/text/scene_7.png"}
+
+  The plan without a second pass: draw on "scene-07" at 0.10s for 0.80s (easeOut); highlight on "scene-07" at 7.24s for 0.60s (easeInOut).
+expects:
+  kind: choice
+  value: keep
+baseline: keep
+policy:
+  rule: motion-specificity
+  note: The shipped plan animates the scene as a whole — the same shape the deterministic baseline
+    produces, so a second pass was not needed.
+provenance:
+  source: "projects/扁平化组织与任务式指挥/storyboard/storyboard.yaml — scene scene-07 (ImageBackground, 14.48s).
+    The shipped motion plan targets: scene-07, scene-07."

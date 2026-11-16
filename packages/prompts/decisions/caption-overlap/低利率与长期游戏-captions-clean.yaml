@@ -1,0 +1,19 @@
+id: 低利率与长期游戏-captions-clean
+surface: caption-overlap
+state: 'Frame 1 of 16. The bottom band of the frame carries the timed caption. The caption runs 2
+  cue(s) from 00:00 to 00:16: "2025年5月，几家国有大行把一年期定存利率降到百分 之一以下。存一万块，一年利息不到一百块。" No other text is
+  drawn in that region.'
+expects:
+  kind: noul
+  value: "false"
+  probability:
+    - 0
+    - 0.2
+baseline: "false"
+policy:
+  rule: caption-band
+  note: The shipped render's caption check passed and the scene's own text sits ABOVE the caption
+    band, so the caption sits alone in the bottom band.
+provenance:
+  source: projects/低利率与长期游戏/qa/render-report.json (captions.ok, 31 cues) +
+    projects/低利率与长期游戏/captions/zh-CN.srt — the caption sits alone in the bottom band.

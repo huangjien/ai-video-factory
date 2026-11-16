@@ -1,0 +1,29 @@
+id: skills-first-scene-09
+surface: motion-prescreen
+state: >-
+  Scene scene-09 — 9.02s, component Comparison.
+
+  Narration: The answer is not another wired-up interface. Skills-first writes capability as
+  documentation plus scripts instead.
+
+  Scene elements: {"text":"Capability that loads on demand","visual":"compare: interfaces vs.
+  skills","left":{"title":"Capability that l…","items":["Capability that loads on demand","The
+  answer is not another wired-up interface","Skills-first writes capability as documentation plus
+  scripts"]},"right":{"title":". The previous ep…","items":["The answer is not another wired-up
+  interface"]}}
+
+
+  The plan without a second pass: fade on "scene-09" at 0.10s for 0.50s (easeOut); highlight on
+  "scene-09" at 4.51s for 0.60s (easeInOut).
+expects:
+  kind: choice
+  value: refine
+baseline: keep
+policy:
+  rule: motion-specificity
+  note: The shipped plan animates a NAMED element of the scene — the baseline plan cannot know those
+    names, so the scene needed a second pass.
+provenance:
+  source: "projects/skills-first/storyboard/storyboard.yaml — scene scene-09 (Comparison, 9.02s). The
+    shipped motion plan targets: __left__, __right__, left-item-0, left-item-1, left-item-2,
+    right-item-0."

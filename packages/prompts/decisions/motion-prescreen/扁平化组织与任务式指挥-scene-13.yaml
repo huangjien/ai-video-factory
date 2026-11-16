@@ -1,0 +1,19 @@
+id: 扁平化组织与任务式指挥-scene-13
+surface: motion-prescreen
+state: |-
+  Scene scene-13 — 15.27s, component ImageBackground.
+  Narration: 三个案例，三种扁平化：德军下放决策权，解决等待命令；美军统一目标、分散执行，应对通信中断；陆战队靠小组模块化，压缩管理跨度。
+  Scene elements: {"src":"/Users/huangjien/workspace/ai-video-factory/projects/扁平化组织与任务式指挥/assets/images/scene_13.jpg","caption":"三种扁平化路径","textOverlaySrc":"/Users/huangjien/workspace/ai-video-factory/projects/扁平化组织与任务式指挥/assets/images/text/scene_13.png"}
+
+  The plan without a second pass: draw on "scene-13" at 0.10s for 0.80s (easeOut); highlight on "scene-13" at 7.63s for 0.60s (easeInOut).
+expects:
+  kind: choice
+  value: keep
+baseline: keep
+policy:
+  rule: motion-specificity
+  note: The shipped plan animates the scene as a whole — the same shape the deterministic baseline
+    produces, so a second pass was not needed.
+provenance:
+  source: "projects/扁平化组织与任务式指挥/storyboard/storyboard.yaml — scene scene-13 (ImageBackground, 15.27s).
+    The shipped motion plan targets: scene-13, scene-13."

@@ -1,0 +1,19 @@
+id: 软件工程师的认知之旅-从争论到判断-captions-clean
+surface: caption-overlap
+state: 'Frame 1 of 23. The bottom band of the frame carries the timed caption. The caption runs 1
+  cue(s) from 00:01 to 00:11: "「PHP 是不是最好的语言？」这场争论，几乎每个团队 都发生过，也几乎从来没有结果。" No other text is drawn in
+  that region.'
+expects:
+  kind: noul
+  value: "false"
+  probability:
+    - 0
+    - 0.2
+baseline: "false"
+policy:
+  rule: caption-band
+  note: The shipped render's caption check passed and the scene's own text sits ABOVE the caption
+    band, so the caption sits alone in the bottom band.
+provenance:
+  source: projects/软件工程师的认知之旅-从争论到判断/qa/render-report.json (captions.ok, 44 cues) +
+    projects/软件工程师的认知之旅-从争论到判断/captions/zh-CN.srt — the caption sits alone in the bottom band.

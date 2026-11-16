@@ -28,3 +28,12 @@ export {
   type MotionSpec,
   type SceneMotionInput,
 } from "./plan.js";
+export {
+  buildMotionPrescreenState,
+  consultMotionPrescreen,
+  describeMotionPlan,
+  motionPrescreenQuestion,
+  runMotionPrescreenShadow,
+  type MotionDecisionRow,
+  type MotionPrescreenScene,
+} from "./decision.js";

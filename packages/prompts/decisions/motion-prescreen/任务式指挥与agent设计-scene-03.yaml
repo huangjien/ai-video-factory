@@ -1,0 +1,19 @@
+id: 任务式指挥与agent设计-scene-03
+surface: motion-prescreen
+state: |-
+  Scene scene-03 — 21.40s, component ImageBackground.
+  Narration: 道路坍塌时，命令式指挥的连队只能停下待命，任务式指挥的连队可以绕行止损再报告。本文依据美国陆军官方《ADP 6-0》；Auftragstaktik 只是本文对传统原则的概括。核心是控制意图、边界和结果。
+  Scene elements: {"src":"/Users/huangjien/workspace/ai-video-factory/projects/任务式指挥与Agent设计/assets/images/scene_3.jpg","caption":"意图与结果，而非步骤","textOverlaySrc":"/Users/huangjien/workspace/ai-video-factory/projects/任务式指挥与agent设计/assets/images/text/scene_3.png"}
+
+  The plan without a second pass: draw on "scene-03" at 0.10s for 0.80s (easeOut); highlight on "scene-03" at 10.70s for 0.60s (easeInOut).
+expects:
+  kind: choice
+  value: keep
+baseline: keep
+policy:
+  rule: motion-specificity
+  note: The shipped plan animates the scene as a whole — the same shape the deterministic baseline
+    produces, so a second pass was not needed.
+provenance:
+  source: "projects/任务式指挥与agent设计/storyboard/storyboard.yaml — scene scene-03 (ImageBackground,
+    21.4s). The shipped motion plan targets: scene-03, scene-03."

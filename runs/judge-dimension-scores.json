@@ -1,0 +1,454 @@
+{
+  "generatedAt": "2026-11-16T18:38:24.638Z",
+  "model": "gpt-6-luna",
+  "rows": [
+    {
+      "project": "3m与pfos的秘密",
+      "dimension": "A",
+      "name": "Content Quality",
+      "judged": 4.333333333333333,
+      "decision": 4.11,
+      "confidence": 0.91
+    },
+    {
+      "project": "3m与pfos的秘密",
+      "dimension": "B",
+      "name": "Logic & Coherence",
+      "judged": 3.3333333333333335,
+      "decision": 4,
+      "confidence": 0.96
+    },
+    {
+      "project": "3m与pfos的秘密",
+      "dimension": "C",
+      "name": "Structure & Organization",
+      "judged": 5,
+      "decision": 4.66,
+      "confidence": 0.77
+    },
+    {
+      "project": "3m与pfos的秘密",
+      "dimension": "D",
+      "name": "Language & Expression",
+      "judged": 4.666666666666667,
+      "decision": 4.01,
+      "confidence": 0.93
+    },
+    {
+      "project": "3m与pfos的秘密",
+      "dimension": "E",
+      "name": "Readability & Reader Experience",
+      "judged": 4.666666666666667,
+      "decision": 3.95,
+      "confidence": 0.89
+    },
+    {
+      "project": "3m与pfos的秘密",
+      "dimension": "F",
+      "name": "Originality & Information Delta",
+      "judged": 4.333333333333333,
+      "decision": 3.93,
+      "confidence": 0.77
+    },
+    {
+      "project": "3m与pfos的秘密",
+      "dimension": "G",
+      "name": "Facts & Internal Consistency",
+      "judged": 3.3333333333333335,
+      "decision": 3.83,
+      "confidence": 0.87
+    },
+    {
+      "project": "3m与pfos的秘密",
+      "dimension": "H",
+      "name": "Instruction Compliance",
+      "judged": 5,
+      "decision": 4.48,
+      "confidence": 0.65
+    },
+    {
+      "project": "ai浪潮与结构性失业",
+      "dimension": "A",
+      "name": "Content Quality",
+      "judged": 4.833333333333333,
+      "decision": 4.41,
+      "confidence": 0.71
+    },
+    {
+      "project": "ai浪潮与结构性失业",
+      "dimension": "B",
+      "name": "Logic & Coherence",
+      "judged": 4.333333333333333,
+      "decision": 4.08,
+      "confidence": 0.92
+    },
+    {
+      "project": "ai浪潮与结构性失业",
+      "dimension": "C",
+      "name": "Structure & Organization",
+      "judged": 4.833333333333333,
+      "decision": 4.69,
+      "confidence": 0.79
+    },
+    {
+      "project": "ai浪潮与结构性失业",
+      "dimension": "D",
+      "name": "Language & Expression",
+      "judged": 4.666666666666667,
+      "decision": 4.24,
+      "confidence": 0.8
+    },
+    {
+      "project": "ai浪潮与结构性失业",
+      "dimension": "E",
+      "name": "Readability & Reader Experience",
+      "judged": 4.666666666666667,
+      "decision": 3.74,
+      "confidence": 0.77
+    },
+    {
+      "project": "ai浪潮与结构性失业",
+      "dimension": "F",
+      "name": "Originality & Information Delta",
+      "judged": 4.666666666666667,
+      "decision": 3.99,
+      "confidence": 0.82
+    },
+    {
+      "project": "ai浪潮与结构性失业",
+      "dimension": "G",
+      "name": "Facts & Internal Consistency",
+      "judged": 4.333333333333333,
+      "decision": 3.98,
+      "confidence": 0.95
+    },
+    {
+      "project": "ai浪潮与结构性失业",
+      "dimension": "H",
+      "name": "Instruction Compliance",
+      "judged": 5,
+      "decision": 3.75,
+      "confidence": 0.46
+    },
+    {
+      "project": "the-planet-without-metal",
+      "dimension": "A",
+      "name": "Content Quality",
+      "judged": 4.666666666666667,
+      "decision": 4.85,
+      "confidence": 0.9
+    },
+    {
+      "project": "the-planet-without-metal",
+      "dimension": "B",
+      "name": "Logic & Coherence",
+      "judged": 3.3333333333333335,
+      "decision": 3.88,
+      "confidence": 0.84
+    },
+    {
+      "project": "the-planet-without-metal",
+      "dimension": "C",
+      "name": "Structure & Organization",
+      "judged": 5,
+      "decision": 4.87,
+      "confidence": 0.91
+    },
+    {
+      "project": "the-planet-without-metal",
+      "dimension": "D",
+      "name": "Language & Expression",
+      "judged": 4.333333333333333,
+      "decision": 4.67,
+      "confidence": 0.78
+    },
+    {
+      "project": "the-planet-without-metal",
+      "dimension": "E",
+      "name": "Readability & Reader Experience",
+      "judged": 4.666666666666667,
+      "decision": 4.25,
+      "confidence": 0.81
+    },
+    {
+      "project": "the-planet-without-metal",
+      "dimension": "F",
+      "name": "Originality & Information Delta",
+      "judged": 4.666666666666667,
+      "decision": 4.41,
+      "confidence": 0.71
+    },
+    {
+      "project": "the-planet-without-metal",
+      "dimension": "G",
+      "name": "Facts & Internal Consistency",
+      "judged": 3.3333333333333335,
+      "decision": 3.32,
+      "confidence": 0.64
+    },
+    {
+      "project": "the-planet-without-metal",
+      "dimension": "H",
+      "name": "Instruction Compliance",
+      "judged": 4.333333333333333,
+      "decision": 4.12,
+      "confidence": 0.41
+    },
+    {
+      "project": "从雇佣军到现代军队-奖励机制的演变-以及-ai-agent-组织设计的启示",
+      "dimension": "A",
+      "name": "Content Quality",
+      "judged": 4.5,
+      "decision": 4.47,
+      "confidence": 0.65
+    },
+    {
+      "project": "从雇佣军到现代军队-奖励机制的演变-以及-ai-agent-组织设计的启示",
+      "dimension": "B",
+      "name": "Logic & Coherence",
+      "judged": 4.166666666666667,
+      "decision": 4.13,
+      "confidence": 0.85
+    },
+    {
+      "project": "从雇佣军到现代军队-奖励机制的演变-以及-ai-agent-组织设计的启示",
+      "dimension": "C",
+      "name": "Structure & Organization",
+      "judged": 4.666666666666667,
+      "decision": 4.77,
+      "confidence": 0.85
+    },
+    {
+      "project": "从雇佣军到现代军队-奖励机制的演变-以及-ai-agent-组织设计的启示",
+      "dimension": "D",
+      "name": "Language & Expression",
+      "judged": 4.333333333333333,
+      "decision": 4.26,
+      "confidence": 0.81
+    },
+    {
+      "project": "从雇佣军到现代军队-奖励机制的演变-以及-ai-agent-组织设计的启示",
+      "dimension": "E",
+      "name": "Readability & Reader Experience",
+      "judged": 4.5,
+      "decision": 3.99,
+      "confidence": 0.97
+    },
+    {
+      "project": "从雇佣军到现代军队-奖励机制的演变-以及-ai-agent-组织设计的启示",
+      "dimension": "F",
+      "name": "Originality & Information Delta",
+      "judged": 4.166666666666667,
+      "decision": 4.17,
+      "confidence": 0.79
+    },
+    {
+      "project": "从雇佣军到现代军队-奖励机制的演变-以及-ai-agent-组织设计的启示",
+      "dimension": "G",
+      "name": "Facts & Internal Consistency",
+      "judged": 4.166666666666667,
+      "decision": 4.25,
+      "confidence": 0.75
+    },
+    {
+      "project": "从雇佣军到现代军队-奖励机制的演变-以及-ai-agent-组织设计的启示",
+      "dimension": "H",
+      "name": "Instruction Compliance",
+      "judged": 4.666666666666667,
+      "decision": 4.53,
+      "confidence": 0.69
+    },
+    {
+      "project": "命数还是余量",
+      "dimension": "A",
+      "name": "Content Quality",
+      "judged": 4.333333333333333,
+      "decision": 4.19,
+      "confidence": 0.86
+    },
+    {
+      "project": "命数还是余量",
+      "dimension": "B",
+      "name": "Logic & Coherence",
+      "judged": 3.3333333333333335,
+      "decision": 3.29,
+      "confidence": 0.59
+    },
+    {
+      "project": "命数还是余量",
+      "dimension": "C",
+      "name": "Structure & Organization",
+      "judged": 5,
+      "decision": 4.78,
+      "confidence": 0.85
+    },
+    {
+      "project": "命数还是余量",
+      "dimension": "D",
+      "name": "Language & Expression",
+      "judged": 5,
+      "decision": 3.97,
+      "confidence": 0.85
+    },
+    {
+      "project": "命数还是余量",
+      "dimension": "E",
+      "name": "Readability & Reader Experience",
+      "judged": 4.333333333333333,
+      "decision": 3.82,
+      "confidence": 0.64
+    },
+    {
+      "project": "命数还是余量",
+      "dimension": "F",
+      "name": "Originality & Information Delta",
+      "judged": 5,
+      "decision": 4.15,
+      "confidence": 0.74
+    },
+    {
+      "project": "命数还是余量",
+      "dimension": "G",
+      "name": "Facts & Internal Consistency",
+      "judged": 4,
+      "decision": 3.31,
+      "confidence": 0.51
+    },
+    {
+      "project": "命数还是余量",
+      "dimension": "H",
+      "name": "Instruction Compliance",
+      "judged": 5,
+      "decision": 4.58,
+      "confidence": 0.72
+    },
+    {
+      "project": "把软件团队也看做系统",
+      "dimension": "A",
+      "name": "Content Quality",
+      "judged": 4.333333333333333,
+      "decision": 4.2,
+      "confidence": 0.83
+    },
+    {
+      "project": "把软件团队也看做系统",
+      "dimension": "B",
+      "name": "Logic & Coherence",
+      "judged": 2.6666666666666665,
+      "decision": 3.72,
+      "confidence": 0.79
+    },
+    {
+      "project": "把软件团队也看做系统",
+      "dimension": "C",
+      "name": "Structure & Organization",
+      "judged": 4.666666666666667,
+      "decision": 4.51,
+      "confidence": 0.67
+    },
+    {
+      "project": "把软件团队也看做系统",
+      "dimension": "D",
+      "name": "Language & Expression",
+      "judged": 4.333333333333333,
+      "decision": 4.12,
+      "confidence": 0.87
+    },
+    {
+      "project": "把软件团队也看做系统",
+      "dimension": "E",
+      "name": "Readability & Reader Experience",
+      "judged": 3.6666666666666665,
+      "decision": 3.56,
+      "confidence": 0.69
+    },
+    {
+      "project": "把软件团队也看做系统",
+      "dimension": "F",
+      "name": "Originality & Information Delta",
+      "judged": 4.333333333333333,
+      "decision": 4.21,
+      "confidence": 0.74
+    },
+    {
+      "project": "把软件团队也看做系统",
+      "dimension": "G",
+      "name": "Facts & Internal Consistency",
+      "judged": 3.3333333333333335,
+      "decision": 3.47,
+      "confidence": 0.63
+    },
+    {
+      "project": "把软件团队也看做系统",
+      "dimension": "H",
+      "name": "Instruction Compliance",
+      "judged": 5,
+      "decision": 4.22,
+      "confidence": 0.48
+    },
+    {
+      "project": "第二名的诅咒",
+      "dimension": "A",
+      "name": "Content Quality",
+      "judged": 4,
+      "decision": 4.3,
+      "confidence": 0.73
+    },
+    {
+      "project": "第二名的诅咒",
+      "dimension": "B",
+      "name": "Logic & Coherence",
+      "judged": 4,
+      "decision": 4.04,
+      "confidence": 0.93
+    },
+    {
+      "project": "第二名的诅咒",
+      "dimension": "C",
+      "name": "Structure & Organization",
+      "judged": 4.333333333333333,
+      "decision": 4.91,
+      "confidence": 0.94
+    },
+    {
+      "project": "第二名的诅咒",
+      "dimension": "D",
+      "name": "Language & Expression",
+      "judged": 3.6666666666666665,
+      "decision": 4.16,
+      "confidence": 0.73
+    },
+    {
+      "project": "第二名的诅咒",
+      "dimension": "E",
+      "name": "Readability & Reader Experience",
+      "judged": 4,
+      "decision": 4.04,
+      "confidence": 0.96
+    },
+    {
+      "project": "第二名的诅咒",
+      "dimension": "F",
+      "name": "Originality & Information Delta",
+      "judged": 4.333333333333333,
+      "decision": 3.96,
+      "confidence": 0.95
+    },
+    {
+      "project": "第二名的诅咒",
+      "dimension": "G",
+      "name": "Facts & Internal Consistency",
+      "judged": 4,
+      "decision": 3.82,
+      "confidence": 0.81
+    },
+    {
+      "project": "第二名的诅咒",
+      "dimension": "H",
+      "name": "Instruction Compliance",
+      "judged": 4.666666666666667,
+      "decision": 4.32,
+      "confidence": 0.55
+    }
+  ]
+}

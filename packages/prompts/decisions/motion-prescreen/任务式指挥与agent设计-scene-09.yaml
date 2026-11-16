@@ -1,0 +1,19 @@
+id: 任务式指挥与agent设计-scene-09
+surface: motion-prescreen
+state: |-
+  Scene scene-09 — 16.98s, component ImageBackground.
+  Narration: 最小协议可以很短，但必须可执行。purpose、goal、constraints、authority、success criteria、resources 和 termination 都要出现，而且对应具体组件。
+  Scene elements: {"src":"/Users/huangjien/workspace/ai-video-factory/projects/任务式指挥与Agent设计/assets/images/scene_9.jpg","caption":"最小协议如何执行","textOverlaySrc":"/Users/huangjien/workspace/ai-video-factory/projects/任务式指挥与agent设计/assets/images/text/scene_9.png"}
+
+  The plan without a second pass: draw on "scene-09" at 0.10s for 0.80s (easeOut); highlight on "scene-09" at 8.49s for 0.60s (easeInOut).
+expects:
+  kind: choice
+  value: keep
+baseline: keep
+policy:
+  rule: motion-specificity
+  note: The shipped plan animates the scene as a whole — the same shape the deterministic baseline
+    produces, so a second pass was not needed.
+provenance:
+  source: "projects/任务式指挥与agent设计/storyboard/storyboard.yaml — scene scene-09 (ImageBackground,
+    16.98s). The shipped motion plan targets: scene-09, scene-09."

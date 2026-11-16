@@ -25,6 +25,7 @@
 import type { Command } from "commander";
 import {
   DECISION_QUESTIONS,
+  isRetiredSurface,
   listDecisionCases,
   loadDecisionPrices,
   loadDecisionQuestion,
@@ -87,6 +88,13 @@ export interface SurfaceReport {
   accuracy: number;
   brier: number | null;
   disputed: number;
+  /** True when the surface was measured and retired — reported, but it
+   *  does not gate the provider choice. */
+  retired: boolean;
+  /** The deterministic path's accuracy ON THIS SURFACE — over the cases
+   *  that record a baseline. Null when the surface has no deterministic
+   *  path (the draft-bar surface's baseline IS its label). */
+  baselineAccuracy: number | null;
 }
 
 export interface ProviderReport {
@@ -122,7 +130,15 @@ export interface ProviderReport {
   reasons: string[];
   /** Per-surface numbers. */
   surfaces: SurfaceReport[];
+  /** The cases in the run. */
   cases: CaseResult[];
+  /** How many of the cases belong to an ACTIVE surface — the ones the
+   *  gate is computed over. */
+  activeCases: number;
+  /** How many of the ACTIVE cases were answered correctly. */
+  activeCorrect: number;
+  /** How many belong to a retired surface (measured, kept, not wired). */
+  retiredCases: number;
 }
 
 export interface BenchReport {
@@ -212,7 +228,11 @@ function scalarOf(value: DecisionValue): string | number | boolean {
 
 /** Is the answer right for this case? */
 export function isCorrect(
-  expects: { kind: string; value: string | number | boolean; tolerance?: number | undefined },
+  expects: {
+    kind: string;
+    value: string | number | boolean;
+    tolerance?: number | undefined;
+  },
   got: string | number | boolean,
 ): boolean {
   if (expects.kind === "choice") return got === expects.value;
@@ -252,7 +272,8 @@ function percentile(values: number[], p: number): number | null {
  *  unknown — never 0. */
 export function costOf(
   usage: { input: number; output: number },
-  price: { input_per_1k: number | null; output_per_1k: number | null } | undefined,
+  price:
+    { input_per_1k: number | null; output_per_1k: number | null } | undefined,
 ): number | null {
   if (!price) return null;
   if (price.input_per_1k === null || price.output_per_1k === null) {
@@ -262,6 +283,35 @@ export function costOf(
     (usage.input / 1000) * price.input_per_1k +
     (usage.output / 1000) * price.output_per_1k
   );
+}
+
+/**
+ * The deterministic path's accuracy on ONE surface — over the cases of
+ * that surface that record a baseline.
+ *
+ * The comparison is per surface on purpose: the corpus mixes surfaces
+ * with very different deterministic paths, and a corpus-wide baseline
+ * number is not a thing any provider can beat. The gate asks the
+ * question that matters — "is this provider worse than doing nothing
+ * on this surface?" — surface by surface.
+ */
+function surfaceBaselineAccuracy(
+  surface: string,
+  cases: DecisionCaseRef[],
+  rows: CaseResult[],
+): number | null {
+  const ids = new Set(rows.map((r) => r.case));
+  const withBaseline = cases.filter(
+    (ref) => ids.has(ref.fixture.id) && ref.fixture.baseline !== undefined,
+  );
+  if (withBaseline.length === 0) return null;
+  const correct = withBaseline.filter((ref) =>
+    isCorrect(
+      ref.fixture.expects,
+      ref.fixture.baseline as string | number | boolean,
+    ),
+  ).length;
+  return correct / withBaseline.length;
 }
 
 /** Run the bench. */
@@ -358,24 +408,43 @@ export async function runDecisionBench(
             ? 0
             : answers.reduce((s, a) => s + a.latencyMs, 0) / answers.length,
         usage,
-        error: errors.length > 0 ? errors[0] ?? null : null,
+        error: errors.length > 0 ? (errors[0] ?? null) : null,
       });
     }
 
     const answered = results.filter((r) => r.got !== null).length;
     const correctCount = results.filter((r) => r.correct === true).length;
-    const accuracy = results.length === 0 ? 0 : correctCount / results.length;
+    // The gate is computed over the ACTIVE surfaces only. A surface
+    // that was measured and retired keeps its cases (the measurement is
+    // the deliverable) but must not drag the corpus-wide gate down: the
+    // gate answers "can this provider carry the surfaces the pipeline
+    // actually consults?", and a retired surface is not one of them.
+    const activeResults = results.filter((r) => !isRetiredSurface(r.surface));
+    const retiredCases = results.length - activeResults.length;
+    const activeCorrect = activeResults.filter(
+      (r) => r.correct === true,
+    ).length;
+    const accuracy =
+      activeResults.length === 0 ? 0 : activeCorrect / activeResults.length;
 
     // Brier over the answered noul cases: (p − y)², averaged.
     const noulCases = results.filter(
       (r) => typeof r.got === "number" && r.expected !== undefined,
     );
-    const noulAnswers = cases.filter((ref) => ref.fixture.expects.kind === "noul");
+    const noulAnswers = cases.filter(
+      (ref) =>
+        ref.fixture.expects.kind === "noul" &&
+        !isRetiredSurface(ref.fixture.surface),
+    );
     const brierValues: number[] = [];
     for (const ref of noulAnswers) {
       const result = results.find((r) => r.case === ref.fixture.id);
       if (!result || typeof result.got !== "number") continue;
-      const truth = ref.fixture.expects.value === true || ref.fixture.expects.value === "true" ? 1 : 0;
+      const truth =
+        ref.fixture.expects.value === true ||
+        ref.fixture.expects.value === "true"
+          ? 1
+          : 0;
       brierValues.push((result.got - truth) ** 2);
     }
     const brier =
@@ -390,23 +459,30 @@ export async function runDecisionBench(
 
     // The deterministic path's accuracy over the cases that record one.
     const withBaseline = cases.filter(
-      (ref) => ref.fixture.baseline !== undefined,
+      (ref) =>
+        ref.fixture.baseline !== undefined &&
+        !isRetiredSurface(ref.fixture.surface),
     );
     const baselineAccuracy =
       withBaseline.length === 0
         ? null
         : withBaseline.filter((ref) =>
-            isCorrect(ref.fixture.expects, ref.fixture.baseline as string | number | boolean),
+            isCorrect(
+              ref.fixture.expects,
+              ref.fixture.baseline as string | number | boolean,
+            ),
           ).length / withBaseline.length;
 
     // Disputed labels: counted in the accuracy (hiding them would
     // flatter the providers), reported separately, and scored again
     // without them so a reader can see both numbers.
-    const disputedRefs = cases.filter((ref) => ref.fixture.disputed === true);
+    const disputedRefs = cases.filter(
+      (ref) =>
+        ref.fixture.disputed === true && !isRetiredSurface(ref.fixture.surface),
+    );
     const disputedCount = disputedRefs.length;
-    const strictResults = results.filter(
-      (r) =>
-        !disputedRefs.some((ref) => ref.fixture.id === r.case),
+    const strictResults = activeResults.filter(
+      (r) => !disputedRefs.some((ref) => ref.fixture.id === r.case),
     );
     const strictAccuracy =
       strictResults.length === 0
@@ -418,15 +494,9 @@ export async function runDecisionBench(
     if (accuracy < minAccuracy) {
       reasons.push(`accuracy ${accuracy.toFixed(3)} < ${minAccuracy}`);
     }
-    if (baselineAccuracy !== null && accuracy < baselineAccuracy) {
-      reasons.push(
-        `accuracy ${accuracy.toFixed(3)} < baseline ${baselineAccuracy.toFixed(3)}`,
-      );
-    }
     if (brier !== null && brier > maxBrier) {
       reasons.push(`brier ${brier.toFixed(3)} > ${maxBrier}`);
     }
-
     // Per-surface numbers: the corpus is lopsided, so the surface a
     // case belongs to is the unit that compares like with like.
     const surfaceNames = [...new Set(results.map((r) => r.surface))].sort();
@@ -459,8 +529,25 @@ export async function runDecisionBench(
             ? null
             : noulBrier.reduce((a, b) => a + b, 0) / noulBrier.length,
         disputed: rows.filter((r) => r.disputed === true).length,
+        retired: isRetiredSurface(surface as DecisionSurface),
+        baselineAccuracy: surfaceBaselineAccuracy(surface, cases, rows),
       };
     });
+
+    // The baseline comparison is PER SURFACE: the corpus mixes surfaces
+    // with very different deterministic paths, and a corpus-wide
+    // baseline number is not a thing any provider can beat. The gate
+    // asks the question that matters — "is this provider worse than
+    // doing nothing on THIS surface?" — surface by surface.
+    for (const surface of surfaces) {
+      if (surface.retired) continue;
+      if (surface.baselineAccuracy === null) continue;
+      if (surface.accuracy < surface.baselineAccuracy) {
+        reasons.push(
+          `${surface.surface}: accuracy ${surface.accuracy.toFixed(3)} < baseline ${surface.baselineAccuracy.toFixed(3)}`,
+        );
+      }
+    }
 
     providers.push({
       provider: spec.id,
@@ -485,6 +572,9 @@ export async function runDecisionBench(
       reasons,
       surfaces,
       cases: results,
+      activeCases: activeResults.length,
+      activeCorrect,
+      retiredCases,
     });
   }
 
@@ -495,7 +585,10 @@ export async function runDecisionBench(
       const ac = a.costPerDecision ?? Number.POSITIVE_INFINITY;
       const bc = b.costPerDecision ?? Number.POSITIVE_INFINITY;
       if (ac !== bc) return ac - bc;
-      return (a.p95Ms ?? Number.POSITIVE_INFINITY) - (b.p95Ms ?? Number.POSITIVE_INFINITY);
+      return (
+        (a.p95Ms ?? Number.POSITIVE_INFINITY) -
+        (b.p95Ms ?? Number.POSITIVE_INFINITY)
+      );
     });
 
   return {
@@ -511,8 +604,9 @@ export async function runDecisionBench(
 /** The report as a markdown table. */
 export function renderBenchReport(report: BenchReport): string {
   const rows = report.providers.map((p) => {
-    const cost = p.costPerDecision === null ? "n/a" : `$${p.costPerDecision.toFixed(6)}`;
-    return `| ${p.label} | ${p.model} | ${p.correct}/${p.total} | ${
+    const cost =
+      p.costPerDecision === null ? "n/a" : `$${p.costPerDecision.toFixed(6)}`;
+    return `| ${p.label} | ${p.model} | ${p.activeCorrect}/${p.activeCases} | ${
       p.brier === null ? "n/a" : p.brier.toFixed(3)
     } | ${p.p50Ms === null ? "n/a" : `${p.p50Ms} ms`} | ${
       p.p95Ms === null ? "n/a" : `${p.p95Ms} ms`
@@ -527,6 +621,11 @@ export function renderBenchReport(report: BenchReport): string {
     `cases: ${report.cases} · deterministic baseline accuracy: ${
       baseline === null || baseline === undefined ? "n/a" : baseline.toFixed(3)
     } · gates: accuracy ≥ ${report.minAccuracy}, brier ≤ ${report.maxBrier}`,
+    ...(report.providers[0]?.retiredCases
+      ? [
+          `· ${report.providers[0].retiredCases} case(s) belong to a RETIRED surface — reported below, not gated`,
+        ]
+      : []),
     ...report.providers.map(
       (p) =>
         `· ${p.label}: ${p.disputed} disputed label(s), accuracy over the undisputed cases ${
@@ -536,13 +635,15 @@ export function renderBenchReport(report: BenchReport): string {
     "",
     ...report.providers.flatMap((p) => [
       `per surface — ${p.label}:`,
-      `| surface | cases | accuracy | brier | disputed |`,
-      `|---|---|---|---|---|`,
+      `| surface | cases | accuracy | brier | disputed | baseline |`,
+      `|---|---|---|---|---|---|`,
       ...p.surfaces.map(
         (s) =>
-          `| ${s.surface} | ${s.correct}/${s.total} | ${s.accuracy.toFixed(3)} | ${
+          `| ${s.surface}${s.retired ? " (retired)" : ""} | ${s.correct}/${s.total} | ${s.accuracy.toFixed(3)} | ${
             s.brier === null ? "n/a" : s.brier.toFixed(3)
-          } | ${s.disputed} |`,
+          } | ${s.disputed} | ${
+            s.baselineAccuracy === null ? "n/a" : s.baselineAccuracy.toFixed(3)
+          } |`,
       ),
       "",
     ]),
@@ -566,26 +667,38 @@ export function registerDecision(program: Command): void {
       "Measure the decision providers (accuracy, calibration, latency, cost) against the corpus.",
     )
     .option("--provider <id>", "openai | minimax | all", "all")
-    .option("--surface <surface>", "one surface (qa-triage, draft-bar, visual-class, …)")
+    .option(
+      "--surface <surface>",
+      "one surface (qa-triage, draft-bar, visual-class, …)",
+    )
     .option("--case <id>", "one case id")
     .option("--repeat <n>", "calls per case", "1")
     .option("--samples <n>", "MiniMax samples per call (vote mode)", "1")
     .option("--model <id>", "override the model id")
     .option("--min-accuracy <n>", "accuracy gate", "0.9")
-    .option("--max-brier <n>", "Brier gate (0.25 = always answering 0.5)", "0.25")
+    .option(
+      "--max-brier <n>",
+      "Brier gate (0.25 = always answering 0.5)",
+      "0.25",
+    )
     .option("--out <path>", "write the JSON report here")
     .option("--json", "print the JSON report instead of the table")
     .action(async (options: Record<string, string | boolean>) => {
       const report = await runDecisionBench({
-        provider: typeof options["provider"] === "string" ? options["provider"] : undefined,
+        provider:
+          typeof options["provider"] === "string"
+            ? options["provider"]
+            : undefined,
         surface:
           typeof options["surface"] === "string"
             ? (options["surface"] as DecisionSurface)
             : undefined,
-        caseId: typeof options["case"] === "string" ? options["case"] : undefined,
+        caseId:
+          typeof options["case"] === "string" ? options["case"] : undefined,
         repeat: Number(options["repeat"] ?? 1),
         samples: Number(options["samples"] ?? 1),
-        model: typeof options["model"] === "string" ? options["model"] : undefined,
+        model:
+          typeof options["model"] === "string" ? options["model"] : undefined,
         minAccuracy: Number(options["minAccuracy"] ?? 0.9),
         maxBrier: Number(options["maxBrier"] ?? 0.25),
       });

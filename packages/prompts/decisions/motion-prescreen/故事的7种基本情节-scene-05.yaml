@@ -1,0 +1,19 @@
+id: 故事的7种基本情节-scene-05
+surface: motion-prescreen
+state: |-
+  Scene scene-05 — 10.72s, component ImageBackground.
+  Narration: 从珀修斯、贝奥武甫，到七武士、007、星球大战、饥饿游戏和哈利·波特，几千年过去，骨架从未变过。
+  Scene elements: {"src":"/Users/huangjien/workspace/ai-video-factory/projects/故事的7种基本情节/assets/images/scene_5.jpg","caption":"从珀修斯到哈利·波特","textOverlaySrc":"/Users/huangjien/workspace/ai-video-factory/projects/故事的7种基本情节/assets/images/text/scene_5.png"}
+
+  The plan without a second pass: draw on "scene-05" at 0.10s for 0.80s (easeOut); highlight on "scene-05" at 5.36s for 0.60s (easeInOut).
+expects:
+  kind: choice
+  value: refine
+baseline: keep
+policy:
+  rule: motion-specificity
+  note: The shipped plan animates a NAMED element of the scene — the baseline plan cannot know those
+    names, so the scene needed a second pass.
+provenance:
+  source: "projects/故事的7种基本情节/storyboard/storyboard.yaml — scene scene-05 (ImageBackground, 10.72s).
+    The shipped motion plan targets: rank-0, rank-1, rank-2."

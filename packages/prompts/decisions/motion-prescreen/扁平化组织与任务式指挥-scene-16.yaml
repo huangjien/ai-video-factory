@@ -1,0 +1,19 @@
+id: 扁平化组织与任务式指挥-scene-16
+surface: motion-prescreen
+state: |-
+  Scene scene-16 — 16.00s, component ImageBackground.
+  Narration: 但扁平化有代价：协调成本上升，决策质量参差，团队争夺资源；授权不清时责任重叠，缺乏共同目标，就各自为政。分权不是免费午餐。
+  Scene elements: {"src":"/Users/huangjien/workspace/ai-video-factory/projects/扁平化组织与任务式指挥/assets/images/scene_16.jpg","caption":"扁平化的五个代价","textOverlaySrc":"/Users/huangjien/workspace/ai-video-factory/projects/扁平化组织与任务式指挥/assets/images/text/scene_16.png"}
+
+  The plan without a second pass: draw on "scene-16" at 0.10s for 0.80s (easeOut); highlight on "scene-16" at 8.00s for 0.60s (easeInOut).
+expects:
+  kind: choice
+  value: keep
+baseline: keep
+policy:
+  rule: motion-specificity
+  note: The shipped plan animates the scene as a whole — the same shape the deterministic baseline
+    produces, so a second pass was not needed.
+provenance:
+  source: "projects/扁平化组织与任务式指挥/storyboard/storyboard.yaml — scene scene-16 (ImageBackground, 16s).
+    The shipped motion plan targets: scene-16, scene-16."

@@ -60,7 +60,8 @@ export type DecisionPolicyRule =
   | "photo"
   | "thesis"
   | "caption-band"
-  | "motion-specificity";
+  | "motion-specificity"
+  | "section-verdict";
 
 /** The rules each surface may use. A case that names a rule from
  *  another surface is a labelling mistake the loader catches. */
@@ -77,6 +78,8 @@ export const DECISION_POLICY_RULES: Record<
   "draft-bar-v4": ["review-verdict"],
   "motion-prescreen": ["motion-specificity"],
   "caption-overlap": ["caption-band"],
+  // v0.12 (P5): the review agent's own per-section verdict.
+  "review-verdict": ["section-verdict"],
 };
 
 /** The verdict the artifact itself recorded. For the `draft-bar` surface
@@ -85,11 +88,14 @@ export const DECISION_POLICY_RULES: Record<
  *  drift away from the artifact it claims to encode. */
 export interface DecisionSourceVerdict {
   /** The review's own `passing` flag. */
-  passing: boolean;
+  passing?: boolean | undefined;
   /** The review raised a Critical finding, or a CRITICAL_BLOCKER flag. */
   critical?: boolean | undefined;
   /** The review raised a MAJOR_REVISION_NEEDED flag. */
   major_revision_needed?: boolean | undefined;
+  /** The review agent's own per-section verdict (`pass` | `warn` |
+   *  `fail`) — the `review-verdict` surface's label. */
+  section_verdict?: string | undefined;
 }
 
 export interface DecisionCaseFixture {
@@ -168,7 +174,11 @@ export function parseDecisionCase(
     );
   }
   const value = rawExpects["value"];
-  if (typeof value !== "string" && typeof value !== "number" && typeof value !== "boolean") {
+  if (
+    typeof value !== "string" &&
+    typeof value !== "number" &&
+    typeof value !== "boolean"
+  ) {
     return fail(file, "`expects.value` must be a string, number or boolean");
   }
   if (spec.kind === "choice") {
@@ -186,7 +196,10 @@ export function parseDecisionCase(
       return fail(file, "`expects.value` must be an integer level index");
     }
     if (value < 0 || value >= levels.length) {
-      return fail(file, `expects.value ${value} is outside the surface's levels`);
+      return fail(
+        file,
+        `expects.value ${value} is outside the surface's levels`,
+      );
     }
   }
 
@@ -265,7 +278,18 @@ export function parseDecisionCase(
       return fail(file, "`source_verdict` must be a mapping");
     }
     const passing = rawVerdict["passing"];
-    if (typeof passing !== "boolean") {
+    // `passing` is the draft-bar surface's own gate, so it is required
+    // there. The `review-verdict` surface carries the review agent's own
+    // `section_verdict` instead, and a `passing` flag would be
+    // meaningless for it.
+    if (surface === "draft-bar" && typeof passing !== "boolean") {
+      return fail(file, "`source_verdict.passing` must be a boolean");
+    }
+    if (
+      passing !== undefined &&
+      passing !== null &&
+      typeof passing !== "boolean"
+    ) {
       return fail(file, "`source_verdict.passing` must be a boolean");
     }
     const readFlag = (key: string): boolean | undefined => {
@@ -276,13 +300,26 @@ export function parseDecisionCase(
       }
       return value;
     };
+    const sectionVerdict = rawVerdict["section_verdict"];
+    if (
+      sectionVerdict !== undefined &&
+      (typeof sectionVerdict !== "string" || sectionVerdict === "")
+    ) {
+      return fail(
+        file,
+        "`source_verdict.section_verdict` must be a non-empty string",
+      );
+    }
     sourceVerdict = {
-      passing,
+      ...(typeof passing === "boolean" ? { passing } : {}),
       ...(readFlag("critical") !== undefined
         ? { critical: readFlag("critical") }
         : {}),
       ...(readFlag("major_revision_needed") !== undefined
         ? { major_revision_needed: readFlag("major_revision_needed") }
+        : {}),
+      ...(sectionVerdict !== undefined
+        ? { section_verdict: sectionVerdict }
         : {}),
     };
     // The draft-bar label is DERIVED from the artifact's verdict. A
@@ -293,6 +330,17 @@ export function parseDecisionCase(
         return fail(
           file,
           `expects.value ${JSON.stringify(value)} does not match the verdict rule (${derived})`,
+        );
+      }
+    }
+    // The review-verdict label is DERIVED the same way: the review
+    // agent's own `overall` IS the verdict, and a label that disagrees
+    // with the artifact is a bug in the corpus.
+    if (surface === "review-verdict" && sectionVerdict !== undefined) {
+      if (value !== sectionVerdict) {
+        return fail(
+          file,
+          `expects.value ${JSON.stringify(value)} does not match the artifact's own section verdict (${sectionVerdict})`,
         );
       }
     }
@@ -425,9 +473,9 @@ export interface DecisionPriceTable {
 export function loadDecisionPrices(root = decisionsDir()): DecisionPriceTable {
   const file = path.join(root, "prices.yaml");
   if (!existsSync(file)) return { prices: {} };
-  const parsed = parseYaml(readFileSync(file, "utf8")) as
-    | DecisionPriceTable
-    | null;
+  const parsed = parseYaml(
+    readFileSync(file, "utf8"),
+  ) as DecisionPriceTable | null;
   if (!isRecord(parsed) || !isRecord(parsed.prices)) return { prices: {} };
   const prices: Record<string, Record<string, DecisionPrice>> = {};
   for (const [provider, models] of Object.entries(parsed.prices)) {

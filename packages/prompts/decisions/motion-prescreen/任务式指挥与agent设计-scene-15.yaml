@@ -1,0 +1,19 @@
+id: 任务式指挥与agent设计-scene-15
+surface: motion-prescreen
+state: |-
+  Scene scene-15 — 9.84s, component ImageBackground.
+  Narration: 层级并非越多越好。多层 Manager 会重复上下文、增加调用、拖慢决策，还可能造成职责重叠。
+  Scene elements: {"src":"/Users/huangjien/workspace/ai-video-factory/projects/任务式指挥与Agent设计/assets/images/scene_15.jpg","caption":"管理层过载的代价","textOverlaySrc":"/Users/huangjien/workspace/ai-video-factory/projects/任务式指挥与agent设计/assets/images/text/scene_15.png"}
+
+  The plan without a second pass: draw on "scene-15" at 0.10s for 0.80s (easeOut); highlight on "scene-15" at 4.92s for 0.60s (easeInOut).
+expects:
+  kind: choice
+  value: keep
+baseline: keep
+policy:
+  rule: motion-specificity
+  note: The shipped plan animates the scene as a whole — the same shape the deterministic baseline
+    produces, so a second pass was not needed.
+provenance:
+  source: "projects/任务式指挥与agent设计/storyboard/storyboard.yaml — scene scene-15 (ImageBackground,
+    9.84s). The shipped motion plan targets: scene-15."

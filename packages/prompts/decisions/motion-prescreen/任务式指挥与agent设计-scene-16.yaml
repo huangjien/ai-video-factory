@@ -1,0 +1,19 @@
+id: 任务式指挥与agent设计-scene-16
+surface: motion-prescreen
+state: |-
+  Scene scene-16 — 17.05s, component ImageBackground.
+  Narration: 可选择分层、平坦团队或动态组织。更现实的是保留稳定专业 Agent 与权限体系，按 Mission 临时组队；简单任务直接委派，复杂任务才建 Coordinator，结束后释放。
+  Scene elements: {"src":"/Users/huangjien/workspace/ai-video-factory/projects/任务式指挥与Agent设计/assets/images/scene_16.jpg","caption":"按任务动态组队","textOverlaySrc":"/Users/huangjien/workspace/ai-video-factory/projects/任务式指挥与agent设计/assets/images/text/scene_16.png"}
+
+  The plan without a second pass: draw on "scene-16" at 0.10s for 0.80s (easeOut); highlight on "scene-16" at 8.53s for 0.60s (easeInOut).
+expects:
+  kind: choice
+  value: keep
+baseline: keep
+policy:
+  rule: motion-specificity
+  note: The shipped plan animates the scene as a whole — the same shape the deterministic baseline
+    produces, so a second pass was not needed.
+provenance:
+  source: "projects/任务式指挥与agent设计/storyboard/storyboard.yaml — scene scene-16 (ImageBackground,
+    17.05s). The shipped motion plan targets: scene-16, scene-16."

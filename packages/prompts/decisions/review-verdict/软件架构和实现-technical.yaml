@@ -1,0 +1,34 @@
+id: 软件架构和实现-technical
+surface: review-verdict
+state: >-
+  The technical section of a review.
+
+
+  Fields:
+
+  - resolution: ok — storyboard 声明 width 1920 / height 1080（16:9），内部自洽；script front matter
+  未给出与之冲突的输出分辨率要求。
+
+  - fps: ok — storyboard 声明 fps: 30；全部动画计时以秒给出且与 30 fps 兼容；未提供其他帧率要求来源。
+
+  - audio: warn — 仅有计划信息：voice 为 Chinese (Mandarin)_Male_Announcer、tts_provider 为
+  minimax；未提供任何音频文件、时长或同步元数据，音频存在性、时长与 420 秒画面的匹配、削波、静音等均无法核实。
+
+  - subtitle: warn — 35 个场景均有 captions: source: narration 的叠加字幕计划，但未提供独立字幕文件（如
+  SRT）、格式或交付要求，无法核实字幕交付是否满足需求；亦无证据表明必须交付外挂字幕轨，故不判 fail。
+
+
+  No findings.
+expects:
+  kind: choice
+  value: warn
+baseline: warn
+source_verdict:
+  section_verdict: warn
+policy:
+  rule: section-verdict
+  note: The label is DERIVED from the review artifact's own `overall` verdict by the section-verdict
+    rule. The loader re-checks that derivation when the case is loaded.
+provenance:
+  source: projects/软件架构和实现/review/technical-review.yaml — the review agent's own verdict for the
+    technical section.

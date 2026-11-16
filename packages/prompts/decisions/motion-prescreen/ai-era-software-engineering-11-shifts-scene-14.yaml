@@ -1,0 +1,19 @@
+id: ai-era-software-engineering-11-shifts-scene-14
+surface: motion-prescreen
+state: |-
+  Scene scene-14 — 13.84s, component ImageBackground.
+  Narration: 第八个变化，好代码的标准在扩展。同样功能的实现，一个缠成巨型函数，一个分层清晰，改退款策略、查线上故障时高下立现。可验证、可演进，正和可读性一样重要。
+  Scene elements: {"src":"/Users/huangjien/workspace/ai-video-factory/projects/ai-era-software-engineering-11-shifts/assets/images/scene_14.jpg","caption":"可验证、可演进","textOverlaySrc":"/Users/huangjien/workspace/ai-video-factory/projects/ai-era-software-engineering-11-shifts/assets/images/text/scene_14.png"}
+
+  The plan without a second pass: draw on "scene-14" at 0.10s for 0.80s (easeOut); highlight on "scene-14" at 6.92s for 0.60s (easeInOut).
+expects:
+  kind: choice
+  value: refine
+baseline: keep
+policy:
+  rule: motion-specificity
+  note: The shipped plan animates a NAMED element of the scene — the baseline plan cannot know those
+    names, so the scene needed a second pass.
+provenance:
+  source: "projects/ai-era-software-engineering-11-shifts/storyboard/storyboard.yaml — scene scene-14
+    (ImageBackground, 13.84s). The shipped motion plan targets: level-0, level-1."

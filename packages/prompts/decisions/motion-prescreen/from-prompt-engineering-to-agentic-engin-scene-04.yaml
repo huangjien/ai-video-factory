@@ -1,0 +1,27 @@
+id: from-prompt-engineering-to-agentic-engin-scene-04
+surface: motion-prescreen
+state: >-
+  Scene scene-04 — 26.75s, component CycleDiagram.
+
+  Narration: So the central question of AI engineering changed. It is no longer only how to ask a
+  question that produces a good answer. It is how to make a whole multi-step task land reliably.
+  When generative AI first became widely available, a lot of products looked like an input box and
+  an answer box. Developers adjusted wording and hoped the model got it right in one shot.
+
+  Scene elements: {"stages":["the ques","Processi","Result"],"title":"the question"}
+
+
+  The plan without a second pass: fade on "scene-04" at 0.10s for 0.50s (easeOut); highlight on
+  "scene-04" at 13.38s for 0.60s (easeInOut).
+expects:
+  kind: choice
+  value: refine
+baseline: keep
+policy:
+  rule: motion-specificity
+  note: The shipped plan animates a NAMED element of the scene — the baseline plan cannot know those
+    names, so the scene needed a second pass.
+provenance:
+  source: "projects/from-prompt-engineering-to-agentic-engin/storyboard/storyboard.yaml — scene
+    scene-04 (CycleDiagram, 26.75s). The shipped motion plan targets: __ring__, stage-0, stage-1,
+    stage-2."

@@ -1,0 +1,38 @@
+id: fate-or-the-measure-of-a-life-technical
+surface: review-verdict
+state: >-
+  The technical section of a review.
+
+
+  Fields:
+
+  - resolution: ok — project.width: 1920 and project.height: 1080 (16:9) are internally valid; no
+  conflicting output requirement was supplied.
+
+  - fps: ok — project.fps: 30 is stated and consistent across artifacts; fractional scene durations
+  (e.g., 9.65s = 289.5 frames) will quantize to whole frames at render with at most about 0.5 frame
+  (roughly 17ms) …
+
+  - audio: warn — Script frontmatter declares tts_provider: minimax and voice:
+  English_expressive_narrator, but no audio files, durations, loudness, or synchronization evidence
+  was supplied; audio properties cannot be…
+
+  - subtitle: warn — captions_source: caption with per-scene caption text defined in the storyboard
+  (scene-01 to scene-16), but no standalone subtitle file (e.g., SRT/ASS) or timed subtitle track
+  was supplied, and no del…
+
+
+  No findings.
+expects:
+  kind: choice
+  value: warn
+baseline: warn
+source_verdict:
+  section_verdict: warn
+policy:
+  rule: section-verdict
+  note: The label is DERIVED from the review artifact's own `overall` verdict by the section-verdict
+    rule. The loader re-checks that derivation when the case is loaded.
+provenance:
+  source: projects/fate-or-the-measure-of-a-life/review/technical-review.yaml — the review agent's own
+    verdict for the technical section.

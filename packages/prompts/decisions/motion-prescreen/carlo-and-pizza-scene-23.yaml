@@ -1,0 +1,19 @@
+id: carlo-and-pizza-scene-23
+surface: motion-prescreen
+state: |-
+  Scene scene-23 — 39.48s, component PyramidDiagram.
+  Narration: 工程师的角色也在变。传统的 Jenkins 故障处理需要工程师亲自读日志、查代码、跑测试。引入 Agent 后，一部分步骤可以自动化，但工程师的职责不会消失，而是更强调系统设计与责任边界。工程师要决定：哪些任务适合自动化？Agent 应该访问哪些上下文？什么才算成功？Agent 可以执行哪些操作？如何用独立证据证明结果可靠？
+  Scene elements: {"levels":[{"label":"工程师的新角色","role":"方向","icon":"向"},{"label":"设计系统约束","role":"约束","icon":"约"},{"label":"系统稳定","role":"成果","icon":"果"}],"title":"从动手到系统设计","text_overlay":"从动手到系统设计"}
+
+  The plan without a second pass: fade on "scene-23" at 0.10s for 0.50s (easeOut); highlight on "scene-23" at 19.74s for 0.60s (easeInOut).
+expects:
+  kind: choice
+  value: refine
+baseline: keep
+policy:
+  rule: motion-specificity
+  note: The shipped plan animates a NAMED element of the scene — the baseline plan cannot know those
+    names, so the scene needed a second pass.
+provenance:
+  source: "projects/carlo-and-pizza/storyboard/storyboard.yaml — scene scene-23 (PyramidDiagram,
+    39.48s). The shipped motion plan targets: level-0, level-1, level-2."

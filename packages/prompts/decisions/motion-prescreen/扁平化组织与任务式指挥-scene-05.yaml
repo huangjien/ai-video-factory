@@ -1,0 +1,19 @@
+id: 扁平化组织与任务式指挥-scene-05
+surface: motion-prescreen
+state: |-
+  Scene scene-05 — 15.00s, component ImageBackground.
+  Narration: 最早的实践者是普鲁士军队，他们发展出任务式指挥，德语写作 Auftragstaktik。核心一句话：上级规定目标，下级决定实现方式。
+  Scene elements: {"src":"/Users/huangjien/workspace/ai-video-factory/projects/扁平化组织与任务式指挥/assets/images/scene_5.jpg","caption":"Auftragstaktik 任务式指挥","textOverlaySrc":"/Users/huangjien/workspace/ai-video-factory/projects/扁平化组织与任务式指挥/assets/images/text/scene_5.png"}
+
+  The plan without a second pass: draw on "scene-05" at 0.10s for 0.80s (easeOut); highlight on "scene-05" at 7.50s for 0.60s (easeInOut).
+expects:
+  kind: choice
+  value: keep
+baseline: keep
+policy:
+  rule: motion-specificity
+  note: The shipped plan animates the scene as a whole — the same shape the deterministic baseline
+    produces, so a second pass was not needed.
+provenance:
+  source: "projects/扁平化组织与任务式指挥/storyboard/storyboard.yaml — scene scene-05 (ImageBackground, 15s).
+    The shipped motion plan targets: scene-05, scene-05."

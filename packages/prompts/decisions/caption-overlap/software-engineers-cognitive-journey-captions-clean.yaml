@@ -1,0 +1,20 @@
+id: software-engineers-cognitive-journey-captions-clean
+surface: caption-overlap
+state: 'Frame 1 of 24. The bottom band of the frame carries the timed caption. The caption runs 2
+  cue(s) from 00:01 to 00:12: "Somewhere tonight, two engineers are arguing about whether PHP is the
+  best langu" No other text is drawn in that region.'
+expects:
+  kind: noul
+  value: "false"
+  probability:
+    - 0
+    - 0.2
+baseline: "false"
+policy:
+  rule: caption-band
+  note: The shipped render's caption check passed and the scene's own text sits ABOVE the caption
+    band, so the caption sits alone in the bottom band.
+provenance:
+  source: projects/software-engineers-cognitive-journey/qa/render-report.json (captions.ok, 50 cues) +
+    projects/software-engineers-cognitive-journey/captions/en-US.srt — the caption sits alone in the
+    bottom band.

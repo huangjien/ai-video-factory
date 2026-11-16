@@ -1,0 +1,23 @@
+id: 扁平化组织与任务式指挥-scene-24
+surface: motion-prescreen
+state: >-
+  Scene scene-24 — 6.91s, component QuoteBlock.
+
+  Narration: 军队留下的这句话，值得每个技术团队记住：统一目标，但不要求统一行动方式。
+
+  Scene elements: {"quote":"军队留下的这句话，值得每个技术团队记住：统一目标，但不要求统一行动方式"}
+
+
+  The plan without a second pass: fade on "scene-24" at 0.10s for 0.50s (easeOut); highlight on
+  "scene-24" at 3.46s for 0.60s (easeInOut).
+expects:
+  kind: choice
+  value: keep
+baseline: keep
+policy:
+  rule: motion-specificity
+  note: The shipped plan animates the scene as a whole — the same shape the deterministic baseline
+    produces, so a second pass was not needed.
+provenance:
+  source: "projects/扁平化组织与任务式指挥/storyboard/storyboard.yaml — scene scene-24 (QuoteBlock, 6.91s). The
+    shipped motion plan targets: scene-24."

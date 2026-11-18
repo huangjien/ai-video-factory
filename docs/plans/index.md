@@ -22,6 +22,9 @@ do not add to them, and do not delete them.
 | [`2026-10-19-chinese-storybook-visual-dna-design.md`](./2026-10-19-chinese-storybook-visual-dna-design.md) | The `chinese-storybook` channel's visual DNA (shipped in v0.9.1) |
 | [`2026-10-19-chinese-storybook-visual-dna-implementation-plan.md`](./2026-10-19-chinese-storybook-visual-dna-implementation-plan.md) | Its implementation plan |
 | [`2026-10-26-cross-model-judging-design.md`](./2026-10-26-cross-model-judging-design.md) | The judge-≠-generator pairing rule (shipped) |
+| [`2026-11-18-military-ai-topic-backlog-design.md`](./2026-11-18-military-ai-topic-backlog-design.md) | 5-topic verified-fresh content backlog (military why/mechanism + AI hallucination) |
+| [`2026-11-18-backlog-feature-design.md`](./2026-11-18-backlog-feature-design.md) | The `video backlog` feature: idea store, harvest, pick-to-draft loop |
+| [`2026-11-18-backlog-feature-implementation-plan.md`](./2026-11-18-backlog-feature-implementation-plan.md) | Its implementation plan (BL-01…BL-08) |
 
 ## The decision layer
 

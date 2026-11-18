@@ -379,6 +379,14 @@ BGM 没有 provider 服务。标签解析到 `assets/bgm/` 里的精选库，`mu
 它记录实测时长、响度、动态范围和场景备注。项目本地的
 `assets/audio-assets/bgm/` 会遮蔽工作区库。
 
+> **遗留格式：`audio-assets/mix.yaml`。** v0.3.5 时代混音由
+> `audio-assets/mix.yaml` 配置（`bgm:`、`sfx:`、`bgm_fade_in_sec:`、
+> `bgm_fade_out_sec:`）。自从 `audio-config.yaml` 成为人工编辑文件，流水线
+> 就再也没有写过那个文件，因此混音器现在只把它当**兜底**读：它只填补
+> `audio-config.yaml` 没覆盖的空缺，并且每次用到都会打印一条警告。
+> **迁移：** 把上面四个键原样抄进 `audio-config.yaml`，然后删掉那个文件。
+> 保留它的老项目，混音结果不变。
+
 ---
 
 ## 7. 图片与视觉护栏（v0.8）

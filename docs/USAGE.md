@@ -433,6 +433,15 @@ BGM has no provider service. Tags resolve against the curated library in
 dynamic range, and scenario notes. A project-local `assets/audio-assets/bgm/`
 shadows the workspace library.
 
+> **Legacy: `audio-assets/mix.yaml`.** In v0.3.5 the mix was configured by
+> `audio-assets/mix.yaml` (`bgm:`, `sfx:`, `bgm_fade_in_sec:`,
+> `bgm_fade_out_sec:`). The pipeline has never written that file since
+> `audio-config.yaml` became the human-edit file, so the mixer now reads it
+> as a **fallback only** — it fills the gaps `audio-config.yaml` leaves and
+> prints a warning when it does. **Migration:** copy those four keys into
+> `audio-config.yaml` (same names) and delete the file. A project that keeps
+> it keeps mixing the way it did.
+
 ---
 
 ## 7. Images and visual guardrails (v0.8)

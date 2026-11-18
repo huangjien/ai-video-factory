@@ -11,8 +11,9 @@ export interface OpenAIImageProviderOptions {
   defaultModel?: string | undefined;
   /**
    * Render quality: `low` | `medium` | `high` | `xhigh` | `max`.
-   * Default `low` — the 2.5 models bill per image output token, so
-   * low keeps a bulk scene render around $0.006/image.
+   * Default `low` — the 2.6 models bill per image output token, so
+   * low keeps a bulk scene render around $0.020/image (measured
+   * 2026-11-16: 622 output tokens = $0.0203, 8.1 s).
    */
   quality?: string | undefined;
   /** Override the default retry sleeps (default: [1000, 2000, 4000]). Tests use [1,1,1]. */
@@ -20,8 +21,23 @@ export interface OpenAIImageProviderOptions {
 }
 
 /** `flare` is the fast everyday model; `sunburst` is the editing-precision
- * one. Both bill at the same token rate. */
-const DEFAULT_MODEL = "gpt-image-2.5-flare";
+ * one. Both bill at the same token rate.
+ *
+ * The default moved to **2.6** on 2026-11-16, measured against
+ * MiniMax image-01 on a real shipped scene prompt (the same prompt,
+ * the same minute):
+ *
+ * | provider | wall clock | cost/image | prompt fidelity |
+ * |---|---|---|---|
+ * | minimax image-01 | 17.2 s | $0.0196 | atmosphere, but the diagram was unreadable |
+ * | gpt-image-2.6-flare `low` | **8.1 s** | **$0.0203** | followed the prompt's two-part structure and drew a legible diagram |
+ * | gpt-image-2.6-flare `medium` | 8.6 s | $0.0357 | same structure, cleaner glyphs |
+ * | gpt-image-2.6-sunburst `medium` | 41.7 s | $0.0357 | same price, 4x slower |
+ *
+ * So `low` costs what image-01 costs, renders twice as fast, and is
+ * the only one of the three that drew the diagram the prompt asked
+ * for. The 2.5 models stay reachable through `defaultModel`. */
+const DEFAULT_MODEL = "gpt-image-2.6-flare";
 
 /**
  * Sizes the Images API documents as recommended. Custom `WIDTHxHEIGHT`
@@ -50,6 +66,30 @@ function closestSize(width: number, height: number): string {
     }
   }
   return `${best.w}x${best.h}`;
+}
+
+/** GPT-Image-2.6 accepts custom dimensions: both edges multiples of 16,
+ *  ratio between 1:3 and 3:1, total pixels between 655,360 and
+ *  8,294,400 (4K). Returns null when the request does not fit, and
+ *  the caller falls back to the recommended set.
+ *
+ * This is what buys the pipeline its real 16:9: the recommended set
+ * tops out at 1536x1024 (3:2), so a 1920x1080 composition used to be
+ * snapped to a 3:2 frame and cropped by the renderer. 2.6 renders
+ * 1920x1088 (the nearest multiple of 16) instead. */
+function customSize(width: number, height: number): string | null {
+  const w = Math.round(width / 16) * 16;
+  const h = Math.round(height / 16) * 16;
+  const pixels = w * h;
+  if (pixels < 655_360 || pixels > 8_294_400) return null;
+  if (Math.max(w / h, h / w) > 3) return null;
+  return `${w}x${h}`;
+}
+
+/** Does this model take custom dimensions? Only the 2.6 line does —
+ *  the 2.5 models reject a size outside the recommended set. */
+function supportsCustomSize(model: string): boolean {
+  return /gpt-image-2\.6/.test(model);
 }
 
 /**
@@ -100,7 +140,10 @@ export class OpenAIImageProvider implements ImageProvider {
           body: JSON.stringify({
             model: this.defaultModel,
             prompt: req.prompt,
-            size: closestSize(req.width, req.height),
+            size: supportsCustomSize(this.defaultModel)
+              ? (customSize(req.width, req.height) ??
+                closestSize(req.width, req.height))
+              : closestSize(req.width, req.height),
             quality: this.quality,
             n: 1,
             output_format: "png",

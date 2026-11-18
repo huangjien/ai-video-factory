@@ -130,7 +130,7 @@ exports[`emitQuestionsDoc > emits the full video-ask/1 envelope (snapshot) 1`] =
           "value": "minimax",
         },
         {
-          "note": "gpt-image-2.5-flare; needs OPENAI_API_KEY",
+          "note": "gpt-image-2.6-flare; needs OPENAI_API_KEY",
           "value": "openai",
         },
         {

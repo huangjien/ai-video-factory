@@ -66,7 +66,7 @@ PR and push to `main`. See `.github/workflows/test.yml`.
 | `packages/cli/`                           | The `video` CLI (entry point + all `bin/video` verbs).                             |
 | `packages/cli/src/audio-command.ts`       | TTS per scene.                                                                  |
 | `packages/cli/src/audio-asset-command.ts` | `video audio-asset` (BGM/SFX).                                                     |
-| `packages/cli/src/mix-command.ts`         | `video mix` (read `audio-assets/mix.yaml`).                                        |
+| `packages/cli/src/mix-command.ts`         | `video mix` (reads `audio-config.yaml`; the legacy `audio-assets/mix.yaml` is a fallback only). |
 | `packages/cli/src/render-command.ts`      | `video preview` / `video final` (Remotion render + mix chaining).                     |
 | `packages/cli/src/youtube-command.ts`     | `video youtube` (title + description + chapters.vtt).                              |
 | `packages/cli/src/thumbnail-command.ts`   | `video thumbnail` (mock + MiniMax image).                                          |

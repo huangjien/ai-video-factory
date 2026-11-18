@@ -32,3 +32,9 @@ __pycache__/
 projects/benchmark-v01/runs/
 projects/benchmark-v01/youtube/
 stderr.txt
+
+# Local image-provider A/B evidence (scripts/measure-image-providers.mjs
+# regenerates it): the comparison PNGs and the provider backups are
+# tens of MB and the numbers live in docs/RELEASES.md.
+runs/image-provider-ab/
+runs/frames/

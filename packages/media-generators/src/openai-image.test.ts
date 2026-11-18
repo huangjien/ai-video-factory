@@ -61,7 +61,7 @@ describe("OpenAIImageProvider — developers.openai.com/api/docs/guides/image-ge
     data: [{ b64_json: TINY_JPEG_B64 }],
   });
 
-  it("sends Bearer auth to /images/generations with the 2.5 model and png output", async () => {
+  it("sends Bearer auth to /images/generations with the 2.6 model and png output", async () => {
     process.env["OPENAI_API_KEY"] = "test-key";
     responseBody = okBody();
     statusToSend = 200;
@@ -76,15 +76,44 @@ describe("OpenAIImageProvider — developers.openai.com/api/docs/guides/image-ge
     expect(lastAuth).toBe("Bearer test-key");
     expect(lastPath).toBe("/images/generations");
     const body = JSON.parse(lastBody ?? "{}");
-    expect(body.model).toBe("gpt-image-2.5-flare");
+    expect(body.model).toBe("gpt-image-2.6-flare");
     expect(body.output_format).toBe("png");
     expect(body.quality).toBe("low");
     expect(body.n).toBe(1);
   });
 
-  it("snaps width/height to the nearest recommended size", async () => {
+  it("asks for the EXACT composition size on 2.6 — the models take custom dimensions", async () => {
+    // GPT-Image-2.6 accepts WIDTHxHEIGHT (multiples of 16, ratio between
+    // 1:3 and 3:1, 655,360-8,294,400 px). The 2.5 models only take the
+    // recommended set, so the snap below is theirs.
     process.env["OPENAI_API_KEY"] = "test-key";
     const p = new OpenAIImageProvider({ apiBaseUrl: baseUrl });
+
+    await p.generate({ prompt: "landscape", width: 1920, height: 1080 });
+    expect(JSON.parse(lastBody ?? "{}").size).toBe("1920x1088");
+
+    await p.generate({ prompt: "square", width: 1024, height: 1024 });
+    expect(JSON.parse(lastBody ?? "{}").size).toBe("1024x1024");
+
+    await p.generate({ prompt: "vertical", width: 1080, height: 1920 });
+    expect(JSON.parse(lastBody ?? "{}").size).toBe("1088x1920");
+  });
+
+  it("falls back to the recommended set when the custom size is out of bounds", async () => {
+    process.env["OPENAI_API_KEY"] = "test-key";
+    const p = new OpenAIImageProvider({ apiBaseUrl: baseUrl });
+
+    // 100x100 is below the 655,360-pixel floor.
+    await p.generate({ prompt: "tiny", width: 100, height: 100 });
+    expect(JSON.parse(lastBody ?? "{}").size).toBe("1024x1024");
+  });
+
+  it("snaps width/height to the nearest recommended size on the 2.5 models", async () => {
+    process.env["OPENAI_API_KEY"] = "test-key";
+    const p = new OpenAIImageProvider({
+      apiBaseUrl: baseUrl,
+      defaultModel: "gpt-image-2.5-flare",
+    });
 
     await p.generate({ prompt: "landscape", width: 1920, height: 1080 });
     expect(JSON.parse(lastBody ?? "{}").size).toBe("1536x1024");

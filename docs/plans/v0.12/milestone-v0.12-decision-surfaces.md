@@ -7,10 +7,16 @@
 **Builds on:** `docs/v0.11-decision-provider-plan.md` (the layer's design, contract, bench and
 safety rules — unchanged by this milestone)
 
-> **Implementation is complete (2026-11-16); the release is not.** Every item in the plan was
-> built and measured against the live API — see §13 of the plan for the numbers. The marker
-> stays **Planned** until the git tag and the GitHub Release exist
-> (`docs/CONTRIBUTING.md` § Release process), because `Complete` means "shipped".
+> **Implementation is complete and verified (2026-11-16); the release is not.** Every item in the
+> plan was built and measured against the live API — see §13 of the plan for the numbers. The
+> marker stays **Planned** until the git tag and the GitHub Release exist
+> (`docs/CONTRIBUTING.md` § Release process), because `Complete` means "shipped" — and
+> `sync_version.sh --from-gsd` reads this line to drive the package version.
+>
+> **One line left to do:** bump `package.json` + `packages/cli/package.json` to `0.12.0`, commit,
+> tag `v0.12`, push, `gh release create v0.12 --title "v0.12 — Decision surfaces, the 2.6 image
+> provider, and two films" --notes-file <RELEASES.md section>`, then flip this line to
+> `*Status:** Complete`.
 
 ## One-line scope
 

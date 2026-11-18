@@ -351,11 +351,37 @@ every generator boundary. AI never auto-publishes; humans decide.
 
 ## SFX Cues + BGM Fades (v0.3.5)
 
-`video mix` now reads `audio-assets/mix.yaml` (alongside `--mix-yaml <path>`
-override) for SFX cues and BGM fade durations. Plus a new `--mix` flag on
-`video final` that chains `runMix` into the final pipeline.
+> **Legacy format.** `audio-assets/mix.yaml` was the mix configuration
+> in v0.3.5. It is now **superseded by `audio-config.yaml`**, which is
+> one of the two human-edit files (`article.md` + `audio-config.yaml`)
+> and is what `video make` reads. The pipeline never writes
+> `mix.yaml`; the mixer still reads it as a **fallback** that only
+> fills the gaps `audio-config.yaml` leaves, and it prints a warning
+> when it does. Move the keys below into `audio-config.yaml` and
+> delete the file.
 
-### `audio-assets/mix.yaml` convention
+### `audio-config.yaml` (current)
+
+```yaml
+voice: Chinese (Mandarin)_Male_Announcer # optional: the narration voice
+bgm: calm # optional: tag override for which BGM to pick
+bgm_tracks: # optional: multi-BGM timeline — overrides `bgm`
+  - { track: calm, until_sec: 18 }
+bgm_fade_in_sec: 1.5 # optional: fade BGM in over N seconds
+bgm_fade_out_sec: 2 # optional: fade BGM out over last N seconds
+bgm_attenuation_db: -18 # optional: BGM bed level while narration is silent
+sfx: # optional: scene-keyed SFX cues
+  scene_2: whoosh
+  scene_4: ding
+```
+
+- SFX cue keys MUST match `scene_N` where N is 1-based.
+- CLI flags (`--bgm`, `--bgm-fade-in`, `--bgm-fade-out`, `--sfx`) override the file.
+- Files referenced in `sfx` MUST exist in `assets/audio-assets/sfx/<tag>.wav`
+  (from `video audio-asset --sfx <tag>`); the CLI gives a readable error
+  with the next-step hint if a cue is missing.
+
+### `audio-assets/mix.yaml` (legacy)
 
 ```yaml
 bgm: calm # optional: tag override for which BGM to pick
@@ -366,11 +392,12 @@ bgm_fade_in_sec: 1.5 # optional: fade BGM in over N seconds
 bgm_fade_out_sec: 2 # optional: fade BGM out over last N seconds
 ```
 
-- SFX cue keys MUST match `scene_N` where N is 1-based.
-- CLI flags (`--bgm`, `--bgm-fade-in`, `--bgm-fade-out`) override the spec.
-- Files referenced in `sfx` MUST exist in `assets/audio-assets/sfx/<tag>.wav`
-  (from `video audio-asset --sfx <tag>`); the CLI gives a readable error
-  with the next-step hint if a cue is missing.
+**Migration:** copy `bgm:`, `sfx:`, `bgm_fade_in_sec:` and
+`bgm_fade_out_sec:` into `audio-config.yaml` (same key names), then
+delete `audio-assets/mix.yaml`. Nothing else changes — the cue-key
+schema, the fade semantics and the file layout are the same. A project
+that keeps the legacy file keeps mixing the way it did; the mixer says
+so on every run.
 
 ### `video final --mix`
 
@@ -381,7 +408,7 @@ SFX cues) instead of the bare narration-only mp4.
 ```bash
 video audio "demo"               # assets/audio/scene-N.wav
 video audio-asset "demo" --bgm calm --sfx whoosh
-# write audio-assets/mix.yaml (sfx cues + fades)
+# declare the cues + fades in audio-config.yaml
 video final --mix --cwd projects/demo    # produces output/final-mixed.mp4
 ```
 

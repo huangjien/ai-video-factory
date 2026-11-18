@@ -316,12 +316,7 @@ export interface MakeOptions {
    * "none" (skip image generation; scenes fall back to
    * AnimatedIllustration shapes). */
   imageProvider?:
-    | "minimax"
-    | "minimax-h3"
-    | "openai"
-    | "gemini"
-    | "mock"
-    | "none";
+    "minimax" | "minimax-h3" | "openai" | "gemini" | "mock" | "none";
   /** Local music library for real BGM — a directory containing
    * `{tag}.wav` (or any .wav whose name contains the tag). Without it
    * the audio-assets step writes a mock silent placeholder. */
@@ -881,13 +876,7 @@ export async function generateSceneVisuals(
   projectRoot: string,
   article: ParsedArticle,
   opts: {
-    provider:
-      | "minimax"
-      | "minimax-h3"
-      | "openai"
-      | "gemini"
-      | "mock"
-      | "none";
+    provider: "minimax" | "minimax-h3" | "openai" | "gemini" | "mock" | "none";
     onEvent?: ProgressEmit | undefined;
   },
 ): Promise<string[]> {
@@ -903,13 +892,7 @@ export async function generateSceneVisuals(
 
   const isMock = opts.provider === "mock";
   const constructImageProvider = (
-    name:
-      | "minimax"
-      | "minimax-h3"
-      | "openai"
-      | "gemini"
-      | "mock"
-      | "none",
+    name: "minimax" | "minimax-h3" | "openai" | "gemini" | "mock" | "none",
   ): ImageProvider => {
     if (name === "minimax") return new MiniMaxImageProvider();
     if (name === "minimax-h3") return new MiniMaxH3ImageProvider();
@@ -1103,7 +1086,9 @@ export async function generateSceneVisuals(
       });
       lines.push(
         `assets/images/scene_${i + 1}.jpg` +
-          (servedBy !== opts.provider ? ` (served by ${servedBy} fallback)` : ""),
+          (servedBy !== opts.provider
+            ? ` (served by ${servedBy} fallback)`
+            : ""),
       );
       return { lines, generated: imagePath };
     } catch (err) {
@@ -1122,7 +1107,7 @@ export async function generateSceneVisuals(
       );
     }
     return { lines, generated: null };
-  }
+  };
 
   // Run the jobs in a pool, then flatten the results in SCENE order so
   // the log reads the same as a serial run.
@@ -1264,7 +1249,7 @@ function updateStoryboardForImages(
   return switched;
 }
 
-interface AudioConfigShape {
+export interface AudioConfigShape {
   voice?: string;
   bgm?: string | null;
   /** Multi-BGM timeline (branding 2026-10-05) — overrides `bgm`. */
@@ -1279,6 +1264,94 @@ interface AudioConfigShape {
   bgm_attenuation_db?: number;
   pause_between_sentences_sec?: number;
   sfx?: Record<string, string>;
+}
+
+/**
+ * Read `audio-config.yaml` — the second human-edit file, and the one
+ * the mix is configured by.
+ *
+ * A MISSING file yields an empty config (a project may have no audio
+ * config at all); a MALFORMED one throws, because silently mixing with
+ * a config nobody could read is how a project ends up with the wrong
+ * BGM and nobody notices.
+ */
+export async function loadAudioConfig(
+  projectRoot: string,
+): Promise<AudioConfigShape> {
+  const file = path.join(projectRoot, "audio-config.yaml");
+  if (!existsSync(file)) return {};
+  return parseYaml(await readFile(file, "utf8")) as AudioConfigShape;
+}
+
+/**
+ * Translate `audio-config.yaml` into mix options.
+ *
+ * The BGM tag is resolved against the curated library
+ * (`assets/bgm/`) with the project's own `assets/audio-assets/bgm/`
+ * shadowing it — the file is passed straight to ffmpeg, NOT copied,
+ * which would write an mp3 under a .wav name (the library is mp3) and
+ * duplicate ~6 MB per project.
+ *
+ * THIS is the single translation `video make`'s mix step and the
+ * standalone `video mix` command both use. They used to have two: the
+ * command read mix.yaml (a file the pipeline does not write) and
+ * ignored audio-config.yaml entirely, so `video mix` on a project whose
+ * config says `bgm: light-gravity` played a DIFFERENT track and
+ * dropped every SFX cue (measured 2026-11-16: the command mixed
+ * `ambient-take-your-pick` with 0 cues where the make step mixed
+ * `light-gravity` with 2 cues).
+ */
+export async function mixOptionsFromAudioConfig(
+  projectRoot: string,
+  config: AudioConfigShape,
+): Promise<MixProjectOptions> {
+  const mixOpts: MixProjectOptions = {};
+  if (config.bgm && typeof config.bgm === "string") {
+    mixOpts.bgmPath = await resolveLibraryBgm(projectRoot, config.bgm);
+  }
+  if (config.bgm_tracks && config.bgm_tracks.length > 0) {
+    // Multi-BGM timeline (branding 2026-10-05): pre-render the ordered
+    // windows into one wav, then mix it through the normal single-bgm
+    // path — the ducker and master fades in the engine apply unchanged.
+    const wsRoot = workspaceRootFor(projectRoot);
+    const total = await totalNarrationSeconds(projectRoot);
+    // Resolve every window's track up front: the resolver is async, while
+    // planBgmWindows takes a synchronous lookup.
+    const resolvedTracks = new Map<string, string>();
+    for (const t of config.bgm_tracks) {
+      resolvedTracks.set(t.track, await resolveBgmTrack(projectRoot, t.track));
+    }
+    const windows = planBgmWindows(
+      config.bgm_tracks,
+      total,
+      (track) => resolvedTracks.get(track) ?? path.resolve(projectRoot, track),
+    );
+    const timelinePath = await renderBgmTimeline(
+      windows,
+      path.join(projectRoot, "assets", "audio-assets", "bgm", "_timeline.wav"),
+    );
+    console.log(
+      `  bgm timeline: ${windows.map((w) => `${path.basename(w.path)}[${w.startSec.toFixed(1)}-${w.endSec.toFixed(1)}s]`).join(" → ")}`,
+    );
+    mixOpts.bgmPath = timelinePath;
+  }
+  if (typeof config.bgm_fade_in_sec === "number") {
+    mixOpts.bgmFadeInSec = config.bgm_fade_in_sec;
+  }
+  if (typeof config.bgm_attenuation_db === "number") {
+    mixOpts.bgmAttenuationDb = config.bgm_attenuation_db;
+  }
+  if (typeof config.bgm_fade_out_sec === "number") {
+    mixOpts.bgmFadeOutSec = config.bgm_fade_out_sec;
+  }
+  // CS-15: the SFX cues live in audio-config.yaml — one of the two
+  // human-edit files — but the mix engine only ever read mix.yaml, so
+  // every cue declared here was silently dropped: the .wav files were
+  // materialised and then never played. Pass them through explicitly.
+  if (config.sfx !== undefined) {
+    mixOpts.sfx = config.sfx;
+  }
+  return mixOpts;
 }
 
 /**
@@ -1811,55 +1884,11 @@ async function runMix(
   projectRoot: string,
   config: AudioConfigShape,
 ): Promise<string[]> {
-  // Translate audio-config.yaml → mix options: resolve tags against the
-  // curated library (`assets/bgm/`) with the project's own
-  // `assets/audio-assets/bgm/` shadowing it — the file is passed straight
-  // to ffmpeg, NOT copied, which would write an mp3 under a .wav name
-  // (the library is mp3) and duplicate ~6 MB per project.
-  const mixOpts: MixProjectOptions = {};
-  if (config.bgm && typeof config.bgm === "string") {
-    mixOpts.bgmPath = await resolveLibraryBgm(projectRoot, config.bgm);
-  }
-  if (config.bgm_tracks && config.bgm_tracks.length > 0) {
-    // Multi-BGM timeline (branding 2026-10-05): pre-render the ordered
-    // windows into one wav, then mix it through the normal single-bgm
-    // path — the ducker and master fades in the engine apply unchanged.
-    const wsRoot = workspaceRootFor(projectRoot);
-    const total = await totalNarrationSeconds(projectRoot);
-    // Resolve every window's track up front: the resolver is async, while
-    // planBgmWindows takes a synchronous lookup.
-    const resolvedTracks = new Map<string, string>();
-    for (const t of config.bgm_tracks) {
-      resolvedTracks.set(t.track, await resolveBgmTrack(projectRoot, t.track));
-    }
-    const windows = planBgmWindows(config.bgm_tracks, total, (track) =>
-      resolvedTracks.get(track) ?? path.resolve(projectRoot, track),
-    );
-    const timelinePath = await renderBgmTimeline(
-      windows,
-      path.join(projectRoot, "assets", "audio-assets", "bgm", "_timeline.wav"),
-    );
-    console.log(
-      `  bgm timeline: ${windows.map((w) => `${path.basename(w.path)}[${w.startSec.toFixed(1)}-${w.endSec.toFixed(1)}s]`).join(" → ")}`,
-    );
-    mixOpts.bgmPath = timelinePath;
-  }
-  if (typeof config.bgm_fade_in_sec === "number") {
-    mixOpts.bgmFadeInSec = config.bgm_fade_in_sec;
-  }
-  if (typeof config.bgm_attenuation_db === "number") {
-    mixOpts.bgmAttenuationDb = config.bgm_attenuation_db;
-  }
-  if (typeof config.bgm_fade_out_sec === "number") {
-    mixOpts.bgmFadeOutSec = config.bgm_fade_out_sec;
-  }
-  // CS-15: the SFX cues live in audio-config.yaml — one of the two
-  // human-edit files — but the mix engine only ever read mix.yaml, so
-  // every cue declared here was silently dropped: the .wav files were
-  // materialised and then never played. Pass them through explicitly.
-  if (config.sfx !== undefined) {
-    mixOpts.sfx = config.sfx;
-  }
+  // The translation lives in one place (`mixOptionsFromAudioConfig`) so
+  // the standalone `video mix` command and this step cannot drift — the
+  // command used to read mix.yaml instead of audio-config.yaml and
+  // mixed a different track with no SFX cues.
+  const mixOpts = await mixOptionsFromAudioConfig(projectRoot, config);
   // In-process call into the shared mix operation (the same one behind
   // `video mix`) — no nested CLI subprocess, no dist-path assumptions.
   const outcome = await mixProject(projectRoot, mixOpts);

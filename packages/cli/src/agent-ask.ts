@@ -167,20 +167,21 @@ const IMAGE_PROVIDER_NOTES: Record<string, string> = {
   minimax: "image-01; seconds per scene; needs MINIMAX_API_KEY",
   "minimax-h3":
     "MiniMax-H3-Image: native 1080p; LAST-resort fallback, never the default; ~$0.02/image at 1K; needs MINIMAX_API_KEY",
-  openai: "gpt-image-2.5-flare; needs OPENAI_API_KEY",
+  openai: "gpt-image-2.6-flare; needs OPENAI_API_KEY",
   gemini: "gemini-3.1-flash-image; needs GEMINI_API_KEY",
   mock: "deterministic placeholders; no API key, not shippable",
   none: "skip image generation; scenes render as vector shapes",
 };
 
-const IMAGE_PROVIDER_CHOICES: readonly { value: string; note: string }[] = (
+const IMAGE_PROVIDER_CHOICES: readonly { value: string; note: string }[] =
   // MiniMax-H3 deliberately LAST (2026-11 policy: fallback of last
   // resort, never a default or an early pick).
-  ["minimax", "openai", "gemini", "mock", "none", "minimax-h3"] as const
-).map((value) => ({
-  value,
-  note: IMAGE_PROVIDER_NOTES[value] ?? value,
-}));
+  (["minimax", "openai", "gemini", "mock", "none", "minimax-h3"] as const).map(
+    (value) => ({
+      value,
+      note: IMAGE_PROVIDER_NOTES[value] ?? value,
+    }),
+  );
 
 /**
  * Shortlist of BGM tracks for the question, drawn from the curated library
@@ -418,9 +419,7 @@ export async function emitQuestionsDoc(
       image_provider: byId.get("image_provider")?.resolved(opts) ?? "minimax",
       style: byId.get("style")?.resolved(opts) ?? DEFAULT_THEME_NAME,
       bgm: byId.get("bgm")?.resolved(opts) ?? "calm",
-      tts:
-        opts.tts ??
-        "minimax-system",
+      tts: opts.tts ?? "minimax-system",
     },
   };
   console.log(JSON.stringify(envelope, null, 2));

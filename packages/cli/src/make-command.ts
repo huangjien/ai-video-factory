@@ -22,12 +22,7 @@ export interface MakeOptions {
   /** Image provider for scene visuals: minimax (real AI), openai, gemini,
    *  mock, or none. */
   imageProvider?:
-    | "minimax"
-    | "minimax-h3"
-    | "openai"
-    | "gemini"
-    | "mock"
-    | "none";
+    "minimax" | "minimax-h3" | "openai" | "gemini" | "mock" | "none";
   /** Local music library dir — BGM tags resolve to {tag}.wav inside it. */
   bgmDir?: string;
   /** Local SFX library dir — same lookup rule as bgmDir. */
@@ -133,7 +128,7 @@ export function registerMake(program: Command): void {
     )
     .option(
       "--image-provider <provider>",
-      "image provider for scene visuals: minimax (image-01, default since v0.8.1; needs MINIMAX_API_KEY), minimax-h3 (MiniMax-H3-Image; LAST-resort fallback, never default; needs MINIMAX_API_KEY), openai (gpt-image-2.5-flare; needs OPENAI_API_KEY), gemini (gemini-3.1-flash-image; needs GEMINI_API_KEY), mock, none (--fake implies none). On a per-scene failure the other configured providers are tried in order minimax → openai → gemini → minimax-h3",
+      "image provider for scene visuals: minimax (image-01, default since v0.8.1; needs MINIMAX_API_KEY), minimax-h3 (MiniMax-H3-Image; LAST-resort fallback, never default; needs MINIMAX_API_KEY), openai (gpt-image-2.6-flare; needs OPENAI_API_KEY), gemini (gemini-3.1-flash-image; needs GEMINI_API_KEY), mock, none (--fake implies none). On a per-scene failure the other configured providers are tried in order minimax → openai → gemini → minimax-h3",
     )
     .option(
       "--bgm-dir <dir>",
@@ -155,12 +150,7 @@ export function registerMake(program: Command): void {
           cwd?: string;
           fake?: boolean;
           imageProvider?:
-            | "minimax"
-            | "minimax-h3"
-            | "openai"
-            | "gemini"
-            | "mock"
-            | "none";
+            "minimax" | "minimax-h3" | "openai" | "gemini" | "mock" | "none";
           bgmDir?: string;
           sfxDir?: string;
           dryRun?: boolean;
@@ -174,12 +164,8 @@ export function registerMake(program: Command): void {
           ...(opts.imageProvider !== undefined
             ? { imageProvider: opts.imageProvider }
             : {}),
-          ...(opts.bgmDir !== undefined
-            ? { bgmDir: opts.bgmDir }
-            : {}),
-          ...(opts.sfxDir !== undefined
-            ? { sfxDir: opts.sfxDir }
-            : {}),
+          ...(opts.bgmDir !== undefined ? { bgmDir: opts.bgmDir } : {}),
+          ...(opts.sfxDir !== undefined ? { sfxDir: opts.sfxDir } : {}),
           ...(opts.dryRun !== undefined ? { dryRun: opts.dryRun } : {}),
           ...(opts.lang !== undefined ? { lang: opts.lang } : {}),
         });

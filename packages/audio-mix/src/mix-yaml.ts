@@ -10,7 +10,12 @@ import { parse as parseYaml } from "yaml";
  *   bgm_fade_in_sec: <number>      # optional, fade BGM in over N seconds
  *   bgm_fade_out_sec: <number>     # optional, fade BGM out over last N seconds
  *
- * Used by `video mix` and `video final --mix`. Human-authored per project.
+ * LEGACY (2026-11-16): the pipeline has not written this file since
+ * `audio-config.yaml` became the human-edit file, so the mixer reads it
+ * as a FALLBACK — it only fills the gaps audio-config.yaml leaves, and
+ * warns when it is there. This schema still validates the cue keys
+ * (the same `scene_N` shape the current format uses), so a migrated
+ * project keeps the same cue contract.
  */
 export const SfxCueKeySchema = z
   .string()

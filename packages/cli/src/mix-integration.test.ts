@@ -247,3 +247,87 @@ describe("CLI mix — --sfx carries audio-config.yaml's cues (CS-15)", () => {
     expect(code).toBe(1);
   });
 });
+
+describe("CLI mix — the legacy mix.yaml is a fallback, not a source", () => {
+  let cwd: string;
+  let projectDir: string;
+  let errors: string[];
+  let errSpy: ReturnType<typeof vi.spyOn>;
+
+  beforeEach(() => {
+    cwd = mkdtempSync(path.join(tmpdir(), "video-mixlegacy-"));
+    projectDir = path.join(cwd, "projects", "demo");
+    for (const sub of [
+      "assets/audio",
+      "assets/audio-assets/bgm",
+      "assets/audio-assets/sfx",
+      "audio-assets",
+      "output",
+      "runs",
+    ]) {
+      mkdirSync(path.join(projectDir, sub), { recursive: true });
+    }
+    writeFileSync(path.join(projectDir, "state.yaml"), "status: DRAFT\n");
+    tone(projectDir, "assets/audio/scene-01.wav", 2, 440);
+    tone(projectDir, "assets/audio/scene-02.wav", 2, 880);
+    tone(projectDir, "assets/audio-assets/bgm/calm.wav", 4, 220);
+    tone(projectDir, "assets/audio-assets/bgm/light-gravity.wav", 4, 220);
+    tone(projectDir, "assets/audio-assets/sfx/whoosh.wav", 1, 1100);
+    errors = [];
+    errSpy = vi.spyOn(console, "error").mockImplementation((m: unknown) => {
+      errors.push(String(m));
+    });
+  });
+
+  afterEach(() => {
+    errSpy.mockRestore();
+    rmSync(cwd, { recursive: true, force: true });
+  });
+
+  it("still mixes a project that only has the legacy file", async () => {
+    // The legacy file keeps working — an old project must not break.
+    writeFileSync(
+      path.join(projectDir, "audio-assets", "mix.yaml"),
+      "bgm: calm\nsfx:\n  scene_2: whoosh\n",
+    );
+    const code = await runMix({ project: "demo", cwd });
+    expect(code).toBe(0);
+    expect(existsSync(path.join(projectDir, "output", "final-mixed.mp4"))).toBe(
+      true,
+    );
+  }, 60_000);
+
+  it("says so when the legacy file is present", async () => {
+    writeFileSync(
+      path.join(projectDir, "audio-assets", "mix.yaml"),
+      "bgm: calm\n",
+    );
+    const code = await runMix({ project: "demo", cwd });
+    expect(code).toBe(0);
+    expect(errors.join("\n")).toMatch(/legacy .*mix\.yaml/);
+    expect(errors.join("\n")).toMatch(/audio-config\.yaml/);
+  }, 60_000);
+
+  it("says nothing when there is no legacy file", async () => {
+    const code = await runMix({ project: "demo", cwd });
+    expect(code).toBe(0);
+    expect(errors.join("\n")).not.toMatch(/legacy/);
+  }, 60_000);
+
+  it("lets audio-config.yaml win over the legacy file", async () => {
+    // The config is the source; the legacy file only fills the gaps.
+    writeFileSync(
+      path.join(projectDir, "audio-config.yaml"),
+      'bgm: "light-gravity"\n',
+    );
+    writeFileSync(
+      path.join(projectDir, "audio-assets", "mix.yaml"),
+      "bgm: calm\n",
+    );
+    const code = await runMix({ project: "demo", cwd });
+    expect(code).toBe(0);
+    const line = errors.join("\n");
+    // The legacy track is NOT the one that plays.
+    expect(line).not.toMatch(/bgm=.*calm/);
+  }, 60_000);
+});

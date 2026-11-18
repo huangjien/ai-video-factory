@@ -15,12 +15,34 @@ video research → script → storyboard → audio (TTS) → audio-asset (BGM+SF
        video review                          → Content/Visual/Technical review YAMLs
 ```
 
-## v0.12 (2026-11-16) — the decision layer, everywhere it fits
+## v0.12 (2026-11-16) — the decision layer, the 2.6 image provider, and two films
 
-The decision provider layer had a contract (`choice` / `score` / `noul`
-with a confidence) and two wired surfaces. This release wires three more,
-fills in the bench's missing cost column, and **measures two candidates
-into cancellation** before writing a line of surface code for them.
+Three things shipped together:
+
+1. **The decision layer, everywhere it fits.** It had a contract
+   (`choice` / `score` / `noul` with a confidence) and two wired
+   surfaces. This release wires three more, fills in the bench's missing
+   cost column, and **measures two candidates into cancellation** before
+   writing a line of surface code for them.
+2. **The OpenAI image provider moves to `gpt-image-2.6-flare`**, measured
+   against MiniMax `image-01` on a real shipped scene prompt (same
+   prompt, same minute, `scripts/measure-image-providers.mjs`):
+
+   | provider | wall clock | cost/image | prompt fidelity |
+   |---|---|---|---|
+   | minimax image-01 | 17.2 s | $0.0196 | atmosphere, but the diagram it was asked for was unreadable |
+   | **gpt-image-2.6-flare `low`** | **8.1 s** | **$0.0203** | followed the prompt's two-part structure and drew a legible diagram |
+   | gpt-image-2.6-flare `medium` | 8.6 s | $0.0357 | same structure, cleaner glyphs |
+   | gpt-image-2.6-sunburst `medium` | 41.7 s | $0.0357 | same price, 4× slower |
+
+   `low` costs what image-01 costs, renders twice as fast, and is the
+   only one of the three that drew the diagram the prompt asked for. 2.6
+   also takes custom dimensions, so the provider now asks for the
+   composition size itself (1920×1088 for 16:9) instead of snapping to
+   the 1536×1024 recommended set and letting the renderer crop. The 2.5
+   models stay reachable through `defaultModel`.
+3. **Two films** — 《孙子兵法的数学原理》 (zh) and The Hidden Mathematics
+   of Sun Tzu (en) — re-shot on the new provider and published.
 
 **The bench can rank providers now.** `packages/prompts/decisions/prices.yaml`
 was empty, so every cost column read `n/a` and the ranking rule never
@@ -67,6 +89,66 @@ returns findings and risk flags) and cannot save the judge's call.
 Decisions API's `score` question, so an axis carries a calibrated
 confidence beside the chat judge's number; and `packages/llm/src/decision/consult.ts`
 collects the consult loop the surfaces used to copy.
+
+**`video mix` now reads `audio-config.yaml`.** The standalone command
+read `mix.yaml` — a file the pipeline does not write — and ignored the
+SFX cues entirely, so it mixed a DIFFERENT track than `video make` did:
+on the 孙子兵法 film the command played `ambient-take-your-pick` with 0
+cues where the make step played `light-gravity` with 2 cues (measured
+2026-11-16). The translation now lives in one place
+(`mixOptionsFromAudioConfig` in `@video/make`) and both paths use it;
+the flags override the file. `--bgm` accepts a library tag as well as a
+path.
+
+**`mix.yaml` is downgraded to a fallback.** The v0.3.5 mix format is
+still read — an old project keeps mixing the way it did — but it only
+fills the gaps `audio-config.yaml` leaves, and the mixer now prints a
+warning when it is there, naming the keys to move. The docs (`README.md`
+§SFX Cues + BGM Fades, `docs/USAGE.md` §6.5 and its zh-CN twin,
+`docs/CONTRIBUTING.md`) mark it legacy and carry the migration: copy
+`bgm:`, `sfx:`, `bgm_fade_in_sec:` and `bgm_fade_out_sec:` into
+`audio-config.yaml`, delete the file.
+
+**Two films shipped on the new provider — 《孙子兵法的数学原理》 (zh) and
+The Hidden Mathematics of Sun Tzu (en).** Both were published on
+2026-11-16, and both were re-shot because the first cut's diagrams were
+unreadable: MiniMax `image-01` drew the six-row ratio table as an EMPTY
+grid and the Lanchester equations as chalk scribbles. The three Chinese
+scenes that carry an argument (the ratio table, the equations, the
+curve) and all twenty-two English scenes were re-shot with
+`gpt-image-2.6-flare`.
+
+| | zh | en |
+|---|---|---|
+| YouTube | https://youtu.be/0p4h_hg93fQ | https://youtu.be/qy656c_h5h4 |
+| Bilibili | https://www.bilibili.com/video/BV1TBsu6vEwd | https://www.bilibili.com/video/BV15Zsz6PEFS |
+
+The first uploads of both films were deleted on YouTube and **marked**
+`【旧版·已重拍】` on Bilibili (the creator-center delete endpoint is not
+reachable with the uploader's cookies, so the old uploads were marked
+rather than deleted — `scripts/bili-mark-superseded.py` does the
+marking, by driving the creator center the way the shelved Zhihu
+uploader does). The draft score was 93/100 (zh) and 91.1/100 (en), both
+grade A on the first attempt; the Chinese film ran 266.9 s, the English
+291.6 s, both QA-clean.
+
+**The OpenAI image provider moves to `gpt-image-2.6-flare`.** Measured
+against MiniMax image-01 on a real shipped scene prompt (same prompt,
+same minute, `scripts/measure-image-providers.mjs`):
+
+| provider | wall clock | cost/image | prompt fidelity |
+|---|---|---|---|
+| minimax image-01 | 17.2 s | $0.0196 | atmosphere, but the diagram it was asked for was unreadable |
+| **gpt-image-2.6-flare `low`** | **8.1 s** | **$0.0203** | followed the prompt's two-part structure and drew a legible diagram |
+| gpt-image-2.6-flare `medium` | 8.6 s | $0.0357 | same structure, cleaner glyphs |
+| gpt-image-2.6-sunburst `medium` | 41.7 s | $0.0357 | same price, 4× slower |
+
+`low` costs what image-01 costs, renders twice as fast, and is the only
+one of the three that drew the diagram the prompt asked for. 2.6 also
+takes custom dimensions, so the provider now asks for the composition
+size itself (1920×1088 for 16:9) instead of snapping to the 1536×1024
+recommended set and letting the renderer crop. The 2.5 models stay
+reachable through `defaultModel`.
 
 The corpus is **370 cases across 5 surfaces**, every one derived from a
 shipped artifact. The labelling rules are in

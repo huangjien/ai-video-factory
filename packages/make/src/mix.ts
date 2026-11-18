@@ -49,12 +49,16 @@ export interface MixOutcome {
 
 export interface MixProjectOptions {
   /** Explicit BGM file — an already-resolved tag or timeline. When
-   *  omitted, mix.yaml's `bgm:` and then the library default apply. */
+   *  omitted, audio-config.yaml's `bgm:` applies, then the LEGACY
+   *  mix.yaml's, then the library default. */
   bgmPath?: string;
   bgmAttenuationDb?: number;
   bgmFadeInSec?: number;
   bgmFadeOutSec?: number;
-  /** Explicit mix.yaml path (default: audio-assets/mix.yaml). */
+  /** Explicit path to the LEGACY mix.yaml (default:
+   *  audio-assets/mix.yaml). The file is a v0.3.5 holdover the
+   *  pipeline no longer writes — it only fills the gaps
+   *  audio-config.yaml leaves. */
   mixYamlPath?: string;
   /** SFX cues as scene_N → tag (validated against the mix.yaml cue-key
    *  schema — a mis-keyed cue fails loudly instead of being dropped). */
@@ -388,10 +392,10 @@ async function probeTotalDuration(narrationPaths: string[]): Promise<number[]> {
 }
 
 /** The full mix operation behind one interface: narration selection,
- *  BGM resolution (explicit > mix.yaml > library default), SFX cue
- *  placement, ffmpeg mix, run record, and the output-artifact check.
- *  Both `video mix` (CLI) and `video make`'s mix step call this —
- *  in-process, no nested CLI subprocess. */
+ *  BGM resolution (explicit > audio-config.yaml > legacy mix.yaml >
+ *  library default), SFX cue placement, ffmpeg mix, run record, and the
+ *  output-artifact check. Both `video mix` (CLI) and `video make`'s mix
+ *  step call this — in-process, no nested CLI subprocess. */
 export async function mixProject(
   projectRoot: string,
   opts: MixProjectOptions = {},
@@ -415,18 +419,26 @@ export async function mixProject(
     return fail((err as Error).message, [`\u2717 ${(err as Error).message}`]);
   }
 
-  // Read mix.yaml (optional) — overrides BGM selection and may define SFX
-  // cues + fade durations. Explicit options override the spec where set.
+  // Read the LEGACY mix.yaml (optional) — a v0.3.5 file the pipeline
+  // has never written: `audio-config.yaml` is the source of truth for
+  // the BGM, the fades and the SFX cues. It is still read, as a
+  // fallback that only fills the gaps audio-config.yaml leaves, so an
+  // old project keeps mixing the way it used to. When it IS used, say
+  // so — a silent legacy file is how a project keeps a track nobody
+  // remembers choosing.
   const mixYamlPath =
     opts.mixYamlPath ?? path.join(projectRoot, "audio-assets", "mix.yaml");
-  let spec = null;
+  let legacy = null;
   if (existsSync(mixYamlPath)) {
     try {
-      spec = parseMixYaml(readFileSync(mixYamlPath, "utf8"));
+      legacy = parseMixYaml(readFileSync(mixYamlPath, "utf8"));
     } catch (err) {
       return fail((err as Error).message, [`\u2717 ${(err as Error).message}`]);
     }
-    if (opts.bgmPath === undefined && spec.bgm) {
+    warnings.push(
+      `legacy ${path.relative(projectRoot, mixYamlPath)} found — it only fills the gaps audio-config.yaml leaves; move its keys (bgm:, sfx:, bgm_fade_in_sec:, bgm_fade_out_sec:) into audio-config.yaml and delete the file`,
+    );
+    if (opts.bgmPath === undefined && legacy.bgm) {
       // pickBgm returns explicit paths without an existence check, so a
       // spec naming a missing track used to hand ffmpeg a dead path and
       // the fallback below could never fire. Check here instead.
@@ -435,28 +447,28 @@ export async function mixProject(
         "assets",
         "audio-assets",
         "bgm",
-        `${spec.bgm}.wav`,
+        `${legacy.bgm}.wav`,
       );
       if (existsSync(specBgm)) {
         bgmPath = specBgm;
       } else {
         warnings.push(
-          `mix.yaml bgm "${spec.bgm}" not found at ${specBgm} — falling back to ${path.basename(bgmPath)}`,
+          `mix.yaml bgm "${legacy.bgm}" not found at ${specBgm} — falling back to ${path.basename(bgmPath)}`,
         );
       }
     }
   }
 
-  const fadeIn = opts.bgmFadeInSec ?? spec?.bgm_fade_in_sec ?? 0;
-  const fadeOut = opts.bgmFadeOutSec ?? spec?.bgm_fade_out_sec ?? 0;
+  const fadeIn = opts.bgmFadeInSec ?? legacy?.bgm_fade_in_sec ?? 0;
+  const fadeOut = opts.bgmFadeOutSec ?? legacy?.bgm_fade_out_sec ?? 0;
   const sfxDir = path.join(projectRoot, "assets/audio-assets/sfx");
-  // Cues from a pre-parsed map (audio-config.yaml via `video make`, or
-  // --sfx flags via the CLI) and from mix.yaml are merged; the map wins
-  // on the same scene key.
+  // Cues from a pre-parsed map (audio-config.yaml, or --sfx flags via
+  // the CLI) and from the legacy mix.yaml are merged; the map wins on
+  // the same scene key.
   let sfxSpec: Record<string, string>;
   try {
     if (opts.sfx !== undefined) validateSfxMap(opts.sfx);
-    sfxSpec = { ...(spec?.sfx ?? {}), ...(opts.sfx ?? {}) };
+    sfxSpec = { ...(legacy?.sfx ?? {}), ...(opts.sfx ?? {}) };
   } catch (err) {
     return fail((err as Error).message, [`✗ ${(err as Error).message}`]);
   }
@@ -527,7 +539,7 @@ export async function mixProject(
     "sha256:" +
     createHash("sha256")
       .update(
-        `bgm=${bgmPath}|narr=${narrationPaths.join(",")}|spec=${spec ? "yes" : "no"}|sfx=${sfxCues.length}|fade=${fadeIn},${fadeOut}`,
+        `bgm=${bgmPath}|narr=${narrationPaths.join(",")}|spec=${legacy ? "yes" : "no"}|sfx=${sfxCues.length}|fade=${fadeIn},${fadeOut}`,
       )
       .digest("hex");
   await writeRun(projectRoot, {

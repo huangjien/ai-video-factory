@@ -14,8 +14,9 @@ export type ScheduleKind = "harvest" | "auto";
  *  program args and the trigger block. */
 function launchdPlist(opts: {
   label: string;
-  videoPath: string;
-  programArgs: string[];
+  command: string;
+  args: string[];
+  env: Record<string, string>;
   triggerXml: string;
   logPath: string;
 }): string {
@@ -26,9 +27,12 @@ function launchdPlist(opts: {
       .replaceAll("<", "&lt;")
       .replaceAll(">", "&gt;")
       .replaceAll("'", "&apos;");
-  const args = opts.programArgs
+  const argv = [opts.command, ...opts.args]
     .map((a) => `<string>${esc(a)}</string>`)
     .join("\n    ");
+  const envXml = Object.entries(opts.env)
+    .map(([k, v]) => `    <key>${esc(k)}</key>\n    <string>${esc(v)}</string>`)
+    .join("\n");
   return `<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
@@ -37,14 +41,12 @@ function launchdPlist(opts: {
   <string>${esc(opts.label)}</string>
   <key>ProgramArguments</key>
   <array>
-    <string>${esc(opts.videoPath)}</string>
-    ${args}
+    ${argv}
   </array>
   ${opts.triggerXml}
   <key>EnvironmentVariables</key>
   <dict>
-    <key>VIDEO_ASK</key>
-    <string>off</string>
+${envXml}
   </dict>
   <key>StandardOutPath</key>
   <string>${esc(opts.logPath)}</string>
@@ -57,23 +59,24 @@ function launchdPlist(opts: {
 `;
 }
 
-export interface HarvestPlistOptions {
-  videoPath: string;
+export interface PlistContentOptions {
+  /** Absolute executable — launchd has no shell PATH, so "video" alone
+   *  fails with exit 127 (measured 2026-11-19). Pass the absolute node
+   *  binary + dist entry via args. */
+  command: string;
+  args: string[];
   label?: string;
   logPath: string;
+  /** PATH for the run's children — make spawns ffmpeg/remotion from
+   *  Homebrew paths launchd does not set. */
+  envPath?: string;
+  /** Provider keys and overrides copied into EnvironmentVariables —
+   *  launchd inherits NO shell env, so without these the quota check and
+   *  every provider call fail (measured 2026-11-19). */
+  env?: Record<string, string>;
 }
 
-/** Pure plist text for the weekly LaunchAgent. Sunday 09:00 because the
- *  backlog refresh has no deadline pressure and early Sunday is when the
- *  machine is idle yet awake enough for an LLM run; weekly cadence matches
- *  the design doc (docs/plans/2026-11-18-backlog-feature-design.md §Scheduler). */
-export function harvestPlistContent(opts: HarvestPlistOptions): string {
-  const label = opts.label ?? DEFAULT_HARVEST_LABEL;
-  return launchdPlist({
-    label,
-    videoPath: opts.videoPath,
-    programArgs: ["backlog", "harvest"],
-    triggerXml: `  <key>StartCalendarInterval</key>
+const TRIGGER_HARVEST = `  <key>StartCalendarInterval</key>
   <dict>
     <key>Weekday</key>
     <integer>0</integer>
@@ -81,30 +84,32 @@ export function harvestPlistContent(opts: HarvestPlistOptions): string {
     <integer>9</integer>
     <key>Minute</key>
     <integer>0</integer>
-  </dict>`,
-    logPath: opts.logPath,
-  });
-}
+  </dict>`;
 
-export interface AutoPlistOptions {
-  videoPath: string;
-  label?: string;
-  logPath: string;
-}
+const TRIGGER_AUTO = `  <key>StartInterval</key>
+  <integer>600</integer>`;
 
-/** Pure plist text for the auto-producer LaunchAgent. StartInterval 600:
- *  the trigger condition ("MiniMax idle an hour, ≥80% quota left") is
- *  cheap to evaluate and the pipeline itself refuses to double-run via
- *  its lockfile, so a 10-minute poke reacts fast to an idle gap without
- *  meaningful cost (2026-11-19: owner asked for 600 over 3600). */
-export function autoPlistContent(opts: AutoPlistOptions): string {
-  const label = opts.label ?? DEFAULT_AUTO_LABEL;
+/** LaunchAgent plist for a schedule kind. Weekly harvest (Sunday 09:00 —
+ *  no deadline pressure) or the auto-producer (StartInterval 600 — the
+ *  trigger is cheap and the lockfile prevents double-runs; 2026-11-19:
+ *  owner asked for 600 over 3600). */
+export function plistContentFor(
+  kind: ScheduleKind,
+  opts: PlistContentOptions,
+): string {
+  const label = opts.label ?? labelOf(kind);
   return launchdPlist({
     label,
-    videoPath: opts.videoPath,
-    programArgs: ["backlog", "auto"],
-    triggerXml: `  <key>StartInterval</key>
-  <integer>600</integer>`,
+    command: opts.command,
+    args: opts.args,
+    env: {
+      VIDEO_ASK: "off",
+      PATH:
+        opts.envPath ??
+        "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin",
+      ...(opts.env ?? {}),
+    },
+    triggerXml: kind === "auto" ? TRIGGER_AUTO : TRIGGER_HARVEST,
     logPath: opts.logPath,
   });
 }
@@ -113,16 +118,19 @@ export interface BacklogScheduleOptions {
   install?: boolean;
   remove?: boolean;
   status?: boolean;
-  /** Which LaunchAgent to manage: weekly harvest (default) or the hourly
+  /** Which LaunchAgent to manage: weekly harvest (default) or the 10-min
    *  auto-producer. */
   kind?: ScheduleKind;
   cwd?: string;
   /** TEST SEAM: overrides the LaunchAgents directory (default ~/Library/LaunchAgents). */
   plistDir?: string;
-  /** TEST SEAM: overrides the resolved video binary path, skipping which/bin lookup.
-   *  Empty string simulates total resolution failure (real `which video` may succeed
-   *  on dev machines, so there is no other way to exercise the failure branch). */
-  videoPath?: string;
+  /** TEST SEAM: overrides the built CLI entry the plist runs. Default
+   *  <repo>/packages/cli/dist/index.js; a nonexistent path simulates the
+   *  missing-build failure (the plist cannot fall back to the `video`
+   *  wrapper — launchd has no shell PATH, exit 127 measured 2026-11-19). */
+  distEntry?: string;
+  /** TEST SEAM: overrides the node binary for ProgramArguments. */
+  command?: string;
   /** TEST SEAM: replaces launchctl execution; receives the argv after "launchctl". */
   runLaunchctl?: (args: string[]) => Promise<number>;
 }
@@ -132,21 +140,25 @@ function defaultRunLaunchctl(args: string[]): Promise<number> {
   return Promise.resolve(r.status ?? 1);
 }
 
-function whichVideo(): string | null {
-  try {
-    const out = execFileSync("which", ["video"], { encoding: "utf8" }).trim();
-    return out.length > 0 ? out : null;
-  } catch {
-    return null;
+function resolveDistEntry(opts: BacklogScheduleOptions): string | null {
+  if (opts.distEntry !== undefined) {
+    return existsSync(opts.distEntry) ? opts.distEntry : null;
   }
+  const fallback = path.join(
+    findRepoRoot(opts.cwd ?? process.cwd()),
+    "packages",
+    "cli",
+    "dist",
+    "index.js",
+  );
+  return existsSync(fallback) ? fallback : null;
 }
 
-function resolveVideoBinary(opts: BacklogScheduleOptions): string | null {
-  if (opts.videoPath !== undefined) return opts.videoPath.length > 0 ? opts.videoPath : null;
-  const fromPath = whichVideo();
-  if (fromPath !== null) return fromPath;
-  const fallback = path.join(findRepoRoot(opts.cwd ?? process.cwd()), "bin", "video");
-  return existsSync(fallback) ? fallback : null;
+/** The PATH launchd children get: node's own dir plus the usual Homebrew
+ *  / system dirs — make spawns ffmpeg and Remotion from those. */
+function launchdEnvPath(): string {
+  const nodeDir = path.dirname(process.execPath);
+  return `${nodeDir}:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin`;
 }
 
 function plistDir(opts: BacklogScheduleOptions): string {
@@ -193,22 +205,47 @@ async function isLoaded(
   }
 }
 
+/** Provider keys and overrides the pipeline reads from env. At install
+ *  time, whichever exist in the INSTALLING shell are baked into the plist
+ *  — launchd inherits no shell env. */
+const ENV_KEYS = [
+  "MINIMAX_API_KEY",
+  "GLM_API_KEY",
+  "OPENAI_API_KEY",
+  "GEMINI_API_KEY",
+  "GLM_BASE_URL",
+  "MINIMAX_API_HOST",
+  "OPENAI_API_BASE_URL",
+  "GEMINI_API_BASE_URL",
+  "LL_CONFIG",
+] as const;
+
 async function doInstall(opts: BacklogScheduleOptions): Promise<number> {
-  const video = resolveVideoBinary(opts);
-  if (video === null) {
+  const dist = resolveDistEntry(opts);
+  if (dist === null) {
     console.error(
-      "video binary not found — symlink bin/video into PATH (see repo docs), or pass --video-path",
+      `built CLI entry not found (${path.join("packages", "cli", "dist", "index.js")}) — run \`pnpm build\` first, then reinstall`,
     );
     return 1;
   }
   const kind = plistKind(opts);
   const target = plistPath(opts);
   mkdirSync(path.dirname(target), { recursive: true });
-  const content =
-    kind === "auto"
-      ? autoPlistContent({ videoPath: video, logPath: defaultLogPath(opts) })
-      : harvestPlistContent({ videoPath: video, logPath: defaultLogPath(opts) });
-  writeFileSync(target, content, { mode: 0o644 });
+  const env: Record<string, string> = {};
+  for (const key of ENV_KEYS) {
+    const value = process.env[key];
+    if (value !== undefined && value !== "") env[key] = value;
+  }
+  const embedded = Object.keys(env);
+  const content = plistContentFor(kind, {
+    command: opts.command ?? process.execPath,
+    args: [dist, "backlog", kind],
+    envPath: launchdEnvPath(),
+    logPath: defaultLogPath(opts),
+    env,
+  });
+  // The plist carries provider keys — user-only read/write.
+  writeFileSync(target, content, { mode: 0o600 });
   const run = opts.runLaunchctl ?? defaultRunLaunchctl;
   const code = await run(["load", target]);
   if (code !== 0) {
@@ -217,6 +254,7 @@ async function doInstall(opts: BacklogScheduleOptions): Promise<number> {
   }
   const cadence = kind === "auto" ? "auto-producer (every 10 min)" : "weekly backlog harvest";
   console.log(`installed ${labelOf(kind)} — ${cadence}, plist at ${target}`);
+  console.log(`  env baked in: ${embedded.length > 0 ? embedded.join(", ") : "(none found — provider calls will fail until keys are present at install time)"}`);
   return 0;
 }
 

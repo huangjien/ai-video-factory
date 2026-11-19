@@ -289,7 +289,6 @@ export async function runBacklogAuto(opts: BacklogAutoOptions): Promise<number> 
       kind: "auto",
       ...(opts.cwd !== undefined ? { cwd: opts.cwd } : {}),
       ...(opts.plistDir !== undefined ? { plistDir: opts.plistDir } : {}),
-      ...(opts.videoPath !== undefined ? { videoPath: opts.videoPath } : {}),
       ...(opts.runLaunchctl !== undefined ? { runLaunchctl: opts.runLaunchctl } : {}),
     });
   }

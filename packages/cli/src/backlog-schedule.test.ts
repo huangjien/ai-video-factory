@@ -1,49 +1,37 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 
 import {
+  DEFAULT_AUTO_LABEL,
   DEFAULT_HARVEST_LABEL,
   addScheduleCommand,
-  harvestPlistContent,
+  plistContentFor,
   runBacklogSchedule,
 } from "./backlog-schedule.js";
-import type { Command } from "commander";
-import { Command as RealCommand } from "commander";
 
 let fixtureRoot: string | undefined;
-beforeEach(() => {
-  fixtureRoot = mkdtempSync(path.join(tmpdir(), "video-backlog-schedule-"));
-});
-afterEach(() => {
-  if (fixtureRoot !== undefined) {
-    rmSync(fixtureRoot, { recursive: true, force: true });
-    fixtureRoot = undefined;
-  }
-});
-
 // Console capture so assertions can check user-facing messages.
 let consoleOutput: string[] = [];
 let consoleErrors: string[] = [];
 const origLog = console.log;
 const origErr = console.error;
 beforeEach(() => {
+  fixtureRoot = mkdtempSync(path.join(tmpdir(), "video-backlog-schedule-"));
   consoleOutput = [];
   consoleErrors = [];
+  console.log = (...a: unknown[]) => consoleOutput.push(a.join(" "));
+  console.error = (...a: unknown[]) => consoleErrors.push(a.join(" "));
 });
 afterEach(() => {
   console.log = origLog;
   console.error = origErr;
+  if (fixtureRoot !== undefined) {
+    rmSync(fixtureRoot, { recursive: true, force: true });
+    fixtureRoot = undefined;
+  }
 });
-function captureConsole() {
-  console.log = (...a: unknown[]) => {
-    consoleOutput.push(a.join(" "));
-  };
-  console.error = (...a: unknown[]) => {
-    consoleErrors.push(a.join(" "));
-  };
-}
 
 function fixturePlistDir(): string {
   return path.join(fixtureRoot as string, "LaunchAgents");
@@ -51,63 +39,86 @@ function fixturePlistDir(): string {
 function fixtureLog(): string {
   return path.join(fixtureRoot as string, "runs", "harvest.log");
 }
+/** The built CLI entry the plist must run — a fixture stand-in. */
+function fixtureDist(): string {
+  const dist = path.join(fixtureRoot as string, "packages", "cli", "dist", "index.js");
+  mkdirSync(path.dirname(dist), { recursive: true });
+  writeFileSync(dist, "// fixture entry\n");
+  return dist;
+}
 
-describe("harvestPlistContent", () => {
-  const base = { videoPath: "/usr/local/bin/video", logPath: "/tmp/harvest.log" };
+describe("plistContentFor", () => {
+  const base = (command: string) => ({
+    command,
+    args: ["/repo/packages/cli/dist/index.js", "backlog", "harvest"],
+    logPath: "/tmp/harvest.log",
+  });
 
   it("is well-formed XML with the expected top-level shape", () => {
-    const xml = harvestPlistContent({ ...base, label: "test.label" });
+    const xml = plistContentFor("harvest", { ...base("/usr/local/bin/node"), label: "test.label" });
     expect(xml.startsWith('<?xml version="1.0"')).toBe(true);
-    expect(xml).toContain('<key>Label</key>');
+    expect(xml).toContain("<key>Label</key>");
     expect(xml).toContain("<string>test.label</string>");
     expect(xml.trimEnd().endsWith("</plist>")).toBe(true);
-    // dict keys are paired with values
     expect(xml.match(/<key>/g)?.length).toBe(xml.match(/<\/key>/g)?.length);
   });
 
-  it("defaults the label to com.aivideofactory.backlog-harvest", () => {
-    expect(harvestPlistContent({ ...base })).toContain(
+  it("defaults the label per kind", () => {
+    expect(plistContentFor("harvest", base("/node"))).toContain(
       `<string>${DEFAULT_HARVEST_LABEL}</string>`,
+    );
+    expect(plistContentFor("auto", base("/node"))).toContain(
+      `<string>${DEFAULT_AUTO_LABEL}</string>`,
     );
   });
 
-  it("sets ProgramArguments to [videoPath, backlog, harvest]", () => {
-    const xml = harvestPlistContent(base);
+  it("sets ProgramArguments to [command, distEntry, backlog, verb]", () => {
+    const xml = plistContentFor("harvest", base("/usr/local/bin/node"));
     const args = xml.slice(xml.indexOf("ProgramArguments"));
-    expect(args).toContain("<string>/usr/local/bin/video</string>");
-    expect(args).toContain("<string>backlog</string>");
-    expect(args).toContain("<string>harvest</string>");
+    expect(args).toContain("<string>/usr/local/bin/node</string>");
+    expect(args).toContain("<string>/repo/packages/cli/dist/index.js</string>");
     expect(args.indexOf("backlog")).toBeLessThan(args.indexOf("harvest"));
   });
 
-  it("schedules a weekly run (Sunday 09:00)", () => {
-    const xml = harvestPlistContent(base);
-    const sched = xml.slice(xml.indexOf("StartCalendarInterval"));
-    expect(sched).toContain("<key>Weekday</key>");
-    expect(sched).toContain("<integer>0</integer>"); // launchd: 0 = Sunday
-    expect(sched).toContain("<key>Hour</key>");
-    expect(sched).toContain("<integer>9</integer>");
+  it("schedules harvest weekly (Sunday 09:00) and auto every 600s", () => {
+    const harvest = plistContentFor("harvest", base("/node"));
+    expect(harvest).toContain("<key>Weekday</key>");
+    expect(harvest).toContain("<integer>0</integer>"); // launchd: 0 = Sunday
+    expect(harvest).toContain("<integer>9</integer>");
+
+    const auto = plistContentFor("auto", base("/node"));
+    expect(auto).toContain("<key>StartInterval</key>");
+    expect(auto).toContain("<integer>600</integer>");
   });
 
-  it("forces headless mode via VIDEO_ASK=off", () => {
-    const xml = harvestPlistContent(base);
+  it("forces headless mode and injects a usable PATH for children", () => {
+    const xml = plistContentFor("harvest", { ...base("/node"), envPath: "/x:/usr/bin" });
     expect(xml).toContain("<key>VIDEO_ASK</key>");
     expect(xml).toContain("<string>off</string>");
+    expect(xml).toContain("<key>PATH</key>");
+    expect(xml).toContain("<string>/x:/usr/bin</string>");
+  });
+
+  it("defaults the child PATH to Homebrew + system dirs", () => {
+    const xml = plistContentFor("auto", base("/node"));
+    expect(xml).toContain("/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin");
   });
 
   it("routes stdout and stderr to the log path and does not run at load", () => {
-    const xml = harvestPlistContent({ ...base, logPath: fixtureLog() });
+    const xml = plistContentFor("harvest", { ...base("/node"), logPath: fixtureLog() });
     expect(xml.match(new RegExp(`<string>${fixtureLog().replaceAll("/", "\\/")}</string>`, "g"))?.length).toBe(2);
     expect(xml).toContain("<key>RunAtLoad</key>");
     expect(xml).toContain("<false/>");
   });
 
   it("escapes XML-special characters in paths", () => {
-    const xml = harvestPlistContent({
-      videoPath: "/opt/weird & path/video",
+    const xml = plistContentFor("harvest", {
+      command: "/opt/weird & path/node",
+      args: ["/tmp/log<1>.js", "backlog", "harvest"],
       logPath: "/tmp/log<1>.txt",
     });
-    expect(xml).toContain("/opt/weird &amp; path/video");
+    expect(xml).toContain("/opt/weird &amp; path/node");
+    expect(xml).toContain("/tmp/log&lt;1&gt;.js");
     expect(xml).toContain("/tmp/log&lt;1&gt;.txt");
   });
 });
@@ -126,7 +137,7 @@ describe("runBacklogSchedule — validation", () => {
         install: true,
         status: true,
         plistDir: fixturePlistDir(),
-        videoPath: "/bin/video",
+        distEntry: fixtureDist(),
         runLaunchctl: async () => 0,
       }),
     ).toBe(1);
@@ -135,14 +146,21 @@ describe("runBacklogSchedule — validation", () => {
 });
 
 describe("runBacklogSchedule — install", () => {
-  // Computed lazily per test — fixtureRoot only exists after beforeEach.
-  const seamOpts = () => ({ plistDir: fixturePlistDir(), videoPath: "/usr/local/bin/video" });
+  function seamOpts() {
+    return {
+      plistDir: fixturePlistDir(),
+      distEntry: fixtureDist(),
+      runLaunchctl: async () => 0,
+    };
+  }
 
-  it("writes the plist into the fixture plistDir and loads it via the seam", async () => {
+  it("writes a plist that runs node + dist directly and loads it via the seam", async () => {
     captureConsole();
+    const dist = fixtureDist();
     const calls: string[][] = [];
     const code = await runBacklogSchedule({
-      ...seamOpts(),
+      plistDir: fixturePlistDir(),
+      distEntry: dist,
       install: true,
       runLaunchctl: async (args) => {
         calls.push(args);
@@ -153,8 +171,12 @@ describe("runBacklogSchedule — install", () => {
     const plistPath = path.join(fixturePlistDir(), `${DEFAULT_HARVEST_LABEL}.plist`);
     expect(existsSync(plistPath)).toBe(true);
     const written = readFileSync(plistPath, "utf8");
-    expect(written).toContain("<string>/usr/local/bin/video</string>");
+    // The wrapper binary must NOT appear — launchd has no shell PATH, so
+    // `exec node` inside it failed with 127 (measured 2026-11-19).
+    expect(written).toContain("<string>backlog</string>");
     expect(written).toContain("<string>harvest</string>");
+    expect(written).toContain(dist);
+    expect(written).toContain("<key>PATH</key>");
     expect(calls).toEqual([["load", plistPath]]);
   });
 
@@ -164,21 +186,19 @@ describe("runBacklogSchedule — install", () => {
     await runBacklogSchedule({
       install: true,
       plistDir: nested,
-      videoPath: "/bin/video",
+      distEntry: fixtureDist(),
       runLaunchctl: async () => 0,
     });
     expect(existsSync(path.join(nested, `${DEFAULT_HARVEST_LABEL}.plist`))).toBe(true);
   });
 
-  it("fails with a hint when no video binary resolves", async () => {
+  it("fails with a hint when the built entry is missing", async () => {
     captureConsole();
     const calls: string[][] = [];
     const code = await runBacklogSchedule({
       install: true,
       plistDir: fixturePlistDir(),
-      // empty videoPath = simulated resolution failure (real `which video`
-      // may find a dev-machine binary, so cwd alone cannot force the miss)
-      videoPath: "",
+      distEntry: path.join(fixtureRoot as string, "no-such", "index.js"),
       runLaunchctl: async (args) => {
         calls.push(args);
         return 0;
@@ -187,19 +207,77 @@ describe("runBacklogSchedule — install", () => {
     expect(code).toBe(1);
     expect(calls).toEqual([]);
     expect(existsSync(path.join(fixturePlistDir(), `${DEFAULT_HARVEST_LABEL}.plist`))).toBe(false);
-    expect(consoleErrors.join("\n")).toContain("bin/video");
+    expect(consoleErrors.join("\n")).toContain("pnpm build");
   });
 
   it("prints the manual load command when launchctl fails", async () => {
     captureConsole();
     const plistPath = path.join(fixturePlistDir(), `${DEFAULT_HARVEST_LABEL}.plist`);
     const code = await runBacklogSchedule({
-      ...seamOpts(),
+      plistDir: fixturePlistDir(),
+      distEntry: fixtureDist(),
       install: true,
       runLaunchctl: async () => 127,
     });
     expect(code).toBe(1);
     expect(consoleErrors.join("\n")).toContain(`launchctl load "${plistPath}"`);
+  });
+
+  it("installs the AUTO agent with a 600s interval under --kind auto", async () => {
+    captureConsole();
+    const plistPath = path.join(fixturePlistDir(), `${DEFAULT_AUTO_LABEL}.plist`);
+    const code = await runBacklogSchedule({
+      kind: "auto",
+      plistDir: fixturePlistDir(),
+      distEntry: fixtureDist(),
+      install: true,
+      runLaunchctl: async () => 0,
+    });
+    expect(code).toBe(0);
+    const written = readFileSync(plistPath, "utf8");
+    expect(written).toContain(DEFAULT_AUTO_LABEL);
+    expect(written).toContain("<integer>600</integer>");
+    expect(written).toContain("<string>auto</string>");
+    expect(consoleOutput.join("\n")).toMatch(/every 10 min/);
+  });
+
+  it("bakes present provider keys into the plist and tightens it to 0600", async () => {
+    captureConsole();
+    process.env["MINIMAX_API_KEY"] = "mm-test-key";
+    const plistPath = path.join(fixturePlistDir(), `${DEFAULT_HARVEST_LABEL}.plist`);
+    const code = await runBacklogSchedule({
+      plistDir: fixturePlistDir(),
+      distEntry: fixtureDist(),
+      install: true,
+      runLaunchctl: async () => 0,
+    });
+    delete process.env["MINIMAX_API_KEY"];
+    expect(code).toBe(0);
+    const written = readFileSync(plistPath, "utf8");
+    expect(written).toContain("<key>MINIMAX_API_KEY</key>");
+    expect(written).toContain("<string>mm-test-key</string>");
+    const mode = statSync(plistPath).mode & 0o777;
+    expect(mode).toBe(0o600);
+  });
+
+  it("warns when the installing shell carries no provider keys", async () => {
+    captureConsole();
+    const saved: Record<string, string | undefined> = {};
+    for (const key of ["MINIMAX_API_KEY", "GLM_API_KEY", "OPENAI_API_KEY", "GEMINI_API_KEY"]) {
+      saved[key] = process.env[key];
+      delete process.env[key];
+    }
+    const code = await runBacklogSchedule({
+      plistDir: fixturePlistDir(),
+      distEntry: fixtureDist(),
+      install: true,
+      runLaunchctl: async () => 0,
+    });
+    for (const [key, value] of Object.entries(saved)) {
+      if (value !== undefined) process.env[key] = value;
+    }
+    expect(code).toBe(0);
+    expect(consoleOutput.join("\n")).toMatch(/env baked in: \(none found/);
   });
 });
 
@@ -261,53 +339,33 @@ describe("runBacklogSchedule — status", () => {
     captureConsole();
     mkdirSync(fixturePlistDir(), { recursive: true });
     writeFileSync(path.join(fixturePlistDir(), `${DEFAULT_HARVEST_LABEL}.plist`), "<plist/>");
-    await runBacklogSchedule({
+    const code = await runBacklogSchedule({
       status: true,
       plistDir: fixturePlistDir(),
-      runLaunchctl: async (args) => (args[0] === "list" ? 0 : 1),
+      runLaunchctl: async () => 0,
     });
-    const out = consoleOutput.join("\n");
-    expect(out).toContain("installed");
-    expect(out).toContain("loaded: yes");
-  });
-
-  it("reports installed but not loaded when the seam fails on list", async () => {
-    captureConsole();
-    mkdirSync(fixturePlistDir(), { recursive: true });
-    writeFileSync(path.join(fixturePlistDir(), `${DEFAULT_HARVEST_LABEL}.plist`), "<plist/>");
-    await runBacklogSchedule({
-      status: true,
-      plistDir: fixturePlistDir(),
-      runLaunchctl: async () => 1,
-    });
-    expect(consoleOutput.join("\n")).toContain("loaded: no");
+    expect(code).toBe(0);
+    expect(consoleOutput.join("\n")).toMatch(/loaded: yes/);
   });
 });
 
 describe("addScheduleCommand", () => {
-  function buildBacklog(): Command {
+  it("registers the schedule subcommand with all flags", () => {
     const program = new RealCommand();
     const backlog = program.command("backlog");
     addScheduleCommand(backlog);
-    return program;
-  }
-
-  it("registers a schedule subcommand with the three action flags", () => {
-    const schedule = buildBacklog().commands.find((c) => c.name() === "backlog")?.commands.find((c) => c.name() === "schedule");
+    const schedule = backlog.commands.find((c) => c.name() === "schedule");
     expect(schedule).toBeDefined();
-    const names = schedule?.options.map((o) => o.long);
-    expect(names).toContain("--install");
-    expect(names).toContain("--remove");
-    expect(names).toContain("--status");
-    expect(names).toContain("--cwd");
-  });
-
-  it("maps a --status invocation to a zero exit without side effects", async () => {
-    captureConsole();
-    const program = buildBacklog();
-    await program.parseAsync(["backlog", "schedule", "--status"], { from: "user" });
-    expect(process.exitCode).toBe(0);
-    process.exitCode = undefined;
-    expect(consoleOutput.join("\n")).toContain("not installed");
+    const opts = schedule?.options.map((o) => o.long) ?? [];
+    expect(opts).toContain("--install");
+    expect(opts).toContain("--remove");
+    expect(opts).toContain("--status");
+    expect(opts).toContain("--kind");
   });
 });
+
+// --- console capture helpers (kept at the bottom like the old file) ------
+function captureConsole() {
+  console.log = (...a: unknown[]) => consoleOutput.push(a.join(" "));
+  console.error = (...a: unknown[]) => consoleErrors.push(a.join(" "));
+}

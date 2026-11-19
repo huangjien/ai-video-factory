@@ -858,7 +858,7 @@ When it fires it picks the judge's top-ranked open idea (running the judge
 first if no cache exists), auto-approves it, and runs draft → make (zh) →
 translate en-US → make — two 1080p MP4s, no publishing. A stage failure
 leaves the entry approved-but-unstamped and writes `runs/backlog-auto-*.yaml`
-with the failing stage; the next hourly check refuses to pick a new idea
+with the failing stage; the next 10-minute check refuses to pick a new idea
 until a human resumes or `video backlog reset`s it.
 
 ```bash

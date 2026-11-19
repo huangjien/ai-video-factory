@@ -27,7 +27,7 @@ import { runBacklogSchedule } from "./backlog-schedule.js";
  * idea into TWO finished MP4s (zh draft+make, en translate+make) without
  * a human gate. Refuses to run while another auto holds the lock or any
  * idea is stuck mid-pipeline — a failed render must never silently burn
- * the next idea. Designed to be poked hourly by launchd
+ * the next idea. Designed to be poked every 10 minutes by launchd
  * (`--install-scheduler`, VIDEO_ASK=off); bare invocations run one check.
  */
 
@@ -476,9 +476,9 @@ export function addAutoCommand(backlog: Command): void {
       "required remaining percent in both Token Plan windows (default 80)",
       (v) => parseInt(v, 10),
     )
-    .option("--install-scheduler", "install the hourly launchd LaunchAgent for this check")
-    .option("--remove-scheduler", "remove the hourly LaunchAgent")
-    .option("--scheduler-status", "report the hourly LaunchAgent state")
+    .option("--install-scheduler", "install the 10-minute launchd LaunchAgent for this check")
+    .option("--remove-scheduler", "remove the 10-minute LaunchAgent")
+    .option("--scheduler-status", "report the 10-minute LaunchAgent state")
     .option("--cwd <dir>", "repo root (default: walk up to pnpm-workspace.yaml)")
     .action(async (opts: {
       dryRun?: boolean;

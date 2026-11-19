@@ -502,7 +502,7 @@ ideas:
       - 板门店共同警备区
   - id: 2026-11-19-朝鲜战争从未正式结束
     topic: 朝鲜战争从未正式结束
-    status: proposed
+    status: drafting
     source: harvest:docs/plans/2026-11-18-backlog-feature-design.md
     created: 2026-11-19
     note: "强钩子史实——法律状态与现实和平的巨大落差本身就是故事，配历史影像素材充足 — 1953年签署的是停战协定而非和平条约，技术上战争状态延续至今 —
@@ -512,6 +512,7 @@ ideas:
     anchors:
       - 板门店停战协定
       - 朝鲜半岛
+    drafting_at: 2026-11-19T21:25:44.574Z
   - id: 2026-11-19-克什米尔实际控制线-一条停火线如何变成事实国界
     topic: 克什米尔实际控制线：一条停火线如何变成事实国界
     status: proposed

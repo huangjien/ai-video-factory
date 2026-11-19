@@ -395,7 +395,7 @@ describe("runBacklogJudge", () => {
     expect(parsed.provider).toBe("minimax");
   });
 
-  it("unparseable reply → exit 1, raw dumped to <hash>-failed.yaml, no good cache", async () => {
+  it("unparseable reply → one retry, still bad → exit 1, raw dumped to <hash>-failed.yaml, no good cache", async () => {
     seedEntry({ id: "2026-11-01-alpha", topic: "停电的城市", status: "idea" });
     const raw = "抱歉，我无法以 yaml 排名这些条目。";
     chatReplyOnce(raw);
@@ -403,13 +403,32 @@ describe("runBacklogJudge", () => {
     const code = await runBacklogJudge({ model: "glm", cwd: repoRoot });
 
     expect(code).toBe(1);
-    expect(chatMock).toHaveBeenCalledTimes(1);
+    expect(chatMock).toHaveBeenCalledTimes(2);
     const failed = cacheFiles().filter((f) => f.endsWith("-failed.yaml"));
     expect(failed).toHaveLength(1);
     expect(failed[0]).toMatch(/^backlog-judge-[0-9a-f]{64}-failed\.yaml$/);
     expect(readFileSync(path.join(repoRoot, "runs", failed[0]!), "utf8")).toBe(raw);
-    expect(consoleErrors.join("\n")).toContain("judge output unusable");
+    expect(consoleErrors.join("\n")).toContain("judge output unusable after retry");
     expect(cacheFiles().some((f) => !f.endsWith("-failed.yaml"))).toBe(false);
+  });
+
+  it("a duplicate-row reply retries once and the fresh sample wins", async () => {
+    seedEntry({ id: "2026-11-01-alpha", topic: "停电的城市", status: "idea" });
+    chatMock
+      .mockImplementationOnce(async (): Promise<ChatResponse> => ({
+        content:
+          "```yaml\nranking:\n  - id: 2026-11-01-alpha\n    rank: 1\n    reason: r\n  - id: 2026-11-01-alpha\n    rank: 2\n    reason: dup\n```",
+        usage: { input: 10, output: 5 },
+      }))
+      .mockImplementationOnce(async (): Promise<ChatResponse> => ({
+        content:
+          "```yaml\nranking:\n  - n: 1\n    rank: 1\n    reason: fresh sample parses\n```",
+        usage: { input: 10, output: 5 },
+      }));
+    const code = await runBacklogJudge({ model: "glm", cwd: repoRoot });
+    expect(code).toBe(0);
+    expect(chatMock).toHaveBeenCalledTimes(2);
+    expect(cacheFiles().some((f) => f.endsWith("-failed.yaml"))).toBe(false);
   });
 
   it("--json prints one parseable ranked object sorted by rank", async () => {

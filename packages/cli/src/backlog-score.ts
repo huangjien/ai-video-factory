@@ -407,30 +407,42 @@ export async function runBacklogJudge(
 
     const messages = buildJudgeMessages(open, report ?? undefined);
     let rawReply = "";
-    try {
-      // Low temperature: a ranking should not shuffle between identical runs.
-      const out = await chatWithFallback(
-        providerInstance(chosenName),
-        fallbackName !== undefined ? providerInstance(fallbackName) : null,
-        { messages, temperature: 0.2 },
-      );
-      rawReply = out.response.content;
-      providerName = out.provider;
-      judgedAt = new Date().toISOString();
-    } catch (err) {
-      console.error(`✗ judge LLM call failed: ${(err as Error).message}`);
-      return 1;
+    // ONE automatic retry on an unusable reply: ranking 74 rows is
+    // stochastic and the model occasionally duplicates a row (measured
+    // 2026-11-19); a fresh sample usually parses. Both failures dump.
+    // Assigns the OUTER `ranking` — do not shadow it here or the cache
+    // hit/miss paths split into two variables (2026-11-19 regression).
+    for (let attempt = 1; attempt <= 2 && ranking === null; attempt++) {
+      try {
+        // Low temperature: a ranking should not shuffle between identical runs.
+        const out = await chatWithFallback(
+          providerInstance(chosenName),
+          fallbackName !== undefined ? providerInstance(fallbackName) : null,
+          { messages, temperature: 0.2 },
+        );
+        rawReply = out.response.content;
+        providerName = out.provider;
+        judgedAt = new Date().toISOString();
+      } catch (err) {
+        console.error(`✗ judge LLM call failed: ${(err as Error).message}`);
+        return 1;
+      }
+      try {
+        ranking = parseJudgeRanking(rawReply, open.map((e) => e.id));
+      } catch (err) {
+        if (attempt === 2) {
+          mkdirSync(path.dirname(failedPath), { recursive: true });
+          writeFileSync(failedPath, rawReply, "utf8");
+          console.error(`✗ judge output unusable after retry: ${(err as Error).message}`);
+          console.error(`  raw reply dumped to ${path.relative(repoRoot, failedPath)}`);
+          return 1;
+        }
+        console.error(`  ! judge reply unusable (${(err as Error).message}) — retrying once`);
+      }
     }
-
-    try {
-      ranking = parseJudgeRanking(rawReply, open.map((e) => e.id));
-    } catch (err) {
-      mkdirSync(path.dirname(failedPath), { recursive: true });
-      writeFileSync(failedPath, rawReply, "utf8");
-      console.error(`✗ judge output unusable: ${(err as Error).message}`);
-      console.error(`  raw reply dumped to ${path.relative(repoRoot, failedPath)}`);
-      return 1;
-    }
+    // Both attempts either parse or return — unreachable, but it gives TS
+    // the narrowing the loop cannot express.
+    if (ranking === null) return 1;
 
     mkdirSync(path.dirname(cachePath), { recursive: true });
     const record: JudgeCacheFile = {
@@ -442,6 +454,11 @@ export async function runBacklogJudge(
     };
     writeFileSync(cachePath, yamlStringify(record) + "\n", "utf8");
   }
+
+  // Every refusal path above returned, so the loop only exits with a
+  // parsed ranking — the guard stays because TS cannot follow the loop
+  // invariant through the outer variable.
+  if (ranking === null) return 1;
 
   const rankById = new Map(ranking.map((r) => [r.id, r]));
   // flatMap only guards a hand-edited cache file missing an id; the

@@ -270,7 +270,7 @@ describe("runBacklogSchedule — install", () => {
   it("warns when the installing shell carries no provider keys", async () => {
     captureConsole();
     const saved: Record<string, string | undefined> = {};
-    for (const key of ["MINIMAX_API_KEY", "GLM_API_KEY", "OPENAI_API_KEY", "GEMINI_API_KEY"]) {
+    for (const key of ["MINIMAX_API_KEY", "GLM_API_KEY", "OPENAI_API_KEY", "GEMINI_API_KEY", "YOUTUBE_REFRESH_TOKEN", "YOUTUBE_CLIENT_SECRET_FILE"]) {
       saved[key] = process.env[key];
       delete process.env[key];
     }

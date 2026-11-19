@@ -114,7 +114,11 @@ function quotaOk(): typeof fetch {
 function readyToFire(): Record<string, unknown> {
   seedJudgeCache("2026-11-19-top-idea");
   seed({ status: "proposed" });
-  return { cwd: repoRoot, fetchImpl: quotaOk() };
+  return {
+    cwd: repoRoot,
+    fetchImpl: quotaOk(),
+    runPublish: async () => 0,
+  };
 }
 
 describe("fetchMiniMaxQuota", () => {
@@ -244,7 +248,6 @@ describe("runBacklogAuto — the pipeline", () => {
     expect(approveMock.mock.calls[0]?.[1]).toMatchObject({ stage: "storyboard" });
     expect(String(approveMock.mock.calls[0]?.[0])).toContain("projects");
     expect(String(approveMock.mock.calls[1]?.[0])).toContain(path.join("l10n", "en-US"));
-
     // The draft stage is mocked here, so the FINAL drafted stamp belongs
     // to the real draft — auto's own visible effect is the approval.
     const entry = loadBacklogStore(repoRoot).ideas.find((e) => e.id === "2026-11-19-top-idea");
@@ -263,7 +266,7 @@ describe("runBacklogAuto — the pipeline", () => {
     seed({ id: "2026-11-19-second", topic: "第二个点子", status: "idea" });
     seed({ id: "2026-11-19-top-idea", status: "drafted", project: "x" });
 
-    const code = await runBacklogAuto({ cwd: repoRoot, fetchImpl: quotaOk() });
+    const code = await runBacklogAuto({ cwd: repoRoot, fetchImpl: quotaOk(), runPublish: async () => 0 });
     expect(code).toBe(0);
     expect(draftMock.mock.calls[0]?.[0]).toMatchObject({ id: "2026-11-19-second" });
   });
@@ -305,10 +308,39 @@ describe("runBacklogAuto — the pipeline", () => {
       seedJudgeCache("2026-11-19-top-idea");
       return 0;
     });
-    const code = await runBacklogAuto({ cwd: repoRoot, fetchImpl: quotaOk() });
+    const code = await runBacklogAuto({ cwd: repoRoot, fetchImpl: quotaOk(), runPublish: async () => 0 });
     expect(code).toBe(0);
     expect(judgeMock).toHaveBeenCalledTimes(1);
     expect(draftMock).toHaveBeenCalled();
+  });
+
+  it("publishes all four lanes after make-en; a publish failure is non-fatal", async () => {
+    const publishCalls: string[] = [];
+    const fire = (ytZhFails: boolean): Promise<number> => {
+      const id = `2026-11-19-idea-${publishCalls.length}`;
+      seed({ id, topic: `点子 ${publishCalls.length}`, status: "idea" });
+      seedJudgeCache(id);
+      return runBacklogAuto({
+        cwd: repoRoot,
+        fetchImpl: quotaOk(),
+        runPublish: async (step) => {
+          publishCalls.push(step.kind);
+          return step.kind === "yt-zh" && ytZhFails ? 1 : 0;
+        },
+      });
+    };
+
+    let code = await fire(false);
+    expect(code).toBe(0);
+    expect(publishCalls).toEqual(["bili-zh", "yt-zh", "yt-en", "bili-en"]);
+
+    // One lane failing must not fail the run — the MP4s exist, uploads
+    // are individually retryable by hand.
+    consoleErrors = [];
+    code = await fire(true);
+    expect(code).toBe(0);
+    expect(publishCalls.slice(4)).toEqual(["bili-zh", "yt-zh", "yt-en", "bili-en"]);
+    expect(consoleErrors.join("\n")).toMatch(/publish-yt-zh failed .* non-fatal/);
   });
 });
 

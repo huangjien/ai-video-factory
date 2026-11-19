@@ -1,5 +1,6 @@
-import { execSync } from "node:child_process";
+import { execSync, spawn } from "node:child_process";
 import { existsSync, readdirSync, readFileSync, statSync, mkdirSync, unlinkSync, writeFileSync } from "node:fs";
+import { homedir, tmpdir } from "node:os";
 import path from "node:path";
 import { parse as parseYaml } from "yaml";
 import type { Command } from "commander";
@@ -7,6 +8,8 @@ import { formatRunId, writeRun, approveCheckpoint } from "@video/workflow";
 import { findRepoRoot } from "./learn-command.js";
 import { slugifyProjectName } from "./project-path.js";
 import { l10nRootOrThrow } from "./translate-command.js";
+import { runBilibili } from "./bilibili-command.js";
+import { runYouTube } from "./youtube-command.js";
 import {
   assertTransition,
   isStaleDrafting,
@@ -50,6 +53,9 @@ export interface BacklogAutoOptions {
   plistDir?: string;
   videoPath?: string;
   runLaunchctl?: (args: string[]) => Promise<number>;
+  /** TEST SEAM: replaces the publish steps (bilibili/YouTube uploads).
+   *  Default uploads for real. Returns the stage exit code. */
+  runPublish?: (step: PublishStep) => Promise<number>;
 }
 
 // --- trigger inputs -----------------------------------------------------
@@ -273,6 +279,121 @@ async function pickTopOpenId(
   return { id: top.id, message: `judge rank ${top.rank}` };
 }
 
+// --- publishing ---------------------------------------------------------
+
+export type PublishStepKind = "bili-zh" | "yt-zh" | "yt-en" | "bili-en";
+
+export interface PublishStep {
+  kind: PublishStepKind;
+  slug: string;
+  repoRoot: string;
+  anchors: string[];
+}
+
+const BILI_UPLOAD_PY = path.join(homedir(), ".venvs", "biliup", "bin", "python");
+
+function spawnUpload(args: string[], cwd: string): Promise<{ code: number; output: string }> {
+  // Promise.withResolvers would be cleaner but the package's TS lib target
+  // predates es2024.
+  return new Promise((resolve) => {
+    const child = spawn(BILI_UPLOAD_PY, [path.join(cwd, "scripts", "bilibili-upload.py"), ...args], {
+      cwd,
+      env: process.env,
+    });
+    let output = "";
+    child.stdout.on("data", (d: Buffer) => {
+      output += d.toString();
+      process.stdout.write(d);
+    });
+    child.stderr.on("data", (d: Buffer) => {
+      output += d.toString();
+      process.stderr.write(d);
+    });
+    child.on("error", (err) => {
+      output += String(err);
+      resolve({ code: 1, output });
+    });
+    child.on("close", (code) => resolve({ code: code ?? 1, output }));
+  });
+}
+
+/** The real publish step. YouTube stays PRIVATE: testing-mode OAuth apps
+ *  lock uploads private anyway, and going public stays a human call in
+ *  Studio. bilibili is the channel's public surface, matching every
+ *  manual publish so far. */
+async function defaultPublish(step: PublishStep): Promise<number> {
+  if (step.kind === "yt-zh" || step.kind === "yt-en") {
+    const projectArg =
+      step.kind === "yt-en"
+        ? path.join("projects", step.slug, "l10n", "en-US")
+        : step.slug;
+    return runYouTube({
+      project: projectArg,
+      cwd: step.repoRoot,
+      upload: true,
+      privacy: "private",
+      thumbnailProvider: "minimax",
+    });
+  }
+  if (step.kind === "bili-zh") {
+    const pkg = await runBilibili({ project: step.slug, cwd: step.repoRoot });
+    if (pkg !== 0) return pkg;
+    const up = await spawnUpload([step.slug], step.repoRoot);
+    return up.code;
+  }
+  // bili-en: standalone — no bilibili/package.yaml exists for the l10n
+  // workdir, so the metadata comes from the en YouTube package.
+  const ytPkgPath = path.join(
+    step.repoRoot,
+    "projects",
+    step.slug,
+    "l10n",
+    "en-US",
+    "youtube",
+    "package.yaml",
+  );
+  if (!existsSync(ytPkgPath)) {
+    console.error(`  ! missing ${ytPkgPath} — run the yt-en publish first`);
+    return 1;
+  }
+  const meta = parseYaml(readFileSync(ytPkgPath, "utf8")) as {
+    title?: string;
+    description?: string;
+  };
+  const tags =
+    step.anchors.length > 0
+      ? [...step.anchors, "Chinese history", "documentary"].join(",")
+      : "Chinese history,Tang Dynasty,documentary";
+  const up = await spawnUpload(
+    [
+      "--standalone",
+      "--video",
+      path.join("projects", step.slug, "l10n", "en-US", "output", "final-mixed.mp4"),
+      "--title",
+      meta.title ?? step.slug,
+      "--desc",
+      (meta.description ?? "").slice(0, 900),
+      "--tag",
+      tags,
+      "--tid",
+      "202",
+      "--cover",
+      path.join("projects", step.slug, "l10n", "en-US", "youtube", "thumbnail.jpg"),
+    ],
+    step.repoRoot,
+  );
+  if (up.code !== 0) return up.code;
+  // Record the BV id the same way the zh project upload does — stats'
+  // published tier reads it.
+  const bv = up.output.match(/BV[0-9A-Za-z]{10}/)?.[0];
+  if (bv !== undefined) {
+    const dir = path.join(step.repoRoot, "projects", step.slug, "l10n", "en-US", "bilibili");
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(path.join(dir, "bvid.txt"), bv + "\n", "utf8");
+  }
+  return 0;
+}
+
 // --- the verb -----------------------------------------------------------
 
 interface StageResult {
@@ -375,6 +496,7 @@ export async function runBacklogAuto(opts: BacklogAutoOptions): Promise<number> 
   }
   const slug = slugifyProjectName(entry.topic);
   const stages: StageResult[] = [];
+  const publishFailures: string[] = [];
   const fail = async (stage: string, code: number): Promise<number> => {
     stages.push({ stage, code });
     console.error(`✗ stage ${stage} failed (exit ${code}) — entry left in drafting; resume or \`video backlog reset ${entry.id}\``);
@@ -426,7 +548,41 @@ export async function runBacklogAuto(opts: BacklogAutoOptions): Promise<number> 
   if (makeEnCode !== 0) return fail("make-en", makeEnCode);
   stages.push({ stage: "make-en", code: 0 });
 
-  await recordRun(repoRoot, "succeeded", [...conditions, ...stages.map((s) => s.stage)], startedAt, slug);
+  // Publishing (owner mandate 2026-11-19: upload without waiting): zh
+  // bilibili (public) + zh YouTube (private) + en YouTube (private) +
+  // en bilibili standalone (public). A publish failure is NON-fatal —
+  // the MP4s exist; the upload can be retried by hand.
+  const anchors = entry.anchors ?? [];
+  for (const kind of ["bili-zh", "yt-zh", "yt-en", "bili-en"] as const) {
+    const code = await (opts.runPublish ?? defaultPublish)(
+      { kind, slug, repoRoot, anchors },
+    );
+    stages.push({ stage: `publish-${kind}`, code });
+    if (code !== 0) {
+      publishFailures.push(`publish-${kind}`);
+      console.error(
+        `  ! publish-${kind} failed (exit ${code}) — non-fatal: the MP4s are produced, retry the upload by hand`,
+      );
+    }
+  }
+  if (publishFailures.length === 0) {
+    console.log("✓ published: bilibili zh+en (public), YouTube zh+en (private)");
+  }
+  console.log(
+    `  ! zhihu has no upload API — create the manual post at zhihu.com 创作中心 with bilibili/package.yaml title/desc/tags + the zh MP4`,
+  );
+
+  await recordRun(
+    repoRoot,
+    "succeeded",
+    [
+      ...conditions,
+      ...stages.map((s) => s.stage),
+      ...publishFailures.map((f) => `publish failed (non-fatal): ${f}`),
+    ],
+    startedAt,
+    slug,
+  );
   releaseAutoLock(repoRoot);
   console.log(`✓ auto complete — ${slug}`);
   console.log(`  zh: projects/${slug}/output/final-mixed.mp4`);

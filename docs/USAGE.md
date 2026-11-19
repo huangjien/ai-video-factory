@@ -856,7 +856,9 @@ Token Plan `general` quota ≥80% in BOTH the 5h and weekly windows, no other
 auto holding the `runs/backlog-auto.lock`, and no idea stuck mid-pipeline.
 When it fires it picks the judge's top-ranked open idea (running the judge
 first if no cache exists), auto-approves it, and runs draft → make (zh) →
-translate en-US → make — two 1080p MP4s, no publishing. A stage failure
+translate en-US → make — then PUBLISHES: bilibili zh+en (public), YouTube
+zh+en (private — flip to public in Studio). A failed upload is non-fatal;
+retry it by hand. zhihu has no API — its post stays manual. A stage failure
 leaves the entry approved-but-unstamped and writes `runs/backlog-auto-*.yaml`
 with the failing stage; the next 10-minute check refuses to pick a new idea
 until a human resumes or `video backlog reset`s it.

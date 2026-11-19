@@ -317,6 +317,33 @@ describe("runBacklogJudge — viewing-data evidence", () => {
     expect(cacheFiles().filter((f) => !f.endsWith("-failed.yaml"))).toHaveLength(2);
   });
 
+  it("lists ALREADY PRODUCED stories and re-judges when the produced set grows", async () => {
+    seedEntry({ id: "2026-11-01-alpha", topic: "停电的城市", status: "idea" });
+    let userMessage = "";
+    chatMock.mockImplementation(async (req: ChatRequest): Promise<ChatResponse> => {
+      userMessage = req.messages[1]?.content ?? "";
+      return { content: judgeYaml([{ n: 1, rank: 1, reason: "r" }]), usage: { input: 10, output: 5 } };
+    });
+    await runBacklogJudge({ model: "glm", cwd: repoRoot });
+    expect(userMessage).not.toContain("ALREADY PRODUCED");
+
+    const store = loadBacklogStore(repoRoot);
+    store.ideas.push({
+      id: "2026-11-02-produced",
+      topic: "玄武门之变：一场改变唐朝走向的宫门伏杀",
+      status: "drafted",
+      project: "玄武门之变",
+      source: "manual",
+      created: "2026-11-02",
+    });
+    saveBacklogStore(repoRoot, store);
+    await runBacklogJudge({ model: "glm", cwd: repoRoot });
+    expect(userMessage).toContain("ALREADY PRODUCED");
+    expect(userMessage).toContain("玄武门之变：一场改变唐朝走向的宫门伏杀");
+    // producing a video changes the produced set → cache re-judged
+    expect(chatMock).toHaveBeenCalledTimes(2);
+  });
+
   it("no report → ranks anyway and says evidence is missing", async () => {
     seedEntry({ id: "2026-11-01-alpha", topic: "停电的城市", status: "idea" });
     chatReplyOnce(judgeYaml([{ n: 1, rank: 1, reason: "r" }]));

@@ -23,7 +23,7 @@ import {
   saveBacklogStore,
   type BacklogEntry,
 } from "./backlog-store.js";
-import { scanOverlap } from "./backlog-overlap.js";
+import { nearDuplicateOf, scanOverlap } from "./backlog-overlap.js";
 import { slugifyProjectName } from "./project-path.js";
 import { MARK_FAIL, MARK_OK, MARK_WARN } from "./ui.js";
 
@@ -258,6 +258,20 @@ export async function runBacklogHarvest(
       const slug = slugifyProjectName(cand.topic);
       if (existingSlugs.has(slug)) {
         deduped += 1;
+        continue;
+      }
+      // Near-duplicate of an EXISTING ENTRY (any status): a reworded twin
+      // shares most topic shingles even when the slug differs. Skipped —
+      // unlike catalog overlap, this one is the same story twice.
+      const twinTopic = nearDuplicateOf(
+        cand.topic,
+        store.ideas.map((e) => e.topic),
+      );
+      if (twinTopic !== null) {
+        deduped += 1;
+        console.log(
+          `  ${MARK_WARN} near-duplicate of existing entry "${twinTopic}" — skipped "${cand.topic}"`,
+        );
         continue;
       }
       // Overlap is ADVISORY on harvested ideas (2026-11-19 dry-run: the

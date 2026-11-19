@@ -79,9 +79,11 @@ function keywordsFromText(text: string, cap: number): string[] {
     }
   }
   if (out.length < cap) {
-    const latin = (text.match(/[a-zA-Z][a-zA-Z0-9-]{2,}/g) ?? []).map((w) =>
-      w.toLowerCase(),
-    );
+    // Hyphens split before matching: "Shadow-mode" must yield shadow+mode
+    // or it never meets its non-hyphened twin (2026-11-19 near-dup miss).
+    const latin = (text
+      .replace(/-/g, " ")
+      .match(/[a-zA-Z][a-zA-Z0-9]{2,}/g) ?? []).map((w) => w.toLowerCase());
     for (const w of latin) {
       if (out.length >= cap) break;
       if (LATIN_STOPWORDS[w] !== true) out.push(w);
@@ -147,4 +149,43 @@ export function scanOverlap(
     }
   }
   return hits;
+}
+
+/** Shingle-set of a short topic string: CJK 2-4 grams (no function
+ *  chars) + lowercase latin words. Powers near-duplicate detection. */
+export function topicShingles(topic: string): Set<string> {
+  return new Set(keywordsFromText(topic, 60));
+}
+
+/** Jaccard vs containment: twins share the topic HEAD (玄武门之变…,
+ *  shadow-mode…) but paraphrase the tail, so |∩|/min(|A|,|B|) — how much
+ *  of the smaller title the bigger one covers — separates them far better
+ *  than global Jaccard. Lexical only: cross-language paraphrases stay the
+ *  human's call (the judge's produced-list covers the produced ones). */
+export function topicSimilarity(a: string, b: string): number {
+  const sa = topicShingles(a);
+  const sb = topicShingles(b);
+  if (sa.size === 0 || sb.size === 0) return 0;
+  let shared = 0;
+  for (const s of sa) if (sb.has(s)) shared++;
+  return shared / Math.min(sa.size, sb.size);
+}
+
+export const NEAR_DUP_THRESHOLD = 0.4;
+
+/** The existing backlog topic (any status) this candidate retells, if
+ *  any — reworded twins share most shingles even when slugs differ
+ *  (measured: 玄武门之变 twins, three "retire by numbers" variants). */
+export function nearDuplicateOf(
+  topic: string,
+  existingTopics: string[],
+): string | null {
+  let best: { topic: string; sim: number } | null = null;
+  for (const existing of existingTopics) {
+    const sim = topicSimilarity(topic, existing);
+    if (sim >= NEAR_DUP_THRESHOLD && (best === null || sim > best.sim)) {
+      best = { topic: existing, sim };
+    }
+  }
+  return best === null ? null : best.topic;
 }

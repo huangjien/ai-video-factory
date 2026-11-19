@@ -165,7 +165,7 @@ ideas:
       - 洛阳 Luoyang
   - id: 2026-11-19-玄武门之变-一场改变唐朝走向的宫门伏杀
     topic: 玄武门之变：一场改变唐朝走向的宫门伏杀
-    status: proposed
+    status: dropped
     source: harvest:docs/plans/2026-10-19-chinese-storybook-visual-dna-implementation-plan.md
     created: 2026-11-19
     note: "高悬念、强转折的真实历史事件，天然适配悬念开场与道德追问的叙事弧线 — 公元626年李世民在宫门设伏杀兄逼父，事后却开创贞观之治的完整因果链 —
@@ -177,9 +177,10 @@ ideas:
       - 李世民
       - 李渊
       - 长安太极宫玄武门
+    drop_reason: 孪生：主叙事已发布 BV1Wmse6vERR
   - id: 2026-11-19-玄武门之前-李世民的四大战役
     topic: 玄武门之前：李世民的四大战役
-    status: proposed
+    status: dropped
     source: harvest:docs/plans/2026-10-19-chinese-storybook-visual-dna-implementation-plan.md
     created: 2026-11-19
     note: "把地理、行军方向和权力博弈画在一张图上，直观回答他凭什么敢动手 — 用一张战役地图讲解政变前李世民如何积累压倒性军功与威望 — ⚠
@@ -191,9 +192,10 @@ ideas:
       - 李世民
       - 虎牢关之战
       - 唐代行军路线
+    drop_reason: 孪生：与征战路线图同题材
   - id: 2026-11-19-淡彩工笔-用克制线条和分层设色讲故事
     topic: 淡彩工笔：用克制线条和分层设色讲故事
-    status: proposed
+    status: dropped
     source: harvest:docs/plans/2026-10-19-chinese-storybook-visual-dna-implementation-plan.md
     created: 2026-11-19
     note: "拆解一种画种如何仅靠线条、留白和有限色相传达历史感与克制的情绪 — 细线勾勒加低饱和分层罩染，在旧纸底色上形成安静统一的画面秩序 — ⚠
@@ -205,9 +207,10 @@ ideas:
       - 工笔画
       - 中国画设色传统
       - 青灰与赭黄配色体系
+    drop_reason: 孪生：与工笔画条目重复
   - id: 2026-11-19-留白-中国画里-空-的力量
     topic: 留白：中国画里'空'的力量
-    status: proposed
+    status: dropped
     source: harvest:docs/plans/2026-10-19-chinese-storybook-visual-dna-implementation-plan.md
     created: 2026-11-19
     note: "反直觉的美学机制：不画之处如何制造平静、深度与叙事停顿 — 画面空白引导视线与呼吸感，同时为片名和字幕提供安放位置 — ⚠ possible
@@ -219,6 +222,7 @@ ideas:
       - 马远
       - 《寒江独钓图》
       - 中国画构图
+    drop_reason: 孪生：与留白条目重复
   - id: 2026-11-19-说书人的叙事弧线-为什么故事要从高潮讲起
     topic: 说书人的叙事弧线：为什么故事要从高潮讲起
     status: proposed
@@ -736,7 +740,7 @@ ideas:
       - 现代总参谋部制度
   - id: 2026-11-19-shadow-mode-ai-decision-surfaces
     topic: Shadow-mode AI decision surfaces
-    status: proposed
+    status: dropped
     source: harvest:docs/plans/v0.12/milestone-v0.12-decision-surfaces.md
     created: 2026-11-19
     note: 'A concrete, visual mechanism for how teams safely roll out AI into real
@@ -750,6 +754,7 @@ ideas:
       - OpenAI Decisions API
       - shadow deployment
       - accuracy gating
+    drop_reason: 孪生：与shadow-mode条目重复
   - id: 2026-11-19-retiring-an-ai-feature-because-the-numbe
     topic: Retiring an AI feature because the numbers said so
     status: proposed
@@ -810,7 +815,7 @@ ideas:
       - decision contract
   - id: 2026-11-19-judging-the-judge-scoring-an-ai-rubric-j
     topic: Judging the judge — scoring an AI rubric judge
-    status: proposed
+    status: dropped
     source: harvest:docs/plans/v0.12/milestone-v0.12-decision-surfaces.md
     created: 2026-11-19
     note: "Meta-verification of AI judges is an accessible entry into AI evaluation
@@ -823,6 +828,7 @@ ideas:
     anchors:
       - prompt-eval rubric judge
       - score decision
+    drop_reason: 孪生：与who-judges-the-judges重复
   - id: 2026-11-19-when-a-0-366-error-rate-means-don-t-buil
     topic: When a 0.366 error rate means "don't build it"
     status: proposed
@@ -921,7 +927,7 @@ ideas:
       - zh-CN/en-US corpus spanning
   - id: 2026-11-19-retiring-an-ai-feature-that-performed-at
     topic: Retiring an AI feature that performed at chance
-    status: proposed
+    status: dropped
     source: harvest:docs/plans/v0.12/v0.12-decision-surfaces-plan.md
     created: 2026-11-19
     note: "A rare, honest engineering story: the discipline of pulling the plug on
@@ -934,9 +940,10 @@ ideas:
     anchors:
       - motion-prescreen surface
       - chance-level accuracy measurement
+    drop_reason: 孪生：与retiring-by-numbers重复
   - id: 2026-11-19-kill-the-feature-before-you-build-it
     topic: Kill the feature before you build it
-    status: proposed
+    status: dropped
     source: harvest:docs/plans/v0.12/v0.12-decision-surfaces-plan.md
     created: 2026-11-19
     note: "A compelling why-question for any builder: the cheapest feature is the
@@ -949,6 +956,7 @@ ideas:
     anchors:
       - image-brief expansion skip candidate
       - article-judge pre-screen cancellation
+    drop_reason: 孪生：与no-go-map重复
   - id: 2026-11-19-the-no-go-map-where-ai-must-never-be-con
     topic: "The no-go map: where AI must never be consulted"
     status: proposed

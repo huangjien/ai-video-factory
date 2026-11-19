@@ -13,7 +13,7 @@ import {
   type BacklogStore,
   type BacklogStatus,
 } from "./backlog-store.js";
-import { scanOverlap } from "./backlog-overlap.js";
+import { nearDuplicateOf, scanOverlap } from "./backlog-overlap.js";
 import { sortForList } from "./backlog-score.js";
 import { addHarvestCommand } from "./backlog-harvest.js";
 import { addStatsCommand } from "./backlog-stats.js";
@@ -131,7 +131,24 @@ export async function runBacklogAdd(opts: BacklogAddOptions): Promise<number> {
     );
   }
 
+  // Backlog-internal near-duplicate: a reworded twin of an idea already
+  // queued or produced. Soft gate like catalog overlap — a human may have
+  // a genuinely different angle in mind, --force keeps it.
   const store = initBacklogStore(repoRoot);
+  const twinTopic = nearDuplicateOf(
+    opts.topic,
+    store.ideas.map((e) => e.topic),
+  );
+  if (twinTopic !== null && opts.force !== true) {
+    console.error(
+      `✗ near-duplicate of existing backlog entry "${twinTopic}" — re-run with --force to add anyway (or extend that entry's content instead)`,
+    );
+    return 1;
+  }
+  if (twinTopic !== null) {
+    console.log(`  ! near-duplicate warning overridden by --force (twin of "${twinTopic}")`);
+  }
+
   const entry: BacklogEntry = {
     id: nextBacklogId(opts.topic, store.ideas, backlogToday()),
     topic: opts.topic.trim(),

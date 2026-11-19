@@ -144,17 +144,26 @@ interface JudgeCacheFile {
   ranking: JudgeRank[];
 }
 
-/** Cache key = the open set + the analytics evidence: add/rename/reorder
- *  an entry or ship a NEW weekly report and the hash moves; nothing else
- *  about the store (statuses of closed entries, notes, content) can
- *  invalidate a ranking of ids+topics. */
-function openEntriesHash(open: BacklogEntry[], evidenceDate?: string): string {
+/** Cache key = the open set + the analytics evidence + the produced
+ *  stories: add/rename/reorder an entry, ship a NEW weekly report, or
+ *  produce another video and the hash moves; nothing else about the
+ *  store (statuses of closed entries, notes, content) can invalidate a
+ *  ranking of ids+topics. */
+function openEntriesHash(
+  open: BacklogEntry[],
+  evidenceDate?: string,
+  produced?: { topic: string }[],
+): string {
   const canonical = [...open]
     .sort((a, b) => a.id.localeCompare(b.id))
     .map((e) => `${e.id}\n${e.topic}`)
     .join("\n");
+  const producedLine = (produced ?? [])
+    .map((p) => p.topic)
+    .sort()
+    .join("|");
   return createHash("sha256")
-    .update(canonical + (evidenceDate ?? ""))
+    .update(canonical + (evidenceDate ?? "") + producedLine)
     .digest("hex");
 }
 
@@ -205,6 +214,7 @@ export function latestAnalyticsReport(
 function buildJudgeMessages(
   open: BacklogEntry[],
   report?: { date: string; content: string },
+  produced?: { topic: string; project?: string }[],
 ): ChatMessage[] {
   const lines: string[] = ["Open backlog entries:", ""];
   for (const [i, e] of open.entries()) {
@@ -217,6 +227,16 @@ function buildJudgeMessages(
       lines.push(`  anchors: ${e.anchors.join(", ")}`);
     }
     // content is deliberately absent — see the module header.
+  }
+  if (produced !== undefined && produced.length > 0) {
+    lines.push("");
+    lines.push("ALREADY PRODUCED by this channel (do not re-tell these stories):");
+    for (const p of produced) {
+      lines.push(`- ${p.topic}${p.project !== undefined ? ` (project: ${p.project})` : ""}`);
+    }
+    lines.push(
+      "An open idea that retells one of these gets the LAST ranks with reason 'story already told' — unless it is a genuinely different angle, in which case say what is new.",
+    );
   }
   if (report !== undefined) {
     lines.push("");
@@ -352,7 +372,13 @@ export async function runBacklogJudge(
   } else {
     notice(`  viewing-data evidence: analytics report ${report.date}`);
   }
-  const hash = openEntriesHash(open, report?.date);
+  // Already-produced stories: the judge cannot know 玄武门之变 was filmed
+  // yesterday, so a reworded twin ranked #2 over fresher ideas (measured
+  // 2026-11-19). The produced set rides in the prompt AND the hash.
+  const produced = store.ideas
+    .filter((e) => e.status === "drafted")
+    .map((e) => ({ topic: e.topic, ...(e.project !== undefined ? { project: e.project } : {}) }));
+  const hash = openEntriesHash(open, report?.date, produced);
   // runs/backlog-judge-<hash>.yaml; an unparseable reply is dumped beside
   // it with a -failed suffix so the raw evidence survives the exit 1.
   const cachePath = path.join(repoRoot, "runs", `${JUDGE_CACHE_FILE}-${hash}.yaml`);
@@ -405,7 +431,7 @@ export async function runBacklogJudge(
           ? reviewCfg.primary
           : undefined;
 
-    const messages = buildJudgeMessages(open, report ?? undefined);
+    const messages = buildJudgeMessages(open, report ?? undefined, produced);
     let rawReply = "";
     // ONE automatic retry on an unusable reply: ranking 74 rows is
     // stochastic and the model occasionally duplicates a row (measured

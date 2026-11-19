@@ -20,6 +20,7 @@ import { addStatsCommand } from "./backlog-stats.js";
 import { addScheduleCommand } from "./backlog-schedule.js";
 import { addJudgeCommand } from "./backlog-score.js";
 import { addAutoCommand } from "./backlog-auto.js";
+import { addStatusCommand } from "./backlog-status.js";
 
 /**
  * `video backlog` — the idea store (design:
@@ -343,4 +344,5 @@ export function registerBacklog(program: Command): void {
   addScheduleCommand(backlog);
   addJudgeCommand(backlog);
   addAutoCommand(backlog);
+  addStatusCommand(backlog);
 }

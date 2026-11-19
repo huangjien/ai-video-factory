@@ -223,10 +223,15 @@ export function releaseAutoLock(repoRoot: string): void {
 function newestJudgeRanking(repoRoot: string): { id: string; rank: number }[] | null {
   const runsDir = path.join(repoRoot, "runs");
   if (!existsSync(runsDir)) return null;
+  // Newest by MTIME, not name — hash filenames sort alphabetically, which
+  // is time-ordered only by accident (measured 2026-11-19: a tick picked
+  // a stale ranking while a fresher one sat beside it).
   const caches = readdirSync(runsDir)
     .filter((f) => /^backlog-judge-[0-9a-f]{64}\.yaml$/.test(f))
-    .sort();
-  for (const file of caches.reverse()) {
+    .map((f) => ({ f, m: statSync(path.join(runsDir, f)).mtimeMs }))
+    .sort((a, b) => b.m - a.m)
+    .map((x) => x.f);
+  for (const file of caches) {
     try {
       const parsed = parseYaml(readFileSync(path.join(runsDir, file), "utf8")) as {
         ranking?: { id?: unknown; rank?: unknown }[];

@@ -7,6 +7,7 @@ import {
   writeFileSync,
   mkdirSync,
   readFileSync,
+  statSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -300,6 +301,35 @@ describe("runBacklogAuto — the pipeline", () => {
     expect(loadBacklogStore(repoRoot).ideas[0]?.status).toBe("proposed");
     expect(existsSync(path.join(repoRoot, "runs", "backlog-auto.lock"))).toBe(false);
     expect(consoleOutput.join("\n")).toMatch(/dry run — nothing executed/);
+  });
+
+  it("picks the NEWEST judge cache by mtime, not filename order", async () => {
+    // Two caches whose hashes sort so the OLDER file is alphabetically
+    // last — the old name-order pick would read the stale one.
+    const runs = path.join(repoRoot, "runs");
+    mkdirSync(runs, { recursive: true });
+    writeFileSync(
+      path.join(runs, "backlog-judge-" + "f".repeat(64) + ".yaml"),
+      `schema: backlog-judge/1\nranking:\n  - id: stale-entry\n    rank: 1\n    reason: old\n`,
+      "utf8",
+    );
+    const newer = path.join(runs, "backlog-judge-" + "0".repeat(64) + ".yaml");
+    writeFileSync(
+      newer,
+      `schema: backlog-judge/1\nranking:\n  - id: 2026-11-19-top-idea\n    rank: 1\n    reason: fresh\n`,
+      "utf8",
+    );
+    seed({});
+    // backdate the stale cache so mtime order = [newer, stale]
+    const st = statSync(newer);
+    utimesSync(
+      path.join(runs, "backlog-judge-" + "f".repeat(64) + ".yaml"),
+      new Date(st.mtimeMs - 60_000),
+      new Date(st.mtimeMs - 60_000),
+    );
+    const code = await runBacklogAuto({ cwd: repoRoot, fetchImpl: quotaOk(), runPublish: async () => 0 });
+    expect(code).toBe(0);
+    expect(draftMock.mock.calls[0]?.[0]).toMatchObject({ id: "2026-11-19-top-idea" });
   });
 
   it("runs the judge first when no cache exists", async () => {

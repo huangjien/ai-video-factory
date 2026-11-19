@@ -308,14 +308,29 @@ async function doRemove(opts: BacklogScheduleOptions): Promise<number> {
   return 0;
 }
 
+export interface SchedulerState {
+  kind: ScheduleKind;
+  installed: boolean;
+  loaded: boolean;
+  plistPath: string;
+}
+
+/** Scheduler facts for `backlog status` — no output, pure query. */
+export async function schedulerState(
+  opts: BacklogScheduleOptions,
+): Promise<SchedulerState> {
+  const kind = plistKind(opts);
+  const plistPath = path.join(plistDir(opts), `${labelOf(kind)}.plist`);
+  const installed = existsSync(plistPath);
+  const loaded = installed ? await isLoaded(labelOf(kind), opts) : false;
+  return { kind, installed, loaded, plistPath };
+}
+
 async function doStatus(opts: BacklogScheduleOptions): Promise<number> {
-  const label = labelOf(plistKind(opts));
-  const target = plistPath(opts);
-  const installed = existsSync(target);
-  console.log(`plist: ${installed ? "installed" : "not installed"} (${target})`);
-  if (installed) {
-    const loaded = await isLoaded(label, opts);
-    console.log(`loaded: ${loaded ? "yes" : "no"}`);
+  const state = await schedulerState(opts);
+  console.log(`plist: ${state.installed ? "installed" : "not installed"} (${state.plistPath})`);
+  if (state.installed) {
+    console.log(`loaded: ${state.loaded ? "yes" : "no"}`);
   }
   return 0;
 }

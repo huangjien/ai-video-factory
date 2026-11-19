@@ -87,6 +87,7 @@ Full command set:
 | `video backlog harvest` | LLM extracts candidate topics from `docs/plans/` + `learnings/` → `proposed` entries (dedup; overlap hits flag the note, approve decides; `--dry-run` writes nothing) |
 | `video backlog judge` | One batched LLM ranking of open ideas, fed the channel's latest analytics report (views/day evidence; a new report re-judges), cached by entry-hash + report date in `runs/` |
 | `video backlog auto` | Spare-capacity producer: MiniMax idle ≥1h + both Token Plan windows ≥80% → judge's top idea becomes zh+en MP4s and AUTO-PUBLISHES (bilibili zh+en public; YouTube zh+en private; publish failure non-fatal; zhihu stays manual); 10-minutely launchd via `--install-scheduler`; refuses while an idea is stuck mid-pipeline |
+| `video backlog status` | One screen: scheduler state, live lock, per-entry stage checklist with the continue command, failed runs — nothing writes |
 | `video backlog stats` | Derived hit-rate join: idea → project → article / final-mixed.mp4 / `bilibili/bvid.txt` |
 | `video backlog schedule` | Weekly launchd auto-harvest (`--install`/`--remove`/`--status`, `VIDEO_ASK=off`); `--kind auto` switches to the 10-minute auto-producer |
 | `video prompts [show <name>]` | Inspect the central prompt registry (`packages/prompts/prompts/`) |

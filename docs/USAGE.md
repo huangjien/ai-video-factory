@@ -140,13 +140,13 @@ re-running after an edit only re-executes what the edit affected.
 
 Useful flags:
 
-| Flag                                                   | Effect                                                            |
-| ------------------------------------------------------ | ----------------------------------------------------------------- |
-| `--dry-run`                                            | Print what would run and what would be skipped, without executing |
-| `--fake`                                               | Fully offline: silent placeholder audio and no AI images          |
+| Flag                                                               | Effect                                                                                                                                                                                                                                                                                       |
+| ------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `--dry-run`                                                        | Print what would run and what would be skipped, without executing                                                                                                                                                                                                                            |
+| `--fake`                                                           | Fully offline: silent placeholder audio and no AI images                                                                                                                                                                                                                                     |
 | `--image-provider mock\|minimax\|minimax-h3\|openai\|gemini\|none` | Choose the image backend; `minimax` is the default. `minimax-h3` is MiniMax-H3-Image (native 1080p, reference-image edit), ~\$0.02–0.05 per image. 2026-11 policy: H3 is the LAST-resort fallback, never a default; per-scene failures walk the chain minimax → openai → gemini → minimax-h3 |
-| `--bgm-dir <dir>`                                      | Use your own BGM library instead of the mock placeholder          |
-| `--sfx-dir <dir>`                                      | Use your own SFX library                                          |
+| `--bgm-dir <dir>`                                                  | Use your own BGM library instead of the mock placeholder                                                                                                                                                                                                                                     |
+| `--sfx-dir <dir>`                                                  | Use your own SFX library                                                                                                                                                                                                                                                                     |
 
 `--fake` is the canonical offline mode. It skips both text-to-speech
 (writing silent placeholder WAVs) and real image generation, and scenes
@@ -640,12 +640,12 @@ path.
 
 Publishing metadata is not part of `video make`; invoke it separately.
 
-| Command                     | Output                                                                                              |
-| --------------------------- | --------------------------------------------------------------------------------------------------- |
-| `video youtube <project>`   | The YouTube package: title, description, chapters VTT, thumbnail prompt, Shorts hook                |
+| Command                     | Output                                                                                                                                                                    |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `video youtube <project>`   | The YouTube package: title, description, chapters VTT, thumbnail prompt, Shorts hook                                                                                      |
 | `video thumbnail <project>` | A 1280×720 thumbnail — mock by default, real AI with `--provider minimax` or `--provider minimax-h3 --reference <img>` (H3 edit mode: re-renders the reference's subject) |
-| `video shorts <project>`    | A vertical 9:16 clip extracted from `final-mixed.mp4`                                               |
-| `video bilibili <project>`  | The Bilibili package: title, 简介, tags, suggested 分区, cover brief, and a manual upload checklist |
+| `video shorts <project>`    | A vertical 9:16 clip extracted from `final-mixed.mp4`                                                                                                                     |
+| `video bilibili <project>`  | The Bilibili package: title, 简介, tags, suggested 分区, cover brief, and a manual upload checklist                                                                       |
 
 `video youtube` prefers `article.md` and derives the title, hook, sections,
 and chapter timings from it. It falls back to the older `research.md` +
@@ -814,6 +814,35 @@ Each example's `README.md` documents the scenes — which component family
 pairs with which pipeline feature. The committed integration tests run this
 exact sequence against a temp project, so the examples cannot drift from the
 code without the tests failing.
+
+---
+
+## 15. The idea backlog
+
+Topics worth filming go into `backlog.yaml` at the repo root — the single
+human-editable idea store. Everything else (scores, hit rates) is derived at
+read time and never written back.
+
+```bash
+video backlog add "为什么停火线能冻结几十年" --note "监督机制+利益冻结" --anchor "板门店停战协定"
+video backlog list                  # sorted, dropped hidden
+video backlog harvest               # LLM extracts candidates from docs/plans + learnings → proposed
+video backlog stats                 # which idea sources become published videos
+video backlog schedule --install    # weekly launchd auto-harvest (VIDEO_ASK=off)
+video draft --from-backlog <id>     # pick: draft the idea, stamp it drafted, link the project
+```
+
+The lifecycle is `proposed → idea → drafting → drafted | dropped`, guarded by
+the store. `add` and `harvest` run an overlap preflight — keywords from the
+topic, anchors and content are scanned against every `projects/<id>/article.md`,
+and a hit warns with the colliding project names (`--force` overrules). A
+`draft --from-backlog` run stamps the entry `drafting` before the paid call and
+`drafted` (with the project backlink) on success; a failure or the ask gate's
+exit 2 reverts the stamp, and `video backlog reset <id>` recovers a crash left
+mid-draft. An entry's optional long `content` (a brainstorm or research dump,
+no size cap) is handed to the drafter as context alongside the topic.
+
+Design: [`docs/plans/2026-11-18-backlog-feature-design.md`](./plans/2026-11-18-backlog-feature-design.md).
 
 ---
 

@@ -37,6 +37,7 @@ import { registerScene } from "./scene-command.js";
 import { registerFinal } from "./render-command.js";
 import { registerRetrospect } from "./retrospect-command.js";
 import { registerLearn } from "./learn-command.js";
+import { registerBacklog } from "./backlog-command.js";
 import { registerPrompts } from "./prompts-command.js";
 import { registerTranslate } from "./translate-command.js";
 import { registerDecision } from "./decision-bench.js";
@@ -90,6 +91,7 @@ for (const register of [
   registerFinal,
   registerRetrospect,
   registerLearn,
+  registerBacklog,
   registerPrompts,
   registerTranslate,
   registerDecision,

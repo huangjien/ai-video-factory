@@ -1139,6 +1139,15 @@ export interface DraftCliOpts {
   file?: string;
   /** Revise an existing project from its `video review` report. */
   fromReview?: string;
+  /** Pick a backlog idea by id and draft it (design:
+   *  docs/plans/2026-11-18-backlog-feature-design.md §Pick 流程).
+   *  The entry's topic names the project; its long `content` reaches the
+   *  drafter as ideaSeed context. Mutually exclusive with a topic
+   *  argument, --from and --from-review. */
+  fromBacklog?: string;
+  /** Overrule the backlog pick guards (draft a `proposed` entry without
+   *  approving it first — implicit approve on the way through). */
+  force?: boolean;
   audioPlan?: boolean;
   imageStyle?: string;
   visualMode?: string;
@@ -1297,6 +1306,14 @@ export function registerDraft(program: Command): void {
       "revise an existing project from its `video review` report: the article on disk is the seed, the review's findings are applied surgically, and the quality loop continues from there",
     )
     .option(
+      "--from-backlog <id>",
+      "pick a backlog idea by id and draft it: the entry's topic names the project, its `content` becomes drafting context, and success stamps the idea drafted with the project backlink (status lifecycle lives in backlog.yaml)",
+    )
+    .option(
+      "--force",
+      "with --from-backlog: draft a `proposed` (unapproved harvest) entry — an implicit approve on the way through",
+    )
+    .option(
       "--no-audio-plan",
       "skip the merged audio-plan step (write article.md only)",
     )
@@ -1381,6 +1398,31 @@ export function registerDraft(program: Command): void {
       "v0.7: never ask questions — accept defaults even under an agent harness",
     )
     .action(async (topic: string | undefined, opts: DraftCliOpts) => {
+      if (opts.fromBacklog !== undefined) {
+        if (
+          topic !== undefined ||
+          opts.from !== undefined ||
+          opts.fromReview !== undefined
+        ) {
+          console.error(
+            "--from-backlog is mutually exclusive with a topic argument, --from and --from-review",
+          );
+          process.exitCode = 1;
+          return;
+        }
+        // Static import is not possible here: backlog-draft wraps
+        // runDraft from THIS module, so importing it back would close a
+        // draft-command → backlog-draft → draft-command cycle.
+        const { runDraftFromBacklog } = await import("./backlog-draft.js");
+        const draftOpts = draftCliOptsToDraftOptions(opts);
+        process.exitCode = await runDraftFromBacklog({
+          id: opts.fromBacklog,
+          ...(opts.force === true ? { force: true } : {}),
+          ...(draftOpts.cwd !== undefined ? { cwd: draftOpts.cwd } : {}),
+          draft: draftOpts,
+        });
+        return;
+      }
       process.exitCode = await runDraft({
         ...(topic !== undefined ? { topic } : {}),
         ...draftCliOptsToDraftOptions(opts),

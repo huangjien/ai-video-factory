@@ -26,6 +26,8 @@ ideas:
     project: null      # 草稿成功后回填 <project-id>
     source: manual     # manual | harvest:<relpath>
     created: "2026-11-18"
+    drafting_at: null  # 进入 drafting 的时间 — 卡死检测（>24h 警告）
+    drop_reason: null  # `video backlog drop --reason` 的原因
     drafted_at: null
 ```
 

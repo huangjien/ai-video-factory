@@ -238,14 +238,14 @@ HTTP call that returns in seconds and needs only `MINIMAX_API_KEY`.
 Three hosted providers are available; all of them are HTTP APIs billed
 against their own API key.
 
-| `--image-provider` | Needs             | Latency           | Notes                                      |
-| ------------------ | ----------------- | ----------------- | ------------------------------------------ |
-| `minimax`          | `MINIMAX_API_KEY` | seconds per scene | default for `video make` / `video visuals` |
+| `--image-provider` | Needs             | Latency           | Notes                                                                                                                                                                                                                                                                                                                                                               |
+| ------------------ | ----------------- | ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `minimax`          | `MINIMAX_API_KEY` | seconds per scene | default for `video make` / `video visuals`                                                                                                                                                                                                                                                                                                                          |
 | `minimax-h3`       | `MINIMAX_API_KEY` | seconds per scene | MiniMax-H3-Image: native 1080p, generation + reference-image edit (`video thumbnail --reference <img>`); ~$0.02/image at 1K. **Last-resort fallback only (2026-11 policy): on a per-scene failure the chain tries minimax → openai → gemini → minimax-h3, and H3 is never the default or an early pick** — see docs/v0.11-decision-provider-plan.md §16 for pricing |
-| `openai`           | `OPENAI_API_KEY`  | seconds per scene |                                            |
-| `gemini`           | `GEMINI_API_KEY`  | seconds per scene |                                            |
-| `mock`             | nothing           | instant           | deterministic placeholders                 |
-| `none`             | nothing           | —                 | skip image generation entirely             |
+| `openai`           | `OPENAI_API_KEY`  | seconds per scene |                                                                                                                                                                                                                                                                                                                                                                     |
+| `gemini`           | `GEMINI_API_KEY`  | seconds per scene |                                                                                                                                                                                                                                                                                                                                                                     |
+| `mock`             | nothing           | instant           | deterministic placeholders                                                                                                                                                                                                                                                                                                                                          |
+| `none`             | nothing           | —                 | skip image generation entirely                                                                                                                                                                                                                                                                                                                                      |
 
 Hosted providers return their own output sizes; scenes are fitted to the
 requested 1920×1080 frame at render time. `video thumbnail` takes the
@@ -872,7 +872,7 @@ Seven quality wins shipped under the same human-gate principle:
   `article.md` frontmatter, default `narration`). The overlay is checked
   per CUE, and a long narration is split into several two-line cues, so an
   English scene of 150-220 characters renders in full. `captions_source:
-  caption` burns the scene's short `caption:` label instead — but that
+caption` burns the scene's short `caption:` label instead — but that
   label already appears as the Pillow key-info banner at the top of the
   frame, so the bottom band would repeat the top and the viewer would
   get no subtitle. Leave it at `narration`. `no_captions: true` still

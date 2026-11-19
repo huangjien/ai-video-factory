@@ -18,6 +18,7 @@ export {
   readSceneCacheMeta,
   sceneCacheFile,
   sceneCacheIsFresh,
+  sceneCacheUsable,
   sceneFileName,
   sceneImageDigest,
   scenesDirFor,

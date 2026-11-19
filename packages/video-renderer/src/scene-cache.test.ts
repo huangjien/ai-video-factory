@@ -7,6 +7,7 @@ import {
   readSceneCacheMeta,
   sceneCacheFile,
   sceneCacheIsFresh,
+  sceneCacheUsable,
   sceneImageDigest,
   writeSceneCacheMeta,
 } from "./scene-cache.js";
@@ -176,5 +177,32 @@ describe("overlay digest freshness (2026-10-24 — Pillow banner is a render inp
         audio: { path: null, mtimeMs: 0 },
       }),
     ).toBe(true);
+  });
+});
+
+describe("sceneCacheUsable — a sidecar without its mp4 is not a cache hit", () => {
+  const terms = {
+    sceneHash: "h",
+    projectHash: "p",
+    rendererRevision: "7",
+    audio: { path: null, mtimeMs: 0 },
+  };
+
+  it("is fresh when the mp4 is there", () => {
+    const dir = mkdtempSync(path.join(tmpdir(), "vf-sceneusable-"));
+    const file = path.join(dir, "00-scene-01.mp4");
+    writeFileSync(file, "pixels");
+    expect(sceneCacheUsable(file, legacy as never, terms)).toBe(true);
+  });
+
+  it("is NOT fresh when the mp4 was deleted but the sidecar stayed", () => {
+    // The incident (2026-11-18): a disk cleaned of renders kept the
+    // sidecars, the cache claimed "cached", and the concat failed on the
+    // missing file.
+    const dir = mkdtempSync(path.join(tmpdir(), "vf-sceneusable-"));
+    const file = path.join(dir, "00-scene-01.mp4");
+    writeSceneCacheMeta(file, legacy as never);
+    expect(sceneCacheIsFresh(readSceneCacheMeta(file), terms)).toBe(true);
+    expect(sceneCacheUsable(file, readSceneCacheMeta(file), terms)).toBe(false);
   });
 });

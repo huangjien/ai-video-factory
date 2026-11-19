@@ -1,0 +1,251 @@
+schema: backlog-judge/1
+hash: cbf09bbd48bb193b9a561d6e3c2e6f9b63156b52fb9c52db16c442e6c6038d8f
+provider: glm
+created: 2026-11-19T08:50:20.008Z
+ranking:
+  - id: 2026-11-19-玄武门之变-the-xuanwu-gate-incident
+    rank: 1
+    reason: Dawn ambush with dynasty-defining stakes — the strongest built-in
+      suspense in the backlog.
+  - id: 2026-11-19-朝鲜战争从未正式结束
+    rank: 2
+    reason: Legal-status-versus-lived-peace gap is an instant hook with rich
+      archival footage.
+  - id: 2026-11-19-为什么航母拦阻着舰是最危险的常规作业
+    rank: 3
+    reason: "'Most dangerous thing done daily' fuses routine and catastrophe into
+      constant tension."
+  - id: 2026-11-19-为什么停火线能冻结几十年
+    rank: 4
+    reason: Counterintuitive durability mechanism plus two famous cases; geopolitics
+      the channel hasn't touched.
+  - id: 2026-11-19-为什么ai会一本正经地胡说
+    rank: 5
+    reason: Mass-relevant daily-use question with a surprising 'cannot be fixed'
+      answer.
+  - id: 2026-11-19-为什么演习要专门养一支-假想敌部队
+    rank: 6
+    reason: A unit paid to beat its own side is a vivid metric-gaming paradox with
+      broad lessons.
+  - id: 2026-11-19-为什么-冻结的冲突-对双方都有利
+    rank: 7
+    reason: Both sides preferring stalemate is a genuinely counterintuitive payoff.
+  - id: 2026-11-19-李世民的双面人生-li-shimin-from-young-war-prince
+    rank: 8
+    reason: Killer-to-golden-age arc supplies moral tension few other entries can
+      match.
+  - id: 2026-11-19-唐朝人穿什么-what-tang-dynasty-people-really-w
+    rank: 9
+    reason: The 'did the drama get it wrong' hook invites argument backed by
+      surviving artifacts.
+  - id: 2026-11-19-为什么会有总参谋部
+    rank: 10
+    reason: Officers who never fight deciding wars is a clean institutional surprise.
+  - id: 2026-11-19-说书人传统-the-chinese-oral-storyteller-tradi
+    rank: 11
+    reason: Living oral art with famous voices — human texture entirely new to the
+      channel.
+  - id: 2026-11-19-为什么预备役存在
+    rank: 12
+    reason: Peacetime skeleton swelling into a million-strong army is an unseen
+      capability reveal.
+  - id: 2026-11-19-没有和平条约的战争如何被-监督
+    rank: 13
+    reason: Concrete 'who patrols this' question hiding behind a familiar news image.
+  - id: 2026-11-19-克什米尔实际控制线-一条停火线如何变成事实国界
+    rank: 14
+    reason: Current hotspot plus a complete mechanism-to-de-facto-border evolution arc.
+  - id: 2026-11-19-when-ai-grades-its-own-homework
+    rank: 15
+    reason: Self-grading conflict of interest is instantly graspable, with
+      documented bias to prove it.
+  - id: 2026-11-19-the-bug-that-only-appears-when-you-chang
+    rank: 16
+    reason: "'It works today' revealed as pure coincidence is a relatable detective
+      twist."
+  - id: 2026-11-19-the-duplicate-filter-that-ate-every-new-
+    rank: 17
+    reason: Automation eating its own ideas is ironic, quantified, and self-inflicted.
+  - id: 2026-11-19-why-software-should-refuse-to-fix-your-b
+    rank: 18
+    reason: "'Crashing is safer than healing' inverts user intuition with everyday
+      stakes."
+  - id: 2026-11-19-中国画颜色的来源-where-chinese-painting-colors-c
+    rank: 19
+    reason: Minerals, trade routes and chemistry give vivid material hidden inside
+      famous paintings.
+  - id: 2026-11-19-the-brier-score-judging-whether-ai-knows
+    rank: 20
+    reason: Being right vs knowing you're right — one 75-year-old metric carries the
+      whole story.
+  - id: 2026-11-19-why-the-scene-cut-detector-missed-every-
+    rank: 21
+    reason: Demoable mystery where sweeping one number decides whether a machine
+      'sees'.
+  - id: 2026-11-19-留白-the-power-of-blank-space-in-chinese-p
+    rank: 22
+    reason: Visible-at-a-glance principle that audiences consistently misread.
+  - id: 2026-11-19-为什么军官要定期轮岗
+    rank: 23
+    reason: Seemingly wasteful rotation revealed as deliberate anti-fief control.
+  - id: 2026-11-19-the-black-box-recorder-for-ai-decisions
+    rank: 24
+    reason: Flight-recorder analogy makes AI accountability tangible and forensic.
+  - id: 2026-11-19-李世民的征战路线图-li-shimin-s-campaigns-that-won
+    rank: 25
+    reason: March routes string scattered battles into one decisive diagram.
+  - id: 2026-11-19-retiring-an-ai-feature-because-the-numbe
+    rank: 26
+    reason: Killing your own feature on the numbers is a rare honest reversal.
+  - id: 2026-11-19-古人长什么样-reconstructing-what-historical-fi
+    rank: 27
+    reason: Detective work separating record from painterly invention is inherently
+      engaging.
+  - id: 2026-11-19-shadow-mode-how-ai-earns-the-right-to-ac
+    rank: 28
+    reason: AI votes but only earns power after a track record — a clean trust arc.
+  - id: 2026-11-19-teaching-a-model-to-say-i-don-t-know
+    rank: 29
+    reason: Shifting from confident answers to quantified doubt is the core
+      reliability idea.
+  - id: 2026-11-19-the-failure-that-made-no-sound
+    rank: 30
+    reason: Silence indistinguishable from success is a chilling failure class.
+  - id: 2026-11-19-who-judges-the-judges-measuring-ai-with-
+    rank: 31
+    reason: Benchmarks written by AI themselves is provocative circularity.
+  - id: 2026-11-19-the-cache-that-shipped-a-patchwork-of-er
+    rank: 32
+    reason: Invisible cache bug producing visibly wrong art on screen — watchable
+      failure.
+  - id: 2026-11-19-the-warning-that-cried-wolf
+    rank: 33
+    reason: An always-red alert being worse than none generalizes to aviation and
+      hospitals.
+  - id: 2026-11-19-the-pigeonhole-principle-breaks-a-config
+    rank: 34
+    reason: Abstract pigeonhole math forcing real engineering decisions delights.
+  - id: 2026-11-19-finding-duplicate-text-in-a-language-wit
+    rank: 35
+    reason: Answers a question nobody thinks to ask about unspaced text.
+  - id: 2026-11-19-how-to-rank-ai-providers-accuracy-then-p
+    rank: 36
+    reason: Practical accuracy-first rule plus the silent null that froze it.
+  - id: 2026-11-19-a-stable-of-models-why-pipelines-assign-
+    rank: 37
+    reason: Writer/director/critic casting metaphor is vivid and structural at once.
+  - id: 2026-11-19-every-idea-needs-a-status
+    rank: 38
+    reason: Reframes procrastination as a state-machine problem audiences personally
+      feel.
+  - id: 2026-11-19-ai-archaeology-of-your-own-notes
+    rank: 39
+    reason: Everyone's graveyard of unfinished notes — relatable, with AI limits
+      shown honestly.
+  - id: 2026-11-19-how-a-computer-knows-when-a-file-changed
+    rank: 40
+    reason: One jpg story explains the trust mechanism under every cache and CDN.
+  - id: 2026-11-19-which-idea-sources-actually-finish
+    rank: 41
+    reason: Self-audit with real conversion numbers — honest and measurable.
+  - id: 2026-11-19-database-transactions-for-creative-work
+    rank: 42
+    reason: Familiar database concept landing in surprising creative territory.
+  - id: 2026-11-19-the-no-go-map-where-ai-must-never-be-con
+    rank: 43
+    reason: "Flips AI hype: the design virtue is an explicit forbidden list."
+  - id: 2026-11-19-为什么ai画的地图上不能有地名
+    rank: 44
+    reason: Everyone has seen AI map gibberish; few know the mechanism or the fix.
+  - id: 2026-11-19-when-a-0-366-error-rate-means-don-t-buil
+    rank: 45
+    reason: A single measured error rate ending weeks of work is a sharp decision
+      moment.
+  - id: 2026-11-19-why-your-test-data-might-be-lying-to-you
+    rank: 46
+    reason: Test data quietly lying taps a live benchmark-contamination debate.
+  - id: 2026-11-19-the-ai-that-never-crashes-the-pipeline
+    rank: 47
+    reason: "'A failure is a log, never an answer' is a crisp design stance."
+  - id: 2026-11-19-when-the-preview-lies
+    rank: 48
+    reason: Dashboard diverging from reality plus the fix that forbids lying
+      structurally.
+  - id: 2026-11-19-how-to-migrate-a-cache-without-nuking-it
+    rank: 49
+    reason: Adding a rule to already-existing data is a felt systems puzzle.
+  - id: 2026-11-19-为什么静止画面更能讲故事-why-stillness-tells-better-
+    rank: 50
+    reason: Counterintuitive claim against fast-cut culture, but examples stay
+      abstract.
+  - id: 2026-11-19-说书人的叙事弧线-为什么故事要从高潮讲起
+    rank: 51
+    reason: Useful structure breakdown, though viewers can supply the examples
+      themselves.
+  - id: 2026-11-19-近乎静止的镜头-慢推为什么让人入静
+    rank: 52
+    reason: Narrow single-technique explainer — mechanism clear, story thin.
+  - id: 2026-11-19-judging-the-judge-scoring-an-ai-rubric-j
+    rank: 53
+    reason: Meta-verification angle already carried better by stronger judge entries.
+  - id: 2026-11-19-retiring-an-ai-feature-that-performed-at
+    rank: 54
+    reason: Same retirement story as a higher-ranked entry with little new to add.
+  - id: 2026-11-19-kill-the-feature-before-you-build-it
+    rank: 55
+    reason: Overlaps several pre-build refusal entries — the lesson repeats.
+  - id: 2026-11-19-cancelled-before-it-was-built-the-measur
+    rank: 56
+    reason: "Tidy but small: one cancelled candidate with limited stakes."
+  - id: 2026-11-19-工笔画-gongbi-painting-the-engineering-of-l
+    rank: 57
+    reason: Beautiful craft but mostly descriptive — little tension or surprise.
+  - id: 2026-11-19-李世民长什么样-跨场景保持同一张脸有多难
+    rank: 58
+    reason: Internal production problem with narrow audience pull.
+  - id: 2026-11-19-史料还是想象-历史人物形象是怎么被-画-出来的
+    rank: 59
+    reason: Solid source-criticism angle but it presupposes the portrait entries above.
+  - id: 2026-11-19-旁白语速与两行字幕-阅读与聆听的认知极限
+    rank: 60
+    reason: Production guideline more than a story — numbers without tension.
+  - id: 2026-11-19-the-pairing-rule-two-lines-of-code-that-
+    rank: 61
+    reason: Small internal fix; the invariant idea outweighs the anecdote.
+  - id: 2026-11-19-the-difference-between-done-and-shipped
+    rank: 62
+    reason: Release-semantics detail — accurate but low narrative charge.
+  - id: 2026-11-19-designing-loud-graceful-failure
+    rank: 63
+    reason: Useful failure-mode taxonomy yet abstract, with no concrete scene.
+  - id: 2026-11-19-provenance-recording-who-wrote-it-and-wh
+    rank: 64
+    reason: Provenance-label analogy is neat but thin on stakes.
+  - id: 2026-11-19-make-it-an-invariant-not-a-coincidence
+    rank: 65
+    reason: Design philosophy already implicit in the stronger case-study entries.
+  - id: 2026-11-19-why-some-quality-checks-skip-the-ai-enti
+    rank: 66
+    reason: Correct taxonomy, but 'which check where' is dry sorting.
+  - id: 2026-11-19-deterministic-core-ai-at-the-edges
+    rank: 67
+    reason: Sound design argument already told many times in this space.
+  - id: 2026-11-19-choice-score-noul-three-shapes-of-an-ai-
+    rank: 68
+    reason: Clean conceptual frame but no narrative tension.
+  - id: 2026-11-19-淡彩工笔-用克制线条和分层设色讲故事
+    rank: 69
+    reason: Duplicates the gongbi entry with added overlap noise.
+  - id: 2026-11-19-shadow-mode-ai-decision-surfaces
+    rank: 70
+    reason: Shadow-mode story told more accessibly by its twin entry.
+  - id: 2026-11-19-留白-中国画里-空-的力量
+    rank: 71
+    reason: Duplicates the blank-space entry already ranked above.
+  - id: 2026-11-19-玄武门之前-李世民的四大战役
+    rank: 72
+    reason: Same campaign-map idea as a higher-ranked entry.
+  - id: 2026-11-19-玄武门之变-一场改变唐朝走向的宫门伏杀
+    rank: 73
+    reason: Duplicates the top-ranked incident — the story is already claimed.
+

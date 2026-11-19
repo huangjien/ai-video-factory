@@ -20,7 +20,7 @@ import {
 import {
   readSceneCacheMeta,
   sceneCacheFile,
-  sceneCacheIsFresh,
+  sceneCacheUsable,
   sceneImageDigest,
   scenesDirFor,
   writeSceneCacheMeta,
@@ -285,8 +285,12 @@ async function renderScenesIncrementally(
     const overlayHash =
       overlaySrc === null ? null : sceneImageDigest(overlaySrc);
     const sidecar = readSceneCacheMeta(file);
+    // The sidecar says the INPUTS are unchanged; the file itself says
+    // whether the pixels are still there. A sidecar without its mp4 (a
+    // disk cleaned of renders, a truncated copy, a deleted cache) must
+    // NOT count as fresh — the concat would then fail on a missing file.
     if (
-      sceneCacheIsFresh(sidecar, {
+      sceneCacheUsable(file, sidecar, {
         sceneHash,
         projectHash,
         rendererRevision: RENDERER_REVISION,

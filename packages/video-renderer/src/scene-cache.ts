@@ -1,4 +1,4 @@
-import { readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { createHash } from "node:crypto";
 import path from "node:path";
 
@@ -181,6 +181,24 @@ export function sceneCacheIsFresh(
  * path; hashing the DECODED bytes keeps both sides identical. Null when
  * the file is missing/unreadable — the freshness term is then skipped
  * rather than falsely stale (a missing jpg fails the render on its own). */
+/**
+ * Is this cached scene USABLE? The sidecar says the INPUTS are unchanged;
+ * the file says whether the pixels are still there.
+ *
+ * A sidecar without its mp4 — a disk cleaned of renders, a truncated
+ * copy, a deleted cache — must not count as fresh: the concat step
+ * would then fail on a missing file (measured 2026-11-18, the first
+ * re-render after `scripts/clean-projects.py` removed the renders and
+ * kept the sidecars).
+ */
+export function sceneCacheUsable(
+  file: string,
+  meta: SceneCacheMeta | null,
+  terms: SceneCacheTerms,
+): boolean {
+  return existsSync(file) && sceneCacheIsFresh(meta, terms);
+}
+
 export function sceneImageDigest(src: string): string | null {
   try {
     const data =

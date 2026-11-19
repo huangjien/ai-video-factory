@@ -132,6 +132,27 @@ uploader does). The draft score was 93/100 (zh) and 91.1/100 (en), both
 grade A on the first attempt; the Chinese film ran 266.9 s, the English
 291.6 s, both QA-clean.
 
+**A third film on the new provider: "The AI Pricing Shift" (EN + zh).**
+From the draft `docs/draft/ai_era_software_value_and_pricing.md` — what
+should customers pay for when the software does the work. The English cut
+scored **93.7/100 (grade A)** on the first attempt (27 scenes, 723 words,
+324 s); the Chinese cut came from the `l10n` path, which **shares the
+image store — zero image spend** — and ran 326 s. Both QA-clean.
+
+| | YouTube | Bilibili |
+|---|---|---|
+| 中文 | https://youtu.be/0_PkAM91V20 | https://www.bilibili.com/video/BV1oGsD6YEgK |
+| English | https://youtu.be/RKZttuu0xQM | https://www.bilibili.com/video/BV1d5sD6wEKb |
+
+Two operational findings came out of it and are worth keeping: **English
+narration overflows the caption safe area** (the caption block is capped at
+4 lines × 24 units and an ASCII character counts 0.5 a unit, so ~192
+characters — a 190-character narration wraps to 5 lines and fails the VDSL
+validation for the whole render), and **`gpt-image-2.6` is fast alone and
+slow in parallel** (8–12 s per image single-threaded, 60–150 s under the
+pipeline's 4-way concurrency). The handover note lives at
+`projects/ai-era-software-value-and-pricing/HANDOVER.md`.
+
 **The OpenAI image provider moves to `gpt-image-2.6-flare`.** Measured
 against MiniMax image-01 on a real shipped scene prompt (same prompt,
 same minute, `scripts/measure-image-providers.mjs`):

@@ -6,19 +6,19 @@ import type { Command } from "commander";
 import { findRepoRoot } from "./learn-command.js";
 
 export const DEFAULT_HARVEST_LABEL = "com.aivideofactory.backlog-harvest";
+export const DEFAULT_AUTO_LABEL = "com.aivideofactory.backlog-auto";
 
-export interface HarvestPlistOptions {
+export type ScheduleKind = "harvest" | "auto";
+
+/** Shared LaunchAgent skeleton; the two kinds differ only in label,
+ *  program args and the trigger block. */
+function launchdPlist(opts: {
+  label: string;
   videoPath: string;
-  label?: string;
+  programArgs: string[];
+  triggerXml: string;
   logPath: string;
-}
-
-/** Pure plist text for the weekly LaunchAgent. Sunday 09:00 because the
- *  backlog refresh has no deadline pressure and early Sunday is when the
- *  machine is idle yet awake enough for an LLM run; weekly cadence matches
- *  the design doc (docs/plans/2026-11-18-backlog-feature-design.md §Scheduler). */
-export function harvestPlistContent(opts: HarvestPlistOptions): string {
-  const label = opts.label ?? DEFAULT_HARVEST_LABEL;
+}): string {
   // XML-escape only what can realistically contain & < > ' here: user paths.
   const esc = (s: string): string =>
     s
@@ -26,27 +26,21 @@ export function harvestPlistContent(opts: HarvestPlistOptions): string {
       .replaceAll("<", "&lt;")
       .replaceAll(">", "&gt;")
       .replaceAll("'", "&apos;");
+  const args = opts.programArgs
+    .map((a) => `<string>${esc(a)}</string>`)
+    .join("\n    ");
   return `<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
   <key>Label</key>
-  <string>${esc(label)}</string>
+  <string>${esc(opts.label)}</string>
   <key>ProgramArguments</key>
   <array>
     <string>${esc(opts.videoPath)}</string>
-    <string>backlog</string>
-    <string>harvest</string>
+    ${args}
   </array>
-  <key>StartCalendarInterval</key>
-  <dict>
-    <key>Weekday</key>
-    <integer>0</integer>
-    <key>Hour</key>
-    <integer>9</integer>
-    <key>Minute</key>
-    <integer>0</integer>
-  </dict>
+  ${opts.triggerXml}
   <key>EnvironmentVariables</key>
   <dict>
     <key>VIDEO_ASK</key>
@@ -63,10 +57,64 @@ export function harvestPlistContent(opts: HarvestPlistOptions): string {
 `;
 }
 
+export interface HarvestPlistOptions {
+  videoPath: string;
+  label?: string;
+  logPath: string;
+}
+
+/** Pure plist text for the weekly LaunchAgent. Sunday 09:00 because the
+ *  backlog refresh has no deadline pressure and early Sunday is when the
+ *  machine is idle yet awake enough for an LLM run; weekly cadence matches
+ *  the design doc (docs/plans/2026-11-18-backlog-feature-design.md §Scheduler). */
+export function harvestPlistContent(opts: HarvestPlistOptions): string {
+  const label = opts.label ?? DEFAULT_HARVEST_LABEL;
+  return launchdPlist({
+    label,
+    videoPath: opts.videoPath,
+    programArgs: ["backlog", "harvest"],
+    triggerXml: `  <key>StartCalendarInterval</key>
+  <dict>
+    <key>Weekday</key>
+    <integer>0</integer>
+    <key>Hour</key>
+    <integer>9</integer>
+    <key>Minute</key>
+    <integer>0</integer>
+  </dict>`,
+    logPath: opts.logPath,
+  });
+}
+
+export interface AutoPlistOptions {
+  videoPath: string;
+  label?: string;
+  logPath: string;
+}
+
+/** Pure plist text for the hourly auto-producer LaunchAgent. StartInterval
+ *  3600: the trigger condition ("MiniMax idle an hour, ≥80% quota left")
+ *  is cheap to evaluate and the pipeline itself refuses to double-run via
+ *  its lockfile, so an hourly poke is the right granularity. */
+export function autoPlistContent(opts: AutoPlistOptions): string {
+  const label = opts.label ?? DEFAULT_AUTO_LABEL;
+  return launchdPlist({
+    label,
+    videoPath: opts.videoPath,
+    programArgs: ["backlog", "auto"],
+    triggerXml: `  <key>StartInterval</key>
+  <integer>3600</integer>`,
+    logPath: opts.logPath,
+  });
+}
+
 export interface BacklogScheduleOptions {
   install?: boolean;
   remove?: boolean;
   status?: boolean;
+  /** Which LaunchAgent to manage: weekly harvest (default) or the hourly
+   *  auto-producer. */
+  kind?: ScheduleKind;
   cwd?: string;
   /** TEST SEAM: overrides the LaunchAgents directory (default ~/Library/LaunchAgents). */
   plistDir?: string;
@@ -104,13 +152,26 @@ function plistDir(opts: BacklogScheduleOptions): string {
   return opts.plistDir ?? path.join(homedir(), "Library", "LaunchAgents");
 }
 
+function plistKind(opts: BacklogScheduleOptions): ScheduleKind {
+  return opts.kind ?? "harvest";
+}
+
+function labelOf(kind: ScheduleKind): string {
+  return kind === "auto" ? DEFAULT_AUTO_LABEL : DEFAULT_HARVEST_LABEL;
+}
+
 function plistPath(opts: BacklogScheduleOptions): string {
-  return path.join(plistDir(opts), `${DEFAULT_HARVEST_LABEL}.plist`);
+  return path.join(plistDir(opts), `${labelOf(plistKind(opts))}.plist`);
 }
 
 function defaultLogPath(opts: BacklogScheduleOptions): string {
+  const kind = plistKind(opts);
   const stamp = new Date().toISOString().slice(0, 10);
-  return path.join(findRepoRoot(opts.cwd ?? process.cwd()), "runs", `backlog-harvest-${stamp}.yaml`);
+  return path.join(
+    findRepoRoot(opts.cwd ?? process.cwd()),
+    "runs",
+    `backlog-${kind}-${stamp}.yaml`,
+  );
 }
 
 /** Loaded-detection differs by seam: the real `launchctl list` exits 0 even
@@ -139,12 +200,13 @@ async function doInstall(opts: BacklogScheduleOptions): Promise<number> {
     );
     return 1;
   }
+  const kind = plistKind(opts);
   const target = plistPath(opts);
   mkdirSync(path.dirname(target), { recursive: true });
-  const content = harvestPlistContent({
-    videoPath: video,
-    logPath: defaultLogPath(opts),
-  });
+  const content =
+    kind === "auto"
+      ? autoPlistContent({ videoPath: video, logPath: defaultLogPath(opts) })
+      : harvestPlistContent({ videoPath: video, logPath: defaultLogPath(opts) });
   writeFileSync(target, content, { mode: 0o644 });
   const run = opts.runLaunchctl ?? defaultRunLaunchctl;
   const code = await run(["load", target]);
@@ -152,7 +214,8 @@ async function doInstall(opts: BacklogScheduleOptions): Promise<number> {
     console.error(`launchctl load failed (exit ${code}). Load manually with:\n  launchctl load "${target}"`);
     return 1;
   }
-  console.log(`installed ${DEFAULT_HARVEST_LABEL} — weekly backlog harvest, plist at ${target}`);
+  const cadence = kind === "auto" ? "hourly auto-producer" : "weekly backlog harvest";
+  console.log(`installed ${labelOf(kind)} — ${cadence}, plist at ${target}`);
   return 0;
 }
 
@@ -165,16 +228,17 @@ async function doRemove(opts: BacklogScheduleOptions): Promise<number> {
   const run = opts.runLaunchctl ?? defaultRunLaunchctl;
   await run(["unload", target]);
   rmSync(target, { force: true });
-  console.log(`removed ${DEFAULT_HARVEST_LABEL} (${target})`);
+  console.log(`removed ${labelOf(plistKind(opts))} (${target})`);
   return 0;
 }
 
 async function doStatus(opts: BacklogScheduleOptions): Promise<number> {
+  const label = labelOf(plistKind(opts));
   const target = plistPath(opts);
   const installed = existsSync(target);
   console.log(`plist: ${installed ? "installed" : "not installed"} (${target})`);
   if (installed) {
-    const loaded = await isLoaded(DEFAULT_HARVEST_LABEL, opts);
+    const loaded = await isLoaded(label, opts);
     console.log(`loaded: ${loaded ? "yes" : "no"}`);
   }
   return 0;
@@ -196,12 +260,19 @@ export async function runBacklogSchedule(opts: BacklogScheduleOptions): Promise<
 export function addScheduleCommand(backlog: Command): void {
   backlog
     .command("schedule")
-    .description("manage the weekly launchd backlog-harvest LaunchAgent (install/remove/status)")
+    .description("manage launchd LaunchAgents: weekly harvest (default) or the hourly auto-producer (--kind auto)")
     .option("--install", "write the plist and launchctl load it")
     .option("--remove", "launchctl unload and delete the plist")
     .option("--status", "report install/load state")
+    .option("--kind <kind>", "which agent: harvest (default) | auto")
     .option("--cwd <dir>", "repo root (default: walk up to pnpm-workspace.yaml)")
-    .action(async (opts: { install?: boolean; remove?: boolean; status?: boolean; cwd?: string }) => {
-      process.exitCode = await runBacklogSchedule(opts);
+    .action(async (opts: { install?: boolean; remove?: boolean; status?: boolean; kind?: string; cwd?: string }) => {
+      process.exitCode = await runBacklogSchedule({
+        ...(opts.install === true ? { install: true } : {}),
+        ...(opts.remove === true ? { remove: true } : {}),
+        ...(opts.status === true ? { status: true } : {}),
+        ...(opts.kind === "auto" ? { kind: "auto" as const } : {}),
+        ...(opts.cwd !== undefined ? { cwd: opts.cwd } : {}),
+      });
     });
 }

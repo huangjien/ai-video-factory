@@ -80,3 +80,11 @@
   - 涉及：`.omp/skills/video/SKILL.md`、`docs/USAGE.md`。
   - 实施：新增 `video backlog` 命令族与 `draft --from-backlog` 的用法段落；版本号随发布流程走（`docs/RELEASES.md`）。
   - 验收：skill 文档含命令表与 pick 流程示例。
+
+### D. 自动生产器（2026-11-19 追加）
+
+- [ ] **BL-09｜`video backlog auto`** `P1`
+  - 依赖：BL-04、BL-05、BL-07
+  - 涉及：`packages/cli/src/backlog-auto.ts`（新文件）、`backlog-schedule.ts`（`--kind auto`/hourly plist）。
+  - 实施：触发条件全满足才开工 — MiniMax 空闲 ≥60 min（minimax provider run record + TTS 音频 + 场景图 mtime，TTS 不写 run record）、Token Plan `general` 桶 5h 与周窗口均 ≥80%（默认，`--min-remaining` 可调）、`runs/backlog-auto.lock` 无活锁（死 pid >3h 接管）、无卡在 `drafting` 的条目。动作：取 judge 榜首 open 条目（无缓存先跑 judge）→ 自动 approve → draft(zh) → make(zh) → translate(en-US) → make(en)。任一阶段失败即停，条目停在 approved-but-unstamped，等人工 resume/reset — 绝不静默烧掉下一个点子。不发布。每次运行写 `runs/backlog-auto-*.yaml`（决定与阶段进 `error` 字段，RunRecord 无自由字段）。`--dry-run` 只评估条件与 would-pick，零写入零花费。
+  - 验收：21 个新单测（quota 解析、idle 扫描、锁、逐门槛拒绝、四阶段顺序、sticky-failure、scheduler plist）；真仓 dry-run 冒烟 — 条件满足、would-pick = judge 榜首（玄武门之变）、零写入。

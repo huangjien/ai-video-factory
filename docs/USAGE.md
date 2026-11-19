@@ -847,6 +847,26 @@ is handed to the drafter as context alongside the topic.
 
 Design: [`docs/plans/2026-11-18-backlog-feature-design.md`](./plans/2026-11-18-backlog-feature-design.md).
 
+### The auto-producer
+
+`video backlog auto` turns spare MiniMax capacity into finished videos. It
+fires only when ALL of these hold: MiniMax idle ≥60 min (minimax-provider
+run records + TTS audio + scene-image mtimes — TTS writes no run records),
+Token Plan `general` quota ≥80% in BOTH the 5h and weekly windows, no other
+auto holding the `runs/backlog-auto.lock`, and no idea stuck mid-pipeline.
+When it fires it picks the judge's top-ranked open idea (running the judge
+first if no cache exists), auto-approves it, and runs draft → make (zh) →
+translate en-US → make — two 1080p MP4s, no publishing. A stage failure
+leaves the entry approved-but-unstamped and writes `runs/backlog-auto-*.yaml`
+with the failing stage; the next hourly check refuses to pick a new idea
+until a human resumes or `video backlog reset`s it.
+
+```bash
+video backlog auto --dry-run          # evaluate the trigger, pick nothing, spend nothing
+video backlog auto --install-scheduler  # hourly launchd LaunchAgent (VIDEO_ASK=off)
+video backlog schedule --status --kind auto
+```
+
 ---
 
 ## Next

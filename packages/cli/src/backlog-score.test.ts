@@ -282,6 +282,50 @@ describe("parseJudgeRanking", () => {
   });
 });
 
+describe("runBacklogJudge — viewing-data evidence", () => {
+  it("embeds the newest analytics report and its date in the prompt", async () => {
+    seedEntry({ id: "2026-11-01-alpha", topic: "停电的城市", status: "idea" });
+    mkdirSync(path.join(repoRoot, "docs", "analytics"), { recursive: true });
+    writeFileSync(
+      path.join(repoRoot, "docs", "analytics", "2026-11-11-report.md"),
+      "# 频道分析 2026-11-11\n\n- 陆军班排连营 13.9 播放/天\n- AI幻觉评测 0.4 播放/天",
+    );
+    let userMessage = "";
+    chatMock.mockImplementation(async (req: ChatRequest): Promise<ChatResponse> => {
+      userMessage = req.messages[1]?.content ?? "";
+      return { content: judgeYaml([{ n: 1, rank: 1, reason: "r" }]), usage: { input: 10, output: 5 } };
+    });
+    expect(await runBacklogJudge({ model: "glm", cwd: repoRoot })).toBe(0);
+    expect(userMessage).toContain("REAL viewing data");
+    expect(userMessage).toContain("analytics report 2026-11-11");
+    expect(userMessage).toContain("陆军班排连营 13.9 播放/天");
+    expect(consoleOutput.join("\n")).toMatch(/viewing-data evidence: analytics report 2026-11-11/);
+  });
+
+  it("a NEW report date invalidates the cache → re-judge", async () => {
+    seedEntry({ id: "2026-11-01-alpha", topic: "停电的城市", status: "idea" });
+    mkdirSync(path.join(repoRoot, "docs", "analytics"), { recursive: true });
+    writeFileSync(path.join(repoRoot, "docs", "analytics", "2026-11-04-report.md"), "# old\n");
+    chatReplyOnce(judgeYaml([{ n: 1, rank: 1, reason: "r" }]));
+    await runBacklogJudge({ model: "glm", cwd: repoRoot });
+    expect(cacheFiles().filter((f) => !f.endsWith("-failed.yaml"))).toHaveLength(1);
+
+    writeFileSync(path.join(repoRoot, "docs", "analytics", "2026-11-11-report.md"), "# new\n");
+    chatReplyOnce(judgeYaml([{ n: 1, rank: 1, reason: "r" }]));
+    await runBacklogJudge({ model: "glm", cwd: repoRoot });
+    expect(chatMock).toHaveBeenCalledTimes(2);
+    expect(cacheFiles().filter((f) => !f.endsWith("-failed.yaml"))).toHaveLength(2);
+  });
+
+  it("no report → ranks anyway and says evidence is missing", async () => {
+    seedEntry({ id: "2026-11-01-alpha", topic: "停电的城市", status: "idea" });
+    chatReplyOnce(judgeYaml([{ n: 1, rank: 1, reason: "r" }]));
+    const code = await runBacklogJudge({ model: "glm", cwd: repoRoot });
+    expect(code).toBe(0);
+    expect(consoleOutput.join("\n")).toMatch(/no analytics report/);
+  });
+});
+
 describe("runBacklogJudge", () => {
   it("ranks open entries in one LLM call, prints reasons, writes the cache", async () => {
     const alpha = seedEntry({ id: "2026-11-01-alpha", topic: "停电的城市", status: "idea" });

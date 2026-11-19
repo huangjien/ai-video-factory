@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { createHash } from "node:crypto";
 import type { Command } from "commander";
@@ -144,21 +144,28 @@ interface JudgeCacheFile {
   ranking: JudgeRank[];
 }
 
-/** Cache key = the open set itself: add/rename/reorder an entry and the
- *  hash moves; nothing else about the store (statuses of closed entries,
- *  notes, content) can invalidate a ranking of ids+topics. */
-function openEntriesHash(open: BacklogEntry[]): string {
+/** Cache key = the open set + the analytics evidence: add/rename/reorder
+ *  an entry or ship a NEW weekly report and the hash moves; nothing else
+ *  about the store (statuses of closed entries, notes, content) can
+ *  invalidate a ranking of ids+topics. */
+function openEntriesHash(open: BacklogEntry[], evidenceDate?: string): string {
   const canonical = [...open]
     .sort((a, b) => a.id.localeCompare(b.id))
     .map((e) => `${e.id}\n${e.topic}`)
     .join("\n");
-  return createHash("sha256").update(canonical).digest("hex");
+  return createHash("sha256")
+    .update(canonical + (evidenceDate ?? ""))
+    .digest("hex");
 }
 
 const JUDGE_SYSTEM_PROMPT = `You rank video topic ideas for a knowledge channel.
 Decide which open backlog idea is most worth turning into a video next.
 Judge story potential: a concrete hook, a tension or surprise, material the
 channel has not covered — NOT how long or polished the note is.
+When the prompt includes REAL viewing data from the channel, use it: ideas
+in topic spaces that demonstrably overperform deserve a bump, ideas in
+spaces the audience ignored deserve a discount — and the reason must name
+which evidence drove that call.
 Output STRICTLY one fenced yaml block shaped:
 
 \`\`\`yaml
@@ -174,7 +181,31 @@ Rules:
 - ranks are unique integers;
 - the reason states the decisive factor, it does not restate the topic.`;
 
-function buildJudgeMessages(open: BacklogEntry[]): ChatMessage[] {
+const REPORT_PROMPT_CAP = 6000;
+
+/** Newest docs/analytics/*-report.md — the periodic viewing-data review
+ *  (scripts/channel-analytics.py writes it). Null when the channel has
+ *  never run analytics. */
+export function latestAnalyticsReport(
+  repoRoot: string,
+): { date: string; content: string } | null {
+  const dir = path.join(repoRoot, "docs", "analytics");
+  if (!existsSync(dir)) return null;
+  const reports = readdirSync(dir)
+    .filter((f) => /^\d{4}-\d{2}-\d{2}-report\.md$/.test(f))
+    .sort();
+  const file = reports.at(-1);
+  if (file === undefined) return null;
+  return {
+    date: file.slice(0, 10),
+    content: readFileSync(path.join(dir, file), "utf8"),
+  };
+}
+
+function buildJudgeMessages(
+  open: BacklogEntry[],
+  report?: { date: string; content: string },
+): ChatMessage[] {
   const lines: string[] = ["Open backlog entries:", ""];
   for (const [i, e] of open.entries()) {
     lines.push(`- n: ${i + 1}`);
@@ -186,6 +217,13 @@ function buildJudgeMessages(open: BacklogEntry[]): ChatMessage[] {
       lines.push(`  anchors: ${e.anchors.join(", ")}`);
     }
     // content is deliberately absent — see the module header.
+  }
+  if (report !== undefined) {
+    lines.push("");
+    lines.push(
+      `REAL viewing data for this channel (analytics report ${report.date} — views/day by video, both platforms):`,
+    );
+    lines.push(report.content.slice(0, REPORT_PROMPT_CAP));
   }
   lines.push("");
   lines.push(`Rank ALL ${open.length} entries now.`);
@@ -303,7 +341,18 @@ export async function runBacklogJudge(
     return 0;
   }
 
-  const hash = openEntriesHash(open);
+  const report = latestAnalyticsReport(repoRoot);
+  // --json means stdout is machine-readable ONLY; evidence notices go to
+  // stderr there (same convention as the ask protocol).
+  const notice = (m: string): void => (opts.json === true ? console.error(m) : console.log(m));
+  if (report === null) {
+    notice(
+      "  no analytics report in docs/analytics/ — ranking without viewing-data evidence (run scripts/channel-analytics.py to add it)",
+    );
+  } else {
+    notice(`  viewing-data evidence: analytics report ${report.date}`);
+  }
+  const hash = openEntriesHash(open, report?.date);
   // runs/backlog-judge-<hash>.yaml; an unparseable reply is dumped beside
   // it with a -failed suffix so the raw evidence survives the exit 1.
   const cachePath = path.join(repoRoot, "runs", `${JUDGE_CACHE_FILE}-${hash}.yaml`);
@@ -356,7 +405,7 @@ export async function runBacklogJudge(
           ? reviewCfg.primary
           : undefined;
 
-    const messages = buildJudgeMessages(open);
+    const messages = buildJudgeMessages(open, report ?? undefined);
     let rawReply = "";
     try {
       // Low temperature: a ranking should not shuffle between identical runs.

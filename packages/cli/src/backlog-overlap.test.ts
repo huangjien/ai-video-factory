@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { extractOverlapKeywords, scanOverlap } from "./backlog-overlap.js";
+import { extractOverlapKeywords, nearDuplicateOf, scanOverlap } from "./backlog-overlap.js";
 
 let repoRoot: string;
 beforeEach(() => {
@@ -87,5 +87,29 @@ describe("scanOverlap — per-article verdict", () => {
 
   it("returns no hits on a missing projects dir", () => {
     expect(scanOverlap(repoRoot, { topic: "anything at all" })).toEqual([]);
+  });
+});
+
+describe("nearDuplicateOf — reworded twins", () => {
+  it("catches a 玄武门之变 retelling across different wordings", () => {
+    const twin = nearDuplicateOf(
+      "玄武门之变：一场改变唐朝走向的宫门伏杀",
+      ["玄武门之变：宫门伏杀如何改变唐朝走向", "停火线机制"],
+    );
+    expect(twin).toBe("玄武门之变：宫门伏杀如何改变唐朝走向");
+  });
+
+  it("passes genuinely different topics", () => {
+    expect(
+      nearDuplicateOf("为什么军官要定期轮岗", ["为什么停火线能冻结几十年"]),
+    ).toBeNull();
+  });
+
+  it("returns the BEST match when several are close", () => {
+    const twin = nearDuplicateOf(
+      "Shadow-mode AI decision surfaces",
+      ["Shadow mode: how AI earns the right to act", "中国画颜色的来源"],
+    );
+    expect(twin).toBe("Shadow mode: how AI earns the right to act");
   });
 });

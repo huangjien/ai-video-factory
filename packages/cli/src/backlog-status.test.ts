@@ -62,7 +62,7 @@ describe("runBacklogStatus", () => {
     acquireAutoLock(repoRoot, NOW);
     await runBacklogStatus({ cwd: repoRoot, plistDir: path.join(repoRoot, "LA"), runLaunchctl: async () => 0 });
     releaseAutoLock(repoRoot);
-    expect(out.join("\n")).toMatch(/lock present \(pid/);
+    expect(out.join("\n")).toMatch(/RUNNING \(pid/);
   });
 
   it("derives the stage checklist and continue command for a half-produced idea", async () => {

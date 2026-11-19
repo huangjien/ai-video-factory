@@ -124,22 +124,38 @@ export async function runBacklogStatus(opts: BacklogStatusOptions): Promise<numb
     ...(opts.plistDir !== undefined ? { plistDir: opts.plistDir } : {}),
     ...(opts.runLaunchctl !== undefined ? { runLaunchctl: opts.runLaunchctl } : {}),
   });
+  const schedLabel =
+    sched.kind === "auto" ? "nightly 01:00/03:00/05:00 auto-producer" : "weekly harvest";
   console.log(
-    `scheduler: ${sched.installed ? `installed (${sched.loaded ? "loaded" : "NOT loaded"})` : "not installed"} — 10-min auto-producer`,
+    `scheduler: ${sched.installed ? `installed (${sched.loaded ? "loaded" : "NOT loaded"})` : "not installed"} — ${schedLabel}`,
   );
 
-  // 2. live lock
+  // 2. live lock — a pid can die mid-pipeline (LLM stream cut, reboot),
+  // leaving drafting + lock behind; say which it is, not just that the
+  // file exists.
   const lockPath = path.join(repoRoot, "runs", "backlog-auto.lock");
   if (existsSync(lockPath)) {
+    let lockLine = "auto run: unreadable lock — see runs/backlog-auto.lock";
     try {
       const raw = parseYaml(readFileSync(lockPath, "utf8")) as { pid?: number } | null;
       const pid = raw?.pid;
-      console.log(
-        `auto run: lock present${typeof pid === "number" ? ` (pid ${pid})` : ""} — a pipeline may be mid-flight; taken over automatically only after 3h`,
-      );
+      if (typeof pid !== "number") {
+        lockLine = "auto run: lock present (no pid recorded)";
+      } else {
+        let alive = true;
+        try {
+          process.kill(pid, 0);
+        } catch {
+          alive = false;
+        }
+        lockLine = alive
+          ? `auto run: RUNNING (pid ${pid})`
+          : `auto run: owner pid ${pid} is DEAD — lock is stale; the next fire takes it over, or delete runs/backlog-auto.lock now`;
+      }
     } catch {
-      console.log("auto run: unreadable lock — see runs/backlog-auto.lock");
+      /* keep default line */
     }
+    console.log(lockLine);
   } else {
     console.log("auto run: idle (no lock)");
   }

@@ -163,20 +163,21 @@ Output STRICTLY one fenced yaml block shaped:
 
 \`\`\`yaml
 ranking:
-  - id: <entry id>
+  - n: <entry number, copied VERBATIM from the list below>
     rank: <integer, 1 = most worth doing>
     reason: <one short line, the decisive factor>
 \`\`\`
 
 Rules:
-- every id you are given appears EXACTLY once;
+- identify entries ONLY by their number n — never retype ids or topics;
+- every number you are given appears EXACTLY once;
 - ranks are unique integers;
 - the reason states the decisive factor, it does not restate the topic.`;
 
 function buildJudgeMessages(open: BacklogEntry[]): ChatMessage[] {
   const lines: string[] = ["Open backlog entries:", ""];
-  for (const e of open) {
-    lines.push(`- id: ${e.id}`);
+  for (const [i, e] of open.entries()) {
+    lines.push(`- n: ${i + 1}`);
     lines.push(`  topic: ${e.topic}`);
     if (e.note !== undefined && e.note.trim() !== "") {
       lines.push(`  note: ${e.note.trim().slice(0, NOTE_PROMPT_CAP)}`);
@@ -194,9 +195,13 @@ function buildJudgeMessages(open: BacklogEntry[]): ChatMessage[] {
   ];
 }
 
-/** Validate the judge reply against the open id set. Throws with a
- *  readable reason — the caller dumps the raw reply and exits 1
- *  (loud degradation, same convention as corrupt YAML). */
+/** Validate the judge reply against the open id set. Entries are
+ *  identified by their POSITION NUMBER n (1-based, same order as
+ *  expectedIds) — a 40-char truncated slug invited the model to retype
+ *  ids and fail; small integers do not mangle. An exact `id` is still
+ *  accepted for reply shape robustness. Throws with a readable reason —
+ *  the caller dumps the raw reply and exits 1 (loud degradation, same
+ *  convention as corrupt YAML). */
 export function parseJudgeRanking(
   raw: string,
   expectedIds: string[],
@@ -217,14 +222,30 @@ export function parseJudgeRanking(
   const seenRanks = new Set<number>();
   const out: JudgeRank[] = [];
   for (const [i, item] of ranking.entries()) {
-    const row = item as { id?: unknown; rank?: unknown; reason?: unknown };
-    if (typeof row.id !== "string" || !expected.has(row.id)) {
+    const row = item as {
+      id?: unknown;
+      n?: unknown;
+      rank?: unknown;
+      reason?: unknown;
+    };
+    let id: string;
+    if (typeof row.n === "number" || typeof row.n === "string") {
+      const pos = Number(row.n);
+      if (!Number.isInteger(pos) || pos < 1 || pos > expectedIds.length) {
+        throw new Error(
+          `ranking[${i}].n ${JSON.stringify(row.n ?? null)} is not a position between 1 and ${expectedIds.length}`,
+        );
+      }
+      id = expectedIds[pos - 1]!;
+    } else if (typeof row.id === "string" && expected.has(row.id)) {
+      id = row.id;
+    } else {
       throw new Error(
-        `ranking[${i}].id ${JSON.stringify(row.id ?? null)} is not one of the open ids`,
+        `ranking[${i}] has neither a valid position n nor an exact open id (${JSON.stringify(row.id ?? row.n ?? null)})`,
       );
     }
-    if (seenIds.has(row.id)) {
-      throw new Error(`ranking lists "${row.id}" twice`);
+    if (seenIds.has(id)) {
+      throw new Error(`ranking lists "${id}" twice`);
     }
     const rank =
       typeof row.rank === "number"
@@ -238,10 +259,10 @@ export function parseJudgeRanking(
     if (seenRanks.has(rank)) {
       throw new Error(`rank ${rank} is used twice — ranks must be unique`);
     }
-    seenIds.add(row.id);
+    seenIds.add(id);
     seenRanks.add(rank);
     out.push({
-      id: row.id,
+      id,
       rank,
       reason: typeof row.reason === "string" ? row.reason : "",
     });

@@ -107,10 +107,13 @@ const FRESH_COMPLETE = entryWith({
   content: "长笔记正文",
 });
 
-function judgeYaml(rows: { id: string; rank: number; reason: string }[]): string {
+function judgeYaml(
+  rows: { id?: string; n?: number; rank: number; reason: string }[],
+): string {
   const lines = ["ranking:"];
   for (const r of rows) {
-    lines.push(`  - id: ${r.id}`);
+    const key = r.n !== undefined ? `n: ${r.n}` : `id: ${r.id}`;
+    lines.push(`  - ${key}`);
     lines.push(`    rank: ${r.rank}`);
     lines.push(`    reason: ${r.reason}`);
   }
@@ -234,7 +237,9 @@ describe("parseJudgeRanking", () => {
   });
 
   it("rejects unknown, duplicated, or missing ids and duplicated ranks", () => {
-    expect(() => parseJudgeRanking(judgeYaml([{ id: "zzz", rank: 1, reason: "r" }]), ["a"])).toThrow(/not one of the open ids/);
+    expect(() =>
+      parseJudgeRanking(judgeYaml([{ id: "zzz", rank: 1, reason: "r" }]), ["a"]),
+    ).toThrow(/neither a valid position n nor an exact open id/);
     expect(() =>
       parseJudgeRanking(
         judgeYaml([
@@ -254,6 +259,26 @@ describe("parseJudgeRanking", () => {
         ["a", "b"],
       ),
     ).toThrow(/ranks must be unique/);
+  });
+
+  it("resolves position numbers to ids in expected order", () => {
+    const rows = parseJudgeRanking(
+      judgeYaml([
+        { n: 2, rank: 1, reason: "first" },
+        { n: 1, rank: 2, reason: "second" },
+      ]),
+      ["alpha", "beta"],
+    );
+    expect(rows.map((r) => r.id)).toEqual(["beta", "alpha"]);
+  });
+
+  it("rejects out-of-range positions", () => {
+    expect(() =>
+      parseJudgeRanking(judgeYaml([{ n: 3, rank: 1, reason: "r" }]), ["a", "b"]),
+    ).toThrow(/not a position between 1 and 2/);
+    expect(() =>
+      parseJudgeRanking(judgeYaml([{ n: 0, rank: 1, reason: "r" }]), ["a"]),
+    ).toThrow(/not a position between 1 and 1/);
   });
 });
 
@@ -381,7 +406,7 @@ describe("runBacklogJudge", () => {
     expect(consoleErrors.join("\n")).toContain("unsupported schema");
   });
 
-  it("prompt carries id/topic/capped note/anchors but never the full content", async () => {
+  it("prompt carries number/topic/capped note/anchors but never the full content or the id", async () => {
     const longNote = "甲".repeat(400);
     seedEntry({
       id: "2026-11-01-alpha",
@@ -397,13 +422,16 @@ describe("runBacklogJudge", () => {
       expect(req.messages[0]?.role).toBe("system");
       userMessage = req.messages[1]?.content ?? "";
       return {
-        content: judgeYaml([{ id: "2026-11-01-alpha", rank: 1, reason: "r" }]),
+        content: judgeYaml([{ n: 1, rank: 1, reason: "r" }]),
         usage: { input: 10, output: 5 },
       };
     });
     expect(await runBacklogJudge({ model: "glm", cwd: repoRoot })).toBe(0);
 
-    expect(userMessage).toContain("id: 2026-11-01-alpha");
+    // The model ranks by position number — ids never enter the prompt,
+    // so nothing can be mistyped (the 2026-11-19 mangled-slug failure).
+    expect(userMessage).toContain("n: 1");
+    expect(userMessage).not.toContain("2026-11-01-alpha");
     expect(userMessage).toContain("topic: 停电的城市");
     expect(userMessage).toContain(`note: ${"甲".repeat(200)}`);
     expect(userMessage).not.toContain("甲".repeat(201));

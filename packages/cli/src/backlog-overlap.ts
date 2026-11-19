@@ -51,8 +51,10 @@ const LATIN_STOPWORDS: Record<string, true> = {
 };
 
 /** CJK function characters; a shingle touching one is dropped. Kept
- *  conservative — 中/上/下/大/小 stay eligible (中国, 上海, 大肠 …). */
-const CJK_FUNCTION_CHARS = "的了是在有和与就都也这那为什怎如何么呢吗吧哪被把让向往从到对给跟比很太更只才或因所但于过还又及其等之";
+ *  conservative — 中/上/下/大/小 stay eligible (中国, 上海, 大肠 …).
+ *  2026-11-19 harvest: 一次/一个/下一 flags were pure noise, so 一,
+ *  次 and 个 joined. */
+const CJK_FUNCTION_CHARS = "一的了是在有和与就都也这那为什怎如何么呢吗吧哪被把让向往从到对给跟比很太更只才或因所但于过还又及其等之次个";
 
 /** Contiguous CJK shingles (2-4 chars) that never touch a function
  *  character, plus latin words/phrases ≥3 chars minus stopwords. */

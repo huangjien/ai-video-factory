@@ -316,7 +316,7 @@ export async function runBacklogHarvest(
     );
   }
   console.log(
-    `harvest totals: ${added.length} added, ${deduped} deduped, ${overlapped} overlap-skipped, ${failedDocs} failed doc(s)`,
+    `harvest totals: ${added.length} added, ${deduped} deduped, ${overlapped} overlap-flagged (proposed anyway), ${failedDocs} failed doc(s)`,
   );
 
   if (opts.dryRun === true) {

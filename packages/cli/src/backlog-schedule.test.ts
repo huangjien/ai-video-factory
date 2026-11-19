@@ -92,6 +92,12 @@ describe("plistContentFor", () => {
     expect(auto).toContain("<integer>600</integer>");
   });
 
+  it("sets WorkingDirectory so the CLI can find the repo from launchd's / cwd", () => {
+    const xml = plistContentFor("harvest", { ...base("/node"), workingDir: "/repo" });
+    expect(xml).toContain("<key>WorkingDirectory</key>");
+    expect(xml).toContain("<string>/repo</string>");
+  });
+
   it("forces headless mode and injects a usable PATH for children", () => {
     const xml = plistContentFor("harvest", { ...base("/node"), envPath: "/x:/usr/bin" });
     expect(xml).toContain("<key>VIDEO_ASK</key>");

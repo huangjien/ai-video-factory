@@ -17,6 +17,7 @@ function launchdPlist(opts: {
   command: string;
   args: string[];
   env: Record<string, string>;
+  workingDir: string;
   triggerXml: string;
   logPath: string;
 }): string {
@@ -44,6 +45,8 @@ function launchdPlist(opts: {
     ${argv}
   </array>
   ${opts.triggerXml}
+  <key>WorkingDirectory</key>
+  <string>${esc(opts.workingDir)}</string>
   <key>EnvironmentVariables</key>
   <dict>
 ${envXml}
@@ -67,6 +70,10 @@ export interface PlistContentOptions {
   args: string[];
   label?: string;
   logPath: string;
+  /** WorkingDirectory — launchd defaults to /, and findRepoRoot walks UP
+   *  from there, so the store/projects are invisible without this
+   *  (measured 2026-11-19: "no open entries" from a 73-entry backlog). */
+  workingDir?: string;
   /** PATH for the run's children — make spawns ffmpeg/remotion from
    *  Homebrew paths launchd does not set. */
   envPath?: string;
@@ -102,6 +109,7 @@ export function plistContentFor(
     label,
     command: opts.command,
     args: opts.args,
+    workingDir: opts.workingDir ?? process.cwd(),
     env: {
       VIDEO_ASK: "off",
       PATH:
@@ -240,6 +248,7 @@ async function doInstall(opts: BacklogScheduleOptions): Promise<number> {
   const content = plistContentFor(kind, {
     command: opts.command ?? process.execPath,
     args: [dist, "backlog", kind],
+    workingDir: findRepoRoot(opts.cwd ?? process.cwd()),
     envPath: launchdEnvPath(),
     logPath: defaultLogPath(opts),
     env,

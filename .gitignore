@@ -38,3 +38,9 @@ stderr.txt
 # tens of MB and the numbers live in docs/RELEASES.md.
 runs/image-provider-ab/
 runs/frames/
+
+# runs/ holds runtime artifacts only — per-call run records, judge caches,
+# failed-reply dumps, launchd tick logs, script outputs. Regenerable or
+# ephemeral; the durable numbers they carried live in docs/. Everything
+# under it stays local (untracked since 2026-11-19).
+runs/

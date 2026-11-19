@@ -363,3 +363,22 @@ make: 1 step(s) failed — fix and re-run `video make 玄武门之变-the-xuanwu
 ✗ auto not firing: MiniMax worked 24 min ago (< 60 min idle)
 ✗ auto not firing: MiniMax worked 6 min ago (< 60 min idle)
 ✗ auto not firing: MiniMax worked 16 min ago (< 60 min idle)
+✗ auto not firing: MiniMax worked 26 min ago (< 60 min idle)
+✗ auto not firing: MiniMax worked 36 min ago (< 60 min idle)
+✗ auto not firing: MiniMax worked 46 min ago (< 60 min idle)
+✗ auto not firing: MiniMax worked 56 min ago (< 60 min idle)
+✓ conditions met — top idea: 2026-11-19-朝鲜战争从未正式结束
+▷ auto-producing 2026-11-19-朝鲜战争从未正式结束 (project: 朝鲜战争从未正式结束) zh + en-US
+▷ backlog 2026-11-19-朝鲜战争从未正式结束 → drafting (project: 朝鲜战争从未正式结束)
+A I   V I D E O   F A C T O R Y   ·   v0.11.2
+▷ new channel: 朝鲜战争从未正式结束
+
+✓ scaffolded /Users/huangjien/workspace/ai-video-factory/projects/朝鲜战争从未正式结束
+  next: edit storyboard/storyboard.yaml, then `video approve storyboard`, then `video preview`
+  ! judge flipped to minimax — glm generated the draft; scoring must be cross-model
+  ▷ web search
+  ✓ web search  1s
+  ▷ drafting article (glm, judged by minimax)
+  ⏳ drafting article (glm, judged by minimax) … 30s
+  ⏳ drafting article (glm, judged by minimax) … 50s
+  ⏳ drafting article (glm, judged by minimax) … 70s

@@ -88,7 +88,7 @@ Full command set:
 | `video backlog judge` | One batched LLM ranking of open ideas, cached by entry hash in `runs/` |
 | `video backlog auto` | Spare-capacity producer: MiniMax idle ≥1h + both Token Plan windows ≥80% → judge's top idea becomes zh+en MP4s (draft→make→translate→make); hourly launchd via `--install-scheduler`; refuses while an idea is stuck mid-pipeline |
 | `video backlog stats` | Derived hit-rate join: idea → project → article / final-mixed.mp4 / `bilibili/bvid.txt` |
-| `video backlog schedule` | Weekly launchd auto-harvest (`--install`/`--remove`/`--status`, `VIDEO_ASK=off`); `--kind auto` switches to the hourly auto-producer |
+| `video backlog schedule` | Weekly launchd auto-harvest (`--install`/`--remove`/`--status`, `VIDEO_ASK=off`); `--kind auto` switches to the 10-minute auto-producer |
 | `video prompts [show <name>]` | Inspect the central prompt registry (`packages/prompts/prompts/`) |
 
 Every command accepts `--cwd <dir>` (default `projects/`). Every step writes `runs/<id>.yaml` and updates `state.yaml`.

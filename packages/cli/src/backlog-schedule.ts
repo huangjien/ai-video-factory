@@ -92,10 +92,11 @@ export interface AutoPlistOptions {
   logPath: string;
 }
 
-/** Pure plist text for the hourly auto-producer LaunchAgent. StartInterval
- *  3600: the trigger condition ("MiniMax idle an hour, ≥80% quota left")
- *  is cheap to evaluate and the pipeline itself refuses to double-run via
- *  its lockfile, so an hourly poke is the right granularity. */
+/** Pure plist text for the auto-producer LaunchAgent. StartInterval 600:
+ *  the trigger condition ("MiniMax idle an hour, ≥80% quota left") is
+ *  cheap to evaluate and the pipeline itself refuses to double-run via
+ *  its lockfile, so a 10-minute poke reacts fast to an idle gap without
+ *  meaningful cost (2026-11-19: owner asked for 600 over 3600). */
 export function autoPlistContent(opts: AutoPlistOptions): string {
   const label = opts.label ?? DEFAULT_AUTO_LABEL;
   return launchdPlist({
@@ -103,7 +104,7 @@ export function autoPlistContent(opts: AutoPlistOptions): string {
     videoPath: opts.videoPath,
     programArgs: ["backlog", "auto"],
     triggerXml: `  <key>StartInterval</key>
-  <integer>3600</integer>`,
+  <integer>600</integer>`,
     logPath: opts.logPath,
   });
 }
@@ -214,7 +215,7 @@ async function doInstall(opts: BacklogScheduleOptions): Promise<number> {
     console.error(`launchctl load failed (exit ${code}). Load manually with:\n  launchctl load "${target}"`);
     return 1;
   }
-  const cadence = kind === "auto" ? "hourly auto-producer" : "weekly backlog harvest";
+  const cadence = kind === "auto" ? "auto-producer (every 10 min)" : "weekly backlog harvest";
   console.log(`installed ${labelOf(kind)} — ${cadence}, plist at ${target}`);
   return 0;
 }
@@ -260,7 +261,7 @@ export async function runBacklogSchedule(opts: BacklogScheduleOptions): Promise<
 export function addScheduleCommand(backlog: Command): void {
   backlog
     .command("schedule")
-    .description("manage launchd LaunchAgents: weekly harvest (default) or the hourly auto-producer (--kind auto)")
+    .description("manage launchd LaunchAgents: weekly harvest (default) or the 10-minute auto-producer (--kind auto)")
     .option("--install", "write the plist and launchctl load it")
     .option("--remove", "launchctl unload and delete the plist")
     .option("--status", "report install/load state")

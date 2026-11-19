@@ -1,7 +1,21 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { existsSync, mkdtempSync, rmSync, utimesSync, writeFileSync, mkdirSync, readFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdtempSync,
+  rmSync,
+  utimesSync,
+  writeFileSync,
+  mkdirSync,
+  readFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
+
+/** Write a file and backdate its mtime (the idle scanner reads mtimes). */
+function touch(file: string, when: number): void {
+  writeFileSync(file, existsSync(file) ? readFileSync(file, "utf8") : "", "utf8");
+  utimesSync(file, new Date(when), new Date(when));
+}
 
 // The auto producer orchestrates four stages; every one is stubbed so the
 // trigger/lock/pick logic runs offline.

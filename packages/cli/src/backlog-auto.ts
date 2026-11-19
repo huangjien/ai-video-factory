@@ -117,6 +117,10 @@ function isMinimaxEvidence(file: string, stat: { mtimeMs: number }, now: number)
   if (now - stat.mtimeMs > 24 * 60 * 60 * 1000) return false;
   try {
     const text = readFileSync(file, "utf8");
+    // The auto verb's own bookkeeping records carry provider "minimax+glm"
+    // but spend nothing themselves — counting them here meant every 10-min
+    // tick re-blocked on the previous tick's skip record, forever.
+    if (/^\s*stage:\s*backlog-auto/m.test(text)) return false;
     return /^\s*provider:\s*minimax/m.test(text);
   } catch {
     return false;

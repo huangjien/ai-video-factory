@@ -13,7 +13,7 @@ import {
   type BacklogStore,
   type BacklogStatus,
 } from "./backlog-store.js";
-import { extractOverlapKeywords, scanOverlap } from "./backlog-overlap.js";
+import { scanOverlap } from "./backlog-overlap.js";
 import { sortForList } from "./backlog-score.js";
 import { addHarvestCommand } from "./backlog-harvest.js";
 import { addStatsCommand } from "./backlog-stats.js";
@@ -107,25 +107,26 @@ export async function runBacklogAdd(opts: BacklogAddOptions): Promise<number> {
   }
 
   // Overlap preflight: soft gate, --force overrules (design §CLI).
-  const keywords = extractOverlapKeywords({
+  const hits = scanOverlap(repoRoot, {
     topic: opts.topic,
     ...(opts.note !== undefined ? { note: opts.note } : {}),
     ...(opts.anchors !== undefined ? { anchors: opts.anchors } : {}),
     ...(content !== undefined ? { content } : {}),
   });
-  const hits = scanOverlap(repoRoot, keywords);
   if (hits.length > 0 && opts.force !== true) {
     console.error(
       `✗ overlap with the existing catalog — re-run with --force to add anyway:`,
     );
     for (const hit of hits) {
-      console.error(`  "${hit.keyword}" already in: ${hit.projects.join(", ")}`);
+      console.error(
+        `  ${hit.project}: matched ${hit.keywords.slice(0, 5).map((k) => `"${k}"`).join(", ")}`,
+      );
     }
     return 1;
   }
   if (hits.length > 0) {
     console.log(
-      `  ! ${hits.length} overlap warning(s) overridden by --force (topic "${hits[0]?.keyword}" et al)`,
+      `  ! ${hits.length} overlap warning(s) overridden by --force (first: ${hits[0]?.project})`,
     );
   }
 

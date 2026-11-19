@@ -162,7 +162,7 @@ describe("runBacklogHarvest — happy path", () => {
     expect(consoleOutput.join("\n")).toMatch(/1 deduped/);
   });
 
-  it("skips candidates already covered by the project catalog", async () => {
+  it("flags covered candidates in the note instead of dropping them", async () => {
     const root = mkFixture();
     const proj = path.join(root, "projects", "panmunjom");
     mkdirSync(proj, { recursive: true });
@@ -180,9 +180,30 @@ describe("runBacklogHarvest — happy path", () => {
     captureConsole();
     const code = await runBacklogHarvest({ cwd: root });
     expect(code).toBe(0);
+    // The overlap candidate is PROPOSED with a warning, not discarded —
+    // the human approve step owns that call.
     const store = loadStore(root);
-    expect(store.ideas.map((e) => e.topic)).toEqual(["全新的量子纠错故事"]);
-    expect(consoleOutput.join("\n")).toMatch(/already covered/);
+    expect(store.ideas.map((e) => e.topic)).toEqual([
+      "停战协定的监督机制",
+      "全新的量子纠错故事",
+    ]);
+    const flagged = store.ideas.find((e) => e.topic === "停战协定的监督机制");
+    expect(flagged?.note).toContain("possible overlap");
+    expect(flagged?.note).toContain("panmunjom");
+    expect(consoleOutput.join("\n")).toMatch(/possible overlap/);
+  });
+
+  it("skips index/README files — they describe docs, not topics", async () => {
+    const root = mkFixture();
+    writeFileSync(path.join(root, "docs", "plans", "index.md"), "# Plans\n\nA table of documents.\n");
+    chatMock.mockResolvedValue({
+      content: reply([{ topic: "为什么地图会撒谎", why: "fresh" }]),
+    });
+    captureConsole();
+    const code = await runBacklogHarvest({ cwd: root });
+    expect(code).toBe(0);
+    // Only the fixture doc got an LLM call — index.md never scanned.
+    expect(chatMock).toHaveBeenCalledTimes(1);
   });
 });
 
@@ -260,7 +281,6 @@ describe("addHarvestCommand", () => {
     expect(opts).toContain("--dry-run");
     expect(opts).toContain("--paths");
     expect(opts).toContain("--model");
-    expect(opts).toContain("--force");
     const defaults = harvest?.opts() as { paths?: string } | undefined;
     expect(defaults?.paths).toBe("docs/plans,learnings");
   });

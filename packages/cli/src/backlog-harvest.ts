@@ -23,7 +23,7 @@ import {
   saveBacklogStore,
   type BacklogEntry,
 } from "./backlog-store.js";
-import { extractOverlapKeywords, scanOverlap } from "./backlog-overlap.js";
+import { scanOverlap } from "./backlog-overlap.js";
 import { slugifyProjectName } from "./project-path.js";
 import { MARK_FAIL, MARK_OK, MARK_WARN } from "./ui.js";
 
@@ -44,8 +44,6 @@ export interface BacklogHarvestOptions {
   paths?: string;
   model?: "minimax" | "glm";
   cwd?: string;
-  /** Add candidates even when the overlap scan hits the catalog. */
-  force?: boolean;
 }
 
 const MAX_FILES = 30;
@@ -74,12 +72,17 @@ function safeGitHead(cwd: string): string {
   }
 }
 
+/** Skippable by name: nav/index files describe the docs, not topics. */
+const NON_TOPIC_FILES = new Set(["index.md", "readme.md"]);
+
 function collectMarkdownFiles(dir: string, out: string[]): void {
   if (!existsSync(dir)) return;
   for (const name of readdirSync(dir).sort()) {
     const full = path.join(dir, name);
     if (statSync(full).isDirectory()) collectMarkdownFiles(full, out);
-    else if (name.endsWith(".md")) out.push(full);
+    else if (name.endsWith(".md") && !NON_TOPIC_FILES.has(name.toLowerCase())) {
+      out.push(full);
+    }
   }
 }
 
@@ -257,32 +260,42 @@ export async function runBacklogHarvest(
         deduped += 1;
         continue;
       }
-      const keywords = extractOverlapKeywords({
+      // Overlap is ADVISORY on harvested ideas (2026-11-19 dry-run: the
+      // old auto-skip discarded fresh topics on shingle noise). The hit
+      // is recorded in the note; the human approve step owns the call.
+      const hits = scanOverlap(repoRoot, {
         topic: cand.topic,
         ...(cand.note !== undefined ? { note: cand.note } : {}),
         ...(cand.anchors !== undefined ? { anchors: cand.anchors } : {}),
       });
-      const hits = scanOverlap(repoRoot, keywords);
-      if (hits.length > 0 && opts.force !== true) {
+      const overlapText = hits
+        .slice(0, 3)
+        .map(
+          (h) => `${h.project} (${h.keywords.slice(0, 3).join("、")})`,
+        )
+        .join("; ");
+      if (hits.length > 0) {
         overlapped += 1;
         console.log(
-          `  ${MARK_WARN} already covered: "${hits[0]?.keyword}" in ${hits[0]?.projects.join(", ")} — skipped "${cand.topic}"`,
+          `  ${MARK_WARN} possible overlap — still proposing: ${overlapText} — "${cand.topic}"`,
         );
-        continue;
       }
       const whyText = [cand.why, cand.note]
         .filter((t): t is string => typeof t === "string" && t.trim() !== "")
         .join(" — ");
+      const noteParts = [
+        whyText !== "" ? whyText : `harvested from ${doc.rel}`,
+        ...(hits.length > 0
+          ? [`⚠ possible overlap: ${overlapText}`]
+          : []),
+      ];
       const entry: BacklogEntry = {
         id: nextBacklogId(cand.topic, [...store.ideas, ...added], backlogToday()),
         topic: cand.topic,
         status: "proposed",
         source: `harvest:${doc.rel}`,
         created: backlogToday(),
-        note:
-          whyText !== ""
-            ? `${whyText} (from ${doc.rel})`
-            : `harvested from ${doc.rel}`,
+        note: `${noteParts.join(" — ")} (from ${doc.rel})`,
         ...(cand.anchors !== undefined && cand.anchors.length > 0
           ? { anchors: cand.anchors }
           : {}),
@@ -373,7 +386,6 @@ export function addHarvestCommand(backlog: Command): void {
       "docs/plans,learnings",
     )
     .option("--model <model>", "force a provider: minimax | glm")
-    .option("--force", "add despite overlap warnings from the catalog scan")
     .option("--cwd <dir>", "repo root (default: walk up to pnpm-workspace.yaml)")
     .action(async (opts) => {
       process.exitCode = await runBacklogHarvest({
@@ -382,7 +394,6 @@ export function addHarvestCommand(backlog: Command): void {
         ...(opts.model !== undefined
           ? { model: opts.model as "minimax" | "glm" }
           : {}),
-        ...(opts.force === true ? { force: true } : {}),
         ...(opts.cwd !== undefined ? { cwd: opts.cwd } : {}),
       });
     });

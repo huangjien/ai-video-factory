@@ -5,12 +5,17 @@ import path from "node:path";
  * Overlap preflight (design §CLI): before an idea enters the backlog,
  * its keywords are scanned against each project's article.md so a video
  * that is already covered warns instead of silently re-shipping.
- * A warning is a soft gate — `--force` overrules it everywhere.
+ * A warning is a soft gate — `--force` overrules it on `add`; on
+ * `harvest` the warning lands in the proposed entry's note instead of
+ * skipping, because the signal is advisory (2026-11-19 dry-run: naive
+ * keyword skips discarded 5 fresh topics on shingle noise).
  */
 
 export interface OverlapHit {
-  keyword: string;
-  projects: string[];
+  /** The project whose article matched. */
+  project: string;
+  /** The keywords that matched IN THIS ARTICLE. */
+  keywords: string[];
 }
 
 export interface OverlapInput {
@@ -22,13 +27,53 @@ export interface OverlapInput {
 
 const MAX_KEYWORDS = 40;
 
-/** CJK runs → overlapping bigrams (capped per run); latin words ≥3 chars. */
+/** Function words that match half a catalog and mean nothing: dropped
+ *  before scanning (2026-11-19 dry-run: "the"/"why"/"为什" flagged 20+
+ *  unrelated projects per idea). */
+const LATIN_STOPWORDS: Record<string, true> = {
+  the: true, and: true, for: true, not: true, but: true, why: true,
+  how: true, what: true, when: true, where: true, which: true, who: true,
+  whose: true, with: true, without: true, into: true, from: true, that: true,
+  this: true, these: true, those: true, there: true, their: true, them: true,
+  they: true, than: true, then: true, are: true, was: true, were: true,
+  been: true, being: true, have: true, has: true, had: true, its: true,
+  it: true, is: true, one: true, two: true, same: true, other: true,
+  another: true, such: true, only: true, also: true, just: true, like: true,
+  over: true, under: true, about: true, after: true, before: true,
+  between: true, during: true, each: true, some: true, any: true, all: true,
+  more: true, most: true, less: true, least: true, very: true, much: true,
+  many: true, can: true, could: true, should: true, would: true, may: true,
+  might: true, must: true, will: true, shall: true, does: true, did: true,
+  done: true, doing: true, get: true, gets: true, got: true, make: true,
+  makes: true, made: true, use: true, uses: true, used: true, using: true,
+  new: true, old: true, own: true, still: true, yet: true, way: true,
+  ways: true, thing: true, things: true,
+};
+
+/** CJK function characters; a shingle touching one is dropped. Kept
+ *  conservative — 中/上/下/大/小 stay eligible (中国, 上海, 大肠 …). */
+const CJK_FUNCTION_CHARS = "的了是在有和与就都也这那为什怎如何么呢吗吧哪被把让向往从到对给跟比很太更只才或因所但于过还又及其等之";
+
+/** Contiguous CJK shingles (2-4 chars) that never touch a function
+ *  character, plus latin words/phrases ≥3 chars minus stopwords. */
 function keywordsFromText(text: string, cap: number): string[] {
   const out: string[] = [];
   const cjkRuns = text.match(/[\u4e00-\u9fff]{2,}/g) ?? [];
   for (const run of cjkRuns) {
-    for (let i = 0; i + 2 <= run.length && out.length < cap; i++) {
-      out.push(run.slice(i, i + 2));
+    for (let len = 2; len <= 4; len++) {
+      for (let i = 0; i + len <= run.length; i++) {
+        if (out.length >= cap) break;
+        const shingle = run.slice(i, i + len);
+        let clean = true;
+        for (const ch of shingle) {
+          if (CJK_FUNCTION_CHARS.includes(ch)) {
+            clean = false;
+            break;
+          }
+        }
+        if (clean) out.push(shingle);
+      }
+      if (out.length >= cap) break;
     }
   }
   if (out.length < cap) {
@@ -37,10 +82,19 @@ function keywordsFromText(text: string, cap: number): string[] {
     );
     for (const w of latin) {
       if (out.length >= cap) break;
-      out.push(w);
+      if (LATIN_STOPWORDS[w] !== true) out.push(w);
     }
   }
   return out;
+}
+
+/** A keyword that can carry a verdict ALONE: curated anchors, or
+ *  distinctive tokens (CJK ≥4 chars, latin ≥6). Short shingles need a
+ *  second witness in the same article before they count. */
+function isStrong(keyword: string, anchors: Set<string>): boolean {
+  if (anchors.has(keyword)) return true;
+  const cjk = keyword.match(/^[\u4e00-\u9fff]+$/);
+  return cjk ? keyword.length >= 4 : keyword.length >= 6;
 }
 
 /** Priority order: anchors (verbatim) > topic > note > content. The
@@ -57,7 +111,7 @@ export function extractOverlapKeywords(input: OverlapInput): string[] {
     out.push(k);
   };
   for (const a of input.anchors ?? []) push(a);
-  for (const kw of keywordsFromText(input.topic, 12)) push(kw);
+  for (const kw of keywordsFromText(input.topic, 14)) push(kw);
   if (input.note !== undefined) {
     for (const kw of keywordsFromText(input.note, 10)) push(kw);
   }
@@ -67,23 +121,28 @@ export function extractOverlapKeywords(input: OverlapInput): string[] {
   return out.slice(0, MAX_KEYWORDS);
 }
 
-/** Scan the keywords across every project article. Returns only hits. */
-export function scanOverlap(repoRoot: string, keywords: string[]): OverlapHit[] {
+/** Scan across every project article; report PER ARTICLE with the
+ *  keywords that matched there. Verdict: ≥2 matched keywords in one
+ *  article, or a single STRONG keyword (anchor / long token) — one
+ *  generic shingle alone is never a verdict. */
+export function scanOverlap(
+  repoRoot: string,
+  input: OverlapInput,
+): OverlapHit[] {
+  const keywords = extractOverlapKeywords(input);
+  const anchors = new Set((input.anchors ?? []).map((a) => a.trim()));
   const projectsDir = path.join(repoRoot, "projects");
   if (!existsSync(projectsDir)) return [];
-  const articles: { name: string; text: string }[] = [];
+  const hits: OverlapHit[] = [];
   for (const name of readdirSync(projectsDir).sort()) {
     const article = path.join(projectsDir, name, "article.md");
-    if (existsSync(article)) {
-      articles.push({ name, text: readFileSync(article, "utf8") });
+    if (!existsSync(article)) continue;
+    const text = readFileSync(article, "utf8");
+    const matched = keywords.filter((kw) => text.includes(kw));
+    const strong = matched.some((kw) => isStrong(kw, anchors));
+    if (matched.length >= 2 || (matched.length === 1 && strong)) {
+      hits.push({ project: name, keywords: matched });
     }
-  }
-  const hits: OverlapHit[] = [];
-  for (const keyword of keywords) {
-    const matched = articles
-      .filter((a) => a.text.includes(keyword))
-      .map((a) => a.name);
-    if (matched.length > 0) hits.push({ keyword, projects: matched });
   }
   return hits;
 }

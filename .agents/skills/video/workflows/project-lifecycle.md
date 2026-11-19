@@ -83,9 +83,25 @@ Full command set:
 | `video theme [name]` | Palette inspector (list / one / resolve project) |
 | `video character [list \| approve <id> <style> <version> --by <name>]` | Character bible: list the characters and their per-style reference sheets, or promote a candidate to the official sheet (stamps the reviewer, supersedes the previous one) |
 | `video learn <project>` | Human-review learning loop (`--ask`/`--answer`/`--status`/`--propose`) |
+| `video backlog add/list/approve/drop/reset` | Idea store at repo-root `backlog.yaml` (`add` runs an overlap preflight vs `projects/<id>/article.md`, `--force` overrules) |
+| `video backlog harvest` | LLM extracts candidate topics from `docs/plans/` + `learnings/` → `proposed` entries (dedup; overlap hits flag the note, approve decides; `--dry-run` writes nothing) |
+| `video backlog judge` | One batched LLM ranking of open ideas, cached by entry hash in `runs/` |
+| `video backlog stats` | Derived hit-rate join: idea → project → article / final-mixed.mp4 / `bilibili/bvid.txt` |
+| `video backlog schedule` | Weekly launchd auto-harvest (`--install`/`--remove`/`--status`, `VIDEO_ASK=off`) |
 | `video prompts [show <name>]` | Inspect the central prompt registry (`packages/prompts/prompts/`) |
 
 Every command accepts `--cwd <dir>` (default `projects/`). Every step writes `runs/<id>.yaml` and updates `state.yaml`.
+
+### Picking from the backlog (`video draft --from-backlog <id>`, 2026-11-18)
+
+`video draft --from-backlog <id>` drafts a stored idea: the entry's topic
+names the project, its optional long `content` reaches the drafter as
+idea-seed context (same channel as `--file`), the entry is stamped
+`drafting` before the paid call and `drafted` + project backlink on
+success — a failure or the ask gate's exit 2 reverts the stamp. Status
+lifecycle `proposed → idea → drafting → drafted | dropped` lives in
+`backlog.yaml`; `video backlog reset <id>` recovers a crash. Design:
+`docs/plans/2026-11-18-backlog-feature-design.md`.
 
 ### Zhihu companion upload (Chinese videos, standing rule 2026-11-15)
 

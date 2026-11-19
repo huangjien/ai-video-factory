@@ -51,7 +51,8 @@
 - [ ] **BL-04｜harvest 子命令** `P1`
   - 依赖：BL-02
   - 涉及：`packages/cli/src/backlog-harvest.ts`（新文件）、`packages/llm`。
-  - 实施：默认扫描 `docs/plans/`+`learnings/`（`--paths` 可改），每候选文档一次 LLM 抽取；按 id/topic 去重；追加 `proposed` 条目（source 记 `harvest:<relpath>`，理由进 note）；解析失败转储 `runs/` 并 exit 1；`--dry-run` 只报告。
+  - 实施：默认扫描 `docs/plans/`+`learnings/`（`--paths` 可改，跳过 index/README），每候选文档一次 LLM 抽取；按 id/topic 去重；追加 `proposed` 条目（source 记 `harvest:<relpath>`，理由进 note）；解析失败转储 `runs/` 并 exit 1；`--dry-run` 只报告。
+  - 变更记录（2026-11-19 首次 dry-run 实测）：重叠预检从「命中即跳过」改为「命中写进 proposed 条目的 note，由人工 approve 决定」——旧策略在停用词噪声下丢弃了全部 5 条新选题（77 次误报 skip）。同时抽取端加停用词/虚词过滤，判定改为「同文章 ≥2 词或单一强词」。
   - 验收：mock LLM 单测；首跑真实冒烟——军事/AI 设计文档导入 5 条选题且二次运行零重复。
 
 - [ ] **BL-05｜确定性打分 + 可选 judge 排名** `P1`

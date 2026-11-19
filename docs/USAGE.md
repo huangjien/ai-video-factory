@@ -834,13 +834,16 @@ video draft --from-backlog <id>     # pick: draft the idea, stamp it drafted, li
 
 The lifecycle is `proposed → idea → drafting → drafted | dropped`, guarded by
 the store. `add` and `harvest` run an overlap preflight — keywords from the
-topic, anchors and content are scanned against every `projects/<id>/article.md`,
-and a hit warns with the colliding project names (`--force` overrules). A
-`draft --from-backlog` run stamps the entry `drafting` before the paid call and
-`drafted` (with the project backlink) on success; a failure or the ask gate's
-exit 2 reverts the stamp, and `video backlog reset <id>` recovers a crash left
-mid-draft. An entry's optional long `content` (a brainstorm or research dump,
-no size cap) is handed to the drafter as context alongside the topic.
+topic, anchors and content (stopword-filtered) are scanned against every
+`projects/<id>/article.md`; a verdict needs two matching keywords in one
+article or a single anchor/distinctive term. On `add` the hit blocks until
+`--force`; on `harvest` the hit is advisory — it lands in the proposed
+entry's note and the `approve` step decides. A `draft --from-backlog` run
+stamps the entry `drafting` before the paid call and `drafted` (with the
+project backlink) on success; a failure or the ask gate's exit 2 reverts the
+stamp, and `video backlog reset <id>` recovers a crash left mid-draft. An
+entry's optional long `content` (a brainstorm or research dump, no size cap)
+is handed to the drafter as context alongside the topic.
 
 Design: [`docs/plans/2026-11-18-backlog-feature-design.md`](./plans/2026-11-18-backlog-feature-design.md).
 

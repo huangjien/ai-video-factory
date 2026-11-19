@@ -98,6 +98,12 @@ export interface ImageCacheKeyInput {
    *  INSIDE the jpg, so an edited title must invalidate the cached image —
    *  otherwise the old typography ships forever behind a "fresh" key. */
   bakeDigest: string;
+  /** Digest of the historical picture used for this scene ("" when none).
+   *  A borrowed picture is an INPUT to the image, exactly like the visual
+   *  line: a different picture means a different image, so it belongs in
+   *  the key. The value comes from the recorded source sidecar, so the
+   *  impact table can compute the key offline. */
+  sourceDigest: string;
   width: number;
   height: number;
 }
@@ -117,6 +123,11 @@ export function imageCacheKey(input: ImageCacheKeyInput): string {
     input.bakeDigest,
     input.width,
     input.height,
+    // The borrowed picture is appended ONLY when there is one. A scene
+    // with no picture must keep the key it had before the feature
+    // existed, or every existing image would be regenerated (and
+    // re-bought) the first time a project runs with retrieval on.
+    ...(input.sourceDigest === "" ? [] : [input.sourceDigest]),
   ]);
   return "sha256:" + createHash("sha256").update(stable).digest("hex");
 }

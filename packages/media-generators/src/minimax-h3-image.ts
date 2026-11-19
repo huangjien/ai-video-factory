@@ -136,6 +136,9 @@ export function autoConstraintMarkers(prompt: string): string[] {
 
 export class MiniMaxH3ImageProvider implements ImageProvider {
   readonly name = "minimax-h3";
+  /** The edits endpoint — the only provider in the repo that can take a
+   *  reference picture. */
+  readonly supportsReferences = true;
   private readonly apiHost: string;
   private readonly model: string;
   private readonly requestTimeoutMs: number;

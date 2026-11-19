@@ -86,6 +86,11 @@ export const ArticleFrontmatterSchema = z
      *  (article.md is human-edited — a typo must not brick parsing);
      *  resolveImageProvider coerces unknown values at the use site. */
     image_provider: z.string().optional(),
+    /** Historical-picture retrieval for the scene images: "auto" (the
+     *  default — look for a freely-licensed historical picture for the
+     *  scenes that show one) or "off". Plain string like image_style;
+     *  resolveImageSourcesMode coerces unknown values at the use site. */
+    historical_images: z.string().optional(),
     /** CS-01: cross-video channel grammar (narrative voice, captions,
      *  motion defaults, brand chrome) — distinct from `image_style`,
      *  which is the per-film art style. Carried article → storyboard

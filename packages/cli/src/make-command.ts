@@ -1,6 +1,11 @@
 import type { Command } from "commander";
 import path from "node:path";
-import { computeMakeImpact, formatImpact, runMake } from "@video/make";
+import {
+  computeMakeImpact,
+  formatImpact,
+  parseImageSourcesMode,
+  runMake,
+} from "@video/make";
 import { resolveProjectDir } from "./project-path.js";
 import { l10nRootOrThrow } from "./translate-command.js";
 import {
@@ -23,6 +28,8 @@ export interface MakeOptions {
    *  mock, or none. */
   imageProvider?:
     "minimax" | "minimax-h3" | "openai" | "gemini" | "mock" | "none";
+  /** Historical-picture retrieval: auto (default) | off. */
+  sources?: "auto" | "off";
   /** Local music library dir — BGM tags resolve to {tag}.wav inside it. */
   bgmDir?: string;
   /** Local SFX library dir — same lookup rule as bgmDir. */
@@ -67,6 +74,7 @@ export async function runMakeCli(opts: MakeOptions): Promise<number> {
     ...(opts.imageProvider !== undefined
       ? { imageProvider: opts.imageProvider }
       : {}),
+    ...(opts.sources !== undefined ? { sources: opts.sources } : {}),
     ...(opts.bgmDir !== undefined ? { bgmDir: opts.bgmDir } : {}),
     ...(opts.sfxDir !== undefined ? { sfxDir: opts.sfxDir } : {}),
   });
@@ -131,6 +139,10 @@ export function registerMake(program: Command): void {
       "image provider for scene visuals: minimax (image-01, default since v0.8.1; needs MINIMAX_API_KEY), minimax-h3 (MiniMax-H3-Image; LAST-resort fallback, never default; needs MINIMAX_API_KEY), openai (gpt-image-2.6-flare; needs OPENAI_API_KEY), gemini (gemini-3.1-flash-image; needs GEMINI_API_KEY), mock, none (--fake implies none). On a per-scene failure the other configured providers are tried in order minimax → openai → gemini → minimax-h3",
     )
     .option(
+      "--image-sources <mode>",
+      "historical-picture retrieval for scene images: auto (default — look for a freely-licensed historical picture for the scenes that show one) | off",
+    )
+    .option(
       "--bgm-dir <dir>",
       "local BGM library dir — the bgm tag from audio-config.yaml resolves to {tag}.wav inside it (default: mock silent placeholder)",
     )
@@ -151,12 +163,14 @@ export function registerMake(program: Command): void {
           fake?: boolean;
           imageProvider?:
             "minimax" | "minimax-h3" | "openai" | "gemini" | "mock" | "none";
+          imageSources?: string;
           bgmDir?: string;
           sfxDir?: string;
           dryRun?: boolean;
           lang?: string;
         },
       ) => {
+        const sources = parseImageSourcesMode(opts.imageSources);
         process.exitCode = await runMakeCli({
           project,
           ...(opts.cwd !== undefined ? { cwd: opts.cwd } : {}),
@@ -164,6 +178,7 @@ export function registerMake(program: Command): void {
           ...(opts.imageProvider !== undefined
             ? { imageProvider: opts.imageProvider }
             : {}),
+          ...(sources !== undefined ? { sources } : {}),
           ...(opts.bgmDir !== undefined ? { bgmDir: opts.bgmDir } : {}),
           ...(opts.sfxDir !== undefined ? { sfxDir: opts.sfxDir } : {}),
           ...(opts.dryRun !== undefined ? { dryRun: opts.dryRun } : {}),

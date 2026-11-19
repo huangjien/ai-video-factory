@@ -381,6 +381,21 @@ importers:
         specifier: workspace:*
         version: link:../video-components
 
+  packages/image-sources:
+    dependencies:
+      '@video/llm':
+        specifier: workspace:*
+        version: link:../llm
+      '@video/prompts':
+        specifier: workspace:*
+        version: link:../prompts
+      yaml:
+        specifier: ^2.7.0
+        version: 2.9.1
+      zod:
+        specifier: ^3.25.0
+        version: 3.25.76
+
   packages/learn:
     dependencies:
       yaml:
@@ -413,6 +428,9 @@ importers:
       '@video/draft':
         specifier: workspace:*
         version: link:../draft
+      '@video/image-sources':
+        specifier: workspace:*
+        version: link:../image-sources
       '@video/learn':
         specifier: workspace:*
         version: link:../learn

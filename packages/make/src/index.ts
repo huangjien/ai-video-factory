@@ -59,7 +59,23 @@ import {
   loadBakeManifest,
   bakeDigestFor,
   runBakeText,
+  normalizeToJpeg,
 } from "@video/media-generators";
+import {
+  downloadCandidate,
+  readAllSceneSources,
+  sourceLogLine,
+  writeAttributionFile,
+  writeSceneSource,
+  type PictureSource,
+  type SceneSourcePlan,
+  type SceneSourceRecord,
+} from "@video/image-sources";
+import {
+  resolveHistoricalSources,
+  resolveImageSourcesMode,
+  type ImageSourcesMode,
+} from "./image-sources.js";
 import { loadLessonStore, promptRules, rulesDigest } from "@video/learn";
 import { mixProject, type MixProjectOptions } from "./mix.js";
 import {
@@ -106,6 +122,13 @@ export {
   visualsGateState,
   writeVisualsCheckpoint,
 } from "./visual-cache.js";
+export {
+  parseImageSourcesMode,
+  resolveHistoricalSources,
+  resolveImageSourcesMode,
+  type HistoricalSourceOutcome,
+  type ImageSourcesMode,
+} from "./image-sources.js";
 
 /**
  * `video-progress/1` — live pipeline progress events (v0.7.1 plan).
@@ -317,6 +340,10 @@ export interface MakeOptions {
    * AnimatedIllustration shapes). */
   imageProvider?:
     "minimax" | "minimax-h3" | "openai" | "gemini" | "mock" | "none";
+  /** Historical-picture retrieval for the scene images: "auto" (default —
+   *  look for a freely-licensed historical picture for the scenes that
+   *  show one) or "off". */
+  sources?: ImageSourcesMode;
   /** Local music library for real BGM — a directory containing
    * `{tag}.wav` (or any .wav whose name contains the tag). Without it
    * the audio-assets step writes a mock silent placeholder. */
@@ -457,6 +484,7 @@ export async function runMake(
           article.frontmatter.image_provider,
         ),
         onEvent: emit,
+        ...(opts.sources !== undefined ? { sources: opts.sources } : {}),
       }),
     );
 
@@ -856,12 +884,24 @@ export function resolveImageProvider(
  * Each entry gets ONE generate call (its own internal retry policy
  * still applies). Throws an aggregate error when every entry fails.
  */
-async function generateWithChain(
+export async function generateWithChain(
   chain: { name: string; provider: ImageProvider }[],
-  req: { prompt: string; width: number; height: number },
+  req: {
+    prompt: string;
+    width: number;
+    height: number;
+    referenceImages?: { base64: string; contentType: string }[];
+  },
 ): Promise<{ bytes: Uint8Array; servedBy: string }> {
+  const wantsReferences = (req.referenceImages ?? []).length > 0;
+  // A provider with no reference endpoint IGNORES `referenceImages` — it
+  // would draw the scene from the text alone and the borrowed picture
+  // would vanish without a word. Such providers are skipped, not tried.
+  const usable = wantsReferences
+    ? chain.filter((c) => c.provider.supportsReferences === true)
+    : chain;
   const errors: string[] = [];
-  for (const { name, provider } of chain) {
+  for (const { name, provider } of usable) {
     try {
       const result = await provider.generate(req);
       return { bytes: result.bytes, servedBy: name };
@@ -869,7 +909,12 @@ async function generateWithChain(
       errors.push(`${name}: ${(err as Error).message}`);
     }
   }
-  throw new Error(errors.join(" | ") || "no image provider available");
+  throw new Error(
+    errors.join(" | ") ||
+      (wantsReferences
+        ? "no reference-capable image provider available"
+        : "no image provider available"),
+  );
 }
 
 export async function generateSceneVisuals(
@@ -878,6 +923,14 @@ export async function generateSceneVisuals(
   opts: {
     provider: "minimax" | "minimax-h3" | "openai" | "gemini" | "mock" | "none";
     onEvent?: ProgressEmit | undefined;
+    /** Historical-picture retrieval: "auto" (default) or "off". */
+    sources?: ImageSourcesMode | undefined;
+    /** A pre-computed source plan — the injection seam for callers that
+     *  already know which scenes are historical. */
+    sourcePlan?: SceneSourcePlan[] | undefined;
+    /** The picture sources to search. Defaults to the standard set
+     *  (Commons, Wikipedia, the museums, the project's own pictures). */
+    pictureSources?: PictureSource[] | undefined;
   },
 ): Promise<string[]> {
   if (opts.provider === "none") return [];
@@ -945,6 +998,29 @@ export async function generateSceneVisuals(
   // CS-12: the character bible is shared across films, so it lives at the
   // workspace root rather than inside a project.
   const characterRoot = characterRootFor(projectRoot);
+  // Historical pictures: one plan for the whole article, then a retrieval
+  // for the scenes the plan marked historical. Both steps are allowed to
+  // fail — a picture archive being down must not fail a render.
+  const sourceMode = resolveImageSourcesMode(
+    opts.sources,
+    article.frontmatter.historical_images,
+  );
+  const historical = await resolveHistoricalSources({
+    projectRoot,
+    article,
+    workspaceRoot: wsRoot,
+    provider: expansionProvider,
+    mode: sourceMode,
+    ...(opts.sourcePlan !== undefined ? { plan: opts.sourcePlan } : {}),
+    ...(opts.pictureSources !== undefined
+      ? { sources: opts.pictureSources }
+      : {}),
+  });
+  outputs.push(...historical.notes);
+  const sourceResolutions = historical.resolutions;
+  // The pictures that actually reached a frame (as the frame, or as the
+  // reference the model drew from) — written to the attribution file.
+  const sourceRecords: { scene: number; record: SceneSourceRecord }[] = [];
   if (learnedImageRules !== "") {
     outputs.push(
       `image prompts: applying ${learnedImageRules.split("\n").filter((l) => l.startsWith("- ")).length} human-review lesson(s)`,
@@ -986,17 +1062,25 @@ export async function generateSceneVisuals(
     if (selfRendered.has(i + 1)) return { lines, generated: null };
 
     const imagePath = path.join(imageDir, `scene_${i + 1}.jpg`);
-    const cacheKey = imageCacheKey({
-      sceneNumber: i + 1,
-      visual,
-      imageStyle,
-      provider: opts.provider,
-      learnedDigest: rulesDigest(learnedImageRules),
-      promptRevision: IMAGE_PROMPT_REVISION,
-      bakeDigest: bakeDigestFor(i + 1, bakeManifest),
-      width: reqWidth,
-      height: reqHeight,
-    });
+    // A borrowed historical picture is an image INPUT, so it joins the cache
+    // key exactly like the visual line does. A different picture means a
+    // different image.
+    const resolution = sourceResolutions.get(i + 1);
+    let sourceDigest = resolution?.digest ?? "";
+    const cacheKeyFor = (digest: string): string =>
+      imageCacheKey({
+        sceneNumber: i + 1,
+        visual,
+        imageStyle,
+        provider: opts.provider,
+        learnedDigest: rulesDigest(learnedImageRules),
+        promptRevision: IMAGE_PROMPT_REVISION,
+        bakeDigest: bakeDigestFor(i + 1, bakeManifest),
+        sourceDigest: digest,
+        width: reqWidth,
+        height: reqHeight,
+      });
+    let cacheKey = cacheKeyFor(sourceDigest);
     // G1 (v0.8): content-keyed freshness replaces existence-only caching.
     // Matching key ⇒ skip. No sidecar ⇒ legacy adoption (write the current
     // key, keep the image — upgrading must not re-spend on untouched
@@ -1022,6 +1106,58 @@ export async function generateSceneVisuals(
     const itemAt = { index: i + 1, total };
     const itemT0 = Date.now();
     emit({ kind: "start", label: itemLabel, ...itemAt });
+
+    // Borrow the picture, if this scene has one. The download happens HERE,
+    // after the cache check, so a cached scene spends no network.
+    let borrowed: { bytes: Uint8Array; record: SceneSourceRecord } | null = null;
+    if (resolution !== undefined && resolution.candidate !== null) {
+      const candidate = resolution.candidate;
+      // A reference needs a provider with an edits endpoint. Without one
+      // the picture would be silently ignored, so it is not used at all.
+      const referenceCapable = chain.some(
+        (c) => c.provider.supportsReferences === true,
+      );
+      if (resolution.mode === "reference" && !referenceCapable) {
+        lines.push(
+          `scene_${i + 1}: no reference-capable image provider — generating without the historical picture`,
+        );
+        sourceDigest = "";
+        cacheKey = cacheKeyFor(sourceDigest);
+      } else {
+        const downloaded = await downloadCandidate(candidate);
+        const normalized =
+          downloaded === null ? null : await normalizeToJpeg(downloaded.bytes);
+        if (downloaded === null || normalized === null) {
+          lines.push(
+            `scene_${i + 1}: could not use the historical picture — generating without it`,
+          );
+          // The key must not claim a picture the scene does not use, or the
+          // next run would keep the picture-less image as "fresh".
+          sourceDigest = "";
+          cacheKey = cacheKeyFor(sourceDigest);
+        } else {
+          borrowed = {
+            bytes: normalized.bytes,
+            record: {
+              schema: "scene-source/1",
+              mode: resolution.mode,
+              source: candidate.source,
+              title: candidate.title,
+              author: candidate.author,
+              license: candidate.license,
+              licenseUrl: candidate.licenseUrl,
+              pageUrl: candidate.pageUrl,
+              fileUrl: candidate.fileUrl,
+              localPath: candidate.localPath,
+              digest: sourceDigest,
+              sha256: downloaded.sha256,
+              retrievedAt: new Date().toISOString(),
+            },
+          };
+        }
+      }
+    }
+
     let promptForImage = visual;
     if (expansionProvider) {
       try {
@@ -1048,6 +1184,13 @@ export async function generateSceneVisuals(
             // articles, in which case the expander behaves exactly as before.
             setting: article.frontmatter.setting,
             characterRoot,
+            // The borrowed picture is attached to the request; the brief
+            // says what it is for.
+            ...(borrowed !== null && resolution?.mode === "reference"
+              ? {
+                  referenceNote: `${borrowed.record.title} — ${borrowed.record.source}, ${borrowed.record.license}`,
+                }
+              : {}),
           },
         );
         promptForImage = prompt;
@@ -1065,7 +1208,33 @@ export async function generateSceneVisuals(
       }
     }
 
+    // `direct` mode: the borrowed picture IS the frame. No image model, no
+    // spend — the archive's own picture becomes the scene.
+    if (borrowed !== null && resolution?.mode === "direct") {
+      await writeFile(imagePath, borrowed.bytes);
+      writeImageCacheSidecar(imagePath, cacheKey);
+      writeSceneSource(imageDir, i + 1, borrowed.record);
+      sourceRecords.push({ scene: i + 1, record: borrowed.record });
+      emit({
+        kind: "done",
+        label: itemLabel,
+        ...itemAt,
+        elapsedSec: elapsedSinceSec(itemT0),
+      });
+      lines.push(sourceLogLine(i + 1, borrowed.record));
+      return { lines, generated: imagePath };
+    }
+
     try {
+      const referenceImages =
+        borrowed !== null && resolution?.mode === "reference"
+          ? [
+              {
+                base64: Buffer.from(borrowed.bytes).toString("base64"),
+                contentType: "image/jpeg",
+              },
+            ]
+          : undefined;
       const { bytes, servedBy } = await heartbeat(
         itemLabel,
         () =>
@@ -1073,11 +1242,17 @@ export async function generateSceneVisuals(
             prompt: promptForImage,
             width: reqWidth,
             height: reqHeight,
+            ...(referenceImages !== undefined ? { referenceImages } : {}),
           }),
         emit,
       );
       await writeFile(imagePath, bytes);
       writeImageCacheSidecar(imagePath, cacheKey);
+      if (borrowed !== null) {
+        writeSceneSource(imageDir, i + 1, borrowed.record);
+        sourceRecords.push({ scene: i + 1, record: borrowed.record });
+        lines.push(sourceLogLine(i + 1, borrowed.record));
+      }
       emit({
         kind: "done",
         label: itemLabel,
@@ -1128,6 +1303,19 @@ export async function generateSceneVisuals(
     if (r === undefined) continue;
     outputs.push(...r.lines);
     if (r.generated !== null) generatedImages.push(r.generated);
+  }
+
+  // The attribution file is written from the SIDECARS on disk, not from
+  // this run's records: a scene whose image was cached still borrowed a
+  // picture, and the file has to keep saying so.
+  if (sourceRecords.length > 0) {
+    const attribution = writeAttributionFile(
+      imageDir,
+      readAllSceneSources(imageDir),
+    );
+    outputs.push(
+      `assets/images/${path.basename(attribution)} (${sourceRecords.length} borrowed picture(s) credited)`,
+    );
   }
 
   // 2026-11 policy: a REAL-provider run never ships a self-drawn

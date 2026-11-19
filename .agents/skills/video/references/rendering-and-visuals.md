@@ -337,3 +337,60 @@ video approve visuals <project>                      # freeze the current set in
 
 `video make` then refuses to render until the on-disk image set matches the approved checkpoint, naming the stale scenes. Gate off (default) ⇒ `make` behaves exactly as before. Reject requires an existing approved checkpoint; rejections force-regenerate on the next `video visuals` run.
 
+
+### Historical pictures for the scene art
+
+A history film used to invent every face, every artifact and every battle
+from a text prompt. `video make` now looks for a **real, freely-licensed
+picture** of the thing each scene shows, and uses it in one of two ways.
+
+| Mode | What happens | Cost |
+|---|---|---|
+| `direct` | the archive picture IS the frame — it becomes `assets/images/scene_N.jpg` | no image model at all |
+| `reference` | the picture is attached to the request as a reference; the model draws the scene in the film's style | one image call (MiniMax-H3 edits) |
+
+**The flow.** One LLM call per video (`packages/prompts/prompts/image-source-plan.md`)
+reads every scene and marks which ones are about a real historical subject,
+what to search for, and which mode fits. Only the scenes it marks historical
+spend a network round-trip — a modern or abstract film pays nothing. The
+retrieval then queries **Wikimedia Commons** (the license comes with the
+file record), **Wikipedia** article leads (license resolved through
+Commons), the **Met / Smithsonian / Openverse** open-access collections, and
+the **project's own pictures** (`assets/figures/`, the character bible's
+reference sheets).
+
+A second LLM call per video (`image-source-match.md`) then picks the
+picture that really depicts the subject. An archive matches STRINGS, and a
+query for 唐高宗 李治 comes back with `Gaozong of Song.jpg` — a Song
+emperor with the same temple name. The matcher reads both the subject and
+the returned titles, and may answer "none": a missing picture is better
+than a wrong one.
+
+**License rule (strict).** Only public-domain / CC0 / PDM pictures enter
+the pipeline. CC-BY and CC-BY-SA are rejected — a credit line nobody
+maintains is a rights problem waiting to happen. Every borrowed picture is
+recorded in `assets/images/scene_N.source.json` (machine-readable) and in
+`assets/images/ATTRIBUTION.md` (one row per picture, with its author,
+license and source link).
+
+**Turning it off.** `--image-sources off` on `video make` / `video
+visuals`, or `historical_images: off` in `article.md` frontmatter. Default
+is `auto` — on, for the scenes that are historical.
+
+**Gotchas.**
+
+- *A rich query finds nothing.* An archive ANDs its terms: `唐太宗` returns
+  five portraits, `唐太宗入军图 尉迟乙僧 绢本设色` returns none. The
+  retriever therefore widens the search — planned query, then the bare
+  subject, then single terms — and stops at the first real archive hit.
+  The project's own pictures answer every query, so they cannot be that
+  signal.
+- *A reference needs an edits endpoint.* Only MiniMax-H3 takes a reference
+  image. With any other provider the reference is dropped, the scene is
+  generated from text alone, and the run log says so.
+- *The picture is part of the image cache key* — so a different picture
+  invalidates that scene's image, and a scene with no picture keeps the
+  key it had before the feature existed (no mass re-spend on upgrade).
+- *A cast sheet is never the frame.* The character bible's reference sheets
+  inform a generated frame; showing the drawing instead of the person is
+  not what the scene needs.

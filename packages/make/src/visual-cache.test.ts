@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { createHash } from "node:crypto";
 import { mkdtemp, mkdir, rm, writeFile, readFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -162,6 +163,7 @@ describe("image cache keys the expander revision", () => {
       provider: "mock",
       learnedDigest: "",
       bakeDigest: "",
+      sourceDigest: "",
       width: 1920,
       height: 1080,
     };
@@ -185,6 +187,7 @@ describe("image cache keys the expander revision", () => {
       provider: "minimax",
       learnedDigest: "",
       bakeDigest: "sha256:aaa",
+      sourceDigest: "",
       width: 1920,
       height: 1080,
       promptRevision: "6",
@@ -194,6 +197,63 @@ describe("image cache keys the expander revision", () => {
     // is baked into the pixels, not composited at render time.
     expect(imageCacheKey({ ...base, bakeDigest: "sha256:bbb" })).not.toBe(key);
     expect(imageCacheKey({ ...base, bakeDigest: "sha256:aaa" })).toBe(key);
+  });
+
+  it("keys on the borrowed picture — a different picture is a different image", () => {
+    const base = {
+      sceneNumber: 1,
+      visual: "v",
+      imageStyle: "editorial",
+      provider: "minimax",
+      learnedDigest: "",
+      bakeDigest: "",
+      width: 1920,
+      height: 1080,
+      promptRevision: "6",
+    };
+    const key = imageCacheKey({ ...base, sourceDigest: "direct:aaa" });
+    // A historical picture is an image INPUT: swapping it changes the
+    // image, so the cached one is stale.
+    expect(
+      imageCacheKey({ ...base, sourceDigest: "direct:bbb" }),
+    ).not.toBe(key);
+    expect(imageCacheKey({ ...base, sourceDigest: "direct:aaa" })).toBe(key);
+    // A scene with no borrowed picture keeps its own key.
+    expect(imageCacheKey({ ...base, sourceDigest: "" })).not.toBe(key);
+  });
+
+  it("leaves the key of a picture-less scene exactly as it was", () => {
+    // The feature must not re-buy every image a project already has: a
+    // scene with no borrowed picture keeps the pre-feature key.
+    const base = {
+      sceneNumber: 1,
+      visual: "v",
+      imageStyle: "editorial",
+      provider: "minimax",
+      learnedDigest: "",
+      bakeDigest: "",
+      width: 1920,
+      height: 1080,
+      promptRevision: "6",
+    };
+    const legacy =
+      "sha256:" +
+      createHash("sha256")
+        .update(
+          JSON.stringify([
+            1,
+            "v",
+            "editorial",
+            "minimax",
+            "",
+            "6",
+            "",
+            1920,
+            1080,
+          ]),
+        )
+        .digest("hex");
+    expect(imageCacheKey({ ...base, sourceDigest: "" })).toBe(legacy);
   });
 });
 

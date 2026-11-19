@@ -25,6 +25,10 @@ export interface ImageResult {
 
 export interface ImageProvider {
   readonly name: string;
+  /** True when the provider can take `ImageRequest.referenceImages` (an
+   *  edit-capable endpoint). Providers that cannot ignore the field, so
+   *  callers that NEED a reference must check this and skip the others. */
+  readonly supportsReferences?: boolean;
   generate(req: ImageRequest): Promise<ImageResult>;
 }
 

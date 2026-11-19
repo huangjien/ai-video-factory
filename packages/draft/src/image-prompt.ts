@@ -148,6 +148,10 @@ export interface ScenePromptContext {
    *  one way to say who is in the scene, so the anchors cannot be dropped
    *  on one path and kept on another. */
   identities?: readonly SceneIdentity[] | undefined;
+  /** A borrowed historical picture that is being sent to the image model
+   *  as a reference. The brief names it, so the model borrows the
+   *  likeness and the period detail while keeping the film's style. */
+  referenceNote?: string | undefined;
 }
 
 /** What `expandScenePrompt` needs beyond the brief context: where the
@@ -191,6 +195,14 @@ export function buildScenePromptMessages(
   }
   if (scene.caption) parts.push(`Caption (on-screen text): ${scene.caption}`);
   parts.push(`Visual direction: ${scene.visual}`);
+  if (context.referenceNote !== undefined && context.referenceNote.trim() !== "") {
+    // The reference picture is attached to the request. The brief has to
+    // say what it is FOR, or the model treats it as one more object in
+    // the scene instead of as the likeness and period anchor it is.
+    parts.push(
+      `Reference picture (attached — use it for the subject's likeness, costume and period detail; keep the film's own style, do not copy the picture's medium or framing): ${context.referenceNote.trim()}`,
+    );
+  }
   // CS-12: the character bible's anchors, spliced in as text. The image
   // model takes NO reference image (MiniMax has no subject_reference), so
   // the anchors ARE the consistency mechanism — they must be in the brief
@@ -314,6 +326,10 @@ export async function expandScenePrompt(
   // into the key — not just the character id.
   cacheKey.update("|");
   cacheKey.update(identityDigest(identities));
+  // A reference picture changes what the brief may say about the subject,
+  // so a brief written for one picture must not be served for another.
+  cacheKey.update("|");
+  cacheKey.update(opts.referenceNote ?? "");
   // Same argument for the expander itself: a reworded `draft-image-prompt.md`
   // must not keep serving briefs that were written by the previous wording.
   cacheKey.update("|");

@@ -47,3 +47,9 @@ export {
   type BakeSpec,
   type BakeTextResult,
 } from "./bake-text.js";
+export {
+  detectImageExtension,
+  normalizeToJpeg,
+  type NormalizeOptions,
+  type NormalizedImage,
+} from "./image-io.js";

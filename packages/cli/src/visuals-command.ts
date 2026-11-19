@@ -4,6 +4,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { rm } from "node:fs/promises";
 import {
   generateSceneVisuals,
+  parseImageSourcesMode,
   readVisualsCheckpoint,
   rejectVisualsScene,
   writeVisualsCheckpoint,
@@ -33,6 +34,8 @@ export interface VisualsOptions {
     | "mock"
     | "none";
   fake?: boolean;
+  /** Historical-picture retrieval: auto (default) | off. */
+  sources?: "auto" | "off";
   rejectScene?: number;
   reason?: string;
   cols?: number;
@@ -91,6 +94,7 @@ export async function runVisualsCli(opts: VisualsOptions): Promise<number> {
       onEvent: (e) => {
         if (e.kind === "start") console.error(`  ⏳ ${e.label}`);
       },
+      ...(opts.sources !== undefined ? { sources: opts.sources } : {}),
     });
     for (const o of outputs) console.log(`  · ${o}`);
   } else {
@@ -177,6 +181,10 @@ export function registerVisuals(program: Command): void {
       "--image-provider <provider>",
       "image provider: minimax (default) | minimax-h3 | openai | gemini | mock | none",
     )
+    .option(
+      "--image-sources <mode>",
+      "historical-picture retrieval: auto (default) | off",
+    )
     .option("--fake", "skip generation (contact sheet over existing images)")
     .option(
       "--reject <scene>",
@@ -208,11 +216,13 @@ export function registerVisuals(program: Command): void {
             | "mock"
             | "none";
           fake?: boolean;
+          imageSources?: string;
           reject?: number;
           reason?: string;
           cols?: number;
         },
       ) => {
+        const sources = parseImageSourcesMode(opts.imageSources);
         process.exitCode = await runVisualsCli({
           project,
           ...(opts.cwd !== undefined ? { cwd: opts.cwd } : {}),
@@ -220,6 +230,7 @@ export function registerVisuals(program: Command): void {
             ? { imageProvider: opts.imageProvider }
             : {}),
           ...(opts.fake !== undefined ? { fake: opts.fake } : {}),
+          ...(sources !== undefined ? { sources } : {}),
           ...(opts.reject !== undefined ? { rejectScene: opts.reject } : {}),
           ...(opts.reason !== undefined ? { reason: opts.reason } : {}),
           ...(opts.cols !== undefined ? { cols: opts.cols } : {}),

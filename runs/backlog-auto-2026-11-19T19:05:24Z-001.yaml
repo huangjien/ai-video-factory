@@ -1,0 +1,14 @@
+run_id: backlog-auto-2026-11-19T19:05:24Z-001
+stage: backlog-auto
+status: succeeded
+actor: agent
+tool: video-backlog
+input_commit: e24d9083ab58d046f300e74db5072884bc206cb7
+input_files:
+  - backlog.yaml
+output_files: []
+created_at: 2026-11-19T19:05:24.053Z
+duration_ms: 541
+provider: minimax+glm
+model: token-plan
+error: "quota: 5h 76%, week 100% (bar 80%) | MiniMax quota below 80%"

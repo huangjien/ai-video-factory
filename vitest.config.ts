@@ -23,6 +23,7 @@ export default defineConfig({
       "@video/qa": path.resolve("packages/qa/src"),
       "@video/prompts": path.resolve("packages/prompts/src"),
       "@video/draft": path.resolve("packages/draft/src"),
+      "@video/image-sources": path.resolve("packages/image-sources/src"),
       "@video/make": path.resolve("packages/make/src"),
       "@video/audio-plan": path.resolve("packages/audio-plan/src"),
       "@video/video-renderer": path.resolve("packages/video-renderer/src"),

@@ -1,6 +1,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { bakeDigestFor, loadBakeManifestSync } from "@video/media-generators";
+import { readSceneSource } from "@video/image-sources";
 import { parse as parseYaml } from "yaml";
 import { extractSceneFragment, hashSceneFragment } from "@video/workflow";
 import {
@@ -141,6 +142,12 @@ export function computeMakeImpact(
       const n = i + 1;
       const visual = scene.visual ?? "";
       if (!visual.trim() || selfRendered.has(n)) return;
+      // A borrowed historical picture is an image input, so the table must
+      // read the digest the LAST run recorded — offline, from the source
+      // sidecar, without re-running the retrieval.
+      const sourceDigest =
+        readSceneSource(path.join(projectRoot, "assets", "images"), n)?.digest ??
+        "";
       const key = imageCacheKey({
         sceneNumber: n,
         visual,
@@ -149,6 +156,7 @@ export function computeMakeImpact(
         learnedDigest,
         promptRevision: IMAGE_PROMPT_REVISION,
         bakeDigest: bakeDigestFor(n, bakeManifest),
+        sourceDigest,
         width: reqWidth,
         height: reqHeight,
       });

@@ -2,7 +2,7 @@ schema: backlog/1
 ideas:
   - id: 2026-11-19-玄武门之变-the-xuanwu-gate-incident
     topic: 玄武门之变 The Xuanwu Gate Incident
-    status: proposed
+    status: drafted
     source: harvest:docs/plans/2026-10-19-chinese-storybook-visual-dna-design.md
     created: 2026-11-19
     note: "One dawn coup decided who ruled the Tang; built-in suspense, character
@@ -16,6 +16,9 @@ ideas:
       - 李世民 Li Shimin
       - 玄武门 Xuanwu Gate
       - 长安太极宫 Taiji Palace, Chang'an
+    drafting_at: 2026-11-19T17:54:30.324Z
+    project: 玄武门之变-the-xuanwu-gate-incident
+    drafted_at: 2026-11-19T18:23:34.821Z
   - id: 2026-11-19-李世民的双面人生-li-shimin-from-young-war-prince
     topic: 李世民的双面人生 Li Shimin from young war prince to emperor
     status: proposed

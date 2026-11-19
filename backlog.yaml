@@ -1113,4 +1113,13 @@ ideas:
     anchors:
       - scene-cache sidecar metadata
       - projectHash / captionsHash / rendererRevision precedents
+  - id: 2026-11-19-军队的实弹对抗演习怎么打-实弹打向哪里-如何判定胜负
+    topic: 军队的实弹对抗演习怎么打？实弹打向哪里？如何判定胜负？
+    status: idea
+    source: manual
+    created: 2026-11-19
+    note: 实弹对抗演习的完整机制：空包弹与激光交战系统、安全边界、导调裁定胜负
+    anchors:
+      - 朱日和
+      - 欧文堡
 

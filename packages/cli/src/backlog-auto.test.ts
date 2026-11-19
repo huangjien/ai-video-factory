@@ -135,7 +135,7 @@ describe("minimaxIdleMinutes", () => {
     mkdirSync(runs, { recursive: true });
     const f = path.join(runs, "draft-judge-x.yaml");
     writeFileSync(f, "provider: minimax\nmodel: MiniMax-M3\n");
-    utimesSync(f, new Date(NOW - 5 * 60 * 1000), new Date(NOW - 5 * 60 * 1000));
+    touch(f, NOW - 5 * 60 * 1000);
     expect(minimaxIdleMinutes(repoRoot, NOW)).toBeLessThan(10);
   });
 
@@ -144,7 +144,7 @@ describe("minimaxIdleMinutes", () => {
     mkdirSync(runs, { recursive: true });
     const f = path.join(runs, "draft-judge-x.yaml");
     writeFileSync(f, "provider: glm\n");
-    utimesSync(f, new Date(NOW - 5 * 60 * 1000), new Date(NOW - 5 * 60 * 1000));
+    touch(f, NOW - 5 * 60 * 1000);
     expect(minimaxIdleMinutes(repoRoot, NOW)).toBe(Number.POSITIVE_INFINITY);
   });
 
@@ -153,7 +153,7 @@ describe("minimaxIdleMinutes", () => {
     mkdirSync(audio, { recursive: true });
     const f = path.join(audio, "scene-1.wav");
     writeFileSync(f, "wav");
-    utimesSync(f, new Date(NOW - 30 * 60 * 1000), new Date(NOW - 30 * 60 * 1000));
+    touch(f, NOW - 30 * 60 * 1000);
     expect(minimaxIdleMinutes(repoRoot, NOW)).toBeLessThan(60);
   });
 });
@@ -319,5 +319,16 @@ describe("runBacklogAuto — scheduler flags", () => {
     expect(plist).toContain("com.aivideofactory.backlog-auto");
     expect(plist).toContain("StartInterval");
     expect(plist).toContain("VIDEO_ASK");
+  });
+});
+
+describe("minimaxIdleMinutes — self-poisoning guard", () => {
+  it("the auto verb's own run records are NOT minimax work", () => {
+    const runs = path.join(repoRoot, "runs");
+    mkdirSync(runs, { recursive: true });
+    const f = path.join(runs, "backlog-auto-2026-11-19T17:04:31Z-001.yaml");
+    writeFileSync(f, "provider: minimax+glm\nstage: backlog-auto\nstatus: succeeded\n");
+    touch(f, NOW - 5 * 60 * 1000);
+    expect(minimaxIdleMinutes(repoRoot, NOW)).toBe(Number.POSITIVE_INFINITY);
   });
 });

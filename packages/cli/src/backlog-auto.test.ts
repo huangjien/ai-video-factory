@@ -393,7 +393,7 @@ describe("runBacklogAuto — scheduler flags", () => {
       "utf8",
     );
     expect(plist).toContain("com.aivideofactory.backlog-auto");
-    expect(plist).toContain("StartInterval");
+    expect(plist).toContain("StartCalendarInterval");
     expect(plist).toContain("VIDEO_ASK");
   });
 });

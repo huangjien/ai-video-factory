@@ -866,7 +866,7 @@ until a human resumes or `video backlog reset`s it.
 ```bash
 video backlog auto --dry-run          # evaluate the trigger, pick nothing, spend nothing
 video backlog status                  # anything running/failed? how to continue
-video backlog auto --install-scheduler  # 10-minute launchd LaunchAgent (VIDEO_ASK=off)
+video backlog auto --install-scheduler  # nightly 01:00-05:00 launchd, 2h spacing (VIDEO_ASK=off)
 video backlog schedule --status --kind auto
 ```
 

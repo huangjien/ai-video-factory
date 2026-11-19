@@ -93,13 +93,27 @@ const TRIGGER_HARVEST = `  <key>StartCalendarInterval</key>
     <integer>0</integer>
   </dict>`;
 
-const TRIGGER_AUTO = `  <key>StartInterval</key>
-  <integer>600</integer>`;
+const TRIGGER_AUTO = `  <key>StartCalendarInterval</key>
+  <array>
+    <dict>
+      <key>Hour</key>
+      <integer>1</integer>
+    </dict>
+    <dict>
+      <key>Hour</key>
+      <integer>3</integer>
+    </dict>
+    <dict>
+      <key>Hour</key>
+      <integer>5</integer>
+    </dict>
+  </array>`;
 
 /** LaunchAgent plist for a schedule kind. Weekly harvest (Sunday 09:00 —
- *  no deadline pressure) or the auto-producer (StartInterval 600 — the
- *  trigger is cheap and the lockfile prevents double-runs; 2026-11-19:
- *  owner asked for 600 over 3600). */
+ *  no deadline pressure) or the auto-producer: nightly 01:00/03:00/05:00
+ *  (2h spacing inside the owner's 01:00-05:00 window, 2026-11-19;
+ *  StartInterval cannot express a time-of-day window). The quota/idle/
+ *  lock gates still decide each fire. */
 export function plistContentFor(
   kind: ScheduleKind,
   opts: PlistContentOptions,
@@ -126,8 +140,8 @@ export interface BacklogScheduleOptions {
   install?: boolean;
   remove?: boolean;
   status?: boolean;
-  /** Which LaunchAgent to manage: weekly harvest (default) or the 10-min
-   *  auto-producer. */
+  /** Which LaunchAgent to manage: weekly harvest (default) or the nightly
+   *  01:00-05:00 auto-producer (every 2h). */
   kind?: ScheduleKind;
   cwd?: string;
   /** TEST SEAM: overrides the LaunchAgents directory (default ~/Library/LaunchAgents). */
@@ -252,6 +266,8 @@ const ENV_KEYS = [
   "GLM_BASE_URL",
   "MINIMAX_API_HOST",
   "OPENAI_API_BASE_URL",
+  "YOUTUBE_REFRESH_TOKEN",
+  "YOUTUBE_CLIENT_SECRET_FILE",
   "GEMINI_API_BASE_URL",
   "LL_CONFIG",
 ] as const;
@@ -289,7 +305,7 @@ async function doInstall(opts: BacklogScheduleOptions): Promise<number> {
     console.error(`launchctl load failed (exit ${code}). Load manually with:\n  launchctl load "${target}"`);
     return 1;
   }
-  const cadence = kind === "auto" ? "auto-producer (every 10 min)" : "weekly backlog harvest";
+  const cadence = kind === "auto" ? "auto-producer (nightly 01:00-05:00, every 2h)" : "weekly backlog harvest";
   console.log(`installed ${labelOf(kind)} — ${cadence}, plist at ${target}`);
   console.log(`  env baked in: ${embedded.length > 0 ? embedded.join(", ") : "(none found — provider calls will fail until keys are present at install time)"}`);
   return 0;
@@ -351,7 +367,7 @@ export async function runBacklogSchedule(opts: BacklogScheduleOptions): Promise<
 export function addScheduleCommand(backlog: Command): void {
   backlog
     .command("schedule")
-    .description("manage launchd LaunchAgents: weekly harvest (default) or the 10-minute auto-producer (--kind auto)")
+    .description("manage launchd LaunchAgents: weekly harvest (default) or the nightly 01:00-05:00 auto-producer (--kind auto)")
     .option("--install", "write the plist and launchctl load it")
     .option("--remove", "launchctl unload and delete the plist")
     .option("--status", "report install/load state")

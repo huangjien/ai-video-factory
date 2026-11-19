@@ -655,9 +655,9 @@ export function addAutoCommand(backlog: Command): void {
       "required remaining percent in both Token Plan windows (default 80)",
       (v) => parseInt(v, 10),
     )
-    .option("--install-scheduler", "install the 10-minute launchd LaunchAgent for this check")
-    .option("--remove-scheduler", "remove the 10-minute LaunchAgent")
-    .option("--scheduler-status", "report the 10-minute LaunchAgent state")
+    .option("--install-scheduler", "install the nightly (01:00-05:00, every 2h) launchd LaunchAgent for this check")
+    .option("--remove-scheduler", "remove the nightly LaunchAgent")
+    .option("--scheduler-status", "report the nightly LaunchAgent state")
     .option("--cwd <dir>", "repo root (default: walk up to pnpm-workspace.yaml)")
     .action(async (opts: {
       dryRun?: boolean;

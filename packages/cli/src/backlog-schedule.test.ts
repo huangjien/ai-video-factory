@@ -81,15 +81,17 @@ describe("plistContentFor", () => {
     expect(args.indexOf("backlog")).toBeLessThan(args.indexOf("harvest"));
   });
 
-  it("schedules harvest weekly (Sunday 09:00) and auto every 600s", () => {
+  it("schedules harvest weekly (Sunday 09:00) and auto nightly at 01:00/03:00/05:00", () => {
     const harvest = plistContentFor("harvest", base("/node"));
     expect(harvest).toContain("<key>Weekday</key>");
     expect(harvest).toContain("<integer>0</integer>"); // launchd: 0 = Sunday
     expect(harvest).toContain("<integer>9</integer>");
 
     const auto = plistContentFor("auto", base("/node"));
-    expect(auto).toContain("<key>StartInterval</key>");
-    expect(auto).toContain("<integer>600</integer>");
+    expect(auto).toContain("<key>StartCalendarInterval</key>");
+    expect(auto).toContain("<key>Hour</key>");
+    const hours = [...auto.matchAll(/<key>Hour<\/key>\s*<integer>(\d+)<\/integer>/g)].map((m) => m[1]);
+    expect(hours).toEqual(["1", "3", "5"]); // 2h spacing inside 01:00-05:00
   });
 
   it("sets WorkingDirectory so the CLI can find the repo from launchd's / cwd", () => {
@@ -230,7 +232,7 @@ describe("runBacklogSchedule — install", () => {
     expect(consoleErrors.join("\n")).toContain(`launchctl load "${plistPath}"`);
   });
 
-  it("installs the AUTO agent with a 600s interval under --kind auto", async () => {
+  it("installs the AUTO agent nightly 01:00-05:00 under --kind auto", async () => {
     captureConsole();
     const plistPath = path.join(fixturePlistDir(), `${DEFAULT_AUTO_LABEL}.plist`);
     const code = await runBacklogSchedule({
@@ -243,9 +245,10 @@ describe("runBacklogSchedule — install", () => {
     expect(code).toBe(0);
     const written = readFileSync(plistPath, "utf8");
     expect(written).toContain(DEFAULT_AUTO_LABEL);
-    expect(written).toContain("<integer>600</integer>");
+    expect(written).toContain("<integer>1</integer>");
+    expect(written).toContain("<integer>3</integer>");
     expect(written).toContain("<string>auto</string>");
-    expect(consoleOutput.join("\n")).toMatch(/every 10 min/);
+    expect(consoleOutput.join("\n")).toMatch(/every 2h/);
   });
 
   it("bakes present provider keys into the plist and tightens it to 0600", async () => {

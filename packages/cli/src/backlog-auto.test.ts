@@ -23,6 +23,7 @@ const draftMock = vi.fn();
 const makeMock = vi.fn();
 const translateMock = vi.fn();
 const judgeMock = vi.fn();
+const approveMock = vi.fn();
 vi.mock("./backlog-draft.js", () => ({
   runDraftFromBacklog: (...a: unknown[]) => (draftMock as (...x: unknown[]) => unknown)(...a),
 }));
@@ -31,9 +32,15 @@ vi.mock("./make-command.js", () => ({
 }));
 vi.mock("./translate-command.js", () => ({
   runTranslate: (...a: unknown[]) => (translateMock as (...x: unknown[]) => unknown)(...a),
+  l10nRootOrThrow: (projectRoot: string) => path.join(projectRoot, "l10n", "en-US"),
 }));
 vi.mock("./backlog-score.js", () => ({
   runBacklogJudge: (...a: unknown[]) => (judgeMock as (...x: unknown[]) => unknown)(...a),
+}));
+vi.mock("@video/workflow", () => ({
+  writeRun: vi.fn(async () => undefined),
+  formatRunId: (stage: string) => `${stage}-test`,
+  approveCheckpoint: (...a: unknown[]) => (approveMock as (...x: unknown[]) => unknown)(...a),
 }));
 
 import { runBacklogAuto, minimaxIdleMinutes, acquireAutoLock, fetchMiniMaxQuota } from "./backlog-auto.js";
@@ -56,6 +63,7 @@ beforeEach(() => {
   makeMock.mockReset().mockResolvedValue(0);
   translateMock.mockReset().mockResolvedValue(0);
   judgeMock.mockReset().mockResolvedValue(0);
+  approveMock.mockReset().mockResolvedValue({ ok: true });
   process.env["MINIMAX_API_KEY"] = "test-key";
 });
 afterEach(() => {
@@ -230,6 +238,12 @@ describe("runBacklogAuto — the pipeline", () => {
     expect(makeMock.mock.calls[1]?.[0]).toMatchObject({ project: "为什么停火线能冻结几十年", lang: "en-US" });
     expect(translateMock).toHaveBeenCalledTimes(1);
     expect(translateMock.mock.calls[0]?.[0]).toMatchObject({ project: "为什么停火线能冻结几十年", lang: "en-US" });
+    // Both storyboards are approved before their renders — the gate that
+    // killed the first real auto run (render-preview refuses otherwise).
+    expect(approveMock).toHaveBeenCalledTimes(2);
+    expect(approveMock.mock.calls[0]?.[1]).toMatchObject({ stage: "storyboard" });
+    expect(String(approveMock.mock.calls[0]?.[0])).toContain("projects");
+    expect(String(approveMock.mock.calls[1]?.[0])).toContain(path.join("l10n", "en-US"));
 
     // The draft stage is mocked here, so the FINAL drafted stamp belongs
     // to the real draft — auto's own visible effect is the approval.

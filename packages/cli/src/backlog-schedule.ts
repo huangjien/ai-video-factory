@@ -163,10 +163,38 @@ function resolveDistEntry(opts: BacklogScheduleOptions): string | null {
 }
 
 /** The PATH launchd children get: node's own dir plus the usual Homebrew
- *  / system dirs — make spawns ffmpeg and Remotion from those. */
+ *  / system dirs — make spawns ffmpeg and Remotion from those. When a
+ *  python with Pillow exists (text-overlay needs PIL+yaml), its directory
+ *  joins too — measured 2026-11-19: without it text-overlay silently
+ *  skipped and the film lost its key-info banners. */
 function launchdEnvPath(): string {
   const nodeDir = path.dirname(process.execPath);
-  return `${nodeDir}:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin`;
+  const segments = [
+    nodeDir,
+    "/opt/homebrew/bin",
+    "/usr/local/bin",
+    "/usr/bin",
+    "/bin",
+    "/usr/sbin:/sbin",
+  ];
+  const pillow = pillowPythonDir();
+  if (pillow !== null) segments.unshift(pillow);
+  return segments.join(":");
+}
+
+function pillowPythonDir(): string | null {
+  for (const candidate of ["python3", "python"]) {
+    try {
+      const r = spawnSync(candidate, ["-c", "import PIL, yaml"], { encoding: "utf8" });
+      if (r.status === 0) {
+        const real = execFileSync("which", [candidate], { encoding: "utf8" }).trim();
+        return real.length > 0 ? path.dirname(real) : null;
+      }
+    } catch {
+      // candidate missing — try the next
+    }
+  }
+  return null;
 }
 
 function plistDir(opts: BacklogScheduleOptions): string {

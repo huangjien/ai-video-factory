@@ -3,9 +3,10 @@ import { existsSync, readdirSync, readFileSync, statSync, mkdirSync, unlinkSync,
 import path from "node:path";
 import { parse as parseYaml } from "yaml";
 import type { Command } from "commander";
-import { formatRunId, writeRun } from "@video/workflow";
+import { formatRunId, writeRun, approveCheckpoint } from "@video/workflow";
 import { findRepoRoot } from "./learn-command.js";
 import { slugifyProjectName } from "./project-path.js";
+import { l10nRootOrThrow } from "./translate-command.js";
 import {
   assertTransition,
   isStaleDrafting,
@@ -391,6 +392,15 @@ export async function runBacklogAuto(opts: BacklogAutoOptions): Promise<number> 
   if (draftCode !== 0) return fail("draft-zh", draftCode);
   stages.push({ stage: "draft-zh", code: 0 });
 
+  // make's render step gates on an approved storyboard (measured
+  // 2026-11-19: render-preview refused without it). The gate exists so a
+  // human reads the storyboard — the auto run reads it by construction:
+  // the article was just judged ≥90 by the cross-model review loop.
+  const zhRoot = path.join(repoRoot, "projects", slug);
+  const approveZh = await approveCheckpoint(zhRoot, { stage: "storyboard" });
+  if (!approveZh.ok) return fail("approve-storyboard-zh", 1);
+  stages.push({ stage: "approve-storyboard-zh", code: 0 });
+
   const makeZhCode = await runMakeCli({ project: slug, cwd: repoRoot });
   if (makeZhCode !== 0) return fail("make-zh", makeZhCode);
   stages.push({ stage: "make-zh", code: 0 });
@@ -402,6 +412,11 @@ export async function runBacklogAuto(opts: BacklogAutoOptions): Promise<number> 
   });
   if (translateCode !== 0) return fail("translate-en", translateCode);
   stages.push({ stage: "translate-en", code: 0 });
+
+  const enRoot = l10nRootOrThrow(zhRoot, "en-US");
+  const approveEn = await approveCheckpoint(enRoot, { stage: "storyboard" });
+  if (!approveEn.ok) return fail("approve-storyboard-en", 1);
+  stages.push({ stage: "approve-storyboard-en", code: 0 });
 
   const makeEnCode = await runMakeCli({
     project: slug,

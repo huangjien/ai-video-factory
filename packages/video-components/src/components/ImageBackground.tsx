@@ -18,7 +18,9 @@ export interface ImageBackgroundProps {
    * without cropping. Defaults to cover for background use. */
   fit?: "cover" | "contain";
   /** Ken-Burns motion: slow zoom + pan throughout the scene so the
-   * background reads as alive rather than static. Set to 0 to disable. */
+   * background reads as alive rather than static. Set to 0 to disable.
+   * 0.12 (2026-11-19): the push-in is meant to read at arm's length —
+   * 0.08 was indistinguishable from a still frame on a TV. */
   kenBurnsScale?: number;
   /** Optional caption overlaid at the bottom — keeps the scene
    *  informative even when the background image is a placeholder
@@ -63,7 +65,7 @@ export const ImageBackground: FC<ImageBackgroundProps> = ({
   theme = darkTechTheme,
   src,
   fit = "cover",
-  kenBurnsScale = 0.08,
+  kenBurnsScale = 0.12,
   caption,
   textOverlaySrc,
   width = 1920,

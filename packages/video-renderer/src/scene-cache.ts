@@ -75,7 +75,7 @@ export interface SceneCacheMeta {
  * Same contract as `IMAGE_PROMPT_REVISION` in @video/draft, and deliberately
  * manual: hashing the source tree would re-render on every comment edit.
  */
-export const RENDERER_REVISION = "12";
+export const RENDERER_REVISION = "13";
 // 2: caption type + halo + no-plate overlay
 // 3: the title card preserves inter-word spaces — each glyph is its own flex
 // item, so a bare space collapsed to zero width and headlines rendered run-on.
@@ -101,6 +101,8 @@ export const RENDERER_REVISION = "12";
 // bottom line whenever cues exist; ImageBackground's short `caption`
 // label is now a no-track fallback instead of the winner. Image scenes
 // burn the full narration (same cues as the exported SRT).
+// 13: ImageBackground's Ken-Burns default is 0.12 (was 0.08) — the slow
+// push-in now reads at arm's length instead of reading as a still frame.
 
 /** Cache directory for a project — final renders in `scenes/`, draft-mode
  *  (960x540@15) renders in `scenes-draft/`. */

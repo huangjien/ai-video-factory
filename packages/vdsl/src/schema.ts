@@ -594,6 +594,21 @@ export const brandSchema = z
       })
       .strict()
       .optional(),
+    /** Thumbnail branding (scripts/thumbnail-brand.py, 2026-11-19) — the
+     *  朱红 canvas border + circular mascot badge composited onto every
+     *  generated thumbnail. Consumed by the python pass, declared here so
+     *  the strict brand schema accepts the block. */
+    thumbnail: z
+      .object({
+        border_color: z.string().optional(),
+        border_width: z.number().int().min(0).optional(),
+        icon_diameter: z.number().int().min(40).max(400).optional(),
+        ring_color: z.string().optional(),
+        ring_width: z.number().int().min(0).optional(),
+        margin: z.number().int().min(0).optional(),
+      })
+      .strict()
+      .optional(),
   })
   .strict();
 

@@ -50,9 +50,25 @@
 2. 发布流不变(YouTube 竖屏自动识别;≤60s 竖屏自动归 Shorts;B站支持竖版)
 3. zhihu 不变
 
-### Phase 4(可选,后续再定)— 衍生策略
-- 每部横片自动切一条竖版 Shorts/抖音精选(基于现有 shorts 裁切 + 竖屏组件)
-- 或 auto 按想法类型选格式(历史人文横屏、快节奏 AI 话题竖屏)— 需要数据支撑后再做
+### Phase 4 — 竖版衍生 + Shorts/TikTok 发布(已定向,2026-11-20)
+
+**决策**:每部横片自动配一条竖版衍生,提交 YouTube Shorts;TikTok 预留通道(接口就位,实现待账号/API)。
+
+**4a. 衍生片生成** — 复用 `video shorts` 的既有双路径:
+- minimax 路径(首选):AI 用 thumbnail + shorts-hook 生成真竖版短视频(非盲裁)
+- mock 路径(离线兜底):ffmpeg 中心裁切 `crop=ih*9/16`
+- 选段:v1 用 shorts-hook 指定的开场(打包时 LLM 已选最钩人的 60s);后续按字幕时间轴选"钩子+回报"完整弧段
+
+**4b. 发布通道** — auto 管线在四通道后追加两步:
+- YouTube Shorts:竖片 `--upload --privacy private`(与主片同惯例,公开人工翻转);竖片 ≤60s 被 YouTube 自动归 Shorts
+- TikTok:通道接口就位(平台名/视频文件/标题/tags/可见性的统一记录格式,元数据 JSON 先落盘 `tiktok/package.json`),实现延后 — TikTok Content Posting API 需要应用审核, unofficial 路径风险高
+
+**4c. 开关与记录**:
+- `video backlog auto --no-shorts` 跳过衍生
+- run record 增 `shorts` 阶段(bvid/video-id 落盘同 bvid.txt 惯例)
+- stats 增 shorts 档(每部片衍生数)
+
+**验证**:一支真竖片 Shorts(YouTube 后台可见 ≤60s 竖屏标记);mock 路径离线全链路绿。
 
 ## 验证标准
 - `video draft <topic> --format vertical --fake` 全链路绿

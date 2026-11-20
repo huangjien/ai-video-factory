@@ -222,23 +222,31 @@ export function writeHistoricalSummaryFile(
   opts: {
     plan: SceneSourcePlan[];
     resolutions: Map<number, SceneSourceResolution>;
+    /** What actually reached the screen, read from the sidecars on disk.
+     *  The resolution says what was INTENDED; only the sidecar says what
+     *  happened — a picture that could not be downloaded leaves no
+     *  sidecar, and a summary that still said "frame" would be a lie. */
+    sidecars?: { scene: number; record: SceneSourceRecord }[] | undefined;
     /** True when the film turned the feature off — the file then says so
      *  instead of leaving a stale table from an earlier run. */
     disabled?: boolean | undefined;
   },
 ): string {
   const planned = opts.plan.filter((p) => p.historical && p.mode !== "none");
+  const landed = new Map(
+    (opts.sidecars ?? []).map((s) => [s.scene, s.record]),
+  );
   const rows = planned.map((p) => {
     const resolution = opts.resolutions.get(p.scene);
-    const candidate = resolution?.candidate ?? null;
+    const record = landed.get(p.scene);
     const outcome =
-      resolution === undefined
-        ? "not reached"
-        : resolution.mode === "direct"
+      record !== undefined
+        ? record.mode === "direct"
           ? "frame"
-          : resolution.mode === "reference"
-            ? "reference"
-            : "no picture";
+          : "reference"
+        : resolution?.candidate != null
+          ? "picture failed"
+          : "no picture";
     return {
       scene: p.scene,
       planned: p.mode,
@@ -246,13 +254,15 @@ export function writeHistoricalSummaryFile(
       query: p.query,
       reason: p.reason,
       outcome,
-      title: candidate?.title ?? "",
-      source: candidate?.source ?? "",
-      license: candidate?.license ?? "",
-      pageUrl: candidate?.pageUrl ?? "",
+      title: record?.title ?? "",
+      source: record?.source ?? "",
+      license: record?.license ?? "",
+      pageUrl: record?.pageUrl ?? "",
     };
   });
-  const withPicture = rows.filter((r) => r.outcome !== "no picture" && r.outcome !== "not reached");
+  const withPicture = rows.filter(
+    (r) => r.outcome === "frame" || r.outcome === "reference",
+  );
 
   const lines: string[] = ["# Historical pictures", ""];
   if (opts.disabled === true) {

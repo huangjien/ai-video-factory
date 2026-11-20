@@ -1,5 +1,6 @@
 import { normalizeLicense } from "../license.js";
 import { fetchJson, qs, stripHtml } from "../http.js";
+import { rasterUrl } from "./raster.js";
 import type {
   HistoricalCandidate,
   PictureSearchOptions,
@@ -82,8 +83,10 @@ export function parseCommonsTitleResponse(
   );
   const copyrighted = metaValue(meta, "Copyrighted").toLowerCase();
   if (copyrighted === "true") return null;
-  const fileUrl = info.thumburl ?? info.url;
-  if (fileUrl === undefined || fileUrl === "") return null;
+  // A lead image can be an SVG (a diagram, a seal). The thumbnail the
+  // API returns is the raster version of it.
+  const fileUrl = rasterUrl(info.url, info.thumburl);
+  if (fileUrl === null) return null;
   return {
     source: "wikipedia",
     title: (page.title ?? fileTitle).replace(/^File:/, ""),

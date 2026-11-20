@@ -154,8 +154,61 @@ describe("writeHistoricalSummaryFile", () => {
             mode: "none",
             reason: "an abstract idea",
           },
+          {
+            scene: 4,
+            historical: true,
+            subject: "Tutankhamun",
+            query: "Tutankhamun",
+            mode: "direct",
+            reason: "the mask",
+          },
+        ],
+        sidecars: [
+          {
+            scene: 1,
+            record: {
+              schema: "scene-source/1",
+              mode: "direct",
+              source: "commons",
+              title: "TangTaizongP.jpg",
+              author: "Anonymous",
+              license: "PD",
+              licenseUrl: "",
+              pageUrl: "https://commons.wikimedia.org/wiki/File:TangTaizongP.jpg",
+              fileUrl: "https://upload.wikimedia.org/x.jpg",
+              localPath: null,
+              digest: "direct:abc",
+              sha256: "def456",
+              retrievedAt: "2026-11-20T00:00:00.000Z",
+            },
+          },
         ],
         resolutions: new Map([
+          [
+            4,
+            {
+              scene: 4,
+              mode: "direct",
+              candidate: {
+                source: "openverse",
+                title: "Mask of Tutankhamun.svg",
+                pageUrl: "https://example.com/mask.svg",
+                fileUrl: "https://example.com/mask.svg",
+                localPath: null,
+                author: "",
+                license: "CC0",
+                licenseUrl: "",
+                width: 640,
+                height: 900,
+                digestKey: "x",
+                query: "Tutankhamun",
+                owned: false,
+                directEligible: true,
+              },
+              digest: "direct:def",
+              note: "using the picture itself",
+            },
+          ],
           [
             1,
             {
@@ -194,7 +247,7 @@ describe("writeHistoricalSummaryFile", () => {
         ]),
       });
       const text = await readFile(out, "utf8");
-      expect(text).toContain("Historical scenes planned: 2 of 3");
+      expect(text).toContain("Historical scenes planned: 3 of 4");
       expect(text).toContain("scenes with a picture: 1");
       // The scene that planned a picture and got it.
       expect(text).toContain("李世民");
@@ -203,6 +256,13 @@ describe("writeHistoricalSummaryFile", () => {
       // The scene that planned a picture and got none.
       expect(text).toContain("Helmuth von Moltke");
       expect(text).toContain("no picture");
+      // The picture on screen is the one the SIDECAR says — not the one
+      // the plan hoped for.
+      expect(text).toContain("TangTaizongP.jpg");
+      // A planned picture that never reached the screen must not be
+      // reported as one: the plan is not the outcome.
+      expect(text).toContain("picture failed");
+      expect(text).not.toContain("Mask of Tutankhamun.svg");
     } finally {
       await rm(dir, { recursive: true, force: true });
     }

@@ -62,6 +62,7 @@ import {
   normalizeToJpeg,
 } from "@video/media-generators";
 import {
+  clearSceneSource,
   downloadCandidate,
   readAllSceneSources,
   sha256Text,
@@ -1124,6 +1125,11 @@ export async function generateSceneVisuals(
         lines.push(
           `scene_${i + 1}: could not use the historical picture — generating without it`,
         );
+        // The scene's image is about to become a generated one, so any
+        // sidecar from an earlier run must go: a sidecar that outlives
+        // its picture makes the credit file claim a picture that is not
+        // on screen.
+        clearSceneSource(imageDir, i + 1);
         // The key must not claim a picture the scene does not use, or the
         // next run would keep the picture-less image as "fresh".
         sourceDigest = "";
@@ -1244,6 +1250,10 @@ export async function generateSceneVisuals(
         writeSceneSource(imageDir, i + 1, borrowed.record);
         sourceRecords.push({ scene: i + 1, record: borrowed.record });
         lines.push(sourceLogLine(i + 1, borrowed.record));
+      } else {
+        // This frame is generated, not borrowed — the sidecar must say
+        // so by not existing.
+        clearSceneSource(imageDir, i + 1);
       }
       emit({
         kind: "done",
@@ -1336,6 +1346,9 @@ export async function generateSceneVisuals(
     const summary = writeHistoricalSummaryFile(imageDir, {
       plan: historical.plan,
       resolutions: historical.resolutions,
+      // The sidecars on disk are the truth: they say which pictures are
+      // actually in the frames.
+      sidecars: readAllSceneSources(imageDir),
     });
     outputs.push(
       `assets/images/${path.basename(summary)} (plan + outcome for ${historical.plan.length} scene(s))`,

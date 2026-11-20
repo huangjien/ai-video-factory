@@ -1,4 +1,5 @@
 import { fetchJson, qs } from "../http.js";
+import { rasterUrl } from "./raster.js";
 import type {
   HistoricalCandidate,
   PictureSearchOptions,
@@ -227,8 +228,11 @@ export function parseOpenverseResults(
       width?: number;
       height?: number;
     };
-    const fileUrl = r.url ?? r.thumbnail;
-    if (fileUrl === undefined || fileUrl === "") continue;
+    // Openverse does not filter by file type, and Wikimedia's own file
+    // for the Mask of Tutankhamun is an SVG — a vector the pipeline
+    // cannot use as a frame. Take the archive's rasterized preview.
+    const fileUrl = rasterUrl(r.url, r.thumbnail);
+    if (fileUrl === null) continue;
     const license = (r.license ?? "").toUpperCase();
     out.push({
       source: "openverse",

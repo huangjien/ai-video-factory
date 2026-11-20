@@ -857,8 +857,11 @@ auto holding the `runs/backlog-auto.lock`, and no idea stuck mid-pipeline.
 When it fires it picks the judge's top-ranked open idea (running the judge
 first if no cache exists), auto-approves it, and runs draft → make (zh) →
 translate en-US → make — then PUBLISHES: bilibili zh+en (public), YouTube
-zh+en (private — flip to public in Studio). A failed upload is non-fatal;
-retry it by hand. zhihu has no API — its post stays manual. A stage failure
+zh+en (private — flip to public in Studio), plus a vertical 1080×1920
+Shorts cut uploaded to YouTube Shorts (private) with TikTok metadata staged
+in `projects/<id>/tiktok/` (TikTok upload stays manual until the API lane
+ships). A failed upload is non-fatal; retry it by hand. zhihu has no API —
+its post stays manual. A stage failure
 leaves the entry approved-but-unstamped and writes `runs/backlog-auto-*.yaml`
 with the failing stage; the next 10-minute check refuses to pick a new idea
 until a human resumes or `video backlog reset`s it.

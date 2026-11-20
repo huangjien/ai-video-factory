@@ -37,7 +37,7 @@ ideas:
       - 贞观之治 Zhenguan era
   - id: 2026-11-19-古人长什么样-reconstructing-what-historical-fi
     topic: 古人长什么样 Reconstructing what historical figures looked like
-    status: idea
+    status: drafted
     source: harvest:docs/plans/2026-10-19-chinese-storybook-visual-dna-design.md
     created: 2026-11-19
     note: "Audiences take famous portraits for granted; the detective work
@@ -51,6 +51,9 @@ ideas:
       - 阎立本《步辇图》Bunian Tu
       - 凌烟阁功臣图 Lingyan Pavilion portraits
       - 唐代人物画 Tang portraiture
+    drafting_at: 2026-11-20T14:35:07.376Z
+    project: 古人长什么样-reconstructing-what-historical-fi
+    drafted_at: 2026-11-20T14:52:19.563Z
   - id: 2026-11-19-工笔画-gongbi-painting-the-engineering-of-l
     topic: 工笔画 Gongbi painting, the engineering of line and layered color
     status: proposed

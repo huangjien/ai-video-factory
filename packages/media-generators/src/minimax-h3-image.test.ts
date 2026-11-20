@@ -281,6 +281,16 @@ describe("MiniMaxH3ImageProvider — /v1/images/generations + /v1/images/edits",
       expect(bodies).toHaveLength(1);
     });
 
+    it("does NOT claim reference support — the image API 400s on one", () => {
+      // Verified live 2026-11-20: plain generation works (a 1920x1080 ink
+      // painting came back in one call), but a request carrying a
+      // reference picture answers 400 bad_request. A provider that claims
+      // a capability it cannot deliver makes the CALLER route the scene
+      // to it and the scene fail.
+      const p = new MiniMaxH3ImageProvider();
+      expect(p.supportsReferences).toBe(false);
+    });
+
     it("passes constraintGuard: [] to disable the guard", async () => {
       const bodies = await useScriptedServer([
         { created: 1, data: [{ b64_json: TINY_JPEG_B64, revised_prompt: "a prettier apple" }] },

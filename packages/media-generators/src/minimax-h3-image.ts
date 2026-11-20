@@ -136,9 +136,15 @@ export function autoConstraintMarkers(prompt: string): string[] {
 
 export class MiniMaxH3ImageProvider implements ImageProvider {
   readonly name = "minimax-h3";
-  /** The edits endpoint — the only provider in the repo that can take a
-   *  reference picture. */
-  readonly supportsReferences = true;
+  /** FALSE (verified live 2026-11-20). The docs describe an edits
+   *  endpoint, but the image API answers `400 bad_request` for every
+   *  request that carries a reference picture — while plain generation
+   *  works fine (a 1920x1080 ink painting came back in one call). A
+   *  provider that claims a capability it cannot deliver is worse than
+   *  one that admits it has none: the caller routes the scene to it and
+   *  the scene fails. Declaring none lets the caller fall back to using
+   *  the picture as the frame, which any provider can always do. */
+  readonly supportsReferences = false;
   private readonly apiHost: string;
   private readonly model: string;
   private readonly requestTimeoutMs: number;

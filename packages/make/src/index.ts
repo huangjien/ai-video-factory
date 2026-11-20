@@ -64,6 +64,7 @@ import {
 import {
   downloadCandidate,
   readAllSceneSources,
+  sha256Text,
   sourceLogLine,
   writeAttributionFile,
   writeHistoricalSummaryFile,
@@ -1258,6 +1259,37 @@ export async function generateSceneVisuals(
       );
       return { lines, generated: imagePath };
     } catch (err) {
+      // The reference could not be drawn — but the picture is already in
+      // hand, and it may BE the frame. Losing the scene to a provider
+      // that could not draw a composed shot is a worse outcome than
+      // showing the picture itself.
+      if (
+        borrowed !== null &&
+        borrowed.record.mode === "reference" &&
+        resolution?.candidate?.directEligible === true
+      ) {
+        const directDigest = `direct:${sha256Text(resolution.candidate.digestKey)}`;
+        await writeFile(imagePath, borrowed.bytes);
+        writeImageCacheSidecar(imagePath, cacheKeyFor(directDigest));
+        const record: SceneSourceRecord = {
+          ...borrowed.record,
+          mode: "direct",
+          digest: directDigest,
+        };
+        writeSceneSource(imageDir, i + 1, record);
+        sourceRecords.push({ scene: i + 1, record });
+        lines.push(
+          `scene_${i + 1}: the reference could not be drawn — the picture becomes the frame`,
+        );
+        lines.push(sourceLogLine(i + 1, record));
+        emit({
+          kind: "done",
+          label: itemLabel,
+          ...itemAt,
+          elapsedSec: elapsedSinceSec(itemT0),
+        });
+        return { lines, generated: imagePath };
+      }
       // Real runs: the post-pool guard below fails the step — no silent
       // AnimatedIllustration fallback. Mock runs: non-fatal by contract.
       failedScenes.push(i + 1);

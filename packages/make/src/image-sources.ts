@@ -1,6 +1,11 @@
 import type { Provider } from "@video/llm";
 import type { ParsedArticle } from "@video/draft";
 import {
+  planCacheKey,
+  readSourcePlanCache,
+  writeSourcePlanCache,
+} from "./source-plan-cache.js";
+import {
   collectCandidates,
   defaultPictureSources,
   matchSceneSources,
@@ -114,6 +119,9 @@ export async function resolveHistoricalSources(opts: {
   }));
 
   let plan: SceneSourcePlan[];
+  // True when the plan came from the project's cache — the run log says
+  // so, because a reused plan and a fresh one are not the same thing.
+  let reusedPlan = false;
   if (opts.plan !== undefined) {
     plan = opts.plan;
   } else {
@@ -122,30 +130,47 @@ export async function resolveHistoricalSources(opts: {
     // Nothing to look for without a visual direction.
     const searchable = scenes.filter((s) => s.visual.trim() !== "");
     if (searchable.length === 0) return EMPTY;
-    try {
-      plan = await planSceneSources(
-        {
-          title: opts.article.title ?? "",
-          ...(opts.article.frontmatter.setting !== undefined
-            ? { setting: opts.article.frontmatter.setting }
-            : {}),
-          scenes: searchable,
-        },
-        provider,
-      );
-    } catch (err) {
-      // A failed plan is not a failed run — the feature switches itself off.
-      return {
-        ...EMPTY,
-        notes: [
-          `historical pictures: plan failed (${(err as Error).message.slice(0, 60)}) — generating without them`,
-        ],
-      };
+    const title = opts.article.title ?? "";
+    const setting = opts.article.frontmatter.setting;
+    // The plan is cached against the inputs the planner reads, so an
+    // unchanged article keeps its plan (and its pictures) across renders.
+    const cacheKey = planCacheKey({
+      title,
+      ...(setting !== undefined ? { setting } : {}),
+      scenes: searchable,
+    });
+    const cached = readSourcePlanCache(opts.projectRoot, cacheKey);
+    if (cached !== null) {
+      plan = cached;
+      reusedPlan = true;
+    } else {
+      try {
+        plan = await planSceneSources(
+          {
+            title,
+            ...(setting !== undefined ? { setting } : {}),
+            scenes: searchable,
+          },
+          provider,
+        );
+        writeSourcePlanCache(opts.projectRoot, cacheKey, plan);
+      } catch (err) {
+        // A failed plan is not a failed run — the feature switches itself off.
+        return {
+          ...EMPTY,
+          notes: [
+            `historical pictures: plan failed (${(err as Error).message.slice(0, 60)}) — generating without them`,
+          ],
+        };
+      }
     }
   }
 
   const historical = plan.filter((p) => p.historical && p.mode !== "none");
   const notes: string[] = [];
+  if (reusedPlan) {
+    notes.push("historical pictures: reusing the project's cached plan");
+  }
   if (historical.length === 0) {
     notes.push("historical pictures: no historical scene in this video");
     return { resolutions: new Map(), plan, notes, planned: true };

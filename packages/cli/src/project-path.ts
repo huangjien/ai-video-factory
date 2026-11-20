@@ -78,13 +78,23 @@ export function resolveProjectDir(arg: string, cwd?: string): ResolvedProject {
       .filter((entry) => isProjectRoot(path.join(projectsDir, entry)))
       .sort();
     const target = normalizeForMatch(trimmed);
+    // A topic longer than 40 characters was scaffolded under its
+    // TRUNCATED slug, so the topic itself never equals the folder name.
+    // The slug is the second key: "古人长什么样 Reconstructing what
+    // historical figures looked like" must find the directory
+    // "古人长什么样-reconstructing-what-historical-fi".
+    const slug = slugifyProjectName(trimmed);
     if (target.length > 0) {
-      const normalized = dirs.find((d) => normalizeForMatch(d) === target);
+      const normalized = dirs.find(
+        (d) => normalizeForMatch(d) === target || d === slug,
+      );
       if (normalized !== undefined) {
         return { ok: true, root: path.join(projectsDir, normalized) };
       }
-      const prefixed = dirs.filter((d) =>
-        normalizeForMatch(d).startsWith(target),
+      const prefixed = dirs.filter(
+        (d) =>
+          normalizeForMatch(d).startsWith(target) ||
+          (slug !== "" && d.startsWith(slug)),
       );
       if (prefixed.length === 1) {
         return { ok: true, root: path.join(projectsDir, prefixed[0] ?? "") };

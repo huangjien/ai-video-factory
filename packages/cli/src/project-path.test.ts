@@ -21,6 +21,9 @@ describe("resolveProjectDir", () => {
     seedProject(projectsDir, "harness-engineering");
     seedProject(projectsDir, "长视频测试");
     seedProject(projectsDir, "harness-extra");
+    // A topic longer than 40 characters is scaffolded under its
+    // TRUNCATED slug — the topic itself must still resolve to it.
+    seedProject(projectsDir, "古人长什么样-reconstructing-what-historical-fi");
     // A non-project dir that must never match.
     mkdirSync(path.join(projectsDir, "not-a-project"), { recursive: true });
   });
@@ -53,6 +56,18 @@ describe("resolveProjectDir", () => {
   it("resolves CJK folder names verbatim and case-insensitively", () => {
     const r = resolveProjectDir("长视频测试", base);
     expect(r.ok).toBe(true);
+  });
+
+  it("resolves a topic whose slug was truncated at 40 chars", () => {
+    const r = resolveProjectDir(
+      "古人长什么样 Reconstructing what historical figures looked like",
+      base,
+    );
+    expect(r.ok).toBe(true);
+    if (r.ok)
+      expect(r.root).toBe(
+        path.join(projectsDir, "古人长什么样-reconstructing-what-historical-fi"),
+      );
   });
 
   it("resolves a unique prefix", () => {

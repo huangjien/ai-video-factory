@@ -380,7 +380,8 @@ license and source link).
 
 **Turning it off.** `--image-sources off` on `video make` / `video
 visuals`, or `historical_images: off` in `article.md` frontmatter. Default
-is `auto` — on, for the scenes that are historical.
+is `on` — the feature runs for every film, and the plan still decides
+which scenes are historical (a modern film plans nothing and pays nothing).
 
 **Gotchas.**
 

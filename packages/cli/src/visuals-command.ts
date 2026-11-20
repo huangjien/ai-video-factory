@@ -10,6 +10,7 @@ import {
   writeVisualsCheckpoint,
   imageSceneNumbers,
   resolveImageProvider,
+  type ImageSourcesMode,
 } from "@video/make";
 import { buildContactSheet } from "@video/media-generators";
 import { parseArticleWithRecovery } from "@video/draft";
@@ -35,7 +36,7 @@ export interface VisualsOptions {
     | "none";
   fake?: boolean;
   /** Historical-picture retrieval: auto (default) | off. */
-  sources?: "auto" | "off";
+  sources?: ImageSourcesMode;
   rejectScene?: number;
   reason?: string;
   cols?: number;
@@ -183,7 +184,7 @@ export function registerVisuals(program: Command): void {
     )
     .option(
       "--image-sources <mode>",
-      "historical-picture retrieval: auto (default) | off",
+      "historical-picture retrieval: on (default) | off",
     )
     .option("--fake", "skip generation (contact sheet over existing images)")
     .option(

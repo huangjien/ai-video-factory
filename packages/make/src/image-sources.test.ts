@@ -82,18 +82,20 @@ const PLAN = [
 ];
 
 describe("resolveImageSourcesMode", () => {
-  it("defaults to auto and lets the flag win", () => {
-    expect(resolveImageSourcesMode(undefined, undefined)).toBe("auto");
+  it("defaults to on and lets the flag win", () => {
+    expect(resolveImageSourcesMode(undefined, undefined)).toBe("on");
     expect(resolveImageSourcesMode("off", undefined)).toBe("off");
     expect(resolveImageSourcesMode(undefined, "off")).toBe("off");
     expect(resolveImageSourcesMode(undefined, "false")).toBe("off");
     // A typo in hand-edited frontmatter must not brick the run.
-    expect(resolveImageSourcesMode(undefined, "onn")).toBe("auto");
+    expect(resolveImageSourcesMode(undefined, "onn")).toBe("on");
   });
 
   it("parses the CLI value and ignores an unknown one", () => {
-    expect(parseImageSourcesMode("auto")).toBe("auto");
+    expect(parseImageSourcesMode("on")).toBe("on");
     expect(parseImageSourcesMode("off")).toBe("off");
+    // "auto" is the older spelling of "on" and still parses.
+    expect(parseImageSourcesMode("auto")).toBe("on");
     expect(parseImageSourcesMode("nonsense")).toBeUndefined();
     expect(parseImageSourcesMode(undefined)).toBeUndefined();
   });

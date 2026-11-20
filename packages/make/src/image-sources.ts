@@ -28,9 +28,9 @@ import {
  * because a picture archive was down.
  */
 
-/** Whether the retrieval runs at all. "auto" = run it for historical
+/** Whether the retrieval runs at all. "on" = run it for historical
  *  scenes; "off" = never. */
-export type ImageSourcesMode = "auto" | "off";
+export type ImageSourcesMode = "on" | "off";
 
 /** The mode, from the CLI flag, the article frontmatter, or the default. */
 export function resolveImageSourcesMode(
@@ -42,19 +42,24 @@ export function resolveImageSourcesMode(
   if (raw === "off" || raw === "false" || raw === "no" || raw === "0") {
     return "off";
   }
-  // "on"/"true"/"auto"/absent/typo → the default, which is "auto". The
+  // "on"/"true"/"auto"/absent/typo → the default, which is "on". The
   // frontmatter is hand-edited; an unknown value must not brick the run.
-  return "auto";
+  return "on";
 }
 
 /** Parse the CLI's `--image-sources` value. An unknown value is ignored
- *  (undefined) so the article frontmatter or the default decides. */
+ *  (undefined) so the article frontmatter or the default decides.
+ *  "auto" is accepted as the older spelling of "on". */
 export function parseImageSourcesMode(
   raw: string | undefined,
 ): ImageSourcesMode | undefined {
   const value = (raw ?? "").trim().toLowerCase();
-  if (value === "off" || value === "none" || value === "false") return "off";
-  if (value === "auto" || value === "on" || value === "true") return "auto";
+  if (value === "off" || value === "none" || value === "false" || value === "no") {
+    return "off";
+  }
+  if (value === "on" || value === "auto" || value === "true" || value === "yes") {
+    return "on";
+  }
   return undefined;
 }
 

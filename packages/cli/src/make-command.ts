@@ -5,6 +5,7 @@ import {
   formatImpact,
   parseImageSourcesMode,
   runMake,
+  type ImageSourcesMode,
 } from "@video/make";
 import { resolveProjectDir } from "./project-path.js";
 import { l10nRootOrThrow } from "./translate-command.js";
@@ -28,8 +29,8 @@ export interface MakeOptions {
    *  mock, or none. */
   imageProvider?:
     "minimax" | "minimax-h3" | "openai" | "gemini" | "mock" | "none";
-  /** Historical-picture retrieval: auto (default) | off. */
-  sources?: "auto" | "off";
+  /** Historical-picture retrieval: on (default) | off. */
+  sources?: ImageSourcesMode;
   /** Local music library dir — BGM tags resolve to {tag}.wav inside it. */
   bgmDir?: string;
   /** Local SFX library dir — same lookup rule as bgmDir. */
@@ -140,7 +141,7 @@ export function registerMake(program: Command): void {
     )
     .option(
       "--image-sources <mode>",
-      "historical-picture retrieval for scene images: auto (default — look for a freely-licensed historical picture for the scenes that show one) | off",
+      "historical-picture retrieval for scene images: on (default — look for a freely-licensed historical picture for the scenes that show one) | off",
     )
     .option(
       "--bgm-dir <dir>",

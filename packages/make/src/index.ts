@@ -341,7 +341,7 @@ export interface MakeOptions {
    * AnimatedIllustration shapes). */
   imageProvider?:
     "minimax" | "minimax-h3" | "openai" | "gemini" | "mock" | "none";
-  /** Historical-picture retrieval for the scene images: "auto" (default —
+  /** Historical-picture retrieval for the scene images: "on" (default —
    *  look for a freely-licensed historical picture for the scenes that
    *  show one) or "off". */
   sources?: ImageSourcesMode;
@@ -924,7 +924,7 @@ export async function generateSceneVisuals(
   opts: {
     provider: "minimax" | "minimax-h3" | "openai" | "gemini" | "mock" | "none";
     onEvent?: ProgressEmit | undefined;
-    /** Historical-picture retrieval: "auto" (default) or "off". */
+    /** Historical-picture retrieval: "on" (default) or "off". */
     sources?: ImageSourcesMode | undefined;
     /** A pre-computed source plan — the injection seam for callers that
      *  already know which scenes are historical. */

@@ -9,8 +9,10 @@ import { findRepoRoot } from "./learn-command.js";
 import { slugifyProjectName } from "./project-path.js";
 import { l10nRootOrThrow } from "./translate-command.js";
 import { runBilibili } from "./bilibili-command.js";
+import { runDouyin } from "./douyin-command.js";
 import { runYouTube, resolveYouTubeCredentials } from "./youtube-command.js";
 import { runShorts } from "./shorts-command.js";
+import { runVertical } from "./vertical-command.js";
 import {
   refreshAccessToken,
   uploadVideo,
@@ -76,6 +78,10 @@ export interface BacklogAutoOptions {
     topic: string;
     anchors?: string[];
     creds?: YouTubeCredentials;
+    /** The vertical cut to upload (absolute path). */
+    shortsPath?: string;
+    /** The native vertical master it was cut from. */
+    verticalMaster?: string;
   }) => Promise<number>;
   /** TEST SEAM: pre-resolved YouTube credentials for the shorts upload. */
   shortsCredentials?: YouTubeCredentials;
@@ -309,7 +315,13 @@ async function pickTopOpenId(
 
 // --- publishing ---------------------------------------------------------
 
-export type PublishStepKind = "bili-zh" | "yt-zh" | "yt-en" | "bili-en";
+export type PublishStepKind =
+  | "bili-zh"
+  | "yt-zh"
+  | "yt-en"
+  | "bili-en"
+  | "douyin-zh"
+  | "douyin-en";
 
 export interface PublishStep {
   kind: PublishStepKind;
@@ -361,6 +373,22 @@ async function defaultPublish(step: PublishStep): Promise<number> {
       upload: true,
       privacy: "private",
       thumbnailProvider: "minimax",
+    });
+  }
+  if (step.kind === "douyin-zh" || step.kind === "douyin-en") {
+    // Douyin is vertical: the command cuts the 16:9 master into 1080x1920
+    // (blurred backdrop, nothing cropped) before it uploads. Without an
+    // access token it stops at the packaging + the manual checklist — the
+    // same non-fatal shape as the other lanes.
+    const projectArg =
+      step.kind === "douyin-en"
+        ? path.join("projects", step.slug, "l10n", "en-US")
+        : step.slug;
+    return runDouyin({
+      project: projectArg,
+      cwd: step.repoRoot,
+      upload: true,
+      cutMode: "inset",
     });
   }
   if (step.kind === "bili-zh") {
@@ -433,6 +461,8 @@ async function uploadShortsToYouTube(input: {
   topic: string;
   anchors?: string[];
   creds?: YouTubeCredentials;
+  shortsPath?: string;
+  verticalMaster?: string;
 }): Promise<number> {
   let creds: YouTubeCredentials;
   try {
@@ -441,13 +471,9 @@ async function uploadShortsToYouTube(input: {
     console.error(`  ! shorts upload skipped: ${(err as Error).message}`);
     return 1;
   }
-  const shortsPath = path.join(
-    input.repoRoot,
-    "projects",
-    input.slug,
-    "youtube",
-    "shorts.mp4",
-  );
+  const shortsPath =
+    input.shortsPath ??
+    path.join(input.repoRoot, "projects", input.slug, "youtube", "shorts.mp4");
   const hookPath = path.join(
     input.repoRoot,
     "projects",
@@ -636,7 +662,14 @@ export async function runBacklogAuto(opts: BacklogAutoOptions): Promise<number> 
   // en bilibili standalone (public). A publish failure is NON-fatal —
   // the MP4s exist; the upload can be retried by hand.
   const anchors = entry.anchors ?? [];
-  for (const kind of ["bili-zh", "yt-zh", "yt-en", "bili-en"] as const) {
+  for (const kind of [
+    "bili-zh",
+    "yt-zh",
+    "yt-en",
+    "bili-en",
+    "douyin-zh",
+    "douyin-en",
+  ] as const) {
     const code = await (opts.runPublish ?? defaultPublish)(
       { kind, slug, repoRoot, anchors },
     );
@@ -649,72 +682,89 @@ export async function runBacklogAuto(opts: BacklogAutoOptions): Promise<number> 
     }
   }
   if (publishFailures.length === 0) {
-    console.log("✓ published: bilibili zh+en (public), YouTube zh+en (private)");
+    console.log(
+      "✓ published: bilibili zh+en (public), YouTube zh+en (private), Douyin zh+en",
+    );
   }
   console.log(
     `  ! zhihu has no upload API — create the manual post at zhihu.com 创作中心 with bilibili/package.yaml title/desc/tags + the zh MP4`,
   );
 
   // Vertical-shorts derivative + YouTube Shorts upload (owner decision
-  // 2026-11-20: every film ships with a vertical cut). Failure non-fatal,
-  // same as the other publish lanes.
+  // 2026-11-20: every film ships with a vertical cut). The cut is a
+  // NATIVE vertical master (re-rendered at 1080×1920 — a crop of the
+  // landscape master carries burned-in captions and a cropped title),
+  // trimmed down to a Shorts-length clip from that master.
+  // Failures are non-fatal, same as the other publish lanes.
   if (opts.noShorts !== true) {
-    const shortsCode = await runShorts({
-      project: slug,
-      cwd: repoRoot,
-      ...(opts.shortsProvider !== undefined
-        ? { providerName: opts.shortsProvider }
-        : {}),
-    });
-    stages.push({ stage: "shorts", code: shortsCode });
-    if (shortsCode !== 0) {
-      publishFailures.push("shorts (derivative)");
+    const verticalCode = await runVertical({ project: slug, cwd: repoRoot });
+    stages.push({ stage: "vertical", code: verticalCode });
+    if (verticalCode !== 0) {
+      publishFailures.push("vertical (master)");
       console.error(
-        `  ! shorts derivative failed (exit ${shortsCode}) — non-fatal; retry \`video shorts ${slug}\` by hand`,
+        `  ! vertical master failed (exit ${verticalCode}) — non-fatal; retry \`video vertical ${slug}\` by hand`,
       );
     } else {
-      conditions.push("shorts derivative: youtube/shorts.mp4");
-      const shortsPath = path.join(repoRoot, "projects", slug, "youtube", "shorts.mp4");
-      if (existsSync(shortsPath)) {
-        // TikTok lane reserved: metadata lands as JSON; the upload itself
-        // awaits the Content Posting API (app review) — upload manually.
-        const hookPath = path.join(repoRoot, "projects", slug, "youtube", "shorts-hook.txt");
-        const tiktokDir = path.join(repoRoot, "projects", slug, "tiktok");
-        mkdirSync(tiktokDir, { recursive: true });
-        writeFileSync(
-          path.join(tiktokDir, "package.json"),
-          JSON.stringify(
-            {
-              platform: "tiktok",
-              video: "youtube/shorts.mp4",
-              title: entry.topic,
-              description: existsSync(hookPath) ? readFileSync(hookPath, "utf8").trim() : "",
-              tags: entry.anchors ?? [],
-              visibility: "public",
-              note: "TikTok API lane reserved (Content Posting API needs app review) — upload manually at tiktok.com",
-            },
-            null,
-            2,
-          ) + "\n",
-          "utf8",
+      const verticalRoot = path.join(repoRoot, "projects", slug, "vertical");
+      const master = path.join(verticalRoot, "output", "final-mixed.mp4");
+      conditions.push(`vertical master: ${path.relative(repoRoot, master)}`);
+      const shortsCode = await runShorts({
+        project: verticalRoot,
+        cwd: repoRoot,
+        durationSec: 60,
+      });
+      stages.push({ stage: "shorts", code: shortsCode });
+      if (shortsCode !== 0) {
+        publishFailures.push("shorts (derivative)");
+        console.error(
+          `  ! shorts cut failed (exit ${shortsCode}) — non-fatal; retry \`video shorts ${slug}/vertical\` by hand`,
         );
-        const upCode = await (opts.uploadShorts ?? uploadShortsToYouTube)({
-          repoRoot,
-          slug,
-          topic: entry.topic,
-          ...(entry.anchors !== undefined ? { anchors: entry.anchors } : {}),
-          ...(opts.shortsCredentials !== undefined
-            ? { creds: opts.shortsCredentials }
-            : {}),
-        });
-        stages.push({ stage: "shorts-upload", code: upCode });
-        if (upCode !== 0) {
-          publishFailures.push("shorts-upload");
-          console.error(
-            `  ! shorts upload failed (exit ${upCode}) — non-fatal; the vertical cut is at youtube/shorts.mp4`,
+      } else {
+        const shortsPath = path.join(verticalRoot, "youtube", "shorts.mp4");
+        if (existsSync(shortsPath)) {
+          // TikTok lane reserved: metadata lands as JSON; the upload itself
+          // awaits the Content Posting API (app review) — upload manually.
+          const hookPath = path.join(repoRoot, "projects", slug, "youtube", "shorts-hook.txt");
+          const tiktokDir = path.join(repoRoot, "projects", slug, "tiktok");
+          mkdirSync(tiktokDir, { recursive: true });
+          writeFileSync(
+            path.join(tiktokDir, "package.json"),
+            JSON.stringify(
+              {
+                platform: "tiktok",
+                video: path.relative(path.join(repoRoot, "projects", slug), shortsPath),
+                master: path.relative(path.join(repoRoot, "projects", slug), master),
+                title: entry.topic,
+                description: existsSync(hookPath) ? readFileSync(hookPath, "utf8").trim() : "",
+                tags: entry.anchors ?? [],
+                visibility: "public",
+                note: "TikTok API lane reserved (Content Posting API needs app review) — upload manually at tiktok.com",
+              },
+              null,
+              2,
+            ) + "\n",
+            "utf8",
           );
-        } else {
-          console.log(`  ✓ shorts uploaded (YouTube Shorts, private)`);
+          const upCode = await (opts.uploadShorts ?? uploadShortsToYouTube)({
+            repoRoot,
+            slug,
+            topic: entry.topic,
+            ...(entry.anchors !== undefined ? { anchors: entry.anchors } : {}),
+            shortsPath,
+            verticalMaster: master,
+            ...(opts.shortsCredentials !== undefined
+              ? { creds: opts.shortsCredentials }
+              : {}),
+          });
+          stages.push({ stage: "shorts-upload", code: upCode });
+          if (upCode !== 0) {
+            publishFailures.push("shorts-upload");
+            console.error(
+              `  ! shorts upload failed (exit ${upCode}) — non-fatal; the vertical cut is at ${path.relative(repoRoot, shortsPath)}`,
+            );
+          } else {
+            console.log(`  ✓ shorts uploaded (YouTube Shorts, private)`);
+          }
         }
       }
     }

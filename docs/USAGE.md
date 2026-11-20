@@ -646,6 +646,7 @@ Publishing metadata is not part of `video make`; invoke it separately.
 | `video thumbnail <project>` | A 1280×720 thumbnail — mock by default, real AI with `--provider minimax` or `--provider minimax-h3 --reference <img>` (H3 edit mode: re-renders the reference's subject) |
 | `video shorts <project>`    | A vertical 9:16 clip extracted from `final-mixed.mp4`                                                                                                                     |
 | `video bilibili <project>`  | The Bilibili package: title, 简介, tags, suggested 分区, cover brief, and a manual upload checklist                                                                       |
+| `video douyin <project>`    | The 抖音 package: title, 文案, 话题, cover brief, a vertical 9:16 cut of the film, and a manual upload checklist; `--upload` publishes through the official API |
 
 `video youtube` prefers `article.md` and derives the title, hook, sections,
 and chapter timings from it. It falls back to the older `research.md` +
@@ -662,6 +663,16 @@ fails loudly instead.
 Direct upload to YouTube is available too — the package includes the
 metadata, and the upload path handles the OAuth verification that YouTube
 requires. See the release notes for the current state of that flow.
+
+`video douyin` publishes to 抖音 (Douyin), which is vertical: the command
+cuts the 16:9 master into 1080×1920 before it uploads. Two cut modes —
+`inset` (default) keeps the WHOLE frame, blurred backdrop behind it, so the
+title cards and captions stay readable; `crop` fills the screen but throws
+away ~43% of the width. Douyin HAS an official publishing API (开放平台 →
+内容发布), so `--upload` is a real publish — it needs an approved app:
+`client_key`/`client_secret` in `~/.config/secrets/douyin-client-secret.json`
+and `DOUYIN_ACCESS_TOKEN` in `~/.config/secrets/ai.env`. Without them the
+command stops at the packaging and writes the manual checklist instead.
 
 ### Headless mode (`VIDEO_HEADLESS=1`)
 
@@ -703,6 +714,7 @@ projects/<slug>/
 ├── captions/<lang>.srt              subtitles
 ├── youtube/                         the publishing package
 ├── bilibili/                        the Bilibili package and upload checklist
+├── douyin/                          the 抖音 package, the vertical 9:16 cut, and the upload checklist
 └── output/
     ├── preview.mp4
     ├── preview-faststart.mp4
@@ -846,6 +858,18 @@ entry's optional long `content` (a brainstorm or research dump, no size cap)
 is handed to the drafter as context alongside the topic.
 
 Design: [`docs/plans/2026-11-18-backlog-feature-design.md`](./plans/2026-11-18-backlog-feature-design.md).
+
+### Vertical masters
+
+`video vertical <project>` re-renders an existing film as a NATIVE 1080x1920
+version: the same article, re-declared `format: vertical` in a sibling
+workdir (`projects/<slug>/vertical/`), rendered with vertical composition,
+the ratio-based caption band, the vertical title card and the scaled
+watermark. A crop of the landscape master cannot substitute — the caption
+band and title card are burned into the frames, so cropping only cuts them
+away. The Shorts cut is then trimmed from the vertical master (no
+distortion). The auto-producer does this automatically for every film it
+publishes (`--no-shorts` skips it).
 
 ### The auto-producer
 

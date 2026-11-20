@@ -22,6 +22,7 @@ import { registerReview } from "./review-command.js";
 import { registerRevise } from "./revise-command.js";
 import { registerYouTube } from "./youtube-command.js";
 import { registerBilibili } from "./bilibili-command.js";
+import { registerDouyin } from "./douyin-command.js";
 import { registerThumbnail } from "./thumbnail-command.js";
 import { registerShorts } from "./shorts-command.js";
 import { registerValidate } from "./validate-command.js";
@@ -38,6 +39,7 @@ import { registerFinal } from "./render-command.js";
 import { registerRetrospect } from "./retrospect-command.js";
 import { registerLearn } from "./learn-command.js";
 import { registerBacklog } from "./backlog-command.js";
+import { registerVertical } from "./vertical-command.js";
 import { registerPrompts } from "./prompts-command.js";
 import { registerTranslate } from "./translate-command.js";
 import { registerDecision } from "./decision-bench.js";
@@ -76,6 +78,7 @@ for (const register of [
   registerRevise,
   registerYouTube,
   registerBilibili,
+  registerDouyin,
   registerThumbnail,
   registerShorts,
   registerValidate,
@@ -92,6 +95,7 @@ for (const register of [
   registerRetrospect,
   registerLearn,
   registerBacklog,
+  registerVertical,
   registerPrompts,
   registerTranslate,
   registerDecision,

@@ -56,6 +56,13 @@ async function shortsFfmpeg(
   start: number,
   duration: number,
 ): Promise<void> {
+  // Aspect-aware filter (2026-11-20): a landscape master must be
+  // center-cropped to 9:16, but a VERTICAL master (the native vertical
+  // workdir) must only be trimmed — cropping it would cut the composed
+  // frame and its burned-in captions.
+  const filter = (await isVerticalVideo(src))
+    ? "scale=1080:1920"
+    : "crop=ih*9/16:ih,scale=1080:1920";
   await execFileAsync("ffmpeg", [
     "-y",
     "-ss",
@@ -65,7 +72,7 @@ async function shortsFfmpeg(
     "-t",
     String(duration),
     "-vf",
-    "crop=ih*9/16:ih,scale=1080:1920",
+    filter,
     "-c:v",
     "libx264",
     "-preset",
@@ -80,6 +87,31 @@ async function shortsFfmpeg(
     "+faststart",
     out,
   ]);
+}
+
+/** Probe the source frame: true when it is already portrait. */
+async function isVerticalVideo(file: string): Promise<boolean> {
+  try {
+    const { stdout } = await execFileAsync("ffprobe", [
+      "-v",
+      "error",
+      "-select_streams",
+      "v:0",
+      "-show_entries",
+      "stream=width,height",
+      "-of",
+      "csv=p=0",
+      file,
+    ]);
+    const [w, h] = stdout
+      .trim()
+      .split(",")
+      .map((v) => parseInt(v, 10));
+    if (w === undefined || h === undefined) return false;
+    return h > w;
+  } catch {
+    return false;
+  }
 }
 
 export async function runShorts(opts: ShortsOptions): Promise<number> {

@@ -39,6 +39,10 @@ const shortsMock = vi.fn();
 vi.mock("./shorts-command.js", () => ({
   runShorts: (...a: unknown[]) => (shortsMock as (...x: unknown[]) => unknown)(...a),
 }));
+const verticalMock = vi.fn();
+vi.mock("./vertical-command.js", () => ({
+  runVertical: (...a: unknown[]) => (verticalMock as (...x: unknown[]) => unknown)(...a),
+}));
 vi.mock("./backlog-score.js", () => ({
   runBacklogJudge: (...a: unknown[]) => (judgeMock as (...x: unknown[]) => unknown)(...a),
 }));
@@ -348,7 +352,7 @@ describe("runBacklogAuto — the pipeline", () => {
     expect(draftMock).toHaveBeenCalled();
   });
 
-  it("publishes all four lanes after make-en; a publish failure is non-fatal", async () => {
+  it("publishes every lane after make-en; a publish failure is non-fatal", async () => {
     const publishCalls: string[] = [];
     const fire = (ytZhFails: boolean): Promise<number> => {
       const id = `2026-11-19-idea-${publishCalls.length}`;
@@ -366,14 +370,28 @@ describe("runBacklogAuto — the pipeline", () => {
 
     let code = await fire(false);
     expect(code).toBe(0);
-    expect(publishCalls).toEqual(["bili-zh", "yt-zh", "yt-en", "bili-en"]);
+    expect(publishCalls).toEqual([
+      "bili-zh",
+      "yt-zh",
+      "yt-en",
+      "bili-en",
+      "douyin-zh",
+      "douyin-en",
+    ]);
 
     // One lane failing must not fail the run — the MP4s exist, uploads
     // are individually retryable by hand.
     consoleErrors = [];
     code = await fire(true);
     expect(code).toBe(0);
-    expect(publishCalls.slice(4)).toEqual(["bili-zh", "yt-zh", "yt-en", "bili-en"]);
+    expect(publishCalls.slice(6)).toEqual([
+      "bili-zh",
+      "yt-zh",
+      "yt-en",
+      "bili-en",
+      "douyin-zh",
+      "douyin-en",
+    ]);
     expect(consoleErrors.join("\n")).toMatch(/publish-yt-zh failed .* non-fatal/);
   });
 
@@ -382,9 +400,16 @@ describe("runBacklogAuto — the pipeline", () => {
     const seeded = seed({});
     seedJudgeCache(seeded.id);
     shortsMock.mockResolvedValue(0);
-    // The pipeline derives the project dir from the topic slug; the mocked
-    // runShorts doesn't write the derivative, so drop a stand-in first.
-    const ytDir = path.join(repoRoot, "projects", "为什么停火线能冻结几十年", "youtube");
+    verticalMock.mockResolvedValue(0);
+    // The mocked vertical/shorts stages don't write anything; the pipeline
+    // uploads only when the cut exists, so drop a stand-in first.
+    const ytDir = path.join(
+      repoRoot,
+      "projects",
+      "为什么停火线能冻结几十年",
+      "vertical",
+      "youtube",
+    );
     mkdirSync(ytDir, { recursive: true });
     writeFileSync(path.join(ytDir, "shorts.mp4"), Buffer.alloc(8));
     const code = await runBacklogAuto({
@@ -431,64 +456,7 @@ describe("runBacklogAuto — the pipeline", () => {
     });
     expect(code).toBe(0);
     expect(uploadShorts).not.toHaveBeenCalled();
-    const runsDir = path.join(repoRoot, "projects", "为什么停火线能冻结几十年", "tiktok");
-    expect(existsSync(runsDir)).toBe(false);
-  });
-
-  it("runs the shorts derivative + uploads to YouTube Shorts + writes the TikTok lane", async () => {
-    let shortsUploadInput: { slug: string; topic: string } | undefined;
-    const seeded = seed({});
-    seedJudgeCache(seeded.id);
-    shortsMock.mockResolvedValue(0);
-    // The pipeline derives the project dir from the topic slug; the mocked
-    // runShorts doesn't write the derivative, so drop a stand-in first.
-    const ytDir = path.join(repoRoot, "projects", "为什么停火线能冻结几十年", "youtube");
-    mkdirSync(ytDir, { recursive: true });
-    writeFileSync(path.join(ytDir, "shorts.mp4"), Buffer.alloc(8));
-    const code = await runBacklogAuto({
-      cwd: repoRoot,
-      fetchImpl: quotaOk(),
-      runPublish: async () => 0,
-      uploadShorts: async (input) => {
-        shortsUploadInput = input;
-        return 0;
-      },
-      shortsCredentials: { clientId: "c", clientSecret: "s", refreshToken: "r" },
-    });
-    expect(code).toBe(0);
-    expect(shortsUploadInput).toMatchObject({
-      slug: "为什么停火线能冻结几十年",
-      topic: seeded.topic,
-    });
-    const tiktokPath = path.join(
-      repoRoot,
-      "projects",
-      "为什么停火线能冻结几十年",
-      "tiktok",
-      "package.json",
-    );
-    expect(existsSync(tiktokPath)).toBe(true);
-    const tiktok = JSON.parse(readFileSync(tiktokPath, "utf8")) as {
-      platform: string;
-      visibility: string;
-    };
-    expect(tiktok.platform).toBe("tiktok");
-    expect(tiktok.visibility).toBe("public");
-  });
-
-  it("--no-shorts skips the derivative, the upload, and the TikTok lane", async () => {
-    seed({});
-    seedJudgeCache("2026-11-19-top");
-    const uploadShorts = vi.fn(async () => 0);
-    const code = await runBacklogAuto({
-      cwd: repoRoot,
-      fetchImpl: quotaOk(),
-      runPublish: async () => 0,
-      uploadShorts,
-      noShorts: true,
-    });
-    expect(code).toBe(0);
-    expect(uploadShorts).not.toHaveBeenCalled();
+    expect(verticalMock).not.toHaveBeenCalled();
     const runsDir = path.join(repoRoot, "projects", "为什么停火线能冻结几十年", "tiktok");
     expect(existsSync(runsDir)).toBe(false);
   });

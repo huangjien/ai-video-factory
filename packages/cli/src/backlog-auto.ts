@@ -9,7 +9,13 @@ import { findRepoRoot } from "./learn-command.js";
 import { slugifyProjectName } from "./project-path.js";
 import { l10nRootOrThrow } from "./translate-command.js";
 import { runBilibili } from "./bilibili-command.js";
-import { runYouTube } from "./youtube-command.js";
+import { runYouTube, resolveYouTubeCredentials } from "./youtube-command.js";
+import { runShorts } from "./shorts-command.js";
+import {
+  refreshAccessToken,
+  uploadVideo,
+  type YouTubeCredentials,
+} from "@video/youtube";
 import {
   assertTransition,
   isStaleDrafting,
@@ -44,6 +50,12 @@ export interface BacklogAutoOptions {
   dryRun?: boolean;
   /** Minimum remaining percent in BOTH Token Plan windows (default 80). */
   minRemaining?: number;
+  /** Skip the vertical-shorts derivative + Shorts upload (default: on). */
+  noShorts?: boolean;
+  /** Shorts generation provider: mock (default — ffmpeg center-crop of the
+   *  master, free) | minimax (AI vertical clip from thumbnail + shorts-hook
+   *  — spends video-generation quota). */
+  shortsProvider?: "mock" | "minimax";
   installScheduler?: boolean;
   removeScheduler?: boolean;
   schedulerStatus?: boolean;
@@ -56,6 +68,17 @@ export interface BacklogAutoOptions {
   /** TEST SEAM: replaces the publish steps (bilibili/YouTube uploads).
    *  Default uploads for real. Returns the stage exit code. */
   runPublish?: (step: PublishStep) => Promise<number>;
+  /** TEST SEAM: replaces the YouTube-Shorts upload of youtube/shorts.mp4.
+   *  Default uploads for real (private). Returns the stage exit code. */
+  uploadShorts?: (input: {
+    repoRoot: string;
+    slug: string;
+    topic: string;
+    anchors?: string[];
+    creds?: YouTubeCredentials;
+  }) => Promise<number>;
+  /** TEST SEAM: pre-resolved YouTube credentials for the shorts upload. */
+  shortsCredentials?: YouTubeCredentials;
 }
 
 // --- trigger inputs -----------------------------------------------------
@@ -399,6 +422,61 @@ async function defaultPublish(step: PublishStep): Promise<number> {
   return 0;
 }
 
+// --- shorts derivative publishing ---------------------------------------
+
+/** Upload youtube/shorts.mp4 as a YouTube Shorts (private — the human
+ *  flips public). Title = topic + #Shorts (100-char cap); description =
+ *  the LLM shorts-hook. Failures return non-zero; the mp4 stays on disk. */
+async function uploadShortsToYouTube(input: {
+  repoRoot: string;
+  slug: string;
+  topic: string;
+  anchors?: string[];
+  creds?: YouTubeCredentials;
+}): Promise<number> {
+  let creds: YouTubeCredentials;
+  try {
+    creds = input.creds ?? (await resolveYouTubeCredentials());
+  } catch (err) {
+    console.error(`  ! shorts upload skipped: ${(err as Error).message}`);
+    return 1;
+  }
+  const shortsPath = path.join(
+    input.repoRoot,
+    "projects",
+    input.slug,
+    "youtube",
+    "shorts.mp4",
+  );
+  const hookPath = path.join(
+    input.repoRoot,
+    "projects",
+    input.slug,
+    "youtube",
+    "shorts-hook.txt",
+  );
+  const hook = existsSync(hookPath)
+    ? readFileSync(hookPath, "utf8").trim()
+    : "";
+  const title = `${input.topic} #Shorts`.slice(0, 100);
+  const description = (hook !== "" ? `${hook}\n\n` : "") + input.topic;
+  const videoBytes = new Uint8Array(readFileSync(shortsPath));
+  try {
+    const { videoId, watchUrl } = await uploadVideo({
+      creds,
+      videoBytes,
+      title,
+      description,
+      privacyStatus: "private",
+    });
+    console.log(`  ✓ shorts uploaded: https://youtu.be/${videoId} (${watchUrl})`);
+    return 0;
+  } catch (err) {
+    console.error(`  ! shorts upload failed: ${(err as Error).message}`);
+    return 1;
+  }
+}
+
 // --- the verb -----------------------------------------------------------
 
 interface StageResult {
@@ -577,6 +655,71 @@ export async function runBacklogAuto(opts: BacklogAutoOptions): Promise<number> 
     `  ! zhihu has no upload API — create the manual post at zhihu.com 创作中心 with bilibili/package.yaml title/desc/tags + the zh MP4`,
   );
 
+  // Vertical-shorts derivative + YouTube Shorts upload (owner decision
+  // 2026-11-20: every film ships with a vertical cut). Failure non-fatal,
+  // same as the other publish lanes.
+  if (opts.noShorts !== true) {
+    const shortsCode = await runShorts({
+      project: slug,
+      cwd: repoRoot,
+      ...(opts.shortsProvider !== undefined
+        ? { providerName: opts.shortsProvider }
+        : {}),
+    });
+    stages.push({ stage: "shorts", code: shortsCode });
+    if (shortsCode !== 0) {
+      publishFailures.push("shorts (derivative)");
+      console.error(
+        `  ! shorts derivative failed (exit ${shortsCode}) — non-fatal; retry \`video shorts ${slug}\` by hand`,
+      );
+    } else {
+      conditions.push("shorts derivative: youtube/shorts.mp4");
+      const shortsPath = path.join(repoRoot, "projects", slug, "youtube", "shorts.mp4");
+      if (existsSync(shortsPath)) {
+        // TikTok lane reserved: metadata lands as JSON; the upload itself
+        // awaits the Content Posting API (app review) — upload manually.
+        const hookPath = path.join(repoRoot, "projects", slug, "youtube", "shorts-hook.txt");
+        const tiktokDir = path.join(repoRoot, "projects", slug, "tiktok");
+        mkdirSync(tiktokDir, { recursive: true });
+        writeFileSync(
+          path.join(tiktokDir, "package.json"),
+          JSON.stringify(
+            {
+              platform: "tiktok",
+              video: "youtube/shorts.mp4",
+              title: entry.topic,
+              description: existsSync(hookPath) ? readFileSync(hookPath, "utf8").trim() : "",
+              tags: entry.anchors ?? [],
+              visibility: "public",
+              note: "TikTok API lane reserved (Content Posting API needs app review) — upload manually at tiktok.com",
+            },
+            null,
+            2,
+          ) + "\n",
+          "utf8",
+        );
+        const upCode = await (opts.uploadShorts ?? uploadShortsToYouTube)({
+          repoRoot,
+          slug,
+          topic: entry.topic,
+          ...(entry.anchors !== undefined ? { anchors: entry.anchors } : {}),
+          ...(opts.shortsCredentials !== undefined
+            ? { creds: opts.shortsCredentials }
+            : {}),
+        });
+        stages.push({ stage: "shorts-upload", code: upCode });
+        if (upCode !== 0) {
+          publishFailures.push("shorts-upload");
+          console.error(
+            `  ! shorts upload failed (exit ${upCode}) — non-fatal; the vertical cut is at youtube/shorts.mp4`,
+          );
+        } else {
+          console.log(`  ✓ shorts uploaded (YouTube Shorts, private)`);
+        }
+      }
+    }
+  }
+
   await recordRun(
     repoRoot,
     "succeeded",
@@ -658,6 +801,11 @@ export function addAutoCommand(backlog: Command): void {
     .option("--install-scheduler", "install the nightly (01:00-05:00, every 2h) launchd LaunchAgent for this check")
     .option("--remove-scheduler", "remove the nightly LaunchAgent")
     .option("--scheduler-status", "report the nightly LaunchAgent state")
+    .option("--no-shorts", "skip the vertical-shorts derivative + Shorts upload")
+    .option(
+      "--shorts-provider <provider>",
+      "shorts generation: mock (ffmpeg center-crop, default, free) | minimax (AI vertical clip, spends quota)",
+    )
     .option("--cwd <dir>", "repo root (default: walk up to pnpm-workspace.yaml)")
     .action(async (opts: {
       dryRun?: boolean;
@@ -665,6 +813,8 @@ export function addAutoCommand(backlog: Command): void {
       installScheduler?: boolean;
       removeScheduler?: boolean;
       schedulerStatus?: boolean;
+      noShorts?: boolean;
+      shortsProvider?: string;
       cwd?: string;
     }) => {
       process.exitCode = await runBacklogAuto({
@@ -673,6 +823,10 @@ export function addAutoCommand(backlog: Command): void {
         ...(opts.installScheduler === true ? { installScheduler: true } : {}),
         ...(opts.removeScheduler === true ? { removeScheduler: true } : {}),
         ...(opts.schedulerStatus === true ? { schedulerStatus: true } : {}),
+        ...(opts.noShorts === true ? { noShorts: true } : {}),
+        ...(opts.shortsProvider !== undefined
+          ? { shortsProvider: opts.shortsProvider as "mock" | "minimax" }
+          : {}),
         ...(opts.cwd !== undefined ? { cwd: opts.cwd } : {}),
       });
     });

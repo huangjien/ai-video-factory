@@ -665,7 +665,7 @@ ideas:
       - entity resolution
   - id: 2026-11-19-为什么演习要专门养一支-假想敌部队
     topic: 为什么演习要专门养一支「假想敌部队」
-    status: drafting
+    status: drafted
     source: harvest:docs/plans/2026-11-18-military-ai-topic-backlog-design.md
     created: 2026-11-19
     note: "一支专职「打赢自己人」的精锐部队违反直觉，本质是评价指标被博弈的经典案例，普适性强 —
@@ -678,6 +678,8 @@ ideas:
       - 朱日和蓝军旅
       - 红军扮演部队OPFOR
     drafting_at: 2026-11-20T20:12:26.856Z
+    project: 为什么演习要专门养一支-假想敌部队
+    drafted_at: 2026-11-20T20:57:40.145Z
   - id: 2026-11-19-为什么军官要定期轮岗
     topic: 为什么军官要定期轮岗
     status: proposed

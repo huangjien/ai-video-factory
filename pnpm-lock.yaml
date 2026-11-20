@@ -286,6 +286,9 @@ importers:
       '@video/bilibili':
         specifier: workspace:*
         version: link:../bilibili
+      '@video/douyin':
+        specifier: workspace:*
+        version: link:../douyin
       '@video/draft':
         specifier: workspace:*
         version: link:../draft
@@ -349,6 +352,21 @@ importers:
       yaml:
         specifier: ^2.7.0
         version: 2.9.1
+
+  packages/douyin:
+    dependencies:
+      '@video/llm':
+        specifier: workspace:*
+        version: link:../llm
+      '@video/prompts':
+        specifier: workspace:*
+        version: link:../prompts
+      yaml:
+        specifier: ^2.7.0
+        version: 2.9.1
+      zod:
+        specifier: ^3.25.0
+        version: 3.25.76
 
   packages/draft:
     dependencies:

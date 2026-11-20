@@ -75,6 +75,9 @@
     },
     {
       "path": "packages/theme"
+    },
+    {
+      "path": "packages/douyin"
     }
   ]
 }

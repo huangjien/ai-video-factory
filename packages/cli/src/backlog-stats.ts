@@ -31,6 +31,10 @@ export interface BacklogStats {
   total: number;
   counts: Record<BacklogTier, number>;
   bySource: { manual: number; harvest: number };
+  /** Entries that reached Douyin (douyin/item_id.txt exists). Douyin is
+   *  its own lane, not a tier: a film can be published on Douyin and
+   *  nowhere else. */
+  douyin: number;
   /** id → tier → project, only entries that reached drafted or beyond. */
   drafted: { id: string; tier: BacklogTier; project: string }[];
   anomalies: BacklogAnomaly[];
@@ -62,6 +66,7 @@ export function deriveBacklogStats(
     published: 0,
   };
   const bySource = { manual: 0, harvest: 0 };
+  let douyin = 0;
   const drafted: BacklogStats["drafted"] = [];
   const anomalies: BacklogAnomaly[] = [];
 
@@ -78,6 +83,15 @@ export function deriveBacklogStats(
     counts[tier] += 1;
     if (TIER_ORDER.indexOf(tier) > 0 && entry.project !== undefined) {
       drafted.push({ id: entry.id, tier, project: entry.project });
+    }
+
+    if (
+      entry.project !== undefined &&
+      existsSync(
+        path.join(repoRoot, "projects", entry.project, "douyin", "item_id.txt"),
+      )
+    ) {
+      douyin += 1;
     }
 
     // Hygiene: the store says drafted but the evidence is gone (no
@@ -97,6 +111,7 @@ export function deriveBacklogStats(
     total: entries.length,
     counts,
     bySource,
+    douyin,
     drafted,
     anomalies,
   };
@@ -131,6 +146,7 @@ export async function runBacklogStats(opts: {
   );
   console.log(`  rendered: ${stats.counts.rendered + stats.counts.published}`);
   console.log(`  published: ${stats.counts.published}`);
+  console.log(`  douyin:    ${stats.douyin}`);
   console.log(
     `by source: manual ${stats.bySource.manual}, harvest ${stats.bySource.harvest}`,
   );

@@ -77,6 +77,7 @@ export const ADVANCED_VERBS: readonly string[] = [
   "shorts",
   "youtube",
   "bilibili",
+  "douyin",
   "studio",
   "qa",
   "review",

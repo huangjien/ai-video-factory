@@ -12,6 +12,7 @@ import "@video/agent-storyboard";
 import "@video/audio-plan";
 import "@video/bilibili";
 import "@video/draft";
+import "@video/douyin";
 import "@video/motion";
 import "@video/qa";
 import "@video/research";

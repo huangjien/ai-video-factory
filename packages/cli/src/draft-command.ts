@@ -128,6 +128,11 @@ export interface DraftOptions {
    *  article.md frontmatter (`title_style:`) so `video make` picks it
    *  up; the faces are vendored in the workspace's `assets/fonts/`. */
   titleStyle?: string;
+  /** 2026-11-20: video format — the single frame-dims source. Stamped
+   *  into article.md frontmatter (`format:`) so the storyboard compiler,
+   *  image prompts and the requested image raster all derive from it.
+   *  landscape (default) = 1920×1080; vertical = 1080×1920. */
+  format?: "landscape" | "vertical";
   /** Narration backend — written into article.md frontmatter
    *  (`tts_provider:` + `voice:`) so `video make` picks it up.
    *  minimax-system | voicebox:<profile> | f5tts | edge. Also a
@@ -990,6 +995,12 @@ export async function runDraft(opts: DraftOptions): Promise<number> {
   if (opts.titleStyle !== undefined) {
     stamped = stampFrontmatterKey(stamped, "title_style", opts.titleStyle);
   }
+  // 2026-11-20: the frame-dims source is durable per-film config — the
+  // storyboard compiler derives width/height from it, so it must be in
+  // article.md where this run's storyboard derivation reads it.
+  if (opts.format !== undefined) {
+    stamped = stampFrontmatterKey(stamped, "format", opts.format);
+  }
   // Same contract as image_provider: the narration backend is durable
   // project config (tts_provider + voice), and --tts / the video-ask
   // answer is the explicit value that always wins.
@@ -1026,7 +1037,11 @@ export async function runDraft(opts: DraftOptions): Promise<number> {
 
   let parsedArticle: ParsedArticle | null = null;
   try {
-    const { article, recoveredCount } = parseArticleWithRecovery(markdown);
+    // Parse the STAMPED article — the durable-config stamps (format,
+    // image_style, visual_mode…) must reach this run's storyboard
+    // derivation, or a `--format vertical` draft writes a 1920×1080
+    // storyboard.yaml that approve/preview/shorts read until the next make.
+    const { article, recoveredCount } = parseArticleWithRecovery(stamped);
     parsedArticle = article;
     if (recoveredCount > 0) {
       console.error(
@@ -1154,6 +1169,7 @@ export interface DraftCliOpts {
   imageProvider?: string;
   channelProfile?: string;
   titleStyle?: string;
+  format?: "landscape" | "vertical";
   tts?: string;
   style?: string;
   captions?: boolean;
@@ -1204,6 +1220,7 @@ export function draftCliOptsToDraftOptions(
     ...(opts.titleStyle !== undefined
       ? { titleStyle: opts.titleStyle }
       : {}),
+    ...(opts.format !== undefined ? { format: opts.format } : {}),
     ...(opts.tts !== undefined ? { tts: opts.tts } : {}),
     ...(opts.style !== undefined ? { style: opts.style } : {}),
     noCaptions: opts.captions === false,
@@ -1344,6 +1361,17 @@ export function registerDraft(program: Command): void {
     .option(
       "--channel-profile <name>",
       "v0.11: cross-video channel grammar profile stamped into article.md frontmatter and carried to the render plan (currently: chinese-storybook). Distinct from --image-style, which is the per-film art style.",
+    )
+    .option(
+      "--format <format>",
+      "video format the frame dims derive from: landscape (default, 1920x1080) | vertical (1080x1920, Shorts/抖音) — stamped into article.md frontmatter",
+      (v) => {
+        const allowed = ["landscape", "vertical"];
+        if (!allowed.includes(v)) {
+          throw new Error(`--format must be ${allowed.join("|")}, got: ${v}`);
+        }
+        return v as "landscape" | "vertical";
+      },
     )
     .option(
       "--title-style <style>",

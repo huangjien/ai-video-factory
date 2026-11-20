@@ -134,13 +134,23 @@ export function imageCacheKey(input: ImageCacheKeyInput): string {
 
 /** Requested image raster size for a provider — the cache-key term and the
  *  generate call must agree, so both derive it from here. Mock placeholders
- *  are intentionally tiny (64×36); hosted providers get full HD. */
-export function requestedImageSize(provider: string): {
+ *  are intentionally tiny (64×36); hosted providers get full HD. Vertical
+ *  (2026-11-20) flips to 1080×1920 — image providers snap to their native
+ *  9:16 raster via the existing aspect_ratio machinery. */
+export function requestedImageSize(
+  provider: string,
+  format: "landscape" | "vertical" = "landscape",
+): {
   width: number;
   height: number;
 } {
-  return provider === "mock"
-    ? { width: 64, height: 36 }
+  if (provider === "mock") {
+    return format === "vertical"
+      ? { width: 36, height: 64 }
+      : { width: 64, height: 36 };
+  }
+  return format === "vertical"
+    ? { width: 1080, height: 1920 }
     : { width: 1920, height: 1080 };
 }
 

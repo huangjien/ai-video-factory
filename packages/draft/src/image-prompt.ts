@@ -136,6 +136,9 @@ export interface ScenePromptInput {
 export interface ScenePromptContext {
   style?: ImageStyle | undefined;
   learned?: string | undefined;
+  /** Video format — flips the Frame line the image model reads. Absent =
+   *  landscape (all pre-2026-11-20 callers). */
+  format?: "landscape" | "vertical" | undefined;
   /** Declared era/region/culture for the whole video, from article.md
    *  frontmatter `setting:` — e.g. "Tang-dynasty China, 626 CE". Without it
    *  the expander only has the narration to guess from, which is how a Tang
@@ -222,7 +225,9 @@ export function buildScenePromptMessages(
   }
   parts.push(
     "",
-    "Frame: 16:9 landscape, 1920x1080, a still that will move under a slow zoom or pan and carry caption overlays in the lower third.",
+    context.format === "vertical"
+      ? "Frame: 9:16 vertical, 1080x1920, a still that will move under a slow zoom or pan and carry caption overlays in the lower third — compose tall: the subject stacks vertically and wide vistas crop to their center."
+      : "Frame: 16:9 landscape, 1920x1080, a still that will move under a slow zoom or pan and carry caption overlays in the lower third.",
     "",
     "If the visual direction is a bare category or a narration fragment, invent the concrete subject, setting and action that make it visible. Write the brief in English, following the six parts in the system prompt, then output it alone.",
   );

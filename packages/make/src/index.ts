@@ -978,7 +978,7 @@ export async function generateSceneVisuals(
             process.env[PROVIDER_ENV_KEYS[n] ?? ""] !== undefined,
         ).map((n) => ({ name: n, provider: constructImageProvider(n) })),
       ];
-  const reqSize = requestedImageSize(opts.provider);
+  const reqSize = requestedImageSize(opts.provider, article.frontmatter.format);
   const reqWidth = reqSize.width;
   const reqHeight = reqSize.height;
 
@@ -1181,6 +1181,9 @@ export async function generateSceneVisuals(
             // v0.10: the declared era/region/culture. Absent in older
             // articles, in which case the expander behaves exactly as before.
             setting: article.frontmatter.setting,
+            ...(article.frontmatter.format !== undefined
+              ? { format: article.frontmatter.format }
+              : {}),
             characterRoot,
             // The borrowed picture is attached to the request; the brief
             // says what it is for.

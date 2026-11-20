@@ -258,8 +258,24 @@ describe("articleToStoryboardYaml (VDSL sync)", () => {
       id: "ai-think",
       language: "zh-CN",
       fps: 30,
+      width: 1920,
+      height: 1080,
+      format: "landscape",
     });
     expect(parsed["style"]).toMatchObject({ theme: "paper-light" });
+  });
+
+  it("format vertical flips the frame dims to 1080x1920", () => {
+    const yaml = articleToStoryboardYaml({
+      ...fixture,
+      frontmatter: { ...fixture.frontmatter, format: "vertical" },
+    });
+    const parsed = parseYaml(yaml) as { project: Record<string, unknown> };
+    expect(parsed.project).toMatchObject({
+      width: 1080,
+      height: 1920,
+      format: "vertical",
+    });
   });
 
   it("emits a defaults block (schema_version 0.2) when frontmatter sets default_renderer", () => {

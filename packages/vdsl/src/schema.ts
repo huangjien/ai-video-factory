@@ -540,6 +540,11 @@ const projectSchema = z
     fps: z.number().int().positive(),
     width: z.number().int().positive(),
     height: z.number().int().positive(),
+    /** 2026-11-20: video format the dims were derived from — vertical-aware
+     *  components (caption band, brand scale) read this instead of
+     *  re-deriving orientation from width/height. Absent = landscape
+     *  (all pre-2026-11-20 storyboards). */
+    format: z.enum(["landscape", "vertical"]).optional(),
   })
   .strict();
 

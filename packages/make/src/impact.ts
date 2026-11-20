@@ -121,7 +121,7 @@ export function computeMakeImpact(
   );
   if (provider !== "none") {
     const selfRendered = selfRenderedSceneNumbers(projectRoot);
-    const reqSize = requestedImageSize(provider);
+    const reqSize = requestedImageSize(provider, article.frontmatter.format);
     const reqWidth = reqSize.width;
     const reqHeight = reqSize.height;
     const imageStyle = resolveImageStyle(article.frontmatter.image_style);

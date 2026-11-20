@@ -63,6 +63,11 @@ export const ArticleFrontmatterSchema = z
      *  parsing); resolveImageStyle coerces unknown values to
      *  flat-vector at the use site. */
     image_style: z.string().optional(),
+    /** 2026-11-20: video format — the single source for frame dims.
+     *  landscape = 1920×1080 (default, all legacy articles), vertical =
+     *  1080×1920 (Shorts/抖音). The storyboard compiler, image prompts and
+     *  the requested image raster all derive from this. */
+    format: z.enum(["landscape", "vertical"]).optional(),
     /** "image" = every scene gets a generated illustration. The drafter
      *  writes no component keywords, because a keyword routes the scene
      *  to a self-rendered geometry component and it loses its picture.
@@ -263,6 +268,11 @@ export function articleMdToRawArticle(article: ParsedArticle): RawArticle {
 export function articleToStoryboardYaml(article: ParsedArticle): string {
   const f = article.frontmatter;
   const theme = f.theme ?? DEFAULT_THEME_NAME;
+  // Format is the single frame-dims source (2026-11-20): the storyboard
+  // project block carries the final numbers and everything downstream
+  // (render plan, image raster, brand scale) reads them from here.
+  const dims =
+    f.format === "vertical" ? { width: 1080, height: 1920 } : { width: 1920, height: 1080 };
   const lines: string[] = [
     `schema_version: "0.2"`,
     ``,
@@ -273,8 +283,9 @@ export function articleToStoryboardYaml(article: ParsedArticle): string {
     `  id: ${f.project}`,
     `  language: ${f.language}`,
     `  fps: 30`,
-    `  width: 1920`,
-    `  height: 1080`,
+    `  width: ${dims.width}`,
+    `  height: ${dims.height}`,
+    `  format: ${f.format ?? "landscape"}`,
     ``,
     `style:`,
     `  theme: ${yamlStr(theme)}`,
@@ -284,11 +295,11 @@ export function articleToStoryboardYaml(article: ParsedArticle): string {
     ``,
     `scenes:`,
   ];
+  // Map scenes → prose sections (same 1:N rule as recoverEmptyNarrations)
+  // so visual builders can pull structured data from the article body.
   const captionsOn = f.no_captions !== true;
   const captionSource =
     f.captions_source === "caption" ? "caption" : "narration";
-  // Map scenes → prose sections (same 1:N rule as recoverEmptyNarrations)
-  // so visual builders can pull structured data from the article body.
   const sections = parseProseSections(article.proseBody);
   const perSection =
     sections.length === 0

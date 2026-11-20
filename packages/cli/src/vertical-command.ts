@@ -3,8 +3,12 @@ import { statSync } from "node:fs";
 import path from "node:path";
 import type { Command } from "commander";
 import { parse as parseYaml, stringify as yamlStringify } from "yaml";
-import { initState, writeProjectState } from "@video/workflow";
-import { splitFrontmatterParts } from "@video/draft";
+import { initState, writeProjectState, approveCheckpoint } from "@video/workflow";
+import {
+  articleToStoryboardYaml,
+  parseArticleWithRecovery,
+  splitFrontmatterParts,
+} from "@video/draft";
 import { resolveProjectDir } from "./project-path.js";
 import { runMakeCli } from "./make-command.js";
 
@@ -112,6 +116,25 @@ export async function runVertical(opts: VerticalOptions): Promise<number> {
   const projectId =
     typeof fm?.["project"] === "string" ? fm["project"] : path.basename(projectRoot);
   await writeProjectState(verticalRoot, initState(projectId));
+
+  // Derive the vertical storyboard up front and approve it, so make's
+  // render-preview passes its gate on the FIRST pass (the landscape flow
+  // gets this for free because the draft step leaves an approved
+  // storyboard behind; the vertical workdir is derived, not drafted).
+  const verticalMd = readFileSync(path.join(verticalRoot, "article.md"), "utf8");
+  const verticalStoryboard = articleToStoryboardYaml(
+    parseArticleWithRecovery(verticalMd).article,
+  );
+  writeFileSync(
+    path.join(verticalRoot, "storyboard", "storyboard.yaml"),
+    verticalStoryboard,
+    "utf8",
+  );
+  const approved = await approveCheckpoint(verticalRoot, { stage: "storyboard" });
+  if (!approved.ok) {
+    console.error(`✗ could not approve the vertical storyboard: ${approved.error}`);
+    return 1;
+  }
 
   const code = await runMakeCli({
     project: verticalRoot,

@@ -703,7 +703,7 @@ ideas:
       - 航母着舰事故统计
   - id: 2026-11-19-为什么ai会一本正经地胡说
     topic: 为什么AI会一本正经地胡说
-    status: proposed
+    status: drafted
     source: harvest:docs/plans/2026-11-18-military-ai-topic-backlog-design.md
     created: 2026-11-19
     note: "大众每天都在用AI却不理解它为何自信地犯错，「无法根除」的结论反直觉且与切身利益相关 —
@@ -714,6 +714,9 @@ ideas:
       - 语言模型采样机制
       - RLHF人类反馈强化学习
       - 幻觉评测研究
+    drafting_at: 2026-11-20T01:00:03.929Z
+    project: 为什么ai会一本正经地胡说
+    drafted_at: 2026-11-20T01:28:57.598Z
   - id: 2026-11-19-为什么预备役存在
     topic: 为什么预备役存在
     status: proposed
@@ -728,7 +731,7 @@ ideas:
       - 国家动员体系
   - id: 2026-11-19-为什么会有总参谋部
     topic: 为什么会有总参谋部
-    status: proposed
+    status: drafted
     source: harvest:docs/plans/2026-11-18-military-ai-topic-backlog-design.md
     created: 2026-11-19
     note: "一群不上战场的军官如何主宰战争，制度起源故事完整，适合讲组织设计的演化 — 计划与执行分离，让一个不直接指挥部队的专职机构负责作战设计 — ⚠
@@ -738,6 +741,9 @@ ideas:
     anchors:
       - 普鲁士总参谋部
       - 现代总参谋部制度
+    drafting_at: 2026-11-20T11:04:38.564Z
+    project: 为什么会有总参谋部
+    drafted_at: 2026-11-20T11:38:01.884Z
   - id: 2026-11-19-shadow-mode-ai-decision-surfaces
     topic: Shadow-mode AI decision surfaces
     status: dropped
@@ -1130,4 +1136,10 @@ ideas:
     anchors:
       - 朱日和
       - 欧文堡
+  - id: 2026-11-20-ai-代理-有三种使用模式-1-管道式-做完一步移交给下一步-2-编排式-通过编
+    topic: AI 代理，有三种使用模式：（1）管道式（做完一步移交给下一步），（2）编排式（通过编排器来指挥），（3）白板式（每个 AI
+      自己阅读白板信息，自由行动）。
+    status: idea
+    source: manual
+    created: 2026-11-20
 

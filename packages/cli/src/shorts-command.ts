@@ -165,14 +165,18 @@ export async function runShorts(opts: ShortsOptions): Promise<number> {
           .digest("hex"),
     };
   } else {
-    // Mock path — mechanical ffmpeg clip from final.mp4.
-    // v0.4 (T5): when the user didn't pin one, default `start` snaps
-    // to the second scene's start time (skips the Title card and the
-    // silent intro gap). When only one scene exists we fall back to 0.
-    const src = path.join(projectRoot, "output", "final-faststart.mp4");
-    if (!existsSync(src)) {
-      console.error(`missing final mp4: ${src}`);
-      console.error(`  run video final first`);
+    // Mock path — mechanical ffmpeg clip from the finished film. The
+    // make flow writes output/final-mixed.mp4; `video final` additionally
+    // writes final-faststart.mp4 — prefer the latter, fall back to the
+    // mixed master so a make-produced film can be cut without a final
+    // pass (2026-11-20: the OPFOR film had only final-mixed.mp4).
+    const outDir = path.join(projectRoot, "output");
+    const src = ["final-faststart.mp4", "final-mixed.mp4"]
+      .map((name) => path.join(outDir, name))
+      .find((p) => existsSync(p));
+    if (src === undefined) {
+      console.error(`missing final mp4 under ${outDir} (final-faststart.mp4 / final-mixed.mp4)`);
+      console.error(`  run \`video make <project>\` first`);
       return 1;
     }
     const duration = opts.durationSec ?? 60;

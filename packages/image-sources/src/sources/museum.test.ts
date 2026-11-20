@@ -99,6 +99,41 @@ describe("parseOpenverseResults", () => {
     expect(out[0]?.owned).toBe(false);
   });
 
+  it("skips a vector original — Openverse cannot rasterize it either", () => {
+    // Wikimedia's own file for the Mask of Tutankhamun is an SVG, and
+    // Openverse's thumbnail endpoint answers 424 for exactly that file.
+    // Offering it would produce a candidate that can never be used.
+    const out = parseOpenverseResults(
+      {
+        results: [
+          {
+            title: "Mask of Tutankhamun",
+            url: "https://upload.wikimedia.org/wikipedia/commons/6/68/Mask_of_Tutankhamun.svg",
+            thumbnail: "https://api.openverse.org/v1/images/e58c93e8/thumb/",
+            foreign_landing_url: "https://example.com/mask",
+            creator: "",
+            license: "cc0",
+            width: 640,
+            height: 900,
+          },
+          {
+            title: "Funeral mask",
+            url: "https://live.staticflickr.org/578/21871530520_b.jpg",
+            thumbnail: "https://live.staticflickr.org/578/21871530520_b.jpg",
+            foreign_landing_url: "https://example.com/funeral",
+            creator: "Someone",
+            license: "cc0",
+            width: 1024,
+            height: 1024,
+          },
+        ],
+      },
+      "mask of tutankhamun",
+    );
+    expect(out).toHaveLength(1);
+    expect(out[0]?.fileUrl).toContain("staticflickr");
+  });
+
   it("survives an empty payload", () => {
     expect(parseOpenverseResults({}, "q")).toEqual([]);
     expect(parseOpenverseResults({ results: [] }, "q")).toEqual([]);

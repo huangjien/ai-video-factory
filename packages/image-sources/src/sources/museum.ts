@@ -230,8 +230,10 @@ export function parseOpenverseResults(
     };
     // Openverse does not filter by file type, and Wikimedia's own file
     // for the Mask of Tutankhamun is an SVG — a vector the pipeline
-    // cannot use as a frame. Take the archive's rasterized preview.
-    const fileUrl = rasterUrl(r.url, r.thumbnail);
+    // cannot use as a frame. Its thumbnail endpoint cannot rasterize it
+    // either (424 Failed Dependency), so the candidate is skipped and
+    // the next one — a real photograph — takes its place.
+    const fileUrl = rasterUrl(r.url, r.thumbnail, { trustThumbnail: false });
     if (fileUrl === null) continue;
     const license = (r.license ?? "").toUpperCase();
     out.push({

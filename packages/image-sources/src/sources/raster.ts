@@ -27,16 +27,21 @@ export function isRasterUrl(url: string): boolean {
  * The best usable URL for a candidate: the original when it is a raster,
  * else the archive's rasterized preview, else null.
  *
- * `thumbnail` is the archive's own small JPEG — it is what a preview
- * needs, and it is the only raster a vector original can offer.
+ * `thumbnail` is the archive's own small JPEG. Whether it can be trusted
+ * depends on the archive: Wikimedia rasterizes an SVG itself and serves
+ * a reliable PNG thumb, while Openverse's thumbnail endpoint answers
+ * `424 Failed Dependency` for exactly the vector files that need it. A
+ * source that cannot rasterize says so with `trustThumbnail: false`, and
+ * the candidate is skipped instead — the next candidate is a real one.
  */
 export function rasterUrl(
   original: string | undefined,
   thumbnail: string | undefined,
+  opts: { trustThumbnail?: boolean } = {},
 ): string | null {
   const o = (original ?? "").trim();
   const t = (thumbnail ?? "").trim();
   if (o !== "" && isRasterUrl(o)) return o;
-  if (t !== "" && isRasterUrl(t)) return t;
+  if (opts.trustThumbnail === true && t !== "" && isRasterUrl(t)) return t;
   return null;
 }

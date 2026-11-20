@@ -83,9 +83,9 @@ export function parseCommonsTitleResponse(
   );
   const copyrighted = metaValue(meta, "Copyrighted").toLowerCase();
   if (copyrighted === "true") return null;
-  // A lead image can be an SVG (a diagram, a seal). The thumbnail the
-  // API returns is the raster version of it.
-  const fileUrl = rasterUrl(info.url, info.thumburl);
+  // A lead image can be an SVG (a diagram, a seal). Wikimedia rasterizes
+  // it itself, so its thumbnail is a dependable raster of the original.
+  const fileUrl = rasterUrl(info.url, info.thumburl, { trustThumbnail: true });
   if (fileUrl === null) return null;
   return {
     source: "wikipedia",

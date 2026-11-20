@@ -3,6 +3,7 @@ import {
   dedupe,
   filterFree,
   pickBest,
+  resolutionAsFrame,
   resolveSceneSource,
   retrieveForScenes,
   searchAllSources,
@@ -276,5 +277,53 @@ describe("retrieveForScenes", () => {
     const source = fakeSource("commons", [candidate({ license: "CC BY 4.0" })]);
     const out = await retrieveForScenes(plan, { sources: [source] });
     expect(out.get(1)?.mode).toBe("none");
+  });
+});
+
+describe("resolutionAsFrame", () => {
+  // A reference the providers cannot take is a picture that never reaches
+  // the screen. When the picture may BE the frame, it becomes the frame
+  // instead of being dropped.
+
+  it("turns a reference into a frame when the picture may be one", () => {
+    const pic = candidate();
+    const out = resolutionAsFrame({
+      scene: 3,
+      mode: "reference",
+      candidate: pic,
+      digest: "ref:abc",
+      note: "reference picture",
+    });
+    expect(out.mode).toBe("direct");
+    // The digest changes with the mode — the same picture as a reference
+    // and as the frame are different scene inputs.
+    expect(out.digest).toMatch(/^direct:/);
+    expect(out.digest).not.toBe("ref:abc");
+    expect(out.candidate).toBe(pic);
+    expect(out.note).toContain("Portrait of Li Shimin");
+  });
+
+  it("leaves a picture that may not be the frame alone", () => {
+    // A cast sheet must not become the frame: showing the drawing instead
+    // of the person is not what a portrait scene needs.
+    const resolution = {
+      scene: 3,
+      mode: "reference" as const,
+      candidate: candidate({ directEligible: false, owned: true }),
+      digest: "ref:abc",
+      note: "reference picture",
+    };
+    expect(resolutionAsFrame(resolution)).toBe(resolution);
+  });
+
+  it("leaves a scene without a picture alone", () => {
+    const resolution = {
+      scene: 3,
+      mode: "none" as const,
+      candidate: null,
+      digest: "",
+      note: "no freely-licensed picture found",
+    };
+    expect(resolutionAsFrame(resolution)).toBe(resolution);
   });
 });

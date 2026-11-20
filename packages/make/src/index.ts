@@ -66,6 +66,7 @@ import {
   readAllSceneSources,
   sourceLogLine,
   writeAttributionFile,
+  writeHistoricalSummaryFile,
   writeSceneSource,
   type PictureSource,
   type SceneSourcePlan,
@@ -1011,6 +1012,9 @@ export async function generateSceneVisuals(
     workspaceRoot: wsRoot,
     provider: expansionProvider,
     mode: sourceMode,
+    // Whether a reference picture can reach a provider at all. When it
+    // cannot, the picture becomes the frame instead of being dropped.
+    referenceCapable: chain.some((c) => c.provider.supportsReferences === true),
     ...(opts.sourcePlan !== undefined ? { plan: opts.sourcePlan } : {}),
     ...(opts.pictureSources !== undefined
       ? { sources: opts.pictureSources }
@@ -1112,49 +1116,36 @@ export async function generateSceneVisuals(
     let borrowed: { bytes: Uint8Array; record: SceneSourceRecord } | null = null;
     if (resolution !== undefined && resolution.candidate !== null) {
       const candidate = resolution.candidate;
-      // A reference needs a provider with an edits endpoint. Without one
-      // the picture would be silently ignored, so it is not used at all.
-      const referenceCapable = chain.some(
-        (c) => c.provider.supportsReferences === true,
-      );
-      if (resolution.mode === "reference" && !referenceCapable) {
+      const downloaded = await downloadCandidate(candidate);
+      const normalized =
+        downloaded === null ? null : await normalizeToJpeg(downloaded.bytes);
+      if (downloaded === null || normalized === null) {
         lines.push(
-          `scene_${i + 1}: no reference-capable image provider — generating without the historical picture`,
+          `scene_${i + 1}: could not use the historical picture — generating without it`,
         );
+        // The key must not claim a picture the scene does not use, or the
+        // next run would keep the picture-less image as "fresh".
         sourceDigest = "";
         cacheKey = cacheKeyFor(sourceDigest);
       } else {
-        const downloaded = await downloadCandidate(candidate);
-        const normalized =
-          downloaded === null ? null : await normalizeToJpeg(downloaded.bytes);
-        if (downloaded === null || normalized === null) {
-          lines.push(
-            `scene_${i + 1}: could not use the historical picture — generating without it`,
-          );
-          // The key must not claim a picture the scene does not use, or the
-          // next run would keep the picture-less image as "fresh".
-          sourceDigest = "";
-          cacheKey = cacheKeyFor(sourceDigest);
-        } else {
-          borrowed = {
-            bytes: normalized.bytes,
-            record: {
-              schema: "scene-source/1",
-              mode: resolution.mode,
-              source: candidate.source,
-              title: candidate.title,
-              author: candidate.author,
-              license: candidate.license,
-              licenseUrl: candidate.licenseUrl,
-              pageUrl: candidate.pageUrl,
-              fileUrl: candidate.fileUrl,
-              localPath: candidate.localPath,
-              digest: sourceDigest,
-              sha256: downloaded.sha256,
-              retrievedAt: new Date().toISOString(),
-            },
-          };
-        }
+        borrowed = {
+          bytes: normalized.bytes,
+          record: {
+            schema: "scene-source/1",
+            mode: resolution.mode,
+            source: candidate.source,
+            title: candidate.title,
+            author: candidate.author,
+            license: candidate.license,
+            licenseUrl: candidate.licenseUrl,
+            pageUrl: candidate.pageUrl,
+            fileUrl: candidate.fileUrl,
+            localPath: candidate.localPath,
+            digest: sourceDigest,
+            sha256: downloaded.sha256,
+            retrievedAt: new Date().toISOString(),
+          },
+        };
       }
     }
 
@@ -1303,6 +1294,31 @@ export async function generateSceneVisuals(
     if (r === undefined) continue;
     outputs.push(...r.lines);
     if (r.generated !== null) generatedImages.push(r.generated);
+  }
+
+  // The plan-and-outcome summary. The console lines below are gone when
+  // the run ends, so the file is the durable record of what the film
+  // ASKED for a picture and what each scene actually got — including the
+  // scenes that asked and got nothing.
+  if (historical.planned && historical.plan.length > 0) {
+    const summary = writeHistoricalSummaryFile(imageDir, {
+      plan: historical.plan,
+      resolutions: historical.resolutions,
+    });
+    outputs.push(
+      `assets/images/${path.basename(summary)} (plan + outcome for ${historical.plan.length} scene(s))`,
+    );
+  } else if (sourceMode === "off") {
+    // The film turned the feature off. Say so in the file, so a table
+    // from an earlier run cannot be read as this run's outcome.
+    const summary = writeHistoricalSummaryFile(imageDir, {
+      plan: [],
+      resolutions: new Map(),
+      disabled: true,
+    });
+    outputs.push(
+      `assets/images/${path.basename(summary)} (historical pictures off for this film)`,
+    );
   }
 
   // The attribution file is written from the SIDECARS on disk, not from

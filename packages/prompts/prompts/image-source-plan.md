@@ -16,7 +16,9 @@ HOW THE PICTURE WILL BE USED
   scene needs a moment a still cannot supply (a battle, a crowd, a departure,
   a face in a specific light), but a picture of the same people, place or
   object would fix the likeness, the costume and the period detail. The image
-  model draws the scene, using the picture as a visual reference.
+  model draws the scene, using the picture as a visual reference. THE PICTURE
+  ITSELF IS NOT ON SCREEN — the audience never sees it. Only choose this
+  when the composed moment is worth more than the archive picture.
 - `none` — no picture is used. Choose this for abstract concepts, modern
   subjects, generic atmosphere, invented characters, and anything for which
   no picture could plausibly be found.
@@ -41,9 +43,17 @@ RULES
   in its original script first, then the era or work — "李世民",
   "Emperor Taizong of Tang", "玄武門の変 歌川芳虎". A translation the
   archive does not use finds nothing.
+- A Chinese video about a non-Chinese subject must use the ARCHIVE's name,
+  not the Chinese transliteration. "毛奇" is a Qing-dynasty naval officer in
+  the archive; the Prussian field marshal is "Helmuth von Moltke", and only
+  that finds his portrait. When the Chinese name is the one the audience
+  knows but the archive does not have it, put the archive's name in `query`
+  and the Chinese name in `subject` — the subject is the fallback, and a
+  wrong subject is worse than a right query.
 - Prefer `direct` for a single identifiable subject and `reference` for a
   moment. When both are defensible, choose `direct` — it costs no image
-  generation and it is the more honest frame.
+  generation, it puts a real photograph or painting on screen, and it is the
+  more honest frame.
 - Keep the reasoning in one short clause. It is written to the run log.
 
 OUTPUT — YAML only, no code fence, no commentary, no reasoning of your own:
@@ -52,7 +62,7 @@ scenes:
   - scene: 1
     historical: true
     subject: "Li Shimin"
-    query: "Li Shimin Tang dynasty portrait painting"
+    query: "Li Shimin"
     mode: direct
     reason: "a named emperor; a period portrait is the frame itself"
   - scene: 2
@@ -61,6 +71,12 @@ scenes:
     query: ""
     mode: none
     reason: "an abstract idea about governance"
+  - scene: 3
+    historical: true
+    subject: "毛奇"
+    query: "Helmuth von Moltke"
+    mode: direct
+    reason: "the Prussian field marshal; the archive knows him in Latin script"
 
 Emit ONE entry for EVERY scene, in the order the scenes are given, and use
 the scene numbers exactly as given.

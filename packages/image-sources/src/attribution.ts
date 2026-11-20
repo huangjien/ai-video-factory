@@ -6,7 +6,12 @@ import {
   writeFileSync,
 } from "node:fs";
 import path from "node:path";
-import type { PictureSourceName, SourceMode } from "./types.js";
+import type {
+  PictureSourceName,
+  SceneSourcePlan,
+  SceneSourceResolution,
+  SourceMode,
+} from "./types.js";
 
 /**
  * The audit trail for borrowed pictures.
@@ -42,6 +47,13 @@ export interface SceneSourceRecord {
 }
 
 export const ATTRIBUTION_FILENAME = "ATTRIBUTION.md";
+
+/** The plan-and-outcome summary. `ATTRIBUTION.md` says which pictures were
+ *  used; this one says what the video ASKED for and what each scene got —
+ *  including the scenes that asked for a picture and got none. Without it,
+ *  a run that borrowed nothing looks exactly like a run that never planned
+ *  anything. */
+export const HISTORICAL_FILENAME = "HISTORICAL.md";
 
 /** `assets/images/scene_7.source.json` */
 export function sceneSourcePath(imagesDir: string, sceneNumber: number): string {
@@ -194,4 +206,92 @@ export function writeAttributionFile(
 
 function escapeCell(text: string): string {
   return text.replace(/\|/g, "\\|").replace(/\n/g, " ").trim();
+}
+
+/**
+ * The plan-and-outcome summary for the whole film.
+ *
+ * `ATTRIBUTION.md` is the credit list — only the pictures that made it on
+ * screen. This file is the other half: what the planner ASKED for, and
+ * what each planned scene ended up with, including the ones that asked for
+ * a picture and got none. A run that borrowed nothing and a run that never
+ * planned anything must not look the same.
+ */
+export function writeHistoricalSummaryFile(
+  imagesDir: string,
+  opts: {
+    plan: SceneSourcePlan[];
+    resolutions: Map<number, SceneSourceResolution>;
+    /** True when the film turned the feature off — the file then says so
+     *  instead of leaving a stale table from an earlier run. */
+    disabled?: boolean | undefined;
+  },
+): string {
+  const planned = opts.plan.filter((p) => p.historical && p.mode !== "none");
+  const rows = planned.map((p) => {
+    const resolution = opts.resolutions.get(p.scene);
+    const candidate = resolution?.candidate ?? null;
+    const outcome =
+      resolution === undefined
+        ? "not reached"
+        : resolution.mode === "direct"
+          ? "frame"
+          : resolution.mode === "reference"
+            ? "reference"
+            : "no picture";
+    return {
+      scene: p.scene,
+      planned: p.mode,
+      subject: p.subject,
+      query: p.query,
+      reason: p.reason,
+      outcome,
+      title: candidate?.title ?? "",
+      source: candidate?.source ?? "",
+      license: candidate?.license ?? "",
+      pageUrl: candidate?.pageUrl ?? "",
+    };
+  });
+  const withPicture = rows.filter((r) => r.outcome !== "no picture" && r.outcome !== "not reached");
+
+  const lines: string[] = ["# Historical pictures", ""];
+  if (opts.disabled === true) {
+    lines.push(
+      "Historical pictures are OFF for this film (`historical_images: off` in",
+      "article.md, or `--image-sources off`). Every scene image is generated.",
+      "",
+    );
+  } else {
+    lines.push(
+      "What the picture plan asked for in this film, and what each scene got.",
+      "The credit list for the pictures that reached the screen is in",
+      "`ATTRIBUTION.md`.",
+      "",
+      `Historical scenes planned: ${planned.length} of ${opts.plan.length} · scenes with a picture: ${withPicture.length}`,
+      "",
+    );
+    if (rows.length === 0) {
+      lines.push("_No scene was planned as historical._", "");
+    } else {
+      lines.push("| Scene | Planned | Subject | Query | Outcome | Picture | License |");
+      lines.push("| --- | --- | --- | --- | --- | --- | --- |");
+      for (const r of rows) {
+        const picture =
+          r.title === ""
+            ? "—"
+            : r.pageUrl.trim() === ""
+              ? escapeCell(r.title)
+              : `[${escapeCell(r.title)}](${r.pageUrl})`;
+        lines.push(
+          `| ${r.scene} | ${r.planned} | ${escapeCell(r.subject) || "—"} | ` +
+            `${escapeCell(r.query) || "—"} | ${r.outcome} | ${picture} | ${r.license || "—"} |`,
+        );
+      }
+      lines.push("");
+    }
+  }
+  const out = path.join(imagesDir, HISTORICAL_FILENAME);
+  mkdirSync(imagesDir, { recursive: true });
+  writeFileSync(out, lines.join("\n"), "utf8");
+  return out;
 }

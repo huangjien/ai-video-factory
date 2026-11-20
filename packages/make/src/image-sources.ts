@@ -6,6 +6,7 @@ import {
   matchSceneSources,
   pickBest,
   planSceneSources,
+  resolutionAsFrame,
   resolveSceneSource,
   type PictureSource,
   type SceneSourcePlan,
@@ -89,6 +90,11 @@ export async function resolveHistoricalSources(opts: {
   plan?: SceneSourcePlan[] | undefined;
   /** The picture sources to search. Defaults to the standard set. */
   sources?: PictureSource[] | undefined;
+  /** True when one of the image providers can take a reference image.
+   *  False → a `reference` plan becomes a `direct` one: a picture the
+   *  model cannot be shown alongside is better used as the frame than
+   *  dropped. Defaults to false — the safe side of the choice. */
+  referenceCapable?: boolean | undefined;
 }): Promise<HistoricalSourceOutcome> {
   if (opts.mode === "off") return EMPTY;
   // A pre-computed plan needs no LLM — the caller already decided.
@@ -193,15 +199,38 @@ export async function resolveHistoricalSources(opts: {
             (list.length > 0 ? pickBest(list, planned?.query ?? "") : null)
           : // The matcher answered "none": this scene gets no picture.
             null;
-    resolutions.set(
+    const resolution = resolveSceneSource(
       scene,
-      resolveSceneSource(
-        scene,
-        planned?.mode ?? "none",
-        chosen === null ? [] : [chosen],
-        planned?.query ?? "",
-      ),
+      planned?.mode ?? "none",
+      chosen === null ? [] : [chosen],
+      planned?.query ?? "",
     );
+    // A reference the providers cannot take is a picture that never
+    // reaches the screen. When no provider can take one, the picture
+    // becomes the frame instead — unless it may not be the frame, in
+    // which case the scene drops it and says so.
+    if (resolution.mode === "reference" && opts.referenceCapable !== true) {
+      const asFrame = resolutionAsFrame(resolution);
+      if (asFrame.mode === "direct") {
+        resolutions.set(scene, asFrame);
+        notes.push(
+          `scene ${scene}: no reference-capable image provider — the picture becomes the frame`,
+        );
+        continue;
+      }
+      resolutions.set(scene, {
+        ...resolution,
+        mode: "none",
+        candidate: null,
+        digest: "",
+        note: "no reference-capable image provider",
+      });
+      notes.push(
+        `scene ${scene}: no reference-capable image provider — generating without the historical picture`,
+      );
+      continue;
+    }
+    resolutions.set(scene, resolution);
   }
   const found = [...resolutions.values()].filter((r) => r.mode !== "none");
   notes.push(

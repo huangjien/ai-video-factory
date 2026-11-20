@@ -349,6 +349,11 @@ picture** of the thing each scene shows, and uses it in one of two ways.
 | `direct` | the archive picture IS the frame — it becomes `assets/images/scene_N.jpg` | no image model at all |
 | `reference` | the picture is attached to the request as a reference; the model draws the scene in the film's style | one image call (MiniMax-H3 edits) |
 
+In practice `direct` is what reaches the screen: a reference needs a
+provider with an edits endpoint, and the only one that had it could not
+serve images. A `reference` plan therefore falls back to `direct` — the
+picture becomes the frame — rather than being dropped.
+
 **The flow.** One LLM call per video (`packages/prompts/prompts/image-source-plan.md`)
 reads every scene and marks which ones are about a real historical subject,
 what to search for, and which mode fits. Only the scenes it marks historical
@@ -386,11 +391,22 @@ is `auto` — on, for the scenes that are historical.
   The project's own pictures answer every query, so they cannot be that
   signal.
 - *A reference needs an edits endpoint.* Only MiniMax-H3 takes a reference
-  image. With any other provider the reference is dropped, the scene is
-  generated from text alone, and the run log says so.
+  image — and its image API answers `400 bad_request`, so in practice a
+  reference could never reach a provider. **A reference plan now becomes a
+  `direct` plan instead**: the picture becomes the frame (if it may be), and
+  the run log says so. A cast sheet still cannot be the frame, so that one
+  is dropped.
+- *The plan and its outcome are written down.* `assets/images/HISTORICAL.md`
+  records what was planned for every scene and what each scene got — the
+  scenes that asked for a picture and got none included. The console lines
+  are gone when the run ends; this file is the durable record.
 - *The picture is part of the image cache key* — so a different picture
   invalidates that scene's image, and a scene with no picture keeps the
   key it had before the feature existed (no mass re-spend on upgrade).
 - *A cast sheet is never the frame.* The character bible's reference sheets
   inform a generated frame; showing the drawing instead of the person is
   not what the scene needs.
+- *Name the subject the way the archive catalogues it.* A Chinese video about
+  a non-Chinese subject must search the archive's name: `毛奇` is a Qing
+  naval officer in the archive, the Prussian field marshal is `Helmuth von
+  Moltke`.

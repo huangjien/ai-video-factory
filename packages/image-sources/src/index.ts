@@ -32,6 +32,7 @@ export {
   MAX_DOWNLOAD_BYTES,
   pickBest,
   queryVariants,
+  resolutionAsFrame,
   resolveSceneSource,
   retrieveForScenes,
   scoreCandidate,
@@ -55,12 +56,14 @@ export {
 export {
   ATTRIBUTION_FILENAME,
   clearSceneSource,
+  HISTORICAL_FILENAME,
   readAllSceneSources,
   readSceneSource,
   sceneSourcePath,
   shortAuthor,
   sourceLogLine,
   writeAttributionFile,
+  writeHistoricalSummaryFile,
   writeSceneSource,
   type SceneSourceRecord,
 } from "./attribution.js";

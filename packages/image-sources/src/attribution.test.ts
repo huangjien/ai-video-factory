@@ -8,6 +8,7 @@ import {
   sceneSourcePath,
   sourceLogLine,
   writeAttributionFile,
+  writeHistoricalSummaryFile,
   writeSceneSource,
   type SceneSourceRecord,
 } from "./attribution.js";
@@ -117,5 +118,93 @@ describe("sourceLogLine", () => {
     });
     expect(line.length).toBeLessThan(160);
     expect(line).toContain("…");
+  });
+});
+
+describe("writeHistoricalSummaryFile", () => {
+  // The credit list says what was used; this says what was ASKED for and
+  // what each scene got — including the scene that asked and got nothing.
+
+  it("records the plan and the outcome per scene", async () => {
+    const dir = await mkdtemp(path.join(tmpdir(), "historical-summary-"));
+    try {
+      const out = writeHistoricalSummaryFile(dir, {
+        plan: [
+          {
+            scene: 1,
+            historical: true,
+            subject: "李世民",
+            query: "李世民",
+            mode: "direct",
+            reason: "a named emperor",
+          },
+          {
+            scene: 2,
+            historical: true,
+            subject: "毛奇",
+            query: "Helmuth von Moltke",
+            mode: "reference",
+            reason: "a moment",
+          },
+          {
+            scene: 3,
+            historical: false,
+            subject: "",
+            query: "",
+            mode: "none",
+            reason: "an abstract idea",
+          },
+        ],
+        resolutions: new Map([
+          [
+            1,
+            {
+              scene: 1,
+              mode: "direct",
+              candidate: {
+                source: "commons",
+                title: "TangTaizongP.jpg",
+                pageUrl: "https://commons.wikimedia.org/wiki/File:TangTaizongP.jpg",
+                fileUrl: "https://upload.wikimedia.org/x.jpg",
+                localPath: null,
+                author: "Anonymous",
+                license: "PD",
+                licenseUrl: "",
+                width: 100,
+                height: 100,
+                digestKey: "x",
+                query: "李世民",
+                owned: false,
+                directEligible: true,
+              },
+              digest: "direct:abc",
+              note: "using the picture itself",
+            },
+          ],
+          [
+            2,
+            {
+              scene: 2,
+              mode: "none",
+              candidate: null,
+              digest: "",
+              note: "no freely-licensed picture found",
+            },
+          ],
+        ]),
+      });
+      const text = await readFile(out, "utf8");
+      expect(text).toContain("Historical scenes planned: 2 of 3");
+      expect(text).toContain("scenes with a picture: 1");
+      // The scene that planned a picture and got it.
+      expect(text).toContain("李世民");
+      expect(text).toContain("frame");
+      expect(text).toContain("TangTaizongP.jpg");
+      // The scene that planned a picture and got none.
+      expect(text).toContain("Helmuth von Moltke");
+      expect(text).toContain("no picture");
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
   });
 });

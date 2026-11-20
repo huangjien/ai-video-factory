@@ -185,7 +185,37 @@ function contentTypeForPath(p: string): string {
 
 /** sha256 of the bytes, hex. */
 export function sha256(bytes: Uint8Array): string {
-  return createHash("sha256").update(Buffer.from(bytes)).digest("hex");
+  return createHash("sha256").update(bytes).digest("hex");
+}
+
+/**
+ * The same picture, used as the FRAME instead of as a reference.
+ *
+ * A reference needs a provider with an edits endpoint, and only one
+ * provider has one — so a reference-planned scene is a scene whose picture
+ * may never reach the screen. When no provider can take the reference, the
+ * picture is still worth showing: a still that may BE the frame becomes
+ * the frame, and the scene keeps its archive picture instead of losing it.
+ *
+ * A picture that may not be the frame (the film's own cast sheet) keeps
+ * its mode: showing the drawing instead of the person is not what the
+ * scene needs.
+ *
+ * The digest changes with the mode — the same picture as a reference and
+ * as the frame are different scene inputs, and the cache must not treat
+ * one as the other.
+ */
+export function resolutionAsFrame(
+  resolution: SceneSourceResolution,
+): SceneSourceResolution {
+  const candidate = resolution.candidate;
+  if (candidate === null || !candidate.directEligible) return resolution;
+  return {
+    ...resolution,
+    mode: "direct",
+    digest: `direct:${sha256Text(candidate.digestKey)}`,
+    note: `using the picture itself — ${candidate.title} (${candidate.source}, ${candidate.license})`,
+  };
 }
 
 /**

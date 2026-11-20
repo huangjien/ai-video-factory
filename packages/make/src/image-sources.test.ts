@@ -262,3 +262,173 @@ describe("generateWithChain and reference images", () => {
     expect(r.servedBy).toBe("plain");
   });
 });
+
+describe("a reference nobody can take becomes the frame", () => {
+  // Only one provider has an edits endpoint, and it is the one whose image
+  // API is broken — so a `reference` plan is a scene whose archive picture
+  // never reaches the screen, and (before the fix) a scene that failed the
+  // whole render. The picture is worth more as the frame than as a
+  // reference the film cannot use.
+
+  it("uses the picture itself when no provider can take the reference", async () => {
+    const dir = await mkProject();
+    try {
+      await writeFile(path.join(dir, "assets", "figures", "tang.jpg"), JPEG);
+      const outputs = await generateSceneVisuals(
+        dir,
+        parseArticleWithRecovery(articleMd()).article,
+        {
+          provider: "mock",
+          sourcePlan: PLAN.map((p) =>
+            p.scene === 2 ? { ...p, mode: "reference" as const } : p,
+          ),
+          pictureSources: [
+            new ArtifactPictureSource({ projectRoot: dir, workspaceRoot: null }),
+          ],
+        },
+      );
+      const log = outputs.join("\n");
+      expect(log).toContain("the picture becomes the frame");
+
+      // The frame IS the borrowed picture — no image model was needed.
+      const written = await readFile(
+        path.join(dir, "assets", "images", "scene_2.jpg"),
+      );
+      expect(written.equals(JPEG)).toBe(true);
+
+      // The sidecar says the picture became the frame, not a reference.
+      const record = JSON.parse(
+        await readFile(
+          path.join(dir, "assets", "images", "scene_2.source.json"),
+          "utf8",
+        ),
+      ) as { mode: string; digest: string };
+      expect(record.mode).toBe("direct");
+      expect(record.digest).toMatch(/^direct:/);
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("drops a picture that may not be the frame, and says so", async () => {
+    // A cast sheet is reference-only by design: showing the drawing
+    // instead of the person is not what a portrait scene needs. With no
+    // reference-capable provider it cannot be used at all.
+    const dir = await mkProject();
+    const workspace = await mkdtemp(path.join(tmpdir(), "historical-ws-"));
+    try {
+      await mkdir(
+        path.join(
+          workspace,
+          "assets",
+          "characters",
+          "li_shimin",
+          "refs",
+          "gongbi",
+        ),
+        { recursive: true },
+      );
+      await writeFile(
+        path.join(
+          workspace,
+          "assets",
+          "characters",
+          "li_shimin",
+          "refs",
+          "gongbi",
+          "sheet.jpg",
+        ),
+        JPEG,
+      );
+      const outputs = await generateSceneVisuals(
+        dir,
+        parseArticleWithRecovery(articleMd()).article,
+        {
+          provider: "mock",
+          sourcePlan: PLAN.map((p) =>
+            p.scene === 2 ? { ...p, mode: "reference" as const } : p,
+          ),
+          pictureSources: [
+            new ArtifactPictureSource({
+              projectRoot: dir,
+              workspaceRoot: workspace,
+            }),
+          ],
+        },
+      );
+      const log = outputs.join("\n");
+      expect(log).toContain("no reference-capable image provider");
+      expect(
+        existsSync(path.join(dir, "assets", "images", "scene_2.source.json")),
+      ).toBe(false);
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+      await rm(workspace, { recursive: true, force: true });
+    }
+  });
+});
+
+describe("the plan and its outcome are written down", () => {
+  it("records what was planned and what each scene got", async () => {
+    const dir = await mkProject();
+    try {
+      await writeFile(path.join(dir, "assets", "figures", "tang.jpg"), JPEG);
+      await generateSceneVisuals(
+        dir,
+        parseArticleWithRecovery(articleMd()).article,
+        {
+          provider: "mock",
+          sourcePlan: PLAN,
+          pictureSources: [
+            new ArtifactPictureSource({ projectRoot: dir, workspaceRoot: null }),
+          ],
+        },
+      );
+      const summary = await readFile(
+        path.join(dir, "assets", "images", "HISTORICAL.md"),
+        "utf8",
+      );
+      // The scene that planned a picture, and what it got.
+      expect(summary).toContain("唐太宗");
+      expect(summary).toContain("frame");
+      expect(summary).toContain("Historical scenes planned: 1 of 2");
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+});
+
+describe("a film with the feature off says so", () => {
+  it("writes the summary that records the switch", async () => {
+    const dir = await mkProject();
+    try {
+      await writeFile(path.join(dir, "assets", "figures", "tang.jpg"), JPEG);
+      const article = articleMd().replace(
+        "voice: zh-CN-YunjianNeural",
+        "voice: zh-CN-YunjianNeural\nhistorical_images: off",
+      );
+      await generateSceneVisuals(
+        dir,
+        parseArticleWithRecovery(article).article,
+        {
+          provider: "mock",
+          sourcePlan: PLAN,
+          pictureSources: [
+            new ArtifactPictureSource({ projectRoot: dir, workspaceRoot: null }),
+          ],
+        },
+      );
+      const summary = await readFile(
+        path.join(dir, "assets", "images", "HISTORICAL.md"),
+        "utf8",
+      );
+      expect(summary).toContain("OFF");
+      // No picture was borrowed, so no credit row exists.
+      expect(
+        existsSync(path.join(dir, "assets", "images", "scene_2.source.json")),
+      ).toBe(false);
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+});

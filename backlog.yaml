@@ -665,7 +665,7 @@ ideas:
       - entity resolution
   - id: 2026-11-19-为什么演习要专门养一支-假想敌部队
     topic: 为什么演习要专门养一支「假想敌部队」
-    status: proposed
+    status: drafting
     source: harvest:docs/plans/2026-11-18-military-ai-topic-backlog-design.md
     created: 2026-11-19
     note: "一支专职「打赢自己人」的精锐部队违反直觉，本质是评价指标被博弈的经典案例，普适性强 —
@@ -677,6 +677,7 @@ ideas:
       - 美军国家训练中心NTC
       - 朱日和蓝军旅
       - 红军扮演部队OPFOR
+    drafting_at: 2026-11-20T20:12:26.856Z
   - id: 2026-11-19-为什么军官要定期轮岗
     topic: 为什么军官要定期轮岗
     status: proposed
@@ -1145,4 +1146,549 @@ ideas:
     status: idea
     source: manual
     created: 2026-11-20
+  - id: 2026-11-20-why-coups-kept-happening-at-the-same-pal
+    topic: Why coups kept happening at the same palace gate
+    status: proposed
+    source: harvest:docs/plans/2026-10-19-chinese-storybook-visual-dna-design.md
+    created: 2026-11-20
+    note: "Geography explaining politics: one gate, multiple successful coups — a
+      repeatable mechanism viewers can literally map. — Whoever controlled the
+      north gate of the palace controlled the guards and the emperor's escape
+      route, so Tang power seizures repeatedly turned on this one chokepoint. —
+      ⚠ possible overlap: 7-basic-plots-en (gate、escape); carlo-pizza
+      (gate、controlled); conflicts-resolution-en (kept、gate) (from
+      docs/plans/2026-10-19-chinese-storybook-visual-dna-design.md)"
+    anchors:
+      - 太极宫玄武门
+      - 唐代北门禁军
+      - 唐隆政变
+  - id: 2026-11-20-how-a-22-year-old-prince-won-the-wars-th
+    topic: How a 22-year-old prince won the wars that built the Tang
+    status: proposed
+    source: harvest:docs/plans/2026-10-19-chinese-storybook-visual-dna-design.md
+    created: 2026-11-20
+    note: "The road to the coup: battlefield genius created a political problem that
+      no succession rule could solve. — Li Shimin's campaigns, ending in the
+      double victory over Wang Shichong and Dou Jiande, destroyed the rival
+      warlords and made his military credit impossible to ignore. — ⚠ possible
+      overlap: 7-basic-plots-en (year、tang、ending); AI近期转折-en (year、ending);
+      LLM的输入输出与首Token-en (built、ending) (from
+      docs/plans/2026-10-19-chinese-storybook-visual-dna-design.md)"
+    anchors:
+      - 虎牢关之战
+      - 王世充
+      - 窦建德
+  - id: 2026-11-20-why-the-winning-brother-couldn-t-inherit
+    topic: "Why the winning brother couldn't inherit: birthright vs merit"
+    status: proposed
+    source: harvest:docs/plans/2026-10-19-chinese-storybook-visual-dna-design.md
+    created: 2026-11-20
+    note: "A classic why-question with stakes: what happens when inheritance rules
+      meet the reality of who actually won the wars. — Tang succession defaulted
+      to the eldest son Li Jiancheng, but the empire had been conquered by the
+      second son — a structural collision that ended at Xuanwu Gate. — ⚠
+      possible overlap: 7-basic-plots-en (tang、son、second); LLM的输入输出与首Token-en
+      (son、second); ai-era-software-engineering-11-shifts-en (tang、son) (from
+      docs/plans/2026-10-19-chinese-storybook-visual-dna-design.md)"
+    anchors:
+      - 嫡长子继承制
+      - 李建成
+      - 天策上将
+  - id: 2026-11-20-what-gongbi-painting-is-fine-lines-thin-
+    topic: "What gongbi painting is: fine lines, thin color, chosen detail"
+    status: proposed
+    source: harvest:docs/plans/2026-10-19-chinese-storybook-visual-dna-design.md
+    created: 2026-11-20
+    note: "A visible mechanism of restraint that teaches a general audience how to
+      read a classical Chinese painting in one sitting. — Gongbi builds pictures
+      from disciplined outline and layered low-saturation washes, spending
+      detail only at the focal point and keeping distance simple. — ⚠ possible
+      overlap: 7-basic-plots-en (lines、thin、color); AI近期转折-en (fine、lines、thin);
+      LLM的输入输出与首Token-en (fine、lines、thin) (from
+      docs/plans/2026-10-19-chinese-storybook-visual-dna-design.md)"
+    anchors:
+      - 工笔画
+      - 阎立本《步辇图》
+      - 宋代画院
+  - id: 2026-11-20-the-mineral-palette-behind-old-chinese-p
+    topic: The mineral palette behind old Chinese paintings
+    status: proposed
+    source: harvest:docs/plans/2026-10-19-chinese-storybook-visual-dna-design.md
+    created: 2026-11-20
+    note: "Materials science meets art history: why these specific colors, and why
+      they age the way they do, is a satisfying everyday mystery. — Cinnabar
+      red, azurite blue and ochre come from ground minerals and earths, which is
+      why antique paintings share a stable paper-and-ink low-saturation color
+      floor. — ⚠ possible overlap: 7-basic-plots-en (red、come、ground); AI近期转折-en
+      (behind、red、blue); LLM的输入输出与首Token-en (behind、red、blue) (from
+      docs/plans/2026-10-19-chinese-storybook-visual-dna-design.md)"
+    anchors:
+      - 朱砂
+      - 石青
+      - 敦煌壁画
+  - id: 2026-11-20-blank-paper-as-picture-the-logic-of-nega
+    topic: "Blank paper as picture: the logic of negative space"
+    status: proposed
+    source: harvest:docs/plans/2026-10-19-chinese-storybook-visual-dna-design.md
+    created: 2026-11-20
+    note: "Once shown, everyone can see it — a compact aesthetic mechanism
+      demonstrated with one famous painting. — Emptiness reads as mist, water
+      and snow because detail is budgeted; Ma Yuan's one-corner compositions
+      make blank paper do most of the work. — ⚠ possible overlap:
+      7-basic-plots-en (blank、paper、reads); AI近期转折-en (paper、logic、reads);
+      LLM的输入输出与首Token-en (blank、paper、reads) (from
+      docs/plans/2026-10-19-chinese-storybook-visual-dna-design.md)"
+    anchors:
+      - 留白
+      - 马远《寒江独钓图》
+      - 计白当黑
+  - id: 2026-11-20-what-did-li-shimin-actually-look-like
+    topic: What did Li Shimin actually look like
+    status: proposed
+    source: harvest:docs/plans/2026-10-19-chinese-storybook-visual-dna-design.md
+    created: 2026-11-20
+    note: "Pulls back the curtain on how documentary images of historical faces are
+      built — and how much is honest, labeled guesswork. — Reconstructing a
+      historical figure means splitting every visual choice into documented
+      evidence versus artistic inference, and surviving portraits cover only
+      part of the truth. — ⚠ possible overlap: 3m与pfos的秘密 (visual);
+      7-basic-plots-en (figure、every、visual); AI时代的DevOps团队 (visual) (from
+      docs/plans/2026-10-19-chinese-storybook-visual-dna-design.md)"
+    anchors:
+      - 凌烟阁功臣图
+      - 阎立本
+      - 唐代服饰考古
+  - id: 2026-11-20-why-slow-narration-holds-attention-the-c
+    topic: "Why slow narration holds attention: the craft of the pause"
+    status: proposed
+    source: harvest:docs/plans/2026-10-19-chinese-storybook-visual-dna-design.md
+    created: 2026-11-20
+    note: "A counterintuitive claim — fewer cuts and slower speech can deepen
+      engagement — that audiences can feel demonstrated in real time. — Around
+      220-240 spoken characters per minute, 8-15 second stills, and mostly
+      static shots give the brain time to look — restraint as an attention
+      strategy. — ⚠ possible overlap: 3m与pfos的秘密 (narration); 7-basic-plots-en
+      (slow、narration、around); AI时代的DevOps团队 (narration) (from
+      docs/plans/2026-10-19-chinese-storybook-visual-dna-design.md)"
+    anchors:
+      - 挪威NRK慢电视
+      - 中国说书
+      - 静观式叙事
+  - id: 2026-11-20-why-you-recognize-a-character-in-any-art
+    topic: Why you recognize a character in any art style
+    status: proposed
+    source: harvest:docs/plans/2026-10-19-chinese-storybook-visual-dna-design.md
+    created: 2026-11-20
+    note: "A universal experience (the same character across wildly different
+      styles) explained by a teachable checklist viewers can test on any
+      franchise. — Character identity rides on silhouette, face shape, hair,
+      costume and signature props, a layer separate from rendering style — the
+      trick behind animation model sheets. — ⚠ possible overlap:
+      7-basic-plots-en (you、art、style); AI近期转折-en (you、character、style);
+      LLM的输入输出与首Token-en (you、character、art) (from
+      docs/plans/2026-10-19-chinese-storybook-visual-dna-design.md)"
+    anchors:
+      - 迪士尼角色模型图
+      - 角色圣经
+      - IP视觉识别系统
+  - id: 2026-11-20-李世民的两个身份-青年秦王与后期皇帝
+    topic: 李世民的两个身份：青年秦王与后期皇帝
+    status: proposed
+    source: harvest:docs/plans/2026-10-19-chinese-storybook-visual-dna-implementation-plan.md
+    created: 2026-11-20
+    note: "清晰的人物弧线，可讨论历史形象如何随身份与年龄转变 — 同一人物在统一战争时期与贞观治世的外观、角色与史料形象差异 — ⚠ possible
+      overlap: 为什么会有总参谋部 (后期、人物); 从雇佣军到现代军队-奖励机制的演变-以及-ai-agent-组织设计的启示
+      (身份、人物、战争); 军种与兵种的组织文化 (身份、战争) (from
+      docs/plans/2026-10-19-chinese-storybook-visual-dna-implementation-plan.md\
+      )"
+    anchors:
+      - 李世民
+      - 秦王
+      - 唐太宗
+  - id: 2026-11-20-说书的悬念弧线-悬念-背景-局势-转折-回扣开场
+    topic: 说书的悬念弧线：悬念—背景—局势—转折—回扣开场
+    status: proposed
+    source: harvest:docs/plans/2026-10-19-chinese-storybook-visual-dna-implementation-plan.md
+    created: 2026-11-20
+    note: "可拆解几乎任何故事的通用结构，观众能直接套用到自己爱看的作品 — 传统说书人以固定讲述者、停顿和回扣开场来组织单集故事结构 — ⚠
+      possible overlap: AI时代的DevOps团队 (背景、开场); ai时代app会消失吗 (弧线、背景、传统);
+      ai浪潮与结构性失业 (弧线、背景、转折) (from
+      docs/plans/2026-10-19-chinese-storybook-visual-dna-implementation-plan.md\
+      )"
+    anchors:
+      - 评书
+      - 说书人
+      - 中国叙事传统
+  - id: 2026-11-20-ai生成画面里的角色为什么会前后-变脸
+    topic: AI生成画面里的角色为什么会前后"变脸"
+    status: proposed
+    source: harvest:docs/plans/2026-10-19-chinese-storybook-visual-dna-implementation-plan.md
+    created: 2026-11-20
+    note: "观众都见过AI角色不一致的穿帮，讲清成因与解法有广泛共鸣 — 图像模型不接收参考图时，靠身份文字锚点、年龄变体档案、联系表与人工审核维持一致性 —
+      ⚠ possible overlap: AI时代的DevOps团队 (生成、画面、模型); agents-first (前后、模型、参考);
+      ai-era-software-engineering-11-shifts (生成、画面、角色) (from
+      docs/plans/2026-10-19-chinese-storybook-visual-dna-implementation-plan.md\
+      )"
+    anchors:
+      - 角色圣经
+      - 联系表
+      - 李世民档案
+  - id: 2026-11-20-静观运动-为什么镜头越少动越有味道
+    topic: 静观运动：为什么镜头越少动越有味道
+    status: proposed
+    source: harvest:docs/plans/2026-10-19-chinese-storybook-visual-dna-implementation-plan.md
+    created: 2026-11-20
+    note: "反直觉的剪辑美学，用动静对比片段即可直观演示其对注意力的影响 — 默认静止、每镜至多一种1–2%慢推，拒绝节拍驱动的运动堆叠与自动高亮 — ⚠
+      possible overlap: 3m与pfos的秘密 (镜头、越少); ai时代app会消失吗 (镜头、越少); 人的需要 (运动、镜头)
+      (from
+      docs/plans/2026-10-19-chinese-storybook-visual-dna-implementation-plan.md\
+      )"
+    anchors:
+      - Ken Burns慢推
+      - 纪录片静态构图
+  - id: 2026-11-20-为什么不能相信ai画的地图
+    topic: 为什么不能相信AI画的地图
+    status: proposed
+    source: harvest:docs/plans/2026-10-19-chinese-storybook-visual-dna-implementation-plan.md
+    created: 2026-11-20
+    note: "关乎观众被误导的机制解释，历史与地理爱好者都会点开 — 生成式地图的山河与路线关系不可靠，须用可核验的矢量路径与标记数据重绘 — ⚠
+      possible overlap: 3m与pfos的秘密 (关系、不可); AI时代的DevOps团队 (不能、生成、关系);
+      ai-era-software-engineering-11-shifts (不能、生成) (from
+      docs/plans/2026-10-19-chinese-storybook-visual-dna-implementation-plan.md\
+      )"
+    anchors:
+      - 战役路线图
+      - 矢量地图数据
+  - id: 2026-11-20-让画里的雨动起来-为什么整幅画会变形
+    topic: 让画里的雨动起来，为什么整幅画会变形
+    status: proposed
+    source: harvest:docs/plans/2026-10-19-chinese-storybook-visual-dna-implementation-plan.md
+    created: 2026-11-20
+    note: '用"让一幅画下雨"这个具体案例讲透合成与图层的基础原理 — 单张合成图没有独立图层，局部动画必须靠遮罩把动态层与静态底分离 — ⚠
+      possible overlap: ai-era-software-engineering-11-shifts (会变、独立);
+      ai时代app会消失吗 (起来、合成); carlo-and-pizza (起来、合成、独立) (from
+      docs/plans/2026-10-19-chinese-storybook-visual-dna-implementation-plan.md)'
+    anchors:
+      - 遮罩与图层
+      - 雨丝灯笼微动
+  - id: 2026-11-20-没有词级时间戳时-字幕是如何与语音同步的
+    topic: 没有词级时间戳时，字幕是如何与语音同步的
+    status: proposed
+    source: harvest:docs/plans/2026-10-19-chinese-storybook-visual-dna-implementation-plan.md
+    created: 2026-11-20
+    note: "人人都见过对不上的字幕，讲清时间轴背后如何被计算有揭秘感 — 按标点切分字幕、按文字长度比例对着实测音频时长分配显示区间，凑出近似同步 — ⚠
+      possible overlap: ai时代app会消失吗 (时间、语音、标点); 为什么会有总参谋部 (时间、间戳、时间戳);
+      从app入口到可调用能力 (时间、语音、切分) (from
+      docs/plans/2026-10-19-chinese-storybook-visual-dna-implementation-plan.md\
+      )"
+    anchors:
+      - SRT字幕
+      - TTS旁白
+      - 句读切分
+  - id: 2026-11-20-llm-as-a-judge-who-scores-the-machines
+    topic: "LLM-as-a-judge: who scores the machines"
+    status: proposed
+    source: harvest:docs/plans/2026-10-26-cross-model-judging-design.md
+    created: 2026-11-20
+    note: "Explains how the AI leaderboards everyone quotes are actually built — and
+      why their referees matter. — Benchmarks increasingly use language models
+      to grade outputs, raising the question of who judges the judge. — ⚠
+      possible overlap: 3m与pfos的秘密 (language); 7-basic-plots-en
+      (machines、language); AI时代的DevOps团队 (language) (from
+      docs/plans/2026-10-26-cross-model-judging-design.md)"
+    anchors:
+      - Chatbot Arena
+      - LMSYS leaderboard
+      - MT-Bench
+  - id: 2026-11-20-the-bug-that-hid-because-two-settings-ha
+    topic: The bug that hid because two settings happened to match
+    status: proposed
+    source: harvest:docs/plans/2026-10-26-cross-model-judging-design.md
+    created: 2026-11-20
+    note: "A detective story about coincidence-masked bugs that resonates far beyond
+      programming. — Reading the wrong config key stays invisible as long as
+      defaults coincide; any divergence exposes years of silent misrouting. — ⚠
+      possible overlap: 7-basic-plots-en (bug、because、reading); AI近期转折-en
+      (reading、config、key); LLM的输入输出与首Token-en (hid、match、reading) (from
+      docs/plans/2026-10-26-cross-model-judging-design.md)"
+    anchors:
+      - Hyrum's Law
+      - latent software defects
+  - id: 2026-11-20-when-the-referee-changes-the-scores-stop
+    topic: When the referee changes, the scores stop comparing
+    status: proposed
+    source: harvest:docs/plans/2026-10-26-cross-model-judging-design.md
+    created: 2026-11-20
+    note: "Explains the familiar puzzle of rankings jumping overnight — in tests,
+      sports, or AI — whenever the grader changes. — Swapping the judge model
+      invalidates recorded baselines, so evals pin the judge's identity to keep
+      numbers comparable. — ⚠ possible overlap: 7-basic-plots-en
+      (stop、model、pin); AI近期转折-en (changes、stop、model); LLM的输入输出与首Token-en
+      (scores、stop、model) (from
+      docs/plans/2026-10-26-cross-model-judging-design.md)"
+    anchors:
+      - 1995 SAT recentering
+      - Flynn effect
+      - benchmark comparability
+  - id: 2026-11-20-the-paper-trail-inside-every-file
+    topic: The paper trail inside every file
+    status: proposed
+    source: harvest:docs/plans/2026-10-26-cross-model-judging-design.md
+    created: 2026-11-20
+    note: "A hidden-metadata story: files that quietly testify about who made them
+      and who checked them. — Recording which model judged each artifact gives
+      outputs provenance, making later audits and disputes resolvable. — ⚠
+      possible overlap: 7-basic-plots-en (paper、trail、inside); AI近期转折-en
+      (paper、inside、every); LLM的输入输出与首Token-en (paper、inside、every) (from
+      docs/plans/2026-10-26-cross-model-judging-design.md)"
+    anchors:
+      - W3C PROV standard
+      - chain of custody
+      - software bill of materials (SBOM)
+  - id: 2026-11-20-checklists-vs-judgment-calls
+    topic: Checklists vs judgment calls
+    status: proposed
+    source: harvest:docs/plans/2026-10-26-cross-model-judging-design.md
+    created: 2026-11-20
+    note: "A relatable tension between rigid rules and discretionary judgment, and
+      why good systems use both. — Quality gates split into deterministic code
+      checks and LLM judgment because the two failure modes are complementary. —
+      ⚠ possible overlap: 7-basic-plots-en (code、because); AI近期转折-en
+      (judgment、calls、quality); LLM的输入输出与首Token-en (quality、split、code) (from
+      docs/plans/2026-10-26-cross-model-judging-design.md)"
+    anchors:
+      - Atul Gawande's Checklist Manifesto
+      - linters vs human code review
+  - id: 2026-11-20-why-two-different-minds-beat-one-smarter
+    topic: Why two different minds beat one smarter mind
+    status: proposed
+    source: harvest:docs/plans/2026-10-26-cross-model-judging-design.md
+    created: 2026-11-20
+    note: "Counterintuitive math about collective judgment: diversity of checkers
+      matters more than raw skill of one. — Independent, diverse judges disagree
+      in ways that surface real defects — cross-model checks exploit this
+      ensemble effect. — ⚠ possible overlap: 7-basic-plots-en (beat、real、cross);
+      AI近期转折-en (different、real、cross); LLM的输入输出与首Token-en
+      (different、real、cross) (from
+      docs/plans/2026-10-26-cross-model-judging-design.md)"
+    anchors:
+      - Condorcet jury theorem
+      - ensemble methods
+  - id: 2026-11-20-why-ceasefire-lines-can-stay-frozen-for-
+    topic: Why ceasefire lines can stay frozen for decades
+    status: proposed
+    source: harvest:docs/plans/2026-11-18-backlog-feature-design.md
+    created: 2026-11-20
+    note: "A counterintuitive stability story — armed truces outlasting actual wars
+      — anchored in famous cases (Korea, Kashmir) that general audiences
+      recognize. — Ceasefire ≠ peace: monitoring regimes and frozen interests
+      let armistice lines persist for generations without a peace treaty. — ⚠
+      possible overlap: 7-basic-plots-en (lines、stay、let); AI近期转折-en
+      (lines、let); LLM的输入输出与首Token-en (lines、stay、let) (from
+      docs/plans/2026-11-18-backlog-feature-design.md)"
+    anchors:
+      - Panmunjom Armistice Agreement (Korean DMZ)
+      - Kashmir Line of Control (LoC)
+  - id: 2026-11-20-judgment-apis-models-that-return-decisio
+    topic: "Judgment APIs: models that return decisions, not prose"
+    status: proposed
+    source: harvest:docs/plans/v0.12/v0.12-decision-surfaces-plan.md
+    created: 2026-11-20
+    note: "It reframes LLMs from text generators into measurable judgment machines
+      whose answers can be graded, priced, and logged — a clean mental model for
+      how AI enters real systems. — A decision layer where the model returns
+      typed answers — a choice, a score, or a probability of truth — with
+      confidence attached, so callers branch on the type instead of parsing free
+      text. — ⚠ possible overlap: 7-basic-plots-en (return、model); AI近期转折-en
+      (judgment、models、return); LLM的输入输出与首Token-en (models、return、layer) (from
+      docs/plans/v0.12/v0.12-decision-surfaces-plan.md)"
+    anchors:
+      - OpenAI Decisions API
+      - provider chain pattern
+      - structured/typed model outputs
+  - id: 2026-11-20-the-null-contract-engineering-ai-you-can
+    topic: "The null contract: engineering AI you can safely ignore"
+    status: proposed
+    source: harvest:docs/plans/v0.12/v0.12-decision-surfaces-plan.md
+    created: 2026-11-20
+    note: "The counterintuitive core of safe AI integration: the failure mode is
+      designed first, so a broken model becomes indistinguishable from no model
+      at all. — The decision call never throws — timeouts, low confidence, and
+      out-of-bounds answers all return null, and null means the system runs
+      exactly the code path it ran before the AI existed. — ⚠ possible overlap:
+      7-basic-plots-en (you、never、low); AI近期转折-en (engineering、you、call);
+      LLM的输入输出与首Token-en (engineering、you、call) (from
+      docs/plans/v0.12/v0.12-decision-surfaces-plan.md)"
+    anchors:
+      - graceful degradation
+      - circuit breaker pattern
+      - fail-safe defaults
+  - id: 2026-11-20-why-test-cases-must-come-from-real-artif
+    topic: Why test cases must come from real artifacts
+    status: proposed
+    source: harvest:docs/plans/v0.12/v0.12-decision-surfaces-plan.md
+    created: 2026-11-20
+    note: "A crisp story of how easy benchmarks lie, and how anchoring every test to
+      a real-world artifact stops both overfitting and silent label drift. —
+      Corpus rules require every labeled case to cite a real shipped artifact,
+      with the label re-derived from that source and coverage in both Chinese
+      and English — synthetic fixtures are disqualified. — ⚠ possible overlap:
+      7-basic-plots-en (test、come、real); AI近期转折-en (test、come、real);
+      LLM的输入输出与首Token-en (come、real、rules) (from
+      docs/plans/v0.12/v0.12-decision-surfaces-plan.md)"
+    anchors:
+      - data provenance
+      - benchmark contamination
+      - label drift
+  - id: 2026-11-20-ai-advises-deterministic-code-decides
+    topic: AI advises, deterministic code decides
+    status: proposed
+    source: harvest:docs/plans/v0.12/v0.12-decision-surfaces-plan.md
+    created: 2026-11-20
+    note: "A clear architecture principle for the AI era — keep the judgment layer
+      separate from the control layer — with concrete failure modes when they're
+      mixed. — Branching is owned by if-statements: models supply judgments, but
+      workflow transitions, severity grading, and human gates stay deterministic
+      and replayable. — ⚠ possible overlap: AI近期转折-en (code、decides、models);
+      LLM的输入输出与首Token-en (code、models); ai-era-software-engineering-11-shifts-en
+      (code、decides、transitions) (from
+      docs/plans/v0.12/v0.12-decision-surfaces-plan.md)"
+    anchors:
+      - replay-verified state machines
+      - human-in-the-loop gates
+      - separation of judgment and control
+  - id: 2026-11-20-the-map-of-where-ai-doesn-t-belong
+    topic: The map of where AI doesn't belong
+    status: proposed
+    source: harvest:docs/plans/v0.12/v0.12-decision-surfaces-plan.md
+    created: 2026-11-20
+    note: "Negative-space design is compelling: what a team refuses to automate
+      reveals more about AI's real limits than what it automates. — An explicit
+      ban list: state-machine transitions, prose generation, deterministic
+      selections with no candidate set, and human-gated rules all refuse the
+      decision layer by design. — ⚠ possible overlap: 7-basic-plots-en
+      (ban、list、machine); AI近期转折-en (explicit、ban、list); LLM的输入输出与首Token-en
+      (map、ban、list) (from docs/plans/v0.12/v0.12-decision-surfaces-plan.md)"
+    anchors:
+      - automation boundary design
+      - deterministic selection rules
+      - human-gated review
+  - id: 2026-11-20-why-a-cache-can-ship-the-wrong-video
+    topic: Why a cache can ship the wrong video
+    status: proposed
+    source: harvest:learnings/improvement-proposals/2026-10-24-experience-batch-1.md
+    created: 2026-11-20
+    note: "A visible, embarrassing failure (a mismatched published video) makes
+      content-addressed caching intuitive, and the fix — hash the actual bytes —
+      lands as a detective story. — A render cache keyed on prompt text and
+      project hash never notices when the underlying image bytes change, so
+      viewers get a patchwork of old and new scenes. — ⚠ possible overlap:
+      3m与pfos的秘密 (project); 7-basic-plots-en (ship、text、project); AI时代的DevOps团队
+      (project) (from
+      learnings/improvement-proposals/2026-10-24-experience-batch-1.md)"
+    anchors:
+      - scene-mp4 cache sidecar
+      - sha256 content digest
+      - ai-era-software-engineering-11-shifts-en project
+  - id: 2026-11-20-how-machines-detect-scene-cuts-and-why-y
+    topic: How machines detect scene cuts (and why yours saw none)
+    status: proposed
+    source: harvest:learnings/improvement-proposals/2026-10-24-experience-batch-1.md
+    created: 2026-11-20
+    note: "One hidden constant decides what a machine perceives; the measured sweep
+      (0.4 → 0 hits, 0.02 → 24) is a compelling on-screen experiment. — ffmpeg
+      scores each frame boundary by pixel change; illustration-to-illustration
+      cuts share most pixels and score ~0.01–0.02, far below the 0.4 threshold
+      calibrated for camera footage. — ⚠ possible overlap: 7-basic-plots-en
+      (machines、scene、frame); AI近期转折-en (scene、none、change); LLM的输入输出与首Token-en
+      (scene、none、scores) (from
+      learnings/improvement-proposals/2026-10-24-experience-batch-1.md)"
+    anchors:
+      - ffmpeg scene detection
+      - carlo-pizza preview.mp4 live probe
+      - sceneBoundaries QA check
+  - id: 2026-11-20-one-failed-judge-silently-ends-the-loop
+    topic: One failed judge silently ends the loop
+    status: proposed
+    source: harvest:learnings/improvement-proposals/2026-10-24-experience-batch-1.md
+    created: 2026-11-20
+    note: "Silent failure is the scariest failure class because the system looks
+      healthy; the video explains fail-loud design and why retries belong at the
+      loop level. — A single judge failure ended the draft review loop with no
+      retry and no error, producing output that looked finished but was never
+      actually reviewed. — ⚠ possible overlap: 7-basic-plots-en
+      (ends、single、ended); AI近期转折-en (failed、ends、single); LLM的输入输出与首Token-en
+      (ends、single、ended) (from
+      learnings/improvement-proposals/2026-10-24-experience-batch-1.md)"
+    anchors:
+      - article-review draft loop
+      - judge retry policy
+      - draft/run records
+  - id: 2026-11-20-invalidating-a-cache-exactly-once
+    topic: Invalidating a cache exactly once
+    status: proposed
+    source: harvest:learnings/improvement-proposals/2026-10-24-experience-batch-1.md
+    created: 2026-11-20
+    note: "Cache schema migration is a puzzle anyone with a build cache faces, and
+      'invalidate exactly once' is a crisp, teachable rule with a clear cost
+      trade-off. — Treating a missing hash field on legacy cache records as a
+      mismatch forces a single one-time re-render, instead of re-rendering
+      forever or never. — ⚠ possible overlap: 7-basic-plots-en
+      (exactly、once、treating); AI近期转折-en (once、records、single);
+      LLM的输入输出与首Token-en (cache、exactly、once) (from
+      learnings/improvement-proposals/2026-10-24-experience-batch-1.md)"
+    anchors:
+      - SceneCacheMeta legacy sidecars
+      - rendererRevision precedent
+      - RENDERER_REVISION
+  - id: 2026-11-20-same-prompt-different-picture
+    topic: Same prompt, different picture
+    status: proposed
+    source: harvest:learnings/improvement-proposals/2026-10-24-experience-batch-1.md
+    created: 2026-11-20
+    note: "Non-determinism of generative models is broadly relatable and explains
+      the eerie fact that 'I changed the picture' can be invisible to a machine
+      tracking only words. — Re-rolling an AI image with identical prompt text
+      changes the bytes but not the prompt, so anything keyed on the prompt
+      stays stale — content must be hashed, not instructions. — ⚠ possible
+      overlap: 7-basic-plots-en (rolling、image、text); AI近期转折-en
+      (prompt、different、rolling); LLM的输入输出与首Token-en (prompt、different、rolling)
+      (from learnings/improvement-proposals/2026-10-24-experience-batch-1.md)"
+    anchors:
+      - visuals --reject re-roll
+      - generative image non-determinism
+      - imageHash cache term
+  - id: 2026-11-20-how-to-decide-what-to-fix-first
+    topic: How to decide what to fix first
+    status: proposed
+    source: harvest:learnings/improvement-proposals/2026-10-24-experience-batch-1.md
+    created: 2026-11-20
+    note: "A three-factor triage formula is a portable decision tool viewers can
+      apply to their own backlogs, illustrated by three real ranked fixes. —
+      Ranking candidate fixes by (recurrence × blast radius) ÷ effort turns
+      scattered bug reports and QA telemetry into a defensible triage order. — ⚠
+      possible overlap: 7-basic-plots-en (fix、first、scattered); AI近期转折-en
+      (decide、first、turns); LLM的输入输出与首Token-en (fix、first、candidate) (from
+      learnings/improvement-proposals/2026-10-24-experience-batch-1.md)"
+    anchors:
+      - ranking metric
+      - lessons.yaml recurrence counts
+      - 17 QA render reports
+  - id: 2026-11-20-canonical-forms-the-same-bytes-two-spell
+    topic: "Canonical forms: the same bytes, two spellings"
+    status: proposed
+    source: harvest:learnings/improvement-proposals/2026-10-24-experience-batch-1.md
+    created: 2026-11-20
+    note: "Hashing feels absolute but silently breaks on representation differences
+      — a small gotcha that generalizes to encodings, URLs, and dates. — The
+      same image arrives as a file path in one system and a base64 data URI in
+      another; digests only match if you decode both to a single canonical form
+      before hashing. — ⚠ possible overlap: 7-basic-plots-en
+      (image、arrives、path); AI近期转折-en (image、file、system); LLM的输入输出与首Token-en
+      (image、arrives、file) (from
+      learnings/improvement-proposals/2026-10-24-experience-batch-1.md)"
+    anchors:
+      - Remotion bundling data URIs
+      - sceneImageDigest helper
+      - sha256 digest convention
 

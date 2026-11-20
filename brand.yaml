@@ -11,6 +11,17 @@ brand:
   corner: bottom-right # top-left | top-right | bottom-left | bottom-right
   size_px: 72
   opacity: 0.85
+  # Thumbnail branding (scripts/thumbnail-brand.py; applied automatically
+  # by `video thumbnail` and `video youtube --upload`): canvas EXPANDS by
+  # border_width so no pixels are lost, plus a top-left circular mascot
+  # badge with a ring — identical on every thumbnail, drawn by Pillow.
+  thumbnail:
+    border_color: "#C8102E"
+    border_width: 24
+    icon_diameter: 170
+    ring_color: "#C8102E"
+    ring_width: 10
+    margin: 36
   # intro: removed 2026-10-16 — the top brand band showed in (nearly) every
   # scene because per-scene renders restart the intro window; restoring an
   # `intro:` block now works (frame offset fixed in vdsl/Root), so add it

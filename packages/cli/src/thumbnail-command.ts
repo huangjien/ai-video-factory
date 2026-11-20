@@ -1,7 +1,7 @@
 import type { Command } from "commander";
 import { mkdir, writeFile } from "node:fs/promises";
 import { createHash } from "node:crypto";
-import { execSync } from "node:child_process";
+import { execFileSync, execSync } from "node:child_process";
 import path from "node:path";
 import { resolveProjectDir } from "./project-path.js";
 import { existsSync } from "node:fs";
@@ -241,7 +241,11 @@ export async function generateThumbnailImage(opts: {
   console.log(
     `  provider=${provider.name}  size=${width}x${height}  prompt_hash=${promptHash.slice(0, 16)}…`,
   );
-  return thumbPath;
+  brandProjectThumbnail(projectRoot);
+  // Branding expands the canvas into thumbnail.jpg — prefer it over a raw
+  // png so YouTube/Bilibili uploads always carry the brand mark.
+  const branded = path.join(projectRoot, "youtube", "thumbnail.jpg");
+  return existsSync(branded) ? branded : thumbPath;
 }
 
 /**
@@ -274,6 +278,30 @@ export async function runThumbnail(opts: ThumbnailOptions): Promise<number> {
   if (thumbPath === null) return 1;
   console.log(`  next: upload ${path.basename(thumbPath)} to YouTube Studio`);
   return 0;
+}
+
+/** Brand the generated thumbnail (scripts/thumbnail-brand.py): expanded
+ *  朱红 canvas + top-left mascot badge — the channel mark on every
+ *  thumbnail (owner mandate 2026-11-19). Best-effort: an unbranded
+ *  thumbnail still uploads when Pillow or the script is missing. */
+export function brandProjectThumbnail(projectRoot: string): void {
+  const ytDir = path.join(projectRoot, "youtube");
+  if (!existsSync(ytDir)) return;
+  let script = path.join(projectRoot, "..", "..", "scripts", "thumbnail-brand.py");
+  if (!existsSync(script)) {
+    // l10n workdirs sit deeper — walk up until the repo scripts dir turns up
+    let dir = projectRoot;
+    for (let i = 0; i < 4 && !existsSync(script); i++) {
+      dir = path.dirname(dir);
+      script = path.join(dir, "scripts", "thumbnail-brand.py");
+    }
+  }
+  if (!existsSync(script)) return;
+  try {
+    execFileSync("python3", [script, ytDir], { stdio: "inherit" });
+  } catch (err) {
+    console.error(`  ! thumbnail branding skipped: ${(err as Error).message}`);
+  }
 }
 
 export function registerThumbnail(program: Command): void {

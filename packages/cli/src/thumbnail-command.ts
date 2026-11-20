@@ -25,6 +25,10 @@ export interface ThumbnailOptions {
   cwd?: string | undefined;
   width?: number;
   height?: number;
+  /** 2026-11-20: vertical (720x1280, Shorts/抖音 cover) — writes
+   *  youtube/thumbnail-vertical.jpg; landscape (default) keeps
+   *  youtube/thumbnail.jpg. */
+  format?: "landscape" | "vertical";
   providerName?:
     | "mock"
     | "minimax"
@@ -102,6 +106,10 @@ export async function generateThumbnailImage(opts: {
     | undefined;
   width?: number | undefined;
   height?: number | undefined;
+  /** Output base name (default "thumbnail" → thumbnail.jpg|png). The
+   *  vertical format writes thumbnail-vertical.* so the landscape master
+   *  is never clobbered. */
+  baseName?: string | undefined;
   /** Project label for log lines. */
   projectLabel: string;
   /** Reference image for edit-capable providers (minimax-h3): the edit
@@ -147,7 +155,8 @@ export async function generateThumbnailImage(opts: {
     );
   }
 
-  // YouTube recommended thumbnail: 1280x720 (16:9)
+  // YouTube recommended thumbnail: 1280x720 (16:9). Vertical projects pass
+  // 720x1280 explicitly (runThumbnail derives it from --format).
   const width = opts.width ?? 1280;
   const height = opts.height ?? 720;
 
@@ -200,10 +209,13 @@ export async function generateThumbnailImage(opts: {
   }
 
   await mkdir(path.join(projectRoot, "youtube"), { recursive: true });
+  const baseName = opts.baseName ?? "thumbnail";
   const thumbPath = path.join(
     projectRoot,
     "youtube",
-    result.contentType === "image/jpeg" ? "thumbnail.jpg" : "thumbnail.png",
+    result.contentType === "image/jpeg"
+      ? `${baseName}.jpg`
+      : `${baseName}.png`,
   );
   await writeFile(thumbPath, result.bytes);
 
@@ -221,8 +233,8 @@ export async function generateThumbnailImage(opts: {
     input_files: ["youtube/thumbnail-prompt.txt"],
     output_files: [
       result.contentType === "image/jpeg"
-        ? "youtube/thumbnail.jpg"
-        : "youtube/thumbnail.png",
+        ? `youtube/${baseName}.jpg`
+        : `youtube/${baseName}.png`,
     ],
     created_at: new Date().toISOString(),
     duration_ms: Date.now() - startedAt,
@@ -241,10 +253,10 @@ export async function generateThumbnailImage(opts: {
   console.log(
     `  provider=${provider.name}  size=${width}x${height}  prompt_hash=${promptHash.slice(0, 16)}…`,
   );
-  brandProjectThumbnail(projectRoot);
-  // Branding expands the canvas into thumbnail.jpg — prefer it over a raw
+  brandProjectThumbnail(projectRoot, baseName);
+  // Branding writes <baseName>.jpg (expanded canvas) — prefer it over a raw
   // png so YouTube/Bilibili uploads always carry the brand mark.
-  const branded = path.join(projectRoot, "youtube", "thumbnail.jpg");
+  const branded = path.join(projectRoot, "youtube", `${baseName}.jpg`);
   return existsSync(branded) ? branded : thumbPath;
 }
 
@@ -266,25 +278,38 @@ export async function runThumbnail(opts: ThumbnailOptions): Promise<number> {
     console.error(resolvedProject.message);
     return 1;
   }
+  // Vertical flips the raster (720x1280, Shorts/抖音 cover) and writes
+  // thumbnail-vertical.* — the landscape master (youtube/thumbnail.jpg)
+  // is never clobbered.
+  const vertical = opts.format === "vertical";
+  const baseName = vertical ? "thumbnail-vertical" : "thumbnail";
   const thumbPath = await generateThumbnailImage({
     projectRoot: resolvedProject.root,
     projectLabel: opts.project,
     ...(opts.providerName !== undefined
       ? { providerName: opts.providerName }
       : {}),
-    ...(opts.width !== undefined ? { width: opts.width } : {}),
-    ...(opts.height !== undefined ? { height: opts.height } : {}),
+    width: opts.width ?? (vertical ? 720 : 1280),
+    height: opts.height ?? (vertical ? 1280 : 720),
+    baseName,
   });
   if (thumbPath === null) return 1;
-  console.log(`  next: upload ${path.basename(thumbPath)} to YouTube Studio`);
+  brandProjectThumbnail(resolvedProject.root, baseName);
+  const branded = path.join(resolvedProject.root, "youtube", `${baseName}.jpg`);
+  const finalPath = existsSync(branded) ? branded : thumbPath;
+  console.log(`  next: upload ${path.basename(finalPath)} to YouTube Studio`);
   return 0;
 }
 
-/** Brand the generated thumbnail (scripts/thumbnail-brand.py): expanded
+/** Brand a generated thumbnail (scripts/thumbnail-brand.py): expanded
  *  朱红 canvas + top-left mascot badge — the channel mark on every
  *  thumbnail (owner mandate 2026-11-19). Best-effort: an unbranded
- *  thumbnail still uploads when Pillow or the script is missing. */
-export function brandProjectThumbnail(projectRoot: string): void {
+ *  thumbnail still uploads when Pillow or the script is missing.
+ *  baseName selects which youtube/<base>.* file to brand. */
+export function brandProjectThumbnail(
+  projectRoot: string,
+  baseName = "thumbnail",
+): void {
   const ytDir = path.join(projectRoot, "youtube");
   if (!existsSync(ytDir)) return;
   let script = path.join(projectRoot, "..", "..", "scripts", "thumbnail-brand.py");
@@ -297,8 +322,22 @@ export function brandProjectThumbnail(projectRoot: string): void {
     }
   }
   if (!existsSync(script)) return;
+  // Vertical covers normalize to 1080x1920 — providers snap the raster to
+  // their own supported size, and Shorts covers want the recommended
+  // 1080x1920 exactly.
+  const target = baseName === "thumbnail-vertical" ? "1080x1920" : undefined;
   try {
-    execFileSync("python3", [script, ytDir], { stdio: "inherit" });
+    execFileSync(
+      "python3",
+      [
+        script,
+        ytDir,
+        "--base",
+        baseName,
+        ...(target !== undefined ? ["--target", target] : []),
+      ],
+      { stdio: "inherit" },
+    );
   } catch (err) {
     console.error(`  ! thumbnail branding skipped: ${(err as Error).message}`);
   }
@@ -319,6 +358,17 @@ export function registerThumbnail(program: Command): void {
       parseInt(v, 10),
     )
     .option(
+      "--format <format>",
+      "thumbnail orientation: landscape (default, 1280x720) | vertical (720x1280 — writes youtube/thumbnail-vertical.jpg, Shorts/抖音 cover)",
+      (v: string) => {
+        const allowed = ["landscape", "vertical"];
+        if (!allowed.includes(v)) {
+          throw new Error(`--format must be ${allowed.join("|")}, got: ${v}`);
+        }
+        return v as "landscape" | "vertical";
+      },
+    )
+    .option(
       "--provider <name>",
       "image provider: mock|minimax|minimax-h3|openai|gemini (default mock — minimax-h3 is MiniMax-H3-Image: generation + reference-image edit, needs MINIMAX_API_KEY)",
     )
@@ -333,6 +383,7 @@ export function registerThumbnail(program: Command): void {
           cwd?: string;
           width?: number;
           height?: number;
+          format?: "landscape" | "vertical";
           provider?: "mock" | "minimax" | "minimax-h3" | "openai" | "gemini";
           reference?: string;
         },
@@ -342,6 +393,7 @@ export function registerThumbnail(program: Command): void {
           ...(opts.cwd !== undefined ? { cwd: opts.cwd } : {}),
           ...(opts.width !== undefined ? { width: opts.width } : {}),
           ...(opts.height !== undefined ? { height: opts.height } : {}),
+          ...(opts.format !== undefined ? { format: opts.format } : {}),
           ...(opts.provider !== undefined
             ? { providerName: opts.provider }
             : {}),

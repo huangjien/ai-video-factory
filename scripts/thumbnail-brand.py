@@ -41,9 +41,9 @@ def repo_root_for(yt_dir):
         d = parent
 
 
-def find_base(yt_dir):
-    for name in ("thumbnail.jpg", "thumbnail.png"):
-        p = os.path.join(yt_dir, name)
+def find_base(yt_dir, base):
+    for ext in (".jpg", ".png"):
+        p = os.path.join(yt_dir, base + ext)
         if os.path.exists(p):
             return p
     return None
@@ -53,10 +53,34 @@ def main():
     if len(sys.argv) < 2:
         print(__doc__)
         return 4
-    yt_dir = os.path.abspath(sys.argv[1])
-    base_path = find_base(yt_dir)
+    args = sys.argv[1:]
+    yt_dir = None
+    base = "thumbnail"
+    target = None  # "WxH" — resize the branded canvas to exactly this
+    i = 0
+    while i < len(args):
+        if args[i] == "--base":
+            base = args[i + 1]
+            i += 2
+        elif args[i].startswith("--base="):
+            base = args[i].split("=", 1)[1]
+            i += 1
+        elif args[i] == "--target":
+            target = args[i + 1]
+            i += 2
+        elif args[i].startswith("--target="):
+            target = args[i].split("=", 1)[1]
+            i += 1
+        else:
+            yt_dir = args[i]
+            i += 1
+    if not yt_dir:
+        print(__doc__)
+        return 4
+    yt_dir = os.path.abspath(yt_dir)
+    base_path = find_base(yt_dir, base)
     if not base_path:
-        print(f"no thumbnail.jpg/png in {yt_dir}")
+        print(f"no {base}.jpg/png in {yt_dir}")
         return 4
     root = repo_root_for(yt_dir)
 
@@ -76,12 +100,12 @@ def main():
     margin = int(t.get("margin", 36))
     icon_path = os.path.join(root, brand.get("icon", "assets/brand/icon.png"))
 
-    base = Image.open(base_path).convert("RGB")
-    W, H = base.size
+    base_img = Image.open(base_path).convert("RGB")
+    W, H = base_img.size
 
     # 1. expanded canvas — the base image keeps every pixel
     canvas = Image.new("RGB", (W + border_w * 2, H + border_w * 2), border_color)
-    canvas.paste(base, (border_w, border_w))
+    canvas.paste(base_img, (border_w, border_w))
     draw = ImageDraw.Draw(canvas)
 
     # 2. circular mascot badge, top-left inside the border
@@ -105,8 +129,8 @@ def main():
     canvas.paste(ring, (border_w + margin, border_w + margin), ring)
     canvas.paste(chip, (border_w + margin + ring_w, border_w + margin + ring_w), chip)
 
-    out = os.path.join(yt_dir, "thumbnail.jpg")
-    raw = os.path.join(yt_dir, "thumbnail-raw.jpg")
+    out = os.path.join(yt_dir, base + ".jpg")
+    raw = os.path.join(yt_dir, base + "-raw.jpg")
     if not os.path.exists(raw):
         import shutil
 
@@ -114,6 +138,9 @@ def main():
             os.rename(base_path, raw)  # different names: keep original as-is
         else:
             shutil.copy(base_path, raw)  # same name: snapshot before overwrite
+    if target:
+        tw, th = (int(v) for v in target.lower().split("x"))
+        canvas = canvas.resize((tw, th), Image.LANCZOS)
     canvas.save(out, quality=92)
     print(f"✓ branded thumbnail → {out}")
     return 0

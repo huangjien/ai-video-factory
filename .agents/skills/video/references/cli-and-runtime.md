@@ -64,6 +64,27 @@
 
 Provider fallback (minimax → glm) is automatic on quota / rate-limit errors.
 
+## Decision provider
+
+The shared decision layer defaults to `google → openai → minimax` when
+`DECISION_PROVIDER=auto` (the default). Google uses `GEMINI_API_KEY` and
+`gemini-decision-1`; `DECISION_PROVIDER=google|openai|minimax` pins one
+provider, and `DECISION_MODEL` overrides the selected primary model. The
+automatic chain skips providers without credentials and providers that do
+not support the request's input modality. It retries on provider/service
+failure, not on a missing or invalid answer.
+
+Batch questions share one input. Gemini supports text, image, audio, video,
+and PDF; OpenAI and MiniMax currently support text. Prompt-eval rubric axes
+and QA triage findings use this shared-input batch path. QA answers remain
+advisory; deterministic findings and strict gates still decide the result.
+
+For an explicit local-media check, use `video decision inspect --request
+request.yaml`. The YAML has `input` and `questions` arrays; media blocks use
+local `path` values resolved relative to the YAML file. The command prints
+answers and batch usage but never prints or persists raw media bytes. A
+text-only starting request lives at `docs/examples/decision-inspect-text.yaml`.
+
 ## 5. Package layout (monorepo)
 
 ```

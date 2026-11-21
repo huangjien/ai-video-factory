@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { mkdtemp, readFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -49,6 +49,28 @@ function fakeProvider(answer: string | null = "block"): DecisionProvider {
         model: "fake-1",
       };
     },
+    decideMany: async (req) => ({
+      answers: req.questions.map(({ question }) => ({
+        questionId: question.id,
+        answer:
+          answer === null
+            ? null
+            : {
+                value: { kind: "choice", option: answer },
+                confidence: 0.82,
+                confidenceSource: "native",
+                usage: { input: 0, output: 0 },
+                latencyMs: 5,
+                provider: "fake",
+                model: "fake-1",
+              },
+        error: answer === null ? "offline" : null,
+      })),
+      provider: "fake",
+      model: "fake-1",
+      usage: { input: 100, output: 0 },
+      latencyMs: 5,
+    }),
   };
 }
 
@@ -82,11 +104,7 @@ describe("buildQaState", () => {
 
 describe("qaDecisionQuestion", () => {
   it("offers the three verdicts", () => {
-    expect(qaDecisionQuestion().options).toEqual([
-      "pass",
-      "review",
-      "block",
-    ]);
+    expect(qaDecisionQuestion().options).toEqual(["pass", "review", "block"]);
   });
 });
 
@@ -112,13 +130,16 @@ describe("runQaDecisionAdvisory", () => {
   });
 
   it("attaches the advisory to the finding", async () => {
+    const provider = fakeProvider("block");
+    const batchSpy = vi.spyOn(provider, "decideMany");
     const out = await runQaDecisionAdvisory({
       project: "demo",
       report: report([finding]),
       mode: "shadow",
-      provider: fakeProvider("block"),
+      provider,
     });
     expect(out.report.findings[0]?.advisory).toBe("block");
+    expect(batchSpy).toHaveBeenCalledTimes(1);
   });
 
   it("records the confidence on the finding", async () => {
@@ -209,8 +230,10 @@ describe("runQaDecisionAdvisory", () => {
 
   it("skips cleanly when NO provider has a key", async () => {
     const key = process.env["OPENAI_API_KEY"];
+    const geminiKey = process.env["GEMINI_API_KEY"];
     const minimaxKey = process.env["MINIMAX_API_KEY"];
     delete process.env["OPENAI_API_KEY"];
+    delete process.env["GEMINI_API_KEY"];
     delete process.env["MINIMAX_API_KEY"];
     const seen: string[] = [];
     const original = console.error;
@@ -226,15 +249,20 @@ describe("runQaDecisionAdvisory", () => {
     } finally {
       console.error = original;
       if (key !== undefined) process.env["OPENAI_API_KEY"] = key;
+      if (geminiKey !== undefined) process.env["GEMINI_API_KEY"] = geminiKey;
       if (minimaxKey !== undefined) {
         process.env["MINIMAX_API_KEY"] = minimaxKey;
       }
     }
   });
 
-  it("falls back to the second provider when the first has no key", async () => {
+  it("skips when the configured provider chain has no keys", async () => {
     const key = process.env["OPENAI_API_KEY"];
+    const geminiKey = process.env["GEMINI_API_KEY"];
+    const minimaxKey = process.env["MINIMAX_API_KEY"];
     delete process.env["OPENAI_API_KEY"];
+    delete process.env["GEMINI_API_KEY"];
+    delete process.env["MINIMAX_API_KEY"];
     try {
       const out = await runQaDecisionAdvisory({
         project: "demo",
@@ -242,9 +270,11 @@ describe("runQaDecisionAdvisory", () => {
         mode: "shadow",
         provider: createDecisionProvider({ provider: "auto" }),
       });
-      expect(out.consulted).toBe(1);
+      expect(out.consulted).toBe(0);
     } finally {
       if (key !== undefined) process.env["OPENAI_API_KEY"] = key;
+      if (geminiKey !== undefined) process.env["GEMINI_API_KEY"] = geminiKey;
+      if (minimaxKey !== undefined) process.env["MINIMAX_API_KEY"] = minimaxKey;
     }
   });
 });

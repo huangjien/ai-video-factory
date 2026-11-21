@@ -21,11 +21,40 @@ Make Gemini Decisions API the default provider for the shared decision layer and
 ## Decision contract
 
 - Preserve `decide(request)` as the one-question compatibility surface.
-- Add a shared-input batch request: an ordered content-block input plus 1–1000 independently typed questions. Each question retains its own ID, kind, instructions, criteria, and optional minimum confidence.
-- Support content blocks for text, image, audio, video, and PDF/document. A media block carries a MIME type and either bytes/base64 or a URI. Raw media bytes are not included in decision logs.
-- Add a batch method to decision providers. Google submits all questions in one `/v1beta/decisions` call; OpenAI may submit its batch in one call; MiniMax adapts by making one text-only call per question.
-- Return one answer/error slot per question, including provider/model, confidence source, usage and latency. Missing or invalid answers remain null and do not cause per-question provider switching.
-- Enforce the Google API's 1,000-question and input-size limits before sending a request. The batch unit is one shared input; this does not batch independent media files into a single request.
+- Add `DecisionBatchRequest` with one ordered shared `input` and 1–1000 unique-ID questions. Each question is a `DecisionQuestion` plus optional `minConfidence`; duplicate IDs are rejected before provider calls.
+- `DecisionInputPart` is a discriminated union: `{type:"text", text}` or `{type:"image"|"audio"|"video"|"document", mimeType, data: Uint8Array}`. The CLI accepts local paths and reads bytes; provider adapters own API-specific serialization. Initial media scope is PDF for `document`; arbitrary office files and remote URLs are out of scope.
+- `DecisionBatchResult` has an ordered `answers` array (`questionId`, normalized answer or null, error or null) and one request-level metadata object (`provider`, `model`, total usage, total latency). Request-level usage is recorded once, never copied and summed once per answer.
+- Add `decideMany(request)` to the provider contract. Google submits one native `/v1beta/decisions` request. OpenAI uses one native batch request for text. MiniMax implements a text-only adapter with one call per question. The existing `decide(request)` API remains and is equivalent to a one-question request.
+- Missing IDs, duplicate/invalid answers, and low-confidence answers occupy their question's null slot. They do not trigger provider switching. A service failure can retry the whole batch at the next compatible provider; the log identifies this fallback.
+- Google validates the documented 1,000-question ceiling locally. The API remains authoritative for content/token limits; a provider size rejection is returned as a request failure rather than attempting a potentially lossy input truncation. One batch always means one shared input, never unrelated files bundled as if they were shared context.
+
+### Provider capability and fallback contract
+
+| Provider | Default order | Input support in this change | Batch behavior |
+|---|---:|---|---|
+| Google Gemini Decisions | 1 | text, image, audio, video, PDF | native shared-input batch |
+| OpenAI Decisions | 2 | text | native shared-input batch |
+| MiniMax | 3 | text | sequential single-question adapter |
+
+`auto` skips unavailable providers and providers that cannot represent the request input. It falls through on request/service failure only. Explicit provider selection stays pinned: unsupported input or service failure returns a diagnostic/null result instead of silently switching providers. `DECISION_PROVIDER` and `DECISION_MODEL` remain honored.
+
+### Inspect request format
+
+`video decision inspect --request <yaml> [--json]` accepts a YAML document with `input` blocks and `questions`. A media block uses `path` relative to the YAML file; optional `mimeType` overrides extension detection. The CLI validates the file, MIME type, and question IDs before making a request. It prints answers and metadata; it does not persist request bodies or media bytes.
+
+```yaml
+input:
+  - type: text
+    text: "判断合同是否包含可单方退款条款。"
+  - type: document
+    path: ./合同.pdf
+questions:
+  - id: refund_clause
+    kind: noul
+    instructions: "合同是否明确授予客户单方退款权？"
+    trueMeaning: "存在明确的单方退款权"
+    falseMeaning: "不存在，或文本不足以确认"
+```
 
 ## CLI and workflow integration
 
@@ -47,6 +76,10 @@ Make Gemini Decisions API the default provider for the shared decision layer and
 - Media: request construction supports text plus image/audio/video/PDF blocks and rejects unsupported provider/media combinations without sending an altered request.
 - Integrations: prompt-eval calls once for multiple axes; QA uses one shared report input and maps answers back to findings; inspect parses request YAML and outputs structured answers without writing raw media to logs.
 - Run package builds and focused provider/decision-surface tests; no live paid request is needed for automated tests.
+
+## Delivery plan
+
+The implementation checklist, stable task IDs, dependencies, affected files, and acceptance checks are in [the implementation plan](./2026-11-21-gemini-decisions-implementation-plan.md). The checklist is the source of delivery status; this document is the design contract.
 
 ## Source
 

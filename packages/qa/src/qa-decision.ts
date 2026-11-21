@@ -25,12 +25,10 @@
  */
 import { createHash } from "node:crypto";
 import { appendFile, writeFile } from "node:fs/promises";
-import {
-  DECISION_QUESTIONS,
-  loadDecisionQuestion,
-} from "@video/prompts";
+import { DECISION_QUESTIONS, loadDecisionQuestion } from "@video/prompts";
 import {
   createDecisionProvider,
+  consultDecisionMany,
   decisionLogPath,
   resolveDecisionMode,
   warnIfQuotaExhausted,
@@ -52,9 +50,7 @@ export function qaFindingBaseline(
 
 /** The state a QA finding presents, in the corpus's format. */
 export function buildQaState(finding: QaFinding): string {
-  const lines = [
-    `${finding.level} · ${finding.check} · ${finding.message}`,
-  ];
+  const lines = [`${finding.level} · ${finding.check} · ${finding.message}`];
   if (finding.fix) lines.push(`fix: ${finding.fix}`);
   return lines.join("\n");
 }
@@ -139,45 +135,47 @@ export async function runQaDecisionAdvisory(
     });
   if (!provider.available()) {
     console.error(
-      `  decision advisory skipped: ${provider.name} key not set (${provider.name === "openai" ? "OPENAI_API_KEY" : "MINIMAX_API_KEY"})`,
+      `  decision advisory skipped: ${provider.name} key not set (${provider.name === "openai" ? "OPENAI_API_KEY" : provider.name === "google" ? "GEMINI_API_KEY" : "MINIMAX_API_KEY"})`,
     );
     return { consulted: 0, agreed: 0, mode, report: opts.report };
   }
 
   const question = qaDecisionQuestion();
+  const request = {
+    input: [
+      {
+        type: "text" as const,
+        text: JSON.stringify(
+          findings.map((finding, index) => ({
+            index,
+            finding: buildQaState(finding),
+          })),
+        ),
+      },
+    ],
+    questions: findings.map((finding, index) => ({
+      question: {
+        ...question,
+        id: `qa-finding-${index}`,
+        instructions: `${question.instructions}\nEvaluate only finding index ${index} (check: ${finding.check}): ${buildQaState(finding)}`,
+      },
+    })),
+  };
+  const batch = await consultDecisionMany({ provider, request });
+  const answerById = new Map(
+    batch.answers.map((answer) => [answer.questionId, answer]),
+  );
   const rows: QaDecisionRow[] = [];
   const annotated: QaFinding[] = [];
-  for (const finding of findings) {
+  for (const [index, finding] of findings.entries()) {
     const state = buildQaState(finding);
     const baseline = qaFindingBaseline(finding.level);
-    const started = Date.now();
-    let answer: string | null = null;
-    let confidence: number | null = null;
-    let confidenceSource: string | null = null;
-    let model = "";
-    // The SERVING provider — see draft-decision.ts.
-    let servingProvider = provider.name;
-    let usage = { input: 0, output: 0 };
-    let error: string | null = null;
-    try {
-      const result = await provider.decide({
-        state,
-        question: { ...question, id: `qa-triage:${finding.check}` },
-      });
-      if (result === null) {
-        error = provider.lastError?.message ?? "no answer";
-      } else {
-        answer = result.value.kind === "choice" ? result.value.option : null;
-        confidence = result.confidence;
-        confidenceSource = result.confidenceSource;
-        model = result.model;
-        // The SERVING provider — see draft-decision.ts.
-        servingProvider = result.provider;
-        usage = result.usage;
-      }
-    } catch (err) {
-      error = (err as Error).message;
-    }
+    const result = answerById.get(`qa-finding-${index}`);
+    const answer =
+      result?.value?.kind === "choice" ? result.value.option : null;
+    const confidence = result?.confidence ?? null;
+    const confidenceSource = result?.confidenceSource ?? null;
+    const error = result?.error ?? batch.error ?? null;
     rows.push({
       ts: new Date().toISOString(),
       surface: "qa-triage",
@@ -185,16 +183,16 @@ export async function runQaDecisionAdvisory(
       check: finding.check,
       level: finding.level,
       mode,
-      provider: servingProvider,
-      model,
+      provider: batch.provider,
+      model: batch.model,
       state_sha256: createHash("sha256").update(state).digest("hex"),
       answer,
       confidence,
       confidence_source: confidenceSource,
       baseline,
       agreed: answer === null ? null : answer === baseline,
-      latency_ms: Date.now() - started,
-      usage,
+      latency_ms: index === 0 ? batch.latencyMs : 0,
+      usage: index === 0 ? batch.usage : { input: 0, output: 0 },
       error,
     });
     const advisoryFinding: QaFinding = { ...finding };

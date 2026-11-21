@@ -20,11 +20,25 @@ function fakeProvider(
 ): DecisionProvider {
   return {
     name: "fake",
+    supportedModalities: ["text"],
     available: () => true,
     lastError: opts.lastError ?? null,
     async decide(): Promise<DecisionAnswer | null> {
       if (opts.throws) throw opts.throws;
       return answer;
+    },
+    async decideMany(req) {
+      return {
+        answers: req.questions.map(({ question }) => ({
+          questionId: question.id,
+          answer,
+          error: answer ? null : "no answer",
+        })),
+        provider: "fake",
+        model: "fake-model",
+        usage: answer?.usage ?? { input: 0, output: 0 },
+        latencyMs: answer?.latencyMs ?? 0,
+      };
     },
   };
 }
@@ -115,10 +129,25 @@ describe("consultDecision", () => {
     // into the primary's score.
     const chain: DecisionProvider = {
       name: "openai→minimax",
+      supportedModalities: ["text"],
       available: () => true,
       lastError: null,
       async decide(): Promise<DecisionAnswer | null> {
         return { ...choiceAnswer("a"), provider: "minimax" };
+      },
+      async decideMany(req) {
+        const answer = { ...choiceAnswer("a"), provider: "minimax" };
+        return {
+          answers: req.questions.map(({ question }) => ({
+            questionId: question.id,
+            answer,
+            error: null,
+          })),
+          provider: "minimax",
+          model: answer.model,
+          usage: answer.usage,
+          latencyMs: answer.latencyMs,
+        };
       },
     };
     const r = await consultDecision({ provider: chain, question, state: "s" });

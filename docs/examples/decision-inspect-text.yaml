@@ -1,0 +1,21 @@
+input:
+  - type: text
+    text: >-
+      客户在通话中说：“这个订单我不想要了，请把钱退回到原来的支付方式。”
+questions:
+  - id: explicit_refund_request
+    kind: noul
+    instructions: 客户是否明确要求退款？
+    trueMeaning: 客户清楚表达了退款要求。
+    falseMeaning: 客户没有明确要求退款，或内容不足以确认。
+  - id: request_type
+    kind: choice
+    instructions: 这段话最符合哪一种客户请求？
+    options:
+      - refund
+      - cancellation_only
+      - other
+    optionHints:
+      refund: 明确要求退回已支付的款项。
+      cancellation_only: 只要求取消订单，没有提出退款。
+      other: 不属于退款或单纯取消。

@@ -1,13 +1,17 @@
 import {
   clampProbability,
-  stateToText,
+  decisionInputToText,
+  requestToBatch,
+  validateDecisionBatch,
+  type DecisionBatchRequest,
+  type DecisionBatchResult,
+  type DecisionInputModality,
   type DecisionAnswer,
   type DecisionError,
   type DecisionProvider,
   type DecisionRequest,
   type DecisionValue,
 } from "./contract.js";
-
 
 export interface OpenAIDecisionProviderOptions {
   /** API root. Default `https://api.openai.com/v1`. */
@@ -77,6 +81,7 @@ interface DecisionApiAnswer {
  */
 export class OpenAIDecisionProvider implements DecisionProvider {
   readonly name = "openai";
+  readonly supportedModalities: readonly DecisionInputModality[] = ["text"];
   lastError: Error | null = null;
 
   private readonly baseUrl: string;
@@ -96,12 +101,21 @@ export class OpenAIDecisionProvider implements DecisionProvider {
   }
 
   async decide(req: DecisionRequest): Promise<DecisionAnswer | null> {
+    const result = await this.decideMany(requestToBatch(req));
+    const answer = result.answers[0]?.answer;
+    return answer
+      ? { ...answer, usage: result.usage, latencyMs: result.latencyMs }
+      : null;
+  }
+
+  async decideMany(req: DecisionBatchRequest): Promise<DecisionBatchResult> {
     const started = Date.now();
     try {
+      validateDecisionBatch(req);
       if (!this.apiKey) {
         throw new Error("OPENAI_API_KEY not set in environment");
       }
-      const question = toApiQuestion(req);
+      const input = decisionInputToText(req.input);
       const res = await fetch(`${this.baseUrl}/decisions`, {
         method: "POST",
         headers: {
@@ -110,8 +124,10 @@ export class OpenAIDecisionProvider implements DecisionProvider {
         },
         body: JSON.stringify({
           model: this.model,
-          input: stateToText(req.state),
-          questions: [question],
+          input,
+          questions: req.questions.map(({ question }) =>
+            toApiQuestion(question),
+          ),
         }),
         signal: AbortSignal.timeout(this.timeoutMs),
       });
@@ -131,45 +147,74 @@ export class OpenAIDecisionProvider implements DecisionProvider {
         answers?: DecisionApiAnswer[];
         usage?: { input_tokens?: number; output_tokens?: number };
       };
-      const answer = parsed.answers?.[0];
-      if (!answer) throw new Error("OpenAI Decisions API returned no answer");
-      const value = toDecisionValue(req, answer);
-      if (!value) {
-        throw new Error(
-          `OpenAI Decisions API answer did not match the question type (${answer.type ?? "unknown"})`,
-        );
-      }
-      const confidence = clampProbability(
-        answer.confidence ?? answer.probability ?? 0,
-      );
-      if (
-        req.minConfidence !== undefined &&
-        confidence < req.minConfidence
-      ) {
-        return null;
-      }
-      return {
-        value,
-        confidence,
-        confidenceSource: "native",
-        usage: {
-          input: parsed.usage?.input_tokens ?? 0,
-          output: parsed.usage?.output_tokens ?? 0,
-        },
-        latencyMs: Date.now() - started,
-        provider: this.name,
-        model: parsed.model ?? this.model,
+      this.lastError = null;
+      const latencyMs = Date.now() - started;
+      const model = parsed.model ?? this.model;
+      const usage = {
+        input: parsed.usage?.input_tokens ?? 0,
+        output: parsed.usage?.output_tokens ?? 0,
       };
+      const answers = req.questions.map(({ question, minConfidence }) => {
+        const raw = parsed.answers?.find(
+          (candidate) => candidate.name === question.id,
+        );
+        if (!raw)
+          return {
+            questionId: question.id,
+            answer: null,
+            error: "missing answer",
+          };
+        const value = toDecisionValue(question, raw);
+        if (!value)
+          return {
+            questionId: question.id,
+            answer: null,
+            error: "invalid answer",
+          };
+        const confidence = clampProbability(
+          raw.confidence ?? raw.probability ?? 0,
+        );
+        if (minConfidence !== undefined && confidence < minConfidence) {
+          return {
+            questionId: question.id,
+            answer: null,
+            error: "below minimum confidence",
+          };
+        }
+        return {
+          questionId: question.id,
+          answer: {
+            value,
+            confidence,
+            confidenceSource: "native" as const,
+            usage: { input: 0, output: 0 },
+            latencyMs,
+            provider: this.name,
+            model,
+          },
+          error: null,
+        };
+      });
+      return { answers, provider: this.name, model, usage, latencyMs };
     } catch (err) {
       this.lastError = err instanceof Error ? err : new Error(String(err));
-      return null;
+      return {
+        answers: req.questions.map(({ question }) => ({
+          questionId: question.id,
+          answer: null,
+          error: this.lastError?.message ?? "request failed",
+        })),
+        provider: this.name,
+        model: this.model,
+        usage: { input: 0, output: 0 },
+        latencyMs: Date.now() - started,
+      };
     }
   }
 }
 
 /** Our question → the Decisions API question payload. */
-function toApiQuestion(req: DecisionRequest): DecisionApiQuestion {
-  const q = req.question;
+function toApiQuestion(q: DecisionRequest["question"]): DecisionApiQuestion {
   if (q.kind === "choice") {
     const options = q.options ?? [];
     return {
@@ -178,7 +223,9 @@ function toApiQuestion(req: DecisionRequest): DecisionApiQuestion {
       instructions: q.instructions,
       choices: options.map((option) => ({
         value: option,
-        ...(q.optionHints?.[option] ? { description: q.optionHints[option] } : {}),
+        ...(q.optionHints?.[option]
+          ? { description: q.optionHints[option] }
+          : {}),
       })),
     };
   }
@@ -209,12 +256,16 @@ function toApiQuestion(req: DecisionRequest): DecisionApiQuestion {
 /** The API answer → our typed value. Null when the answer does not match
  *  the question it was asked. */
 function toDecisionValue(
-  req: DecisionRequest,
+  question: DecisionRequest["question"],
   answer: DecisionApiAnswer,
 ): DecisionValue | null {
-  const kind = req.question.kind;
+  const kind = question.kind;
   if (kind === "choice") {
-    if (typeof answer.choice !== "string") return null;
+    if (
+      typeof answer.choice !== "string" ||
+      !(question.options ?? []).includes(answer.choice)
+    )
+      return null;
     const probabilities: Record<string, number> = {};
     for (const p of answer.probabilities ?? []) {
       if (typeof p.value === "string" && typeof p.probability === "number") {
@@ -228,7 +279,12 @@ function toDecisionValue(
     };
   }
   if (kind === "score") {
-    if (typeof answer.score !== "number") return null;
+    if (
+      typeof answer.score !== "number" ||
+      answer.score < 0 ||
+      answer.score > (question.levels?.length ?? 0) - 1
+    )
+      return null;
     const probabilities: Record<string, number> = {};
     const legend: Record<string, string> = {};
     for (const p of answer.probabilities ?? []) {

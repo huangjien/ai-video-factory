@@ -84,6 +84,71 @@ describe("OpenAIDecisionProvider", () => {
     expect(body.input).toContain("frame 12");
   });
 
+  it("sends a text batch once and maps answers by question name", async () => {
+    responseBody = {
+      model: "gpt-6-luna",
+      answers: [
+        {
+          name: "second",
+          type: "predicate",
+          probability: 0.8,
+          confidence: 0.8,
+        },
+        { name: "first", type: "choice", choice: "block", confidence: 0.9 },
+      ],
+      usage: { input_tokens: 80, output_tokens: 0 },
+    };
+    const provider = new OpenAIDecisionProvider({
+      baseUrl,
+      apiKey: "test-key",
+    });
+    const result = await provider.decideMany({
+      input: [{ type: "text", text: "shared context" }],
+      questions: [
+        {
+          question: {
+            id: "first",
+            kind: "choice",
+            instructions: "Pick",
+            options: ["block", "pass"],
+          },
+        },
+        {
+          question: { id: "second", kind: "noul", instructions: "Is it true?" },
+        },
+      ],
+    });
+    const body = JSON.parse(lastBody ?? "{}");
+    expect(body.input).toBe("shared context");
+    expect(body.questions).toHaveLength(2);
+    expect(result.answers[0]?.answer?.value).toEqual({
+      kind: "choice",
+      option: "block",
+    });
+    expect(result.answers[1]?.answer?.value).toEqual({
+      kind: "noul",
+      probability: 0.8,
+    });
+    expect(result.usage.input).toBe(80);
+    responseBody = {
+      model: "gpt-6-luna",
+      answers: [
+        {
+          type: "choice",
+          name: "qa-triage",
+          choice: "block",
+          probabilities: [
+            { value: "pass", probability: 0.07 },
+            { value: "review", probability: 0.07 },
+            { value: "block", probability: 0.86 },
+          ],
+          confidence: 0.72,
+        },
+      ],
+      usage: { input_tokens: 125, output_tokens: 0 },
+    };
+  });
+
   it("sends the option list as the question choices", async () => {
     const p = new OpenAIDecisionProvider({ baseUrl, apiKey: "test-key" });
     await p.decide(request);
@@ -159,9 +224,9 @@ describe("OpenAIDecisionProvider", () => {
         instructions: "The caption overlaps the subtitle band.",
       },
     });
-    expect(answer?.value.kind === "noul" ? answer.value.probability : null).toBe(
-      0.97,
-    );
+    expect(
+      answer?.value.kind === "noul" ? answer.value.probability : null,
+    ).toBe(0.97);
     responseBody = {
       model: "gpt-6-luna",
       answers: [

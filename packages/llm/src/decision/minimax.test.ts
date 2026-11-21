@@ -59,6 +59,7 @@ describe("MiniMaxDecisionProvider", () => {
   let server: Server;
   let baseUrl: string;
   let lastBody: string | undefined;
+  let requestCount = 0;
   let responseBody: unknown = toolCallResponse({
     choice: "block",
     confidence: 0.93,
@@ -67,6 +68,7 @@ describe("MiniMaxDecisionProvider", () => {
 
   beforeAll(async () => {
     server = createServer((req: IncomingMessage, res: ServerResponse) => {
+      requestCount += 1;
       const chunks: Buffer[] = [];
       req.on("data", (c) => chunks.push(c));
       req.on("end", () => {
@@ -120,6 +122,42 @@ describe("MiniMaxDecisionProvider", () => {
     expect(
       (schema.parameters.properties["category"] as { enum: string[] }).enum,
     ).toEqual(["infrastructure", "network", "application"]);
+  });
+
+  it("adapts a text batch to one call per question and aggregates usage", async () => {
+    const provider = new MiniMaxDecisionProvider({
+      apiHost: baseUrl,
+      apiKey: "test-key",
+    });
+    const before = requestCount;
+    const result = await provider.decideMany({
+      input: [{ type: "text", text: "shared context" }],
+      questions: [
+        {
+          question: {
+            id: "one",
+            kind: "choice",
+            instructions: "Pick one",
+            options: ["block", "pass"],
+          },
+        },
+        {
+          question: {
+            id: "two",
+            kind: "choice",
+            instructions: "Pick two",
+            options: ["block", "pass"],
+          },
+        },
+      ],
+    });
+    expect(requestCount - before).toBe(2);
+    expect(
+      result.answers.map((item) =>
+        item.answer?.value.kind === "choice" ? item.answer.value.option : null,
+      ),
+    ).toEqual(["block", "block"]);
+    expect(result.usage).toEqual({ input: 982, output: 1196 });
   });
 
   it("sends the function as a tool and forces it", async () => {
@@ -255,9 +293,9 @@ describe("MiniMaxDecisionProvider", () => {
         instructions: "Does the caption overlap the subtitle band?",
       },
     });
-    expect(answer?.value.kind === "noul" ? answer.value.probability : null).toBe(
-      0.9,
-    );
+    expect(
+      answer?.value.kind === "noul" ? answer.value.probability : null,
+    ).toBe(0.9);
     responseBody = toolCallResponse({
       choice: "block",
       confidence: 0.93,

@@ -1,7 +1,11 @@
 import {
   clampProbability,
+  validateDecisionBatch,
   type DecisionAnswer,
+  type DecisionBatchRequest,
+  type DecisionBatchResult,
   type DecisionError,
+  type DecisionInputModality,
   type DecisionProvider,
   type DecisionRequest,
   type DecisionValue,
@@ -198,6 +202,7 @@ function buildUserContent(req: DecisionRequest): string {
  */
 export class MiniMaxDecisionProvider implements DecisionProvider {
   readonly name = "minimax";
+  readonly supportedModalities: readonly DecisionInputModality[] = ["text"];
   lastError: Error | null = null;
 
   private readonly apiHost: string;
@@ -222,8 +227,84 @@ export class MiniMaxDecisionProvider implements DecisionProvider {
     return Boolean(this.apiKey);
   }
 
+  async decideMany(req: DecisionBatchRequest): Promise<DecisionBatchResult> {
+    const started = Date.now();
+    const answers: DecisionBatchResult["answers"] = [];
+    let usage = { input: 0, output: 0 };
+    let serviceError: Error | null = null;
+    try {
+      validateDecisionBatch(req);
+      if (req.input.some((part) => part.type !== "text")) {
+        throw new Error("MiniMax supports text input only");
+      }
+      if (!this.apiKey)
+        throw new Error("MINIMAX_API_KEY not set in environment");
+      const state = req.input
+        .map((part) => (part.type === "text" ? part.text : ""))
+        .join("\n");
+      for (const [
+        index,
+        { question, minConfidence },
+      ] of req.questions.entries()) {
+        const answer = await this.decide({
+          state,
+          question,
+          ...(minConfidence !== undefined ? { minConfidence } : {}),
+        });
+        if (answer) {
+          usage = {
+            input: usage.input + answer.usage.input,
+            output: usage.output + answer.usage.output,
+          };
+        }
+        if (!answer && this.lastError) serviceError = this.lastError;
+        answers.push({
+          questionId: question.id,
+          answer: answer ? { ...answer, usage: { input: 0, output: 0 } } : null,
+          error: answer
+            ? null
+            : (this.lastError?.message ?? "no usable answer"),
+        });
+        if (!answer && this.lastError) {
+          for (const remaining of req.questions.slice(index + 1)) {
+            answers.push({
+              questionId: remaining.question.id,
+              answer: null,
+              error: this.lastError.message,
+            });
+          }
+          break;
+        }
+      }
+      if (answers.every((item) => item.answer === null)) {
+        this.lastError = serviceError;
+      }
+      return {
+        answers,
+        provider: this.name,
+        model: this.model,
+        usage,
+        latencyMs: Date.now() - started,
+      };
+    } catch (err) {
+      this.lastError = err instanceof Error ? err : new Error(String(err));
+      return {
+        answers: req.questions.map(({ question }) => ({
+          questionId: question.id,
+          answer: null,
+          error: this.lastError?.message ?? "request failed",
+        })),
+        provider: this.name,
+        model: this.model,
+        usage,
+        latencyMs: Date.now() - started,
+      };
+    }
+  }
+
   async decide(req: DecisionRequest): Promise<DecisionAnswer | null> {
     const started = Date.now();
+    this.lastError = null;
     try {
       if (!this.apiKey) {
         throw new Error("MINIMAX_API_KEY not set in environment");
@@ -279,10 +360,7 @@ export class MiniMaxDecisionProvider implements DecisionProvider {
         if (!value) return null;
         const top = Object.entries(distribution).sort((a, b) => b[1] - a[1])[0];
         const confidence = clampProbability(top?.[1] ?? 0);
-        if (
-          req.minConfidence !== undefined &&
-          confidence < req.minConfidence
-        ) {
+        if (req.minConfidence !== undefined && confidence < req.minConfidence) {
           return null;
         }
         return {
@@ -313,10 +391,7 @@ export class MiniMaxDecisionProvider implements DecisionProvider {
           : { [call.value]: 1 };
       const value = deriveValueFromDistribution(req.question, distribution);
       if (!value) return null;
-      if (
-        req.minConfidence !== undefined &&
-        confidence < req.minConfidence
-      ) {
+      if (req.minConfidence !== undefined && confidence < req.minConfidence) {
         return null;
       }
       return {

@@ -8,8 +8,14 @@
  */
 import { MiniMaxDecisionProvider } from "./minimax.js";
 import { OpenAIDecisionProvider } from "./openai.js";
+import { GoogleDecisionProvider } from "./google.js";
+import { decideManyWithProvider, providerSupportsInput } from "./contract.js";
+import { validateDecisionBatch } from "./contract.js";
 import type {
   DecisionAnswer,
+  DecisionBatchRequest,
+  DecisionBatchResult,
+  DecisionInputModality,
   DecisionProvider,
   DecisionRequest,
 } from "./contract.js";
@@ -35,7 +41,7 @@ export function resolveDecisionMode(
 }
 
 export interface CreateDecisionProviderOptions {
-  /** `auto` (default) = the fallback chain; `openai` / `minimax` = that
+  /** `auto` (default) = the fallback chain; provider ids select one
    *  provider alone. */
   provider?: string | undefined;
   /** Override the PRIMARY provider's model. */
@@ -66,6 +72,7 @@ export interface CreateDecisionProviderOptions {
  */
 export class FallbackDecisionProvider implements DecisionProvider {
   readonly name: string;
+  readonly supportedModalities: readonly DecisionInputModality[];
   /** The last failure from the chain — the reason the answer is null. */
   lastError: Error | null = null;
   private readonly providers: DecisionProvider[];
@@ -79,6 +86,13 @@ export class FallbackDecisionProvider implements DecisionProvider {
       providers.length === 1
         ? providers[0]!.name
         : providers.map((p) => p.name).join("→");
+    this.supportedModalities = [
+      ...new Set<DecisionInputModality>(
+        providers.flatMap(
+          (provider) => provider.supportedModalities ?? (["text"] as const),
+        ),
+      ),
+    ];
   }
 
   /** The providers, in the order they are tried. */
@@ -107,15 +121,61 @@ export class FallbackDecisionProvider implements DecisionProvider {
     }
     return null;
   }
+
+  async decideMany(req: DecisionBatchRequest): Promise<DecisionBatchResult> {
+    this.lastError = null;
+    try {
+      validateDecisionBatch(req);
+    } catch (err) {
+      const message = (err as Error).message;
+      return {
+        answers: req.questions.map(({ question }) => ({
+          questionId: question.id,
+          answer: null,
+          error: message,
+        })),
+        provider: this.name,
+        model: "",
+        usage: { input: 0, output: 0 },
+        latencyMs: 0,
+      };
+    }
+    for (const provider of this.providers) {
+      if (!provider.available()) continue;
+      if (!providerSupportsInput(provider, req.input)) {
+        continue;
+      }
+      const result = await decideManyWithProvider(provider, req);
+      if (provider.lastError !== null) {
+        this.lastError = provider.lastError;
+        continue;
+      }
+      if (result.answers.some((item) => item.answer !== null)) {
+        this.lastError = provider.lastError;
+        return result;
+      }
+      return result;
+    }
+    return {
+      answers: req.questions.map(({ question }) => ({
+        questionId: question.id,
+        answer: null,
+        error:
+          this.lastError?.message ??
+          "no compatible decision provider available",
+      })),
+      provider: this.name,
+      model: "",
+      usage: { input: 0, output: 0 },
+      latencyMs: 0,
+    };
+  }
 }
 
 /** The provider the layer consults.
  *
- *  Default: the CHAIN — OpenAI's Decisions API first (the bench's
- *  winner on every measured axis, §15), MiniMax second (the measured
- *  fallback: 0.797 on the same corpus, brier 0.007, and available on
- *  every day its monthly plan has budget). `DECISION_PROVIDER=openai`
- *  or `=minimax` pins a single provider.
+ *  Default: Gemini Decisions first, then text-compatible OpenAI and
+ *  MiniMax fallbacks. `DECISION_PROVIDER` pins one provider.
  */
 export function createDecisionProvider(
   opts: CreateDecisionProviderOptions = {},
@@ -131,20 +191,24 @@ export function createDecisionProvider(
       opts.model !== undefined ? { model: opts.model } : {},
     );
   }
+  if (name === "google") {
+    return new GoogleDecisionProvider(
+      opts.model !== undefined ? { model: opts.model } : {},
+    );
+  }
   if (name === "auto") {
     return new FallbackDecisionProvider([
-      new OpenAIDecisionProvider(
+      new GoogleDecisionProvider(
         opts.model !== undefined ? { model: opts.model } : {},
       ),
+      new OpenAIDecisionProvider({}),
       new MiniMaxDecisionProvider(
-        opts.fallbackModel !== undefined
-          ? { model: opts.fallbackModel }
-          : {},
+        opts.fallbackModel !== undefined ? { model: opts.fallbackModel } : {},
       ),
     ]);
   }
   throw new Error(
-    `unknown decision provider "${name}" — auto | openai | minimax`,
+    `unknown decision provider "${name}" — auto | openai | minimax | google`,
   );
 }
 
@@ -155,7 +219,7 @@ export function createDecisionProvider(
  *  should know WHICH degradation they are looking at. */
 export function isQuotaError(message: string | null | undefined): boolean {
   if (!message) return false;
-  return /429|rate.?limit|usage limit|quota/i.test(message);
+  return /429|rate.?limit|usage limit|quota|resource_exhausted/i.test(message);
 }
 
 /** Print one stderr line when consults hit the provider's quota. The

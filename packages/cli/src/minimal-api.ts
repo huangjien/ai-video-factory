@@ -86,6 +86,7 @@ export const ADVANCED_VERBS: readonly string[] = [
   "scene",
   "learn",
   "prompts",
+  "decision",
   "character",
 ];
 

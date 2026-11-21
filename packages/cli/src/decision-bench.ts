@@ -38,6 +38,7 @@ import {
 } from "./decision-harvest.js";
 import {
   MiniMaxDecisionProvider,
+  GoogleDecisionProvider,
   OpenAIDecisionProvider,
   type DecisionAnswer,
   type DecisionProvider,
@@ -45,6 +46,7 @@ import {
   type DecisionRequest,
   type DecisionValue,
 } from "@video/llm";
+import { registerDecisionInspect } from "./decision-inspect.js";
 
 export interface BenchProviderSpec {
   /** The provider id — the key the price table is filed under. */
@@ -189,6 +191,15 @@ export function benchProviderSpecs(opts: {
         new MiniMaxDecisionProvider({
           model: opts.model ?? "MiniMax-M3.1-Flash",
           samples,
+        }),
+    },
+    {
+      id: "google",
+      label: "Google Gemini Decisions API",
+      model: opts.model ?? "gemini-decision-1",
+      make: () =>
+        new GoogleDecisionProvider({
+          model: opts.model ?? "gemini-decision-1",
         }),
     },
   ];
@@ -658,15 +669,17 @@ export function registerDecision(program: Command): void {
   const decision = program
     .command("decision")
     .description(
-      "Decision layer tools: `video decision bench` measures the decision providers against the corpus; `video decision harvest` turns a project's shadow log into corpus candidates; `video decision backfill` consults the model about a project's existing review attempts.",
+      "Decision layer tools: `video decision inspect` evaluates shared text and media; `video decision bench` measures providers; `video decision harvest` turns a project's shadow log into corpus candidates; `video decision backfill` reviews existing decisions.",
     );
+
+  registerDecisionInspect(decision);
 
   decision
     .command("bench")
     .description(
       "Measure the decision providers (accuracy, calibration, latency, cost) against the corpus.",
     )
-    .option("--provider <id>", "openai | minimax | all", "all")
+    .option("--provider <id>", "openai | minimax | google | all", "all")
     .option(
       "--surface <surface>",
       "one surface (qa-triage, draft-bar, visual-class, …)",

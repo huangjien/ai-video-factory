@@ -200,11 +200,15 @@ describe("decision prices", () => {
     for (const [provider, model] of [
       ["openai", "gpt-6-luna"],
       ["minimax", "MiniMax-M3.1-Flash"],
+      ["google", "gemini-decision-1"],
     ] as const) {
       const price = table.prices[provider]?.[model];
       expect(price?.input_per_1k ?? null).toBeGreaterThan(0);
-      expect(price?.output_per_1k ?? null).toBeGreaterThan(0);
+      expect(price?.output_per_1k ?? null).not.toBeNull();
     }
+    expect(table.prices["google"]?.["gemini-decision-1"]?.output_per_1k).toBe(
+      0,
+    );
   });
 
   it("leaves an unknown model null rather than zero", () => {

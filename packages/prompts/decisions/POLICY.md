@@ -221,11 +221,25 @@ the rule fix moved six labels that contradicted the artifact they cite.
 
 ## The provider and the mode
 
-`openai` (the Decisions API, model `gpt-6-luna`) is the default for every
-surface, and the layer runs **on by default** (the bench gate cleared —
-0.930 ≥ 0.9). `DECISION_MODE=off|shadow|on`, `DECISION_PROVIDER` /
-`DECISION_MODEL` override per run; the vitest global setup pins the mode
-off so tests stay hermetic.
+`google` (Gemini Decisions API, model `gemini-decision-1`) is the default
+primary provider, followed by text-compatible OpenAI and MiniMax. The
+layer runs **on by default**. `DECISION_MODE=off|shadow|on`,
+`DECISION_PROVIDER` / `DECISION_MODEL` override per run; the vitest global
+setup pins the mode off so tests stay hermetic. The historical OpenAI
+benchmark result below describes the old text corpus and does not measure
+Gemini multimodal performance.
+
+The shared decision contract supports a batch of typed questions against
+one ordered shared input. Gemini accepts text, image, audio, video, and PDF
+blocks in a single request (up to 1,000 questions). OpenAI is the native
+text-batch fallback; MiniMax handles text one question at a time. Automatic
+fallback skips providers that cannot represent the input and retries only
+service failures. Missing or malformed answers remain null.
+
+`video decision inspect --request <yaml>` explicitly sends the selected
+local media to the configured provider. It prints structured answers and
+confidence; it does not trigger pipeline actions. Logs keep file metadata
+and digests, not raw text or media bytes.
 
 **One acting surface is wired: the QA advisory.** `video qa` consults the
 model per finding and writes `advisory: pass|review|block` (plus a

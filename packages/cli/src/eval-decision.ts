@@ -16,7 +16,7 @@
  * unsure about is visible instead of silently averaged in.
  */
 import {
-  consultDecision,
+  consultDecisionMany,
   createDecisionProvider,
   resolveDecisionMode,
   type DecisionMode,
@@ -73,27 +73,35 @@ export async function decisionRubricScores(opts: {
   output: string;
   provider: DecisionProvider;
 }): Promise<RubricDecisionScore[]> {
-  const out: RubricDecisionScore[] = [];
-  for (const axis of opts.axes) {
-    const result = await consultDecision({
-      provider: opts.provider,
-      question: rubricScoreQuestion(opts.agent, axis),
-      state: opts.output.slice(0, 12_000),
-    });
+  if (opts.axes.length === 0) return [];
+  const questions = opts.axes.map((axis) => ({
+    question: rubricScoreQuestion(opts.agent, axis),
+  }));
+  const result = await consultDecisionMany({
+    provider: opts.provider,
+    request: {
+      input: [{ type: "text", text: opts.output.slice(0, 12_000) }],
+      questions,
+    },
+  });
+  const byId = new Map(
+    result.answers.map((answer) => [answer.questionId, answer]),
+  );
+  return opts.axes.map((axis) => {
+    const answer = byId.get(`eval-rubric:${opts.agent}:${axis}`);
     const score =
-      result.value !== null && result.value.kind === "score"
-        ? result.value.score
+      answer?.value !== null && answer?.value?.kind === "score"
+        ? answer.value.score
         : null;
-    out.push({
+    return {
       axis,
       score,
-      confidence: result.confidence,
+      confidence: answer?.confidence ?? null,
       provider: result.provider,
       model: result.model,
-      error: result.error,
-    });
-  }
-  return out;
+      error: answer?.error ?? null,
+    };
+  });
 }
 
 /** The decision provider the harness uses, or null when the layer is

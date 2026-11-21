@@ -60,6 +60,44 @@ export interface DecisionRequest {
   minConfidence?: number | undefined;
 }
 
+/** One shared input block. `data` stays binary in memory and is encoded by
+ * the provider adapter only when its wire format requires base64. */
+export type DecisionInputPart =
+  | { type: "text"; text: string }
+  | {
+      type: "image" | "audio" | "video" | "document";
+      mimeType: string;
+      data: Uint8Array;
+      name?: string | undefined;
+    };
+
+export interface DecisionBatchQuestion {
+  question: DecisionQuestion;
+  minConfidence?: number | undefined;
+}
+
+export interface DecisionBatchRequest {
+  /** The same ordered context is evaluated for every question. */
+  input: DecisionInputPart[];
+  questions: DecisionBatchQuestion[];
+}
+
+export interface DecisionBatchAnswer {
+  questionId: string;
+  answer: DecisionAnswer | null;
+  error: string | null;
+}
+
+export interface DecisionBatchResult {
+  answers: DecisionBatchAnswer[];
+  provider: string;
+  model: string;
+  usage: { input: number; output: number };
+  latencyMs: number;
+}
+
+export type DecisionInputModality = DecisionInputPart["type"];
+
 export type DecisionValue =
   | {
       kind: "choice";
@@ -120,11 +158,142 @@ export interface DecisionProvider {
   /** NEVER throws — see invariant 1 above. Returns `null` for "no usable
    *  answer". The last failure is kept on `lastError` for diagnosis. */
   decide(req: DecisionRequest): Promise<DecisionAnswer | null>;
+  /** Evaluate all questions against one shared input. */
+  decideMany?(req: DecisionBatchRequest): Promise<DecisionBatchResult>;
+  /** Input modalities accepted by this adapter. */
+  readonly supportedModalities?: readonly DecisionInputModality[];
   /** False when the provider cannot run at all (no API key). The bench
    *  reports an unavailable provider instead of skipping it silently. */
   available(): boolean;
   /** The most recent failure, for diagnostics. Null after a success. */
   lastError: Error | null;
+}
+
+export function validateDecisionBatch(req: DecisionBatchRequest): void {
+  if (req.input.length === 0) throw new Error("decision batch input is empty");
+  if (req.questions.length === 0 || req.questions.length > 1000) {
+    throw new Error("decision batch must have 1 to 1000 questions");
+  }
+  const ids = new Set<string>();
+  for (const item of req.questions) {
+    validateQuestion(item.question);
+    if (
+      item.minConfidence !== undefined &&
+      (!Number.isFinite(item.minConfidence) ||
+        item.minConfidence < 0 ||
+        item.minConfidence > 1)
+    ) {
+      throw new Error(`invalid minimum confidence for ${item.question.id}`);
+    }
+    if (ids.has(item.question.id)) {
+      throw new Error(`duplicate decision question id: ${item.question.id}`);
+    }
+    ids.add(item.question.id);
+  }
+  for (const part of req.input) {
+    if (part.type === "text" && typeof part.text !== "string") {
+      throw new Error("invalid text decision input");
+    }
+    if (
+      part.type !== "text" &&
+      part.type !== "image" &&
+      part.type !== "audio" &&
+      part.type !== "video" &&
+      part.type !== "document"
+    ) {
+      throw new Error("unsupported decision input type");
+    }
+    if (part.type !== "text" && (!part.mimeType || !part.data?.byteLength)) {
+      throw new Error(`invalid ${part.type} decision input`);
+    }
+  }
+}
+
+/** Convert legacy state to the new shared-input representation. */
+export function requestToBatch(req: DecisionRequest): DecisionBatchRequest {
+  return {
+    input: [{ type: "text", text: stateToText(req.state) }],
+    questions: [
+      {
+        question: req.question,
+        ...(req.minConfidence !== undefined
+          ? { minConfidence: req.minConfidence }
+          : {}),
+      },
+    ],
+  };
+}
+
+export function decisionInputToText(
+  input: readonly DecisionInputPart[],
+): string {
+  if (input.some((part) => part.type !== "text")) {
+    throw new Error("provider supports text input only");
+  }
+  return input
+    .map((part) => (part.type === "text" ? part.text : ""))
+    .join("\n");
+}
+
+export function providerSupportsInput(
+  provider: DecisionProvider,
+  input: readonly DecisionInputPart[],
+): boolean {
+  const supported = provider.supportedModalities ?? ["text"];
+  return input.every((part) => supported.includes(part.type));
+}
+
+/** Adapt legacy one-question providers to text-only batches. */
+export async function decideManyWithProvider(
+  provider: DecisionProvider,
+  req: DecisionBatchRequest,
+): Promise<DecisionBatchResult> {
+  if (provider.decideMany) return provider.decideMany(req);
+  const started = Date.now();
+  const state = decisionInputToText(req.input);
+  const answers: DecisionBatchResult["answers"] = [];
+  let usage = { input: 0, output: 0 };
+  let serviceError: Error | null = null;
+  for (const [index, { question, minConfidence }] of req.questions.entries()) {
+    const answer = await provider.decide({
+      state,
+      question,
+      ...(minConfidence !== undefined ? { minConfidence } : {}),
+    });
+    if (answer) {
+      usage = {
+        input: usage.input + answer.usage.input,
+        output: usage.output + answer.usage.output,
+      };
+    }
+    if (!answer && provider.lastError) serviceError = provider.lastError;
+    answers.push({
+      questionId: question.id,
+      answer: answer ? { ...answer, usage: { input: 0, output: 0 } } : null,
+      error: answer
+        ? null
+        : (provider.lastError?.message ?? "no usable answer"),
+    });
+    if (!answer && provider.lastError) {
+      for (const remaining of req.questions.slice(index + 1)) {
+        answers.push({
+          questionId: remaining.question.id,
+          answer: null,
+          error: provider.lastError.message,
+        });
+      }
+      break;
+    }
+  }
+  if (answers.every((item) => item.answer === null))
+    provider.lastError = serviceError;
+  return {
+    answers,
+    provider: provider.name,
+    model: answers.find((item) => item.answer)?.answer?.model ?? "",
+    usage,
+    latencyMs: Date.now() - started,
+  };
 }
 
 /** A failure raised while deciding. Mirrors `ChatError` in `provider.ts`. */
@@ -155,13 +324,28 @@ export function clampProbability(value: number): number {
  *  Throws — a bad question is a programming error, not a runtime
  *  condition. */
 export function validateQuestion(question: DecisionQuestion): void {
-  if (!question.id) throw new Error("decision question needs an id");
-  if (!question.instructions.trim()) {
+  if (typeof question.id !== "string" || !question.id.trim()) {
+    throw new Error("decision question needs an id");
+  }
+  if (
+    typeof question.instructions !== "string" ||
+    !question.instructions.trim()
+  ) {
     throw new Error(`decision question ${question.id} needs instructions`);
+  }
+  if (
+    question.kind !== "choice" &&
+    question.kind !== "score" &&
+    question.kind !== "noul"
+  ) {
+    throw new Error(`decision question ${question.id} has an unknown kind`);
   }
   if (question.kind === "choice") {
     const options = question.options ?? [];
-    if (options.length < 2) {
+    if (
+      options.length < 2 ||
+      options.some((option) => typeof option !== "string" || !option.trim())
+    ) {
       throw new Error(
         `decision question ${question.id} needs at least 2 options`,
       );
@@ -169,7 +353,10 @@ export function validateQuestion(question: DecisionQuestion): void {
   }
   if (question.kind === "score") {
     const levels = question.levels ?? [];
-    if (levels.length < 2) {
+    if (
+      levels.length < 2 ||
+      levels.some((level) => typeof level !== "string" || !level.trim())
+    ) {
       throw new Error(
         `decision question ${question.id} needs at least 2 levels`,
       );

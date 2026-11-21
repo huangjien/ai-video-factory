@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   RUBRIC_LEVELS,
   decisionRubricScores,
@@ -33,6 +33,32 @@ function fakeProvider(
         model: "fake-1",
       };
     },
+    decideMany: async (req) => ({
+      answers: req.questions.map(({ question }) => ({
+        questionId: question.id,
+        answer:
+          answer === null
+            ? null
+            : {
+                value: {
+                  kind: "score",
+                  score: answer.score,
+                  legend: { "7": "good" },
+                },
+                confidence: answer.confidence,
+                confidenceSource: "native",
+                usage: { input: 0, output: 0 },
+                latencyMs: 11,
+                provider: "fake",
+                model: "fake-1",
+              },
+        error: answer === null ? "offline" : null,
+      })),
+      provider: "fake",
+      model: "fake-1",
+      usage: { input: 400, output: 0 },
+      latencyMs: 11,
+    }),
   };
 }
 
@@ -53,15 +79,18 @@ describe("rubricScoreQuestion", () => {
 
 describe("decisionRubricScores", () => {
   it("returns one score per axis", async () => {
+    const provider = fakeProvider();
+    const batchSpy = vi.spyOn(provider, "decideMany");
     const out = await decisionRubricScores({
       agent: "draft",
       axes: ["structure", "accuracy"],
       output: "the output",
-      provider: fakeProvider(),
+      provider,
     });
     expect(out.map((s) => s.axis)).toEqual(["structure", "accuracy"]);
     expect(out[0]?.score).toBe(7.5);
     expect(out[0]?.confidence).toBe(0.8);
+    expect(batchSpy).toHaveBeenCalledTimes(1);
   });
 
   it("records the error instead of throwing when the provider fails", async () => {
@@ -83,14 +112,17 @@ describe("rubricDecisionProvider", () => {
 
   it("is null when no provider has a key", () => {
     const key = process.env["OPENAI_API_KEY"];
+    const geminiKey = process.env["GEMINI_API_KEY"];
     const minimaxKey = process.env["MINIMAX_API_KEY"];
     delete process.env["OPENAI_API_KEY"];
+    delete process.env["GEMINI_API_KEY"];
     delete process.env["MINIMAX_API_KEY"];
     try {
       const env = { DECISION_MODE: "on" } as NodeJS.ProcessEnv;
       expect(rubricDecisionProvider(env)).toBeNull();
     } finally {
       if (key !== undefined) process.env["OPENAI_API_KEY"] = key;
+      if (geminiKey !== undefined) process.env["GEMINI_API_KEY"] = geminiKey;
       if (minimaxKey !== undefined) {
         process.env["MINIMAX_API_KEY"] = minimaxKey;
       }

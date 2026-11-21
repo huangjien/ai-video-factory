@@ -25,8 +25,11 @@
  *    one line and never fails the run).
  */
 import { appendFile } from "node:fs/promises";
+import { decideManyWithProvider } from "./contract.js";
 import type {
   DecisionAnswer,
+  DecisionBatchRequest,
+  DecisionBatchResult,
   DecisionProvider,
   DecisionQuestion,
   DecisionValue,
@@ -96,6 +99,75 @@ export async function consultDecision(opts: {
     model: answer.model,
     usage: answer.usage,
     latencyMs: answer.latencyMs,
+    error,
+  };
+}
+
+export interface DecisionBatchConsult {
+  answers: {
+    questionId: string;
+    answer: string | null;
+    value: DecisionValue | null;
+    confidence: number | null;
+    confidenceSource: string | null;
+    error: string | null;
+  }[];
+  provider: string;
+  model: string;
+  usage: { input: number; output: number };
+  latencyMs: number;
+  error: string | null;
+}
+
+/** Ask a shared-input batch. Provider/request failures become null slots. */
+export async function consultDecisionMany(opts: {
+  provider: DecisionProvider;
+  request: DecisionBatchRequest;
+}): Promise<DecisionBatchConsult> {
+  let result: DecisionBatchResult | null = null;
+  let error: string | null = null;
+  const started = Date.now();
+  try {
+    result = await decideManyWithProvider(opts.provider, opts.request);
+  } catch (err) {
+    error = (err as Error).message;
+  }
+  if (!result) {
+    const message = error ?? opts.provider.lastError?.message ?? "no answer";
+    return {
+      answers: opts.request.questions.map(({ question }) => ({
+        questionId: question.id,
+        answer: null,
+        value: null,
+        confidence: null,
+        confidenceSource: null,
+        error: message,
+      })),
+      provider: opts.provider.name,
+      model: "",
+      usage: { input: 0, output: 0 },
+      latencyMs: Date.now() - started,
+      error: message,
+    };
+  }
+  const byId = new Map(result.answers.map((item) => [item.questionId, item]));
+  return {
+    answers: opts.request.questions.map(({ question }) => {
+      const item = byId.get(question.id);
+      const answer = item?.answer ?? null;
+      return {
+        questionId: question.id,
+        answer: answer ? valueToString(answer.value) : null,
+        value: answer?.value ?? null,
+        confidence: answer?.confidence ?? null,
+        confidenceSource: answer?.confidenceSource ?? null,
+        error: item?.error ?? (item ? null : "missing answer slot"),
+      };
+    }),
+    provider: result.provider,
+    model: result.model,
+    usage: result.usage,
+    latencyMs: result.latencyMs,
     error,
   };
 }

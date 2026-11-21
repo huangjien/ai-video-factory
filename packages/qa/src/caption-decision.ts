@@ -260,7 +260,7 @@ export async function runCaptionOverlapShadow(opts: {
     });
   if (!provider.available()) {
     console.error(
-      `  decision shadow (captions) skipped: ${provider.name} key not set (${provider.name === "openai" ? "OPENAI_API_KEY" : "MINIMAX_API_KEY"})`,
+      `  decision shadow (captions) skipped: ${provider.name} key not set (${provider.name === "openai" ? "OPENAI_API_KEY" : provider.name === "google" ? "GEMINI_API_KEY" : "MINIMAX_API_KEY"})`,
     );
     return { consulted: 0, agreed: 0, mode };
   }

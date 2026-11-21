@@ -7,6 +7,7 @@ import {
   readdir,
   stat,
   readFile,
+  copyFile,
 } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -69,6 +70,11 @@ const renderEntryTemplate = (
   renderPlan: RenderPlan,
 ): string => `import { registerRoot, Composition } from "remotion";
 import { Root } from "${rootSrcPath}";
+
+// staticFile() resolves against this base; the bundler copies the
+// publicDir into the bundle as ./public (see renderPlanToVideo).
+// Without it, OffthreadVideo requests bundle-root paths and 404s.
+window.remotion_staticBase = "/public";
 
 const renderPlan = ${JSON.stringify(renderPlan)};
 
@@ -172,11 +178,20 @@ export async function renderPlanToVideo(
   await mkdir(path.dirname(outPath), { recursive: true });
   const resolvedPlan = await resolveImageSources(renderPlan);
   const workDir = await mkdtemp(path.join(tmpdir(), "video-render-"));
+  // Remotion's bundler serves `<entryDir>/public` — the entry lives at
+  // the workDir root, so clips copied here resolve via staticFile().
+  const publicDir = path.join(workDir, "public");
+  const planWithVideo = await resolveVideoSources(resolvedPlan, publicDir);
   const entry = path.join(workDir, "entry.tsx");
-  await writeFile(entry, renderEntryTemplate(resolvedPlan), "utf8");
+  await writeFile(entry, renderEntryTemplate(planWithVideo), "utf8");
   try {
     const serveUrl = await bundle({
       entryPoint: entry,
+      // Remotion's default public dir resolves from the process cwd —
+      // meaningless in a render pipeline. Point it at the workDir copy
+      // resolveVideoSources made; the bundler copies it into the bundle
+      // so staticFile()/OffthreadVideo can serve the clips.
+      publicDir,
       // The entry embeds the renderPlan (with base64 image data URLs), so
       // its content changes every render — webpack's persistent cache can
       // never hit and instead writes a fresh 250–575MB snapshot per render
@@ -196,7 +211,7 @@ export async function renderPlanToVideo(
       const composition = await selectComposition({
         serveUrl,
         id: "video-factory",
-        inputProps: { renderPlan: resolvedPlan },
+        inputProps: { renderPlan: planWithVideo },
         puppeteerInstance: browser,
       });
       await renderMedia({
@@ -204,7 +219,7 @@ export async function renderPlanToVideo(
         serveUrl,
         codec: "h264",
         outputLocation: outPath,
-        inputProps: { renderPlan: resolvedPlan },
+        inputProps: { renderPlan: planWithVideo },
         overwrite: true,
         puppeteerInstance: browser,
       });
@@ -260,6 +275,19 @@ export async function resolveImageSources(
   const scenes = await Promise.all(
     plan.scenes.map(async (scene) => {
       if (scene.component === "ImageBackground") {
+        // A hand-placed or video-sources-retrieved PD clip replaces the
+        // full-bleed still (design: docs/plans/2026-11-21-public-domain-
+        // video-scenes-design.md). Captions ride the overlay track, so
+        // the swap touches only the background layer; resolveVideoSources
+        // then copies the clip into the bundler's public dir.
+        const clip = findSceneVideo(plan, scene);
+        if (clip !== null) {
+          return {
+            ...scene,
+            component: "VideoBackground",
+            props: { videoSrc: clip },
+          };
+        }
         const withSrc = await resolveComponentSrc(scene, warn);
         return resolveTextOverlay(withSrc, plan.projectRoot, warn);
       }
@@ -296,6 +324,55 @@ export async function resolveImageSources(
     scenes,
     ...(brand ? { style: { ...plan.style, brand } } : {}),
   };
+}
+
+/**
+ * Copy VideoBackground clips into the bundler's public dir and point
+ * `videoSrc` at the served name (the Remotion `staticFile()` contract).
+ *
+ * Video cannot ride the data-URL path that images use — the bundler
+ * serves the public dir over HTTP and `OffthreadVideo` needs a real
+ * URL to extract frames from. Identical source paths copy once and
+ * share the served name. A missing file warns and leaves the scene on
+ * the dark background (same silence-with-a-warning policy as
+ * `resolveImageSources`) — a film never fails because a clip vanished.
+ */
+export async function resolveVideoSources(
+  plan: RenderPlan,
+  publicDir: string,
+  warn: (message: string) => void = () => {},
+): Promise<RenderPlan> {
+  const servedByName = new Map<string, string>();
+  const scenes = await Promise.all(
+    plan.scenes.map(async (scene) => {
+      if (scene.component !== "VideoBackground") return scene;
+      const src: unknown = scene.props.videoSrc;
+      if (typeof src !== "string" || src === "" || src.startsWith("data:")) {
+        return scene;
+      }
+      let served = servedByName.get(src);
+      if (served === undefined) {
+        const abs = path.isAbsolute(src)
+          ? src
+          : path.join(plan.projectRoot ?? process.cwd(), src);
+        if (!existsSync(abs)) {
+          warn(
+            `scene ${scene.id}: VideoBackground videoSrc not found: ${abs} — rendering the dark background instead`,
+          );
+          return scene;
+        }
+        const safeId = scene.id.replace(/[^a-zA-Z0-9_-]/g, "_");
+        served = `scene-video-${safeId}${path.extname(abs) || ".mp4"}`;
+        // Claim the slot before awaiting the copy — concurrent scenes
+        // sharing one clip must not each schedule their own copy.
+        servedByName.set(src, served);
+        await mkdir(publicDir, { recursive: true });
+        await copyFile(abs, path.join(publicDir, served));
+      }
+      return { ...scene, props: { ...scene.props, videoSrc: served } };
+    }),
+  );
+  return { ...plan, scenes };
 }
 
 /** Inlines an ImageBackground scene's own `src` as a data URL. */
@@ -382,6 +459,21 @@ function findSceneImage(
     if (existsSync(file)) return file;
   }
   return null;
+}
+
+/** The scene's public-domain clip, by the convention the video-sources
+ *  pipeline writes (`assets/video/scene_N.mp4`) — same scene-number rule
+ *  as `findSceneImage`. Null when the project carries no clip, which is
+ *  the normal state for every film made before the feature. */
+function findSceneVideo(
+  plan: RenderPlan,
+  scene: RenderPlanScene,
+): string | null {
+  if (!plan.projectRoot) return null;
+  const idNum = scene.id.match(/scene[-_]?(\d+)/)?.[1];
+  const n = String(idNum ? parseInt(idNum, 10) : scene.index + 1);
+  const file = path.join(plan.projectRoot, "assets", "video", `scene_${n}.mp4`);
+  return existsSync(file) ? file : null;
 }
 
 /**

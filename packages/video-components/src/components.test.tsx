@@ -1,9 +1,22 @@
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+
+// OffthreadVideo needs Remotion's composition contexts, which
+// renderToStaticMarkup does not provide — stub it as the plain <video>
+// it compiles down to; everything else stays the real remotion module.
+vi.mock("remotion", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("remotion")>();
+  const OffthreadVideoStub = (props: Record<string, unknown>) => (
+    <video {...(props as Record<string, string>)} />
+  );
+  return { ...actual, OffthreadVideo: OffthreadVideoStub };
+});
 import { Title } from "./components/Title.js";
 import { Paragraph } from "./components/Paragraph.js";
 import { CodeBlock } from "./components/CodeBlock.js";
 import { Image } from "./components/Image.js";
+import { VideoBackground } from "./components/VideoBackground.js";
+import { ImageBackground } from "./components/ImageBackground.js";
 import { paperLightTheme } from "./theme.js";
 
 const baseScene = (frame: number) => ({
@@ -182,5 +195,43 @@ describe("Title — the artistic title card", () => {
     );
     expect(html).toContain("TitleKai");
     expect(html).not.toContain("vertical-rl");
+  });
+});
+
+describe("VideoBackground — archival clip behind the caption band", () => {
+  it("mounts a muted OffthreadVideo fitted over the frame", () => {
+    const html = renderToStaticMarkup(
+      <VideoBackground
+        videoSrc="scene_3.mp4"
+        {...baseScene(15)}
+      />,
+    );
+    expect(html).toContain("scene_3.mp4");
+    // Audio must never leak from archival clips — narration/BGM own it.
+    expect(html).toMatch(/muted/i);
+    expect(html).toContain("object-fit");
+  });
+
+  it("applies the same bottom scrim band as ImageBackground", () => {
+    const video = renderToStaticMarkup(
+      <VideoBackground videoSrc="s.mp4" {...baseScene(15)} />,
+    );
+    const image = renderToStaticMarkup(
+      <ImageBackground src="s.jpg" {...baseScene(15)} />,
+    );
+    const gradient = /linear-gradient\(180deg[^"]*55%[^"]*\)/;
+    expect(video).toMatch(gradient);
+    expect(image).toMatch(gradient);
+  });
+
+  it("renders the caption band when a caption is given", () => {
+    const html = renderToStaticMarkup(
+      <VideoBackground
+        videoSrc="s.mp4"
+        caption="1944 年的新闻纪录片"
+        {...baseScene(15)}
+      />,
+    );
+    expect(html).toContain("1944 年的新闻纪录片");
   });
 });

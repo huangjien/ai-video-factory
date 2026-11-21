@@ -1,4 +1,4 @@
-import { existsSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import type { z } from "zod";
 import {
@@ -20,6 +20,16 @@ export interface ValidateProjectOptions {
   projectRoot: string;
   registry: ComponentRegistry;
   probeAudio?: (file: string) => Promise<number>;
+  /** Scene-clip probe (geometry/duration/audio) — injectable like
+   *  `probeAudio` so tests can fake it. Returning null = "unreadable",
+   *  which is an error finding. Absent → only file-existence and
+   *  attribution checks run (no ffprobe). */
+  probeVideo?: (file: string) => Promise<{
+    width: number;
+    height: number;
+    durationSec: number;
+    hasAudio: boolean;
+  } | null>;
 }
 
 // The caption safe-area budget lives in @video/media (CAPTION_LINE_UNITS
@@ -188,6 +198,115 @@ export async function validateProject(
           fix: "Shorten the caption text or split into more scenes.",
         });
       }
+    }
+  }
+
+  if (errors.length > 0) return { ok: false, errors };
+
+  // Public-domain scene clips (docs/plans/2026-11-21-public-domain-video-
+  // scenes-design.md): any `assets/video/scene_N.mp4` must be renderable
+  // (geometry, silent, covers the scene) AND audited (sidecar with a free
+  // licence). A clip without its sidecar would put footage on screen with
+  // no provenance — error-level, like a missing image.
+  const videoDir = path.join(opts.projectRoot, "assets", "video");
+  const clipFiles = existsSync(videoDir)
+    ? readdirSync(videoDir).filter((f) => /^scene_\d+\.mp4$/.test(f)).sort()
+    : [];
+  for (const clipFile of clipFiles) {
+    const n = parseInt(clipFile.match(/^scene_(\d+)\.mp4$/)?.[1] ?? "0", 10);
+    const clipAbs = path.join(videoDir, clipFile);
+    const field = `assets.video.${clipFile}`;
+    const scene = scenes.find((s) => {
+      const idNum = s.id.match(/scene[-_]?(\d+)/)?.[1];
+      return idNum !== undefined && parseInt(idNum, 10) === n;
+    });
+    if (!scene) {
+      errors.push({
+        file,
+        field,
+        line: 0,
+        message: `Clip ${clipFile} has no matching scene (scene ${n} is not in this storyboard) — delete it or rename.`,
+        fix: "Remove the stale clip, or re-run `video make --video-sources on`.",
+      });
+      continue;
+    }
+    const sidecarPath = path.join(videoDir, `scene_${n}.source.json`);
+    if (!existsSync(sidecarPath)) {
+      errors.push({
+        file,
+        field,
+        line: 0,
+        message: `Clip ${clipFile} has no attribution sidecar (scene_${n}.source.json) — footage on screen without provenance is unshippable.`,
+        fix: "Re-run `video make --video-sources on` to re-retrieve with attribution.",
+      });
+    } else {
+      try {
+        const sidecar = JSON.parse(
+          readFileSync(sidecarPath, "utf8"),
+        ) as { schema?: string; license?: string };
+        if (sidecar.schema !== "scene-video-source/1") {
+          errors.push({
+            file,
+            field: `${field}.sidecar`,
+            line: 0,
+            message: `Clip sidecar for scene ${n} is not scene-video-source/1 — rewrite it with \`video make --video-sources on\`.`,
+          });
+        } else if (
+          !["PD", "CC0", "PDM"].includes(sidecar.license ?? "")
+        ) {
+          errors.push({
+            file,
+            field: `${field}.sidecar`,
+            line: 0,
+            message: `Clip for scene ${n} carries licence "${sidecar.license ?? ""}" — only PD / CC0 / PDM may ship.`,
+          });
+        }
+      } catch {
+        errors.push({
+          file,
+          field: `${field}.sidecar`,
+          line: 0,
+          message: `Clip sidecar for scene ${n} is not valid JSON.`,
+        });
+      }
+    }
+    if (opts.probeVideo === undefined) continue;
+    const meta = await opts.probeVideo(clipAbs);
+    if (meta === null) {
+      errors.push({
+        file,
+        field,
+        line: 0,
+        message: `Clip ${clipFile} is unreadable by ffprobe — re-run \`video make --video-sources on\`.`,
+      });
+      continue;
+    }
+    if (meta.width !== 1080 || meta.height !== 1920) {
+      errors.push({
+        file,
+        field,
+        line: 0,
+        message: `Clip ${clipFile} is ${meta.width}x${meta.height} — scene clips must be 1080x1920 (the preprocess step enforces this).`,
+        fix: "Re-run `video make --video-sources on`.",
+      });
+    }
+    if (meta.hasAudio) {
+      errors.push({
+        file,
+        field,
+        line: 0,
+        message: `Clip ${clipFile} carries an audio track — scene audio is narration + BGM only; the preprocess step strips it.`,
+        fix: "Re-run `video make --video-sources on`.",
+      });
+    }
+    if (meta.durationSec < scene.duration - 0.5) {
+      errors.push({
+        file,
+        field,
+        line: 0,
+        message: `Clip ${clipFile} runs ${meta.durationSec.toFixed(2)}s but scene ${n} lasts ${scene.duration}s — it cannot cover the scene.`,
+        fix: "Re-run `video make --video-sources on`, or pick a longer clip.",
+      });
     }
   }
 

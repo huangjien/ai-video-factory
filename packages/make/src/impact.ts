@@ -330,6 +330,16 @@ export function computeMakeImpact(
           : sceneImageDigest(
               path.isAbsolute(src) ? src : path.join(projectRoot, src),
             );
+      // The clip's CONTENT is offline-derivable (file digest) — same
+      // honesty rule as the image bytes (2026-11-21).
+      const clipNum = sbId.match(/scene[-_]?(\d+)/)?.[1];
+      const clipFile = clipNum
+        ? path.join(projectRoot, "assets", "video", `scene_${parseInt(clipNum, 10)}.mp4`)
+        : null;
+      const clipDigest =
+        clipFile !== null && existsSync(clipFile)
+          ? sceneImageDigest(clipFile)
+          : null;
       const fresh =
         src !== undefined && digest === null
           ? false // image declared but unreadable — never report "cached"
@@ -338,6 +348,7 @@ export function computeMakeImpact(
               rendererRevision: RENDERER_REVISION,
               ...(digest !== null ? { imageHash: digest } : {}),
               ...(overlayDigest !== null ? { overlayHash: overlayDigest } : {}),
+              ...(clipDigest !== null ? { clipHash: clipDigest } : {}),
             });
       if (fresh) scenesCached.push(scene.id);
       else scenesRender.push(scene.id);

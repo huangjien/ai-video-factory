@@ -8,6 +8,10 @@ export {
   type SourceMode,
 } from "./types.js";
 
+/** HTTP helpers shared with @video/video-sources (same Wikimedia API
+ *  family, same User-Agent policy, same deadline discipline). */
+export { fetchJson, qs, stripHtml, USER_AGENT } from "./http.js";
+
 export {
   FREE_LICENSES,
   isFreeLicense,

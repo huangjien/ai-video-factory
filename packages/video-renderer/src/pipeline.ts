@@ -21,6 +21,7 @@ import {
   readSceneCacheMeta,
   sceneCacheFile,
   sceneCacheUsable,
+  sceneClipPath,
   sceneImageDigest,
   scenesDirFor,
   writeSceneCacheMeta,
@@ -284,6 +285,11 @@ async function renderScenesIncrementally(
         : null;
     const overlayHash =
       overlaySrc === null ? null : sceneImageDigest(overlaySrc);
+    // A public-domain clip (assets/video/scene_N.mp4, rendered as
+    // VideoBackground) is a render input the same way: placing or
+    // replacing one must invalidate the cached scene mp4 (2026-11-21).
+    const clipPath = sceneClipPath(root, scene.id, index);
+    const clipHash = clipPath === null ? null : sceneImageDigest(clipPath);
     const sidecar = readSceneCacheMeta(file);
     // The sidecar says the INPUTS are unchanged; the file itself says
     // whether the pixels are still there. A sidecar without its mp4 (a
@@ -297,6 +303,7 @@ async function renderScenesIncrementally(
         captionsHash,
         imageHash,
         overlayHash,
+        ...(clipHash !== null ? { clipHash } : {}),
         audio: { path: audioPath, mtimeMs: audioM },
       })
     ) {
@@ -315,6 +322,7 @@ async function renderScenesIncrementally(
         ...(captionsHash !== null ? { captionsHash } : {}),
         ...(imageHash !== null ? { imageHash } : {}),
         ...(overlayHash !== null ? { overlayHash } : {}),
+        ...(clipHash !== null ? { clipHash } : {}),
         rendererRevision: RENDERER_REVISION,
         ...(audioPath !== null ? { audioPath, audioMtimeMs: audioM } : {}),
         renderedAt: new Date().toISOString(),

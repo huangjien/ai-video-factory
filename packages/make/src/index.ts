@@ -79,6 +79,13 @@ import {
   resolveImageSourcesMode,
   type ImageSourcesMode,
 } from "./image-sources.js";
+import {
+  parseVideoSourcesMode,
+  resolveVideoSourcesForScenes,
+  resolveVideoSourcesMode,
+  type SceneVideoPlan,
+  type VideoSourcesMode,
+} from "./video-sources.js";
 import { loadLessonStore, promptRules, rulesDigest } from "@video/learn";
 import { mixProject, type MixProjectOptions } from "./mix.js";
 import {
@@ -132,6 +139,13 @@ export {
   type HistoricalSourceOutcome,
   type ImageSourcesMode,
 } from "./image-sources.js";
+export {
+  parseVideoSourcesMode,
+  resolveVideoSourcesForScenes,
+  resolveVideoSourcesMode,
+  type VideoSourcesMode,
+  type VideoSourcesOutcome,
+} from "./video-sources.js";
 
 /**
  * `video-progress/1` — live pipeline progress events (v0.7.1 plan).
@@ -347,6 +361,9 @@ export interface MakeOptions {
    *  look for a freely-licensed historical picture for the scenes that
    *  show one) or "off". */
   sources?: ImageSourcesMode;
+  /** Public-domain footage retrieval for scene backgrounds: "off"
+   *  (default until proven) or "on". */
+  videoSources?: VideoSourcesMode;
   /** Local music library for real BGM — a directory containing
    * `{tag}.wav` (or any .wav whose name contains the tag). Without it
    * the audio-assets step writes a mock silent placeholder. */
@@ -488,6 +505,9 @@ export async function runMake(
         ),
         onEvent: emit,
         ...(opts.sources !== undefined ? { sources: opts.sources } : {}),
+        ...(opts.videoSources !== undefined
+          ? { videoSources: opts.videoSources }
+          : {}),
       }),
     );
 
@@ -928,6 +948,11 @@ export async function generateSceneVisuals(
     onEvent?: ProgressEmit | undefined;
     /** Historical-picture retrieval: "on" (default) or "off". */
     sources?: ImageSourcesMode | undefined;
+    /** Public-domain footage retrieval: "off" (default) or "on". */
+    videoSources?: VideoSourcesMode | undefined;
+    /** A pre-computed video plan — the injection seam for callers that
+     *  already know which scenes are footage-worthy. */
+    videoSourcesPlan?: SceneVideoPlan[] | undefined;
     /** A pre-computed source plan — the injection seam for callers that
      *  already know which scenes are historical. */
     sourcePlan?: SceneSourcePlan[] | undefined;
@@ -1001,6 +1026,31 @@ export async function generateSceneVisuals(
   // CS-12: the character bible is shared across films, so it lives at the
   // workspace root rather than inside a project.
   const characterRoot = characterRootFor(projectRoot);
+  // Public-domain footage (design: docs/plans/2026-11-21-public-domain-
+  // video-scenes-design.md): plan → retrieve → download → preprocess,
+  // BEFORE the image loop — a scene with a clip on disk skips image
+  // generation entirely (a generated jpg behind a VideoBackground is
+  // pixels nobody sees). Every step allowed to fail; the film renders
+  // exactly as before when the feature is off or the plan fails.
+  const videoSourcesMode = resolveVideoSourcesMode(
+    opts.videoSources,
+    article.frontmatter.video_sources,
+  );
+  const sceneDurations = await readSceneTimings(projectRoot).catch(
+    () => [],
+  );
+  const video = await resolveVideoSourcesForScenes({
+    projectRoot,
+    article,
+    provider: expansionProvider,
+    mode: videoSourcesMode,
+    sceneDurationsSec: sceneDurations.map((t) => t.duration),
+    ...(opts.videoSourcesPlan !== undefined
+      ? { plan: opts.videoSourcesPlan }
+      : {}),
+  });
+  outputs.push(...video.notes);
+  const videoScenes = new Set(video.videoScenes);
   // Historical pictures: one plan for the whole article, then a retrieval
   // for the scenes the plan marked historical. Both steps are allowed to
   // fail — a picture archive being down must not fail a render.
@@ -1066,6 +1116,12 @@ export async function generateSceneVisuals(
       return { lines, generated: null };
     }
     if (selfRendered.has(i + 1)) return { lines, generated: null };
+    if (videoScenes.has(i + 1)) {
+      lines.push(
+        `scene ${i + 1}: public-domain clip on disk — image generation skipped`,
+      );
+      return { lines, generated: null };
+    }
 
     const imagePath = path.join(imageDir, `scene_${i + 1}.jpg`);
     // A borrowed historical picture is an image INPUT, so it joins the cache

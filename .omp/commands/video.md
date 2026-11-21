@@ -38,6 +38,8 @@ work whose outputs are newer than its inputs (`--dry-run` previews the plan).
 | `--music-provider auto\|minimax\|mock` | BGM generation (auto = MiniMax music-01 when `MINIMAX_API_KEY` set, else mock). |
 | `--bgm-dir/--sfx-dir <dir>` | use your own audio library instead of generation. |
 | `--fake` | offline: silent TTS placeholders + no images (`--image-provider none`). |
+| `--image-sources on\|off` | historical-picture retrieval for scene images (default `on`; frontmatter `historical_images:`). |
+| `--video-sources on\|off` | **public-domain footage for scene backgrounds** (default `off`; frontmatter `video_sources:`). When on: plans ≤5 footage-worthy scenes, retrieves PD/CC0/PDM clips from Wikimedia Commons, preprocesses (1080×1920, silent, trimmed to scene length) into `assets/video/scene_N.mp4` — those scenes skip image generation and render as `VideoBackground`. Attribution in `assets/video/scene_N.source.json` + `ATTRIBUTION.md`; the validator rejects clips without a sidecar, wrong geometry, an audio track, or a clip too short for its scene. |
 
 ## Fine-grained verbs (back-compat with pre-minimal projects)
 
@@ -64,7 +66,7 @@ review → approve review (GATE) → final
 | `preview`                  | render preview.mp4 (gated on approved storyboard; `--force` recorded) |
 | `final`                    | render final.mp4 (requires review APPROVED; QA error-level findings block it) |
 | `thumbnail <project>`      | YouTube thumbnail (`--provider mock\|minimax\|openai\|gemini`, mock default) |
-| `shorts <project>`         | 60s Shorts clip                                    |
+| `shorts <project>`         | Shorts package — full film by default; `--duration N` cuts a scene-aligned teaser |
 | `youtube <project>`        | title/description/chapters/thumbnail-prompt package |
 
 Every step writes `runs/<id>.yaml` and updates `state.yaml`.

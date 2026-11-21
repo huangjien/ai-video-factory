@@ -19,7 +19,7 @@ describe("Todo 7 — theme tokens", () => {
     expect(ratio).toBeGreaterThan(7);
   });
 
-  it("registry exports the 9 components (v0.12 — structured components removed)", () => {
+  it("registry exports the 10 components (v0.12 — structured components removed)", () => {
     expect(COMPONENT_NAMES.sort()).toEqual(
       [
       "AnimatedIllustration",
@@ -30,7 +30,8 @@ describe("Todo 7 — theme tokens", () => {
       "Image",
       "ImageBackground",
       "Paragraph",
-      "Title"
+      "Title",
+      "VideoBackground"
       ],
     );
   });

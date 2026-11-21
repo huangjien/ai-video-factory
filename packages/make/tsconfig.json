@@ -13,6 +13,7 @@
     { "path": "../audio-mix" },
     { "path": "../media-generators" },
     { "path": "../image-sources" },
+    { "path": "../video-sources" },
     { "path": "../llm" },
     { "path": "../learn" }
   ]

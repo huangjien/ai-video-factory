@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { execFileSync } from "node:child_process";
 import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -24,7 +25,12 @@ vi.mock("@video/media-generators", async (importOriginal) => {
   return { ...actual, MiniMaxVideoProvider: FakeMiniMaxVideoProvider };
 });
 
-const { registerShorts, runShorts } = await import("./shorts-command.js");
+// Dynamic import is required: the vi.mock factory above must register
+// before the module under test is loaded, or the real MiniMax provider
+// ships into the tests.
+const { registerShorts, runShorts, selectShortsWindow } = await import(
+  "./shorts-command.js"
+);
 
 describe("runShorts", () => {
   let root: string;
@@ -133,6 +139,109 @@ describe("runShorts", () => {
     const code = await runShorts({ project: "demo", cwd: root });
     expect(code).toBe(1);
     expect(errors.join("\n")).toContain("missing final mp4");
+  });
+
+  it("keeps the whole vertical master by default (remux, no re-encode)", async () => {
+    const outDir = path.join(project, "output");
+    await mkdir(outDir, { recursive: true });
+    // Portrait 4 s master with audio — h > w so the remux branch fires.
+    execFileSync(
+      "ffmpeg",
+      [
+        "-y",
+        "-f", "lavfi", "-i", "testsrc=duration=4:size=144x256:rate=15",
+        "-f", "lavfi", "-i", "sine=frequency=440:duration=4",
+        "-c:v", "libx264", "-pix_fmt", "yuv420p",
+        "-c:a", "aac", "-shortest",
+        path.join(outDir, "final-mixed.mp4"),
+      ],
+      { stdio: "ignore" },
+    );
+    const code = await runShorts({ project: "demo", cwd: root });
+    expect(code).toBe(0);
+    const dur = parseFloat(
+      execFileSync("ffprobe", [
+        "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0",
+        path.join(project, "youtube", "shorts.mp4"),
+      ]).toString().trim(),
+    );
+    expect(dur).toBeGreaterThan(3.8);
+    expect(logs.join("\n")).toMatch(/full@0/);
+  });
+
+  it("cuts a scene-aligned teaser that keeps the hook when --duration is given", async () => {
+    const outDir = path.join(project, "output");
+    await mkdir(outDir, { recursive: true });
+    await mkdir(path.join(project, "storyboard"), { recursive: true });
+    execFileSync(
+      "ffmpeg",
+      [
+        "-y",
+        "-f", "lavfi", "-i", "testsrc=duration=4:size=144x256:rate=15",
+        "-f", "lavfi", "-i", "sine=frequency=440:duration=4",
+        "-c:v", "libx264", "-pix_fmt", "yuv420p",
+        "-c:a", "aac", "-shortest",
+        path.join(outDir, "final-mixed.mp4"),
+      ],
+      { stdio: "ignore" },
+    );
+    // Boundaries at 1.0 / 2.5 / 4.0 — a 2 s teaser must end at 1.0,
+    // not chop scene-02 mid-narration.
+    await writeFile(
+      path.join(project, "storyboard", "storyboard.yaml"),
+      "scenes:\n  - id: scene-01\n    duration: 1.0\n  - id: scene-02\n    duration: 1.5\n  - id: scene-03\n    duration: 1.5\n",
+      "utf8",
+    );
+    const code = await runShorts({
+      project: "demo",
+      cwd: root,
+      durationSec: 2,
+    });
+    expect(code).toBe(0);
+    const dur = parseFloat(
+      execFileSync("ffprobe", [
+        "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0",
+        path.join(project, "youtube", "shorts.mp4"),
+      ]).toString().trim(),
+    );
+    expect(dur).toBeGreaterThan(0.75);
+    expect(dur).toBeLessThan(1.3);
+  });
+});
+
+describe("selectShortsWindow", () => {
+  const timings = [
+    { duration: 10 },
+    { duration: 9 },
+    { duration: 11.5 },
+  ];
+
+  it("defaults to the whole film", () => {
+    const w = selectShortsWindow(timings, 30.5);
+    expect(w).toEqual({ start: 0, end: 30.5, full: true });
+  });
+
+  it("treats a request >= the master as full", () => {
+    expect(selectShortsWindow(timings, 30.5, 60).full).toBe(true);
+    expect(selectShortsWindow(timings, 30.5, 30.5).full).toBe(true);
+  });
+
+  it("ends a teaser on the last scene boundary that fits", () => {
+    // Boundaries at 10 / 19 / 30.5 — a 20 s teaser ends at 19, mid-list
+    // never happens.
+    expect(selectShortsWindow(timings, 30.5, 20)).toEqual({
+      start: 0,
+      end: 19,
+      full: false,
+    });
+  });
+
+  it("falls back to the raw request without timings", () => {
+    expect(selectShortsWindow([], 30.5, 12)).toEqual({
+      start: 0,
+      end: 12,
+      full: false,
+    });
   });
 });
 

@@ -1,7 +1,7 @@
 import type { Command } from "commander";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
-import { probeAudioDuration } from "@video/media";
+import { probeAudioDuration, probeVideoMetaOrNull } from "@video/media";
 import { formatErrors, parseYaml, validateProject } from "@video/vdsl";
 import { REGISTRY } from "@video/video-components";
 import { DEFAULT_THEME_NAME, THEME_NAMES } from "@video/theme";
@@ -39,6 +39,7 @@ export async function runValidate(
     projectRoot,
     registry: REGISTRY,
     probeAudio: probeAudioDuration,
+    probeVideo: probeVideoMetaOrNull,
   });
   if (result.ok) {
     console.log(brandBannerLine());

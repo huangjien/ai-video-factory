@@ -45,6 +45,13 @@ export interface SceneCacheMeta {
    * banners were re-rendered with a CJK font while the scene mp4s kept
    * the tofu boxes baked in). Absent on legacy sidecars — mismatch. */
   overlayHash?: string;
+  /** sha256 (first 16 hex) of the scene's public-domain clip
+   * (`assets/video/scene_N.mp4`, rendered as `VideoBackground`). The clip
+   * is a RENDER input — placing or replacing it changes the pixels while
+   * every other term stays identical, so it must invalidate the cached
+   * scene mp4 (2026-11-21). Absent on sidecars written before this field
+   * existed — treated as a mismatch when the scene now has a clip. */
+  clipHash?: string;
   audioPath?: string;
   audioMtimeMs?: number;
   renderedAt: string;
@@ -144,6 +151,8 @@ export interface SceneCacheTerms {
   imageHash?: string | null;
   /** Pillow overlay PNG digest; null/undefined ⇒ term skipped. */
   overlayHash?: string | null;
+  /** Public-domain clip digest; null/undefined ⇒ term skipped. */
+  clipHash?: string | null;
   /** Omitted ⇒ audio terms skipped. */
   audio?: { path: string | null; mtimeMs: number };
 }
@@ -170,6 +179,7 @@ export function sceneCacheIsFresh(
     (terms.captionsHash == null || meta.captionsHash === terms.captionsHash) &&
     (terms.imageHash == null || meta.imageHash === terms.imageHash) &&
     (terms.overlayHash == null || meta.overlayHash === terms.overlayHash) &&
+    (terms.clipHash == null || meta.clipHash === terms.clipHash) &&
     (terms.audio === undefined ||
       ((meta.audioPath ?? null) === terms.audio.path &&
         Math.abs((meta.audioMtimeMs ?? 0) - terms.audio.mtimeMs) < 1))
@@ -199,6 +209,21 @@ export function sceneCacheUsable(
   terms: SceneCacheTerms,
 ): boolean {
   return existsSync(file) && sceneCacheIsFresh(meta, terms);
+}
+
+/** The scene's clip path by the video-sources naming convention
+ *  (`assets/video/scene_N.mp4`); null when absent. Mirrors the
+ *  renderer-side `findSceneVideo` — the cache must see the same file the
+ *  render will bind. */
+export function sceneClipPath(
+  projectRoot: string,
+  sceneId: string,
+  index: number,
+): string | null {
+  const idNum = sceneId.match(/scene[-_]?(\d+)/)?.[1];
+  const n = String(idNum ? parseInt(idNum, 10) : index + 1);
+  const file = path.join(projectRoot, "assets", "video", `scene_${n}.mp4`);
+  return existsSync(file) ? file : null;
 }
 
 export function sceneImageDigest(src: string): string | null {

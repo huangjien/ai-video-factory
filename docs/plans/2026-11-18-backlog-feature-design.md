@@ -39,7 +39,7 @@ ideas:
 | `video backlog list [--status] [--json]` | 按分数排序；默认隐藏 `dropped` |
 | `video backlog approve <id>` / `drop <id> [--reason]` / `reset <id>` | proposed→idea / →dropped / 卡死 `drafting` 的人工逃生口 |
 | `video backlog harvest [--dry-run] [--paths docs/plans,learnings]` | 每个候选文档一次 LLM 抽取调用 → 追加 `proposed` 条目（按 id/topic 去重） |
-| `video backlog score [--judge]` | 重算排序（默认确定性分量；`--judge` 一次批量 LLM 排名，缓存于 `runs/backlog-judge-<hash>.yaml`） |
+| `video backlog score [--judge]` | 重算排序（默认确定性分量；`--judge` 一次批量 LLM 排名，滚动快照缓存于 `runs/backlog-judge.yaml`） |
 | `video backlog stats [--json]` | 派生 join：idea.project → `projects/<id>/`（article 存在 / final-mixed.mp4 / BV id / youtube），按 source 出命中率 |
 | `video backlog schedule --install\|--remove\|--status` | 写/卸 `~/Library/LaunchAgents/com.aivideofactory.backlog-harvest.plist`：周度 headless harvest（`VIDEO_ASK=off`），日志进 `runs/` |
 | `video draft --from-backlog <id> [--force]` | 见下 |
@@ -50,7 +50,7 @@ ideas:
 
 ## 打分
 
-排序 = 确定性分量加权和：recency、完整度（note/anchors/content）、重叠清洁度（预检命中数）、status。分支规则全部在代码里；LLM 只做「哪个点子最值得做」这一真实判断（`--judge` 批量排名，缓存键 = 开放条目 ids+topics 哈希，条目不变不重判）。
+排序 = 确定性分量加权和：recency、完整度（note/anchors/content）、重叠清洁度（预检命中数）、status。分支规则全部在代码里；LLM 只做「哪个点子最值得做」这一真实判断。Judge 结果保存在唯一的 `runs/backlog-judge.yaml` 快照中；指纹覆盖提示词使用的开放选题、数据报告、已制作选题、provider 路由和提示词版本。`auto` 只读取与当前输入指纹匹配且覆盖所有开放条目的排名；缓存缺失或失效时重跑 judge，失败则停止，不回退到旧结果。
 
 ## 错误处理
 

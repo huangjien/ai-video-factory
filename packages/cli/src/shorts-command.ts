@@ -63,16 +63,21 @@ async function shortsFfmpeg(
   const filter = (await isVerticalVideo(src))
     ? "scale=1080:1920"
     : "crop=ih*9/16:ih,scale=1080:1920";
+  // A trimmed cut fades its last second out (video + audio) so the
+  // out-point reads as an ending, not a hard chop.
+  const fadeStart = Math.max(0, start + duration - 1);
+  const vf = duration > 0 ? `${filter},fade=t=out:st=${fadeStart}:d=1` : filter;
+  const af = duration > 0 ? `afade=t=out:st=${fadeStart}:d=1` : undefined;
   await execFileAsync("ffmpeg", [
     "-y",
     "-ss",
     String(start),
     "-i",
     src,
-    "-t",
-    String(duration),
+    ...(duration > 0 ? ["-t", String(duration)] : []),
     "-vf",
-    filter,
+    vf,
+    ...(af ? ["-af", af] : []),
     "-c:v",
     "libx264",
     "-preset",
@@ -112,6 +117,64 @@ async function isVerticalVideo(file: string): Promise<boolean> {
   } catch {
     return false;
   }
+}
+
+/** Probe the container duration in seconds (0 when unreadable). */
+async function probeDurationSec(file: string): Promise<number> {
+  try {
+    const { stdout } = await execFileAsync("ffprobe", [
+      "-v",
+      "error",
+      "-show_entries",
+      "format=duration",
+      "-of",
+      "csv=p=0",
+      file,
+    ]);
+    const v = parseFloat(stdout.trim());
+    return Number.isFinite(v) ? v : 0;
+  } catch {
+    return 0;
+  }
+}
+
+export interface ShortsWindow {
+  start: number;
+  /** Cut out-point in source seconds; 0 with full=true means "to EOF". */
+  end: number;
+  /** True when the whole film is kept (no re-timing needed). */
+  full: boolean;
+}
+
+/** Choose the cut window for the mock (ffmpeg) path.
+ *
+ *  Default (no requested teaser length): the WHOLE film — the scene-01
+ *  hook opens the cut and the payoff scene closes it (feedback 2026-11-21:
+ *  the old 60 s slice skipped the hook, cut mid-scene, and truncated the
+ *  story). With a requested length: still start at 0 so the hook is kept,
+ *  and end on the last scene boundary that fits, so the out-point lands
+ *  between scenes instead of mid-narration.
+ */
+export function selectShortsWindow(
+  timings: { duration: number }[],
+  masterDurationSec: number,
+  requestedDurationSec?: number,
+): ShortsWindow {
+  if (
+    requestedDurationSec === undefined ||
+    (masterDurationSec > 0 && requestedDurationSec >= masterDurationSec)
+  ) {
+    return { start: 0, end: masterDurationSec, full: true };
+  }
+  let end = requestedDurationSec;
+  let cum = 0;
+  for (const t of timings) {
+    const next = cum + t.duration;
+    if (next <= requestedDurationSec) end = next;
+    else break;
+    cum = next;
+  }
+  return { start: 0, end, full: false };
 }
 
 export async function runShorts(opts: ShortsOptions): Promise<number> {
@@ -211,31 +274,58 @@ export async function runShorts(opts: ShortsOptions): Promise<number> {
       console.error(`  run \`video make <project>\` first`);
       return 1;
     }
-    const duration = opts.durationSec ?? 60;
-    let start = opts.startSec ?? -1;
-    if (start < 0) {
+    // Window: full story by default (hook → payoff). An explicit
+    // --duration cuts a scene-aligned teaser; an explicit --start wins
+    // verbatim for manual surgical cuts.
+    const masterDur = await probeDurationSec(src);
+    const explicitStart = opts.startSec ?? -1;
+    const timings = await readSceneTimings(projectRoot).catch(() => []);
+    const window = selectShortsWindow(timings, masterDur, opts.durationSec);
+    const start = explicitStart >= 0 ? explicitStart : window.start;
+    const duration =
+      explicitStart >= 0 ? (opts.durationSec ?? 60) : window.end - window.start;
+    // Full-length vertical master: stream-copy remux — the master's own
+    // hook/outro already carry the polish, and re-encoding 3 minutes buys
+    // nothing. Anything else (landscape master, teaser, manual window)
+    // goes through the re-encode cut.
+    if (window.full && explicitStart < 0 && (await isVerticalVideo(src))) {
       try {
-        const timings = await readSceneTimings(projectRoot);
-        const scene1Dur =
-          timings.find((t) => t.id === "scene-01")?.duration ?? 0;
-        start = scene1Dur > 0 ? scene1Dur : 0;
-      } catch {
-        start = 0;
+        await execFileAsync("ffmpeg", [
+          "-y",
+          "-i",
+          src,
+          "-c",
+          "copy",
+          "-movflags",
+          "+faststart",
+          shortsPath,
+        ]);
+      } catch (err) {
+        console.error(`ffmpeg failed: ${(err as Error).message}`);
+        return 1;
+      }
+    } else {
+      try {
+        await shortsFfmpeg(src, shortsPath, start, duration);
+      } catch (err) {
+        console.error(`ffmpeg failed: ${(err as Error).message}`);
+        return 1;
       }
     }
-    try {
-      await shortsFfmpeg(src, shortsPath, start, duration);
-    } catch (err) {
-      console.error(`ffmpeg failed: ${(err as Error).message}`);
-      return 1;
+    if (window.full && masterDur > 180) {
+      console.log(
+        `  note: ${Math.round(masterDur)} s exceeds YouTube's 180 s Shorts cap — it uploads as a regular video; pass --duration <sec> for a scene-aligned teaser`,
+      );
     }
     const hash = createHash("sha256")
       .update(`${src}|${start}|${duration}`)
       .digest("hex");
     runRecord = {
       provider: "ffmpeg",
-      model: `9:16 1080x1920 ${duration}s@${start}`,
-      input_files: ["output/final-faststart.mp4"],
+      model: window.full
+        ? `9:16 1080x1920 full@${start}`
+        : `9:16 1080x1920 ${duration}s@${start}`,
+      input_files: [path.relative(projectRoot, src)],
       prompt_hash: "sha256:" + hash,
     };
   }
@@ -263,7 +353,7 @@ export async function runShorts(opts: ShortsOptions): Promise<number> {
 
   console.log(`\u2713 extracted ${opts.project}/youtube/shorts.mp4`);
   console.log(
-    `  provider=${runRecord.provider}  hash=${runRecord.prompt_hash.slice(7, 19)}…`,
+    `  provider=${runRecord.provider}  model=${runRecord.model}  hash=${runRecord.prompt_hash.slice(7, 19)}…`,
   );
   console.log(`  next: upload shorts.mp4 as a YouTube Short`);
   return 0;
@@ -279,12 +369,12 @@ export function registerShorts(program: Command): void {
     .option("--cwd <dir>", "base directory for the project")
     .option(
       "--duration <seconds>",
-      "short clip length in seconds (default: 60 for mock; 5 for minimax)",
+      "teaser length; the cut ends on the last scene boundary that fits (default: the full film, hook through payoff)",
       (v) => parseInt(v, 10),
     )
     .option(
       "--start <seconds>",
-      "start offset into the final.mp4 (mock provider only, default 0)",
+      "start offset into the master (mock provider only; default 0 — keep the scene-01 hook)",
       (v) => parseInt(v, 10),
     )
     .option(

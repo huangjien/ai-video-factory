@@ -3,7 +3,7 @@ import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import type { RenderPlan } from "@video/vdsl";
-import { resolveImageSources } from "./render.js";
+import { resolveImageSources, resolveVideoSources } from "./render.js";
 
 const rendererFile = fileURLToPath(import.meta.url);
 const rendererDir = path.dirname(rendererFile);
@@ -88,6 +88,12 @@ export async function prepareStudioWorkspace(
   ),
 ): Promise<StudioWorkspace> {
   const resolvedPlan = await resolveImageSources(renderPlan);
+  // Studio serves the workspace root as its public dir — same staticFile
+  // contract the render path uses.
+  const planWithVideo = await resolveVideoSources(
+    resolvedPlan,
+    path.join(workspaceDir, "public"),
+  );
   const srcDir = path.join(workspaceDir, "src");
   await mkdir(srcDir, { recursive: true });
   await writeFile(
@@ -108,7 +114,7 @@ export async function prepareStudioWorkspace(
   );
   await writeFile(
     path.join(srcDir, "index.tsx"),
-    studioEntryTemplate(resolvedPlan),
+    studioEntryTemplate(planWithVideo),
     "utf8",
   );
   const localBin = findStudioBin();

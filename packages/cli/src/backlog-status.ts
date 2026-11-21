@@ -6,6 +6,7 @@ import { findRepoRoot } from "./learn-command.js";
 import { slugifyProjectName } from "./project-path.js";
 import { isStaleDrafting, loadBacklogStore, type BacklogEntry } from "./backlog-store.js";
 import { schedulerState, type BacklogScheduleOptions } from "./backlog-schedule.js";
+import { readJudgeCache } from "./backlog-judge-cache.js";
 
 /**
  * `video backlog status` — one screen answering: is anything running, did
@@ -107,12 +108,6 @@ function recentAutoRecords(repoRoot: string, cap: number): AutoRecord[] {
   return out;
 }
 
-function failedJudgeDumps(repoRoot: string): string[] {
-  const dir = path.join(repoRoot, "runs");
-  if (!existsSync(dir)) return [];
-  return readdirSync(dir).filter((f) => /^backlog-judge-.*-failed\.yaml$/.test(f));
-}
-
 export async function runBacklogStatus(opts: BacklogStatusOptions): Promise<number> {
   const repoRoot = findRepoRoot(opts.cwd ?? process.cwd());
   console.log("backlog status");
@@ -203,11 +198,9 @@ export async function runBacklogStatus(opts: BacklogStatusOptions): Promise<numb
       console.log(`  ✗ ${r.file} — ${r.error ?? "(no detail)"}`);
     }
   }
-  const judgeDumps = failedJudgeDumps(repoRoot);
-  if (judgeDumps.length > 0) {
-    console.log(
-      `  ! ${judgeDumps.length} judge reply dump(s) in runs/ — the retry path handled them; delete when done reading`,
-    );
+  const judgeFailure = readJudgeCache(repoRoot)?.failure;
+  if (judgeFailure !== undefined) {
+    console.log(`  ! latest judge failure: ${judgeFailure.message} — see runs/backlog-judge.yaml`);
   }
   if (records.length > 0 && failures.length === 0) {
     const newest = records[0]!;

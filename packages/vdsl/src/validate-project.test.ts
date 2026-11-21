@@ -270,3 +270,122 @@ scenes:
     expect(result.ok).toBe(true);
   });
 });
+
+describe("validateProject — scene clips must be renderable AND audited", () => {
+  function clipProject(
+    sidecar: Record<string, unknown> | null,
+  ): string {
+    const root = fixtureProject();
+    const videoDir = path.join(root, "assets", "video");
+    mkdirSync(videoDir, { recursive: true });
+    writeFileSync(path.join(videoDir, "scene_1.mp4"), "mp4");
+    if (sidecar !== null) {
+      writeFileSync(
+        path.join(videoDir, "scene_1.source.json"),
+        JSON.stringify(sidecar),
+      );
+    }
+    return root;
+  }
+
+  const goodSidecar = {
+    schema: "scene-video-source/1",
+    source: "commons-video",
+    title: "Carrier landing 1944",
+    license: "PD",
+    pageUrl: "https://commons.wikimedia.org/wiki/File:x.ogv",
+  };
+
+  const goodProbe = async () => ({
+    width: 1080,
+    height: 1920,
+    durationSec: 8,
+    hasAudio: false,
+  });
+
+  it("a silent 1080x1920 clip with a free sidecar validates clean", async () => {
+    const root = clipProject(goodSidecar);
+    const result = await validateProject(validStoryboardYaml, "storyboard.yaml", {
+      projectRoot: root,
+      registry,
+      probeVideo: goodProbe,
+    });
+    expect(result.ok).toBe(true);
+  });
+
+  it("a clip without a sidecar is an error — provenance is mandatory", async () => {
+    const root = clipProject(null);
+    const result = await validateProject(validStoryboardYaml, "storyboard.yaml", {
+      projectRoot: root,
+      registry,
+      probeVideo: goodProbe,
+    });
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(
+        result.errors.map((e) => e.message).join("\n"),
+      ).toMatch(/no attribution sidecar/);
+    }
+  });
+
+  it("a non-free licence in the sidecar is an error", async () => {
+    const root = clipProject({ ...goodSidecar, license: "CC-BY-4.0" });
+    const result = await validateProject(validStoryboardYaml, "storyboard.yaml", {
+      projectRoot: root,
+      registry,
+      probeVideo: goodProbe,
+    });
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(
+        result.errors.map((e) => e.message).join("\n"),
+      ).toMatch(/only PD \/ CC0 \/ PDM/);
+    }
+  });
+
+  it("geometry, audio, and coverage violations are each reported", async () => {
+    const root = clipProject(goodSidecar);
+    const result = await validateProject(validStoryboardYaml, "storyboard.yaml", {
+      projectRoot: root,
+      registry,
+      probeVideo: async () => ({
+        width: 640,
+        height: 480,
+        durationSec: 2,
+        hasAudio: true,
+      }),
+    });
+    if (!result.ok) {
+      const text = result.errors.map((e) => e.message).join("\n");
+      expect(text).toMatch(/must be 1080x1920/);
+      expect(text).toMatch(/audio track/);
+      expect(text).toMatch(/cannot cover the scene/);
+    }
+  });
+
+  it("a clip for a scene not in the storyboard is stale", async () => {
+    const root = clipProject(goodSidecar);
+    // fixture storyboard's scenes are scene-01/scene-02 — a clip numbered
+    // 9 has no owner.
+    writeFileSync(path.join(root, "assets/video/scene_9.mp4"), "mp4");
+    const result = await validateProject(validStoryboardYaml, "storyboard.yaml", {
+      projectRoot: root,
+      registry,
+    });
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(
+        result.errors.map((e) => e.message).join("\n"),
+      ).toMatch(/no matching scene/);
+    }
+  });
+
+  it("without probeVideo only file-existence and attribution run", async () => {
+    const root = clipProject(goodSidecar);
+    const result = await validateProject(validStoryboardYaml, "storyboard.yaml", {
+      projectRoot: root,
+      registry,
+    });
+    expect(result.ok).toBe(true);
+  });
+});

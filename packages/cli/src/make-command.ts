@@ -4,8 +4,10 @@ import {
   computeMakeImpact,
   formatImpact,
   parseImageSourcesMode,
+  parseVideoSourcesMode,
   runMake,
   type ImageSourcesMode,
+  type VideoSourcesMode,
 } from "@video/make";
 import { resolveProjectDir } from "./project-path.js";
 import { l10nRootOrThrow } from "./translate-command.js";
@@ -31,6 +33,8 @@ export interface MakeOptions {
     "minimax" | "minimax-h3" | "openai" | "gemini" | "mock" | "none";
   /** Historical-picture retrieval: on (default) | off. */
   sources?: ImageSourcesMode;
+  /** Public-domain footage for scene backgrounds: off (default) | on. */
+  videoSources?: VideoSourcesMode;
   /** Local music library dir — BGM tags resolve to {tag}.wav inside it. */
   bgmDir?: string;
   /** Local SFX library dir — same lookup rule as bgmDir. */
@@ -76,6 +80,9 @@ export async function runMakeCli(opts: MakeOptions): Promise<number> {
       ? { imageProvider: opts.imageProvider }
       : {}),
     ...(opts.sources !== undefined ? { sources: opts.sources } : {}),
+    ...(opts.videoSources !== undefined
+      ? { videoSources: opts.videoSources }
+      : {}),
     ...(opts.bgmDir !== undefined ? { bgmDir: opts.bgmDir } : {}),
     ...(opts.sfxDir !== undefined ? { sfxDir: opts.sfxDir } : {}),
   });
@@ -144,6 +151,10 @@ export function registerMake(program: Command): void {
       "historical-picture retrieval for scene images: on (default — look for a freely-licensed historical picture for the scenes that show one) | off",
     )
     .option(
+      "--video-sources <mode>",
+      "public-domain footage for scene backgrounds: on|off (default off)",
+    )
+    .option(
       "--bgm-dir <dir>",
       "local BGM library dir — the bgm tag from audio-config.yaml resolves to {tag}.wav inside it (default: mock silent placeholder)",
     )
@@ -165,6 +176,7 @@ export function registerMake(program: Command): void {
           imageProvider?:
             "minimax" | "minimax-h3" | "openai" | "gemini" | "mock" | "none";
           imageSources?: string;
+          videoSources?: string;
           bgmDir?: string;
           sfxDir?: string;
           dryRun?: boolean;
@@ -172,6 +184,7 @@ export function registerMake(program: Command): void {
         },
       ) => {
         const sources = parseImageSourcesMode(opts.imageSources);
+        const videoSources = parseVideoSourcesMode(opts.videoSources);
         process.exitCode = await runMakeCli({
           project,
           ...(opts.cwd !== undefined ? { cwd: opts.cwd } : {}),
@@ -180,6 +193,7 @@ export function registerMake(program: Command): void {
             ? { imageProvider: opts.imageProvider }
             : {}),
           ...(sources !== undefined ? { sources } : {}),
+          ...(videoSources !== undefined ? { videoSources } : {}),
           ...(opts.bgmDir !== undefined ? { bgmDir: opts.bgmDir } : {}),
           ...(opts.sfxDir !== undefined ? { sfxDir: opts.sfxDir } : {}),
           ...(opts.dryRun !== undefined ? { dryRun: opts.dryRun } : {}),

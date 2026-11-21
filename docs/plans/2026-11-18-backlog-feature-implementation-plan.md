@@ -58,7 +58,7 @@
 - [ ] **BL-05｜确定性打分 + 可选 judge 排名** `P1`
   - 依赖：BL-02
   - 涉及：`packages/cli/src/backlog-score.ts`（新文件）。
-  - 实施：recency/完整度/重叠清洁度/status 加权和；`list` 默认按分排序；`--judge` 一次批量排名，缓存 `runs/backlog-judge-<hash>.yaml`（键=开放条目 ids+topics 哈希）。
+  - 实施：recency/完整度/重叠清洁度/status 加权和；`list` 默认按分排序；`--judge` 一次批量排名，结果保存在唯一滚动快照 `runs/backlog-judge.yaml`，由覆盖提示输入和路由配置的指纹校验。
   - 验收：分量权重单测（fixture 条目排序稳定）；缓存命中/失效各一测。
 
 - [ ] **BL-06｜stats 派生统计** `P1`

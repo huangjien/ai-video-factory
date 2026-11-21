@@ -3,6 +3,7 @@ import { existsSync, readdirSync, readFileSync, statSync, mkdirSync, unlinkSync,
 import { homedir, tmpdir } from "node:os";
 import path from "node:path";
 import { parse as parseYaml } from "yaml";
+import { loadProviderConfig } from "@video/llm";
 import type { Command } from "commander";
 import { formatRunId, writeRun, approveCheckpoint } from "@video/workflow";
 import { findRepoRoot } from "./learn-command.js";
@@ -30,6 +31,14 @@ import { runMakeCli } from "./make-command.js";
 import { runTranslate } from "./translate-command.js";
 import { runBacklogJudge } from "./backlog-score.js";
 import { runBacklogSchedule } from "./backlog-schedule.js";
+import {
+  expectedJudgeIds,
+  judgeFingerprint,
+  judgeRoute,
+  readJudgeCache,
+  removeLegacyJudgeCaches,
+  validCachedRanking,
+} from "./backlog-judge-cache.js";
 
 /**
  * `video backlog auto` — the spare-capacity video factory.
@@ -249,64 +258,50 @@ export function releaseAutoLock(repoRoot: string): void {
 
 // --- pick ---------------------------------------------------------------
 
-function newestJudgeRanking(repoRoot: string): { id: string; rank: number }[] | null {
-  const runsDir = path.join(repoRoot, "runs");
-  if (!existsSync(runsDir)) return null;
-  // Newest by MTIME, not name — hash filenames sort alphabetically, which
-  // is time-ordered only by accident (measured 2026-11-19: a tick picked
-  // a stale ranking while a fresher one sat beside it).
-  const caches = readdirSync(runsDir)
-    .filter((f) => /^backlog-judge-[0-9a-f]{64}\.yaml$/.test(f))
-    .map((f) => ({ f, m: statSync(path.join(runsDir, f)).mtimeMs }))
-    .sort((a, b) => b.m - a.m)
-    .map((x) => x.f);
-  for (const file of caches) {
-    try {
-      const parsed = parseYaml(readFileSync(path.join(runsDir, file), "utf8")) as {
-        ranking?: { id?: unknown; rank?: unknown }[];
-      } | null;
-      const rows = parsed?.ranking;
-      if (!Array.isArray(rows)) continue;
-      const ranking = rows
-        .filter(
-          (r): r is { id: string; rank: number } =>
-            typeof r.id === "string" && typeof r.rank === "number",
-        )
-        .sort((a, b) => a.rank - b.rank);
-      if (ranking.length > 0) return ranking;
-    } catch {
-      // unreadable cache — try the next-oldest one
-    }
-  }
-  return null;
-}
-
-/** Highest-ranked OPEN entry from the judge cache; runs the judge first
- *  when no cache exists (one glm call). Returns a message on refusal. */
+/** Highest-ranked entry from the current-input snapshot; stale/missing data
+ *  triggers a judge run and is revalidated before auto can pick. */
 async function pickTopOpenId(
   repoRoot: string,
-  store: { ideas: BacklogEntry[] },
 ): Promise<{ id?: string; message: string }> {
+  const store = loadBacklogStore(repoRoot);
   const openIds = new Set(
     store.ideas.filter((e) => e.status === "idea" || e.status === "proposed").map((e) => e.id),
   );
+  removeLegacyJudgeCaches(repoRoot);
   if (openIds.size === 0) {
     return { message: "no open entries — the backlog needs new ideas (harvest or add)" };
   }
-  let ranking = newestJudgeRanking(repoRoot);
+  const route = judgeRoute(loadProviderConfig());
+  const fingerprint = judgeFingerprint(repoRoot, store, route);
+  let ranking = validCachedRanking(
+    readJudgeCache(repoRoot),
+    fingerprint,
+    expectedJudgeIds(store),
+  );
   if (ranking === null) {
-    console.log("  no judge ranking found — running the judge first (one glm call)");
+    console.log("  no valid ranking for current inputs — running the judge first");
     const code = await runBacklogJudge({ cwd: repoRoot });
     if (code !== 0) {
       return { message: `judge failed (exit ${code}) — no ranking to pick from` };
     }
-    ranking = newestJudgeRanking(repoRoot);
+    const currentStore = loadBacklogStore(repoRoot);
+    const currentFingerprint = judgeFingerprint(repoRoot, currentStore, route);
+    if (currentFingerprint !== fingerprint) {
+      return { message: "backlog or judge evidence changed while judging — refusing stale pick" };
+    }
+    ranking = validCachedRanking(
+      readJudgeCache(repoRoot),
+      currentFingerprint,
+      expectedJudgeIds(currentStore),
+    );
     if (ranking === null) {
-      return { message: "judge wrote no readable cache — cannot pick" };
+      return { message: "judge wrote no valid ranking for current inputs — cannot pick" };
     }
   }
-  // A stale cache may name already-drafted ideas: take the best OPEN id.
-  const top = ranking.find((r) => openIds.has(r.id));
+  const top = ranking[0];
+  if (top !== undefined && !openIds.has(top.id)) {
+    return { message: "validated ranking no longer matches open backlog — refusing stale pick" };
+  }
   if (top === undefined) {
     return { message: "every ranked idea is already drafted — harvest new ideas first" };
   }
@@ -573,9 +568,23 @@ export async function runBacklogAuto(opts: BacklogAutoOptions): Promise<number> 
     return refuse(`idea(s) mid-pipeline: ${names} — resume manually or \`video backlog reset <id>\``);
   }
 
-  const pick = await pickTopOpenId(repoRoot, store);
+  const pick = await pickTopOpenId(repoRoot);
   if (pick.id === undefined) {
     return refuse(pick.message);
+  }
+  try {
+    store = loadBacklogStore(repoRoot);
+  } catch (err) {
+    return refuse(`backlog changed after ranking: ${(err as Error).message}`, 1);
+  }
+  const currentRoute = judgeRoute(loadProviderConfig());
+  const currentRanking = validCachedRanking(
+    readJudgeCache(repoRoot),
+    judgeFingerprint(repoRoot, store, currentRoute),
+    expectedJudgeIds(store),
+  );
+  if (currentRanking?.[0]?.id !== pick.id) {
+    return refuse("backlog or judge inputs changed after ranking — refusing stale pick");
   }
   conditions.push(`pick: ${pick.id} (${pick.message})`);
   console.log(`✓ conditions met — top idea: ${pick.id}`);
@@ -590,8 +599,27 @@ export async function runBacklogAuto(opts: BacklogAutoOptions): Promise<number> 
   if (!lock.acquired) {
     return refuse(lock.reason);
   }
+  try {
+    store = loadBacklogStore(repoRoot);
+  } catch (err) {
+    releaseAutoLock(repoRoot);
+    return refuse(`backlog changed before drafting: ${(err as Error).message}`, 1);
+  }
+  const lockedRanking = validCachedRanking(
+    readJudgeCache(repoRoot),
+    judgeFingerprint(repoRoot, store, judgeRoute(loadProviderConfig())),
+    expectedJudgeIds(store),
+  );
+  if (lockedRanking?.[0]?.id !== pick.id) {
+    releaseAutoLock(repoRoot);
+    return refuse("backlog or judge inputs changed before drafting — refusing stale pick");
+  }
 
-  const entry = store.ideas.find((e) => e.id === pick.id)!;
+  const entry = store.ideas.find((e) => e.id === pick.id);
+  if (entry === undefined || (entry.status !== "idea" && entry.status !== "proposed")) {
+    releaseAutoLock(repoRoot);
+    return refuse(`selected idea ${pick.id} is no longer open`);
+  }
   // Auto-approve is THIS verb's decision, not the draft's: the pick flow
   // stamps drafting→drafted, but proposed→idea happens here so a mocked
   // or short-circuited draft still leaves an approved idea behind.
@@ -694,7 +722,8 @@ export async function runBacklogAuto(opts: BacklogAutoOptions): Promise<number> 
   // 2026-11-20: every film ships with a vertical cut). The cut is a
   // NATIVE vertical master (re-rendered at 1080×1920 — a crop of the
   // landscape master carries burned-in captions and a cropped title),
-  // trimmed down to a Shorts-length clip from that master.
+  // packaged WHOLE (hook through payoff; feedback 2026-11-21 killed the
+  // 60 s slice: it skipped the hook, cut mid-scene, truncated the story).
   // Failures are non-fatal, same as the other publish lanes.
   if (opts.noShorts !== true) {
     const verticalCode = await runVertical({ project: slug, cwd: repoRoot });
@@ -711,7 +740,6 @@ export async function runBacklogAuto(opts: BacklogAutoOptions): Promise<number> 
       const shortsCode = await runShorts({
         project: verticalRoot,
         cwd: repoRoot,
-        durationSec: 60,
       });
       stages.push({ stage: "shorts", code: shortsCode });
       if (shortsCode !== 0) {

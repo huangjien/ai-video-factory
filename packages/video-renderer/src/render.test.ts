@@ -1,10 +1,16 @@
-import { mkdtempSync, mkdirSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { execFileSync } from "node:child_process";
 import { describe, expect, it } from "vitest";
 import { brandSchema, compileStoryboard, type RenderPlan } from "@video/vdsl";
-import { renderPlanToVideo, resolveImageSources } from "./render.js";
+import { renderPlanToVideo, resolveImageSources, resolveVideoSources } from "./render.js";
 
 const samplePlan: RenderPlan = {
   project: {
@@ -334,4 +340,201 @@ ${background}`;
     const { renderPlan } = compileStoryboard(yaml(""), "/tmp/proj-x");
     expect(renderPlan.projectRoot).toBe("/tmp/proj-x");
   });
+});
+
+describe("resolveVideoSources — clips copy into the bundler public dir", () => {
+  it("rewrites videoSrc to the served name and copies the bytes", async () => {
+    const root = mkdtempSync(path.join(tmpdir(), "vf-videosrc-"));
+    const publicDir = path.join(root, "public");
+    const clip = path.join(root, "scene_1.mp4");
+    writeFileSync(clip, Buffer.from([0x66, 0x74, 0x79, 0x70])); // ftyp magic
+    const plan: RenderPlan = {
+      ...samplePlan,
+      projectRoot: root,
+      scenes: [
+        {
+          ...samplePlan.scenes[1]!,
+          id: "scene-02",
+          component: "VideoBackground",
+          props: { videoSrc: clip },
+        },
+      ],
+    };
+    const warnings: string[] = [];
+    const resolved = await resolveVideoSources(plan, publicDir, (m) =>
+      warnings.push(m),
+    );
+    expect(warnings).toEqual([]);
+    const served = resolved.scenes[0]?.props.videoSrc;
+    expect(served).toBe("scene-video-scene-02.mp4");
+    expect(existsSync(path.join(publicDir, served as string))).toBe(true);
+  });
+
+  it("copies an identical source path once and shares the served name", async () => {
+    const root = mkdtempSync(path.join(tmpdir(), "vf-videosrc-"));
+    const publicDir = path.join(root, "public");
+    const clip = path.join(root, "same.mp4");
+    writeFileSync(clip, Buffer.from([0x66, 0x74, 0x79, 0x70]));
+    const videoScene = (id: string) => ({
+      ...samplePlan.scenes[1]!,
+      id,
+      component: "VideoBackground" as const,
+      props: { videoSrc: clip },
+    });
+    const plan: RenderPlan = {
+      ...samplePlan,
+      scenes: [videoScene("scene-01"), videoScene("scene-02")],
+    };
+    const resolved = await resolveVideoSources(plan, publicDir);
+    expect(resolved.scenes[0]?.props.videoSrc).toBe(
+      resolved.scenes[1]?.props.videoSrc,
+    );
+    const served = readdirSync(publicDir);
+    expect(served).toHaveLength(1);
+  });
+
+  it("warns and leaves the scene untouched when the clip is missing", async () => {
+    const root = mkdtempSync(path.join(tmpdir(), "vf-videosrc-"));
+    const publicDir = path.join(root, "public");
+    const plan: RenderPlan = {
+      ...samplePlan,
+      scenes: [
+        {
+          ...samplePlan.scenes[1]!,
+          component: "VideoBackground",
+          props: { videoSrc: path.join(root, "nope.mp4") },
+        },
+      ],
+    };
+    const warnings: string[] = [];
+    const resolved = await resolveVideoSources(plan, publicDir, (m) =>
+      warnings.push(m),
+    );
+    expect(warnings.join("\n")).toMatch(/videoSrc not found/);
+    expect(existsSync(publicDir)).toBe(false);
+    expect(resolved.scenes[0]?.props.videoSrc).toMatch(/nope\.mp4$/);
+  });
+});
+
+describe("resolveImageSources — a placed clip promotes the scene to VideoBackground", () => {
+  it("swaps ImageBackground for VideoBackground when assets/video/scene_N.mp4 exists", async () => {
+    const root = mkdtempSync(path.join(tmpdir(), "vf-videobind-"));
+    mkdirSync(path.join(root, "assets", "video"), { recursive: true });
+    const clip = path.join(root, "assets", "video", "scene_1.mp4");
+    writeFileSync(clip, Buffer.from([0x66, 0x74, 0x79, 0x70]));
+    const imageScene = {
+      ...samplePlan.scenes[1]!,
+      id: "scene-01",
+      component: "ImageBackground" as const,
+      props: { src: path.join(root, "assets", "images", "scene_1.jpg") },
+    };
+    const plan: RenderPlan = {
+      ...samplePlan,
+      projectRoot: root,
+      scenes: [imageScene],
+    };
+    const resolved = await resolveImageSources(plan);
+    expect(resolved.scenes[0]?.component).toBe("VideoBackground");
+    expect(resolved.scenes[0]?.props.videoSrc).toBe(clip);
+  });
+
+  it("keeps ImageBackground (and its data URL) when no clip exists", async () => {
+    const root = mkdtempSync(path.join(tmpdir(), "vf-videobind-"));
+    mkdirSync(path.join(root, "assets", "images"), { recursive: true });
+    const jpg = path.join(root, "assets", "images", "scene_1.jpg");
+    writeFileSync(jpg, Buffer.from([0xff, 0xd8, 0xff, 0xe0]));
+    const imageScene = {
+      ...samplePlan.scenes[1]!,
+      id: "scene-01",
+      component: "ImageBackground" as const,
+      props: { src: jpg },
+    };
+    const plan: RenderPlan = {
+      ...samplePlan,
+      projectRoot: root,
+      scenes: [imageScene],
+    };
+    const resolved = await resolveImageSources(plan);
+    expect(resolved.scenes[0]?.component).toBe("ImageBackground");
+    expect(resolved.scenes[0]?.props.src).toMatch(/^data:image\/jpeg;base64,/);
+  });
+});
+
+describe("M1 — a placed PD clip renders as the scene background", () => {
+  it(
+    "binds assets/video/scene_1.mp4 through OffthreadVideo and paints it",
+    async () => {
+      const root = mkdtempSync(path.join(tmpdir(), "vf-m1-"));
+      mkdirSync(path.join(root, "assets", "video"), { recursive: true });
+      // Loud flat-blue 3 s clip — if the video layer is not actually
+      // composited, the frame stays theme-coloured (dark, low blue).
+      const clip = path.join(root, "assets", "video", "scene_1.mp4");
+      execFileSync(
+        "ffmpeg",
+        ["-y", "-f", "lavfi", "-i", "color=c=blue:s=540x960:r=30", "-t", "3", clip],
+        { stdio: "ignore" },
+      );
+      const imageScene = {
+        ...samplePlan.scenes[0]!,
+        id: "scene-01",
+        component: "ImageBackground" as const,
+        props: { src: path.join(root, "nowhere.jpg") },
+      };
+      const plan: RenderPlan = {
+        ...samplePlan,
+        projectRoot: root,
+        totalFrames: 60,
+        scenes: [{ ...imageScene, durationInFrames: 60 }],
+      };
+
+      const meanChannels = async (out: string): Promise<[number, number, number]> => {
+        await renderPlanToVideo(plan, out);
+        const png = out.replace(/\.mp4$/, "-probe.png");
+        execFileSync("ffmpeg", ["-y", "-ss", "0.5", "-i", out, "-frames:v", "1", png], {
+          stdio: "ignore",
+        });
+        const rgb = execFileSync(
+          "ffmpeg",
+          ["-i", png, "-vf", "format=rgb24", "-f", "rawvideo", "-"],
+          { encoding: "buffer", maxBuffer: 1e8 },
+        );
+        let r = 0;
+        let g = 0;
+        let b = 0;
+        const n = rgb.length / 3;
+        for (let i = 0; i < rgb.length; i += 3) {
+          r += rgb[i]!;
+          g += rgb[i + 1]!;
+          b += rgb[i + 2]!;
+        }
+        return [r / n, g / n, b / n];
+      };
+
+      const outDir = mkdtempSync(path.join(tmpdir(), "vf-m1-out-"));
+      const [r, g, b] = await meanChannels(path.join(outDir, "clip.mp4"));
+      // Blue-dominant frame: the clip's pixels, not the theme's.
+      expect(b).toBeGreaterThan(120);
+      expect(b).toBeGreaterThan(r + 40);
+      expect(b).toBeGreaterThan(g + 40);
+      // And the scrim still keeps the lower third darker than the top.
+      const png = path.join(outDir, "clip-probe.png");
+      const top = execFileSync(
+        "ffmpeg",
+        ["-i", png, "-vf", "format=rgb24,crop=1080:300:0:0", "-f", "rawvideo", "-"],
+        { encoding: "buffer", maxBuffer: 1e8 },
+      );
+      const bottom = execFileSync(
+        "ffmpeg",
+        ["-i", png, "-vf", "format=rgb24,crop=1080:300:0:1620", "-f", "rawvideo", "-"],
+        { encoding: "buffer", maxBuffer: 1e8 },
+      );
+      const mean = (buf: Buffer): number => {
+        let s = 0;
+        for (let i = 0; i < buf.length; i++) s += buf[i]!;
+        return s / buf.length;
+      };
+      expect(mean(bottom)).toBeLessThan(mean(top));
+    },
+    180_000,
+  );
 });

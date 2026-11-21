@@ -467,6 +467,9 @@ importers:
       '@video/video-renderer':
         specifier: workspace:*
         version: link:../video-renderer
+      '@video/video-sources':
+        specifier: workspace:*
+        version: link:../video-sources
       '@video/workflow':
         specifier: workspace:*
         version: link:../workflow
@@ -669,6 +672,21 @@ importers:
       '@types/react':
         specifier: ^19.0.0
         version: 19.3.0
+
+  packages/video-sources:
+    dependencies:
+      '@video/image-sources':
+        specifier: workspace:*
+        version: link:../image-sources
+      '@video/llm':
+        specifier: workspace:*
+        version: link:../llm
+      '@video/prompts':
+        specifier: workspace:*
+        version: link:../prompts
+      zod:
+        specifier: ^3.25.0
+        version: 3.25.76
 
   packages/workflow:
     dependencies:

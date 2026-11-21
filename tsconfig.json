@@ -78,6 +78,9 @@
     },
     {
       "path": "packages/douyin"
+    },
+    {
+      "path": "packages/video-sources"
     }
   ]
 }

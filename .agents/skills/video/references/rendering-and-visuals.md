@@ -383,6 +383,39 @@ visuals`, or `historical_images: off` in `article.md` frontmatter. Default
 is `on` — the feature runs for every film, and the plan still decides
 which scenes are historical (a modern film plans nothing and pays nothing).
 
+## Public-domain footage scenes (`--video-sources`)
+
+The video sibling of the historical-pictures feature: real archival FILM
+clips as full-bleed scene backgrounds. Same licence gate — **PD / CC0 /
+PDM only**, retrieved from Wikimedia Commons video files
+(`filetype:video`, machine-readable licence in the file record). Modern
+military/broadcast footage is copyrighted and never passes the gate.
+
+**How it runs** (`video make --video-sources on`, or `video_sources: on`
+frontmatter; default OFF until a live run is reviewed):
+
+1. PLAN-V — one LLM call marks ≤5 footage-worthy scenes (a Tang court has
+   no footage; the Cuban Missile Crisis does — footage EXISTENCE is the
+   test).
+2. RETRIEVE — Commons video search, query → subject → single terms.
+3. MATCH — one LLM call picks the clip that really shows the subject
+   (era and navy, not just keywords); it may answer "none".
+4. DOWNLOAD + PREPROCESS — cover-crop 1080×1920, audio stripped,
+   30 fps, trimmed to the scene duration, written to
+   `assets/video/scene_N.mp4` with a `scene_N.source.json` sidecar and
+   a row in `assets/video/ATTRIBUTION.md`.
+
+Scenes with a clip skip image generation; at render the storyboard binds
+`VideoBackground` automatically (captions and brand overlays unchanged).
+A step that fails degrades to the generated scene — footage is never
+fatal.
+
+**Validator.** `video validate` rejects a clip that is not 1080×1920,
+carries an audio track, is shorter than its scene, has no sidecar, or has
+a licence outside PD/CC0/PDM.
+
+**Design + status:** `docs/plans/2026-11-21-public-domain-video-scenes-design.md`.
+
 **Gotchas.**
 
 - *A rich query finds nothing.* An archive ANDs its terms: `唐太宗` returns

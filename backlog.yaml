@@ -314,7 +314,7 @@ ideas:
       - 战役路线史料核对
   - id: 2026-11-19-when-ai-grades-its-own-homework
     topic: When AI Grades Its Own Homework
-    status: proposed
+    status: drafted
     source: harvest:docs/plans/2026-10-26-cross-model-judging-design.md
     created: 2026-11-19
     note: "Everyone intuitively grasains the conflict of interest in self-grading;
@@ -329,6 +329,9 @@ ideas:
       - GLM
       - MiniMax
       - LLM-as-a-judge research
+    drafting_at: 2026-11-21T05:00:07.351Z
+    project: when-ai-grades-its-own-homework
+    drafted_at: 2026-11-21T05:34:51.211Z
   - id: 2026-11-19-the-pairing-rule-two-lines-of-code-that-
     topic: "The Pairing Rule: Two Lines of Code That Guarantee a Fair Judge"
     status: proposed
@@ -682,7 +685,7 @@ ideas:
     drafted_at: 2026-11-20T20:57:40.145Z
   - id: 2026-11-19-为什么军官要定期轮岗
     topic: 为什么军官要定期轮岗
-    status: proposed
+    status: drafted
     source: harvest:docs/plans/2026-11-18-military-ai-topic-backlog-design.md
     created: 2026-11-19
     note: "频繁调动看似低效，实则是大组织对抗派系与地方主义的深层设计，对企业和官僚体系同样适用 —
@@ -694,9 +697,12 @@ ideas:
       - 各国军官轮任制度
       - 苏军人事制度
       - 美军军官晋升体系
+    drafting_at: 2026-11-21T19:20:54.140Z
+    project: 为什么军官要定期轮岗
+    drafted_at: 2026-11-21T20:16:40.562Z
   - id: 2026-11-19-为什么航母拦阻着舰是最危险的常规作业
     topic: 为什么航母拦阻着舰是最危险的常规作业
-    status: proposed
+    status: drafted
     source: harvest:docs/plans/2026-11-18-military-ai-topic-backlog-design.md
     created: 2026-11-19
     note: "「天天做的最危险的事」自带戏剧张力，可结合驾驶舱视角与事故影像做高视觉化呈现 —
@@ -707,6 +713,9 @@ ideas:
       - 着舰信号官LSO
       - 光学助降系统
       - 航母着舰事故统计
+    drafting_at: 2026-11-21T01:00:02.700Z
+    project: 为什么航母拦阻着舰是最危险的常规作业
+    drafted_at: 2026-11-21T01:36:58.969Z
   - id: 2026-11-19-为什么ai会一本正经地胡说
     topic: 为什么AI会一本正经地胡说
     status: drafted
@@ -1693,4 +1702,20 @@ ideas:
       - Remotion bundling data URIs
       - sceneImageDigest helper
       - sha256 digest convention
+  - id: 2026-11-21-军队招募制度的历史沿革-从府兵-募兵到义务兵与志愿兵
+    topic: 军队招募制度的历史沿革：从府兵、募兵到义务兵与志愿兵
+    status: idea
+    source: manual
+    created: 2026-11-21
+    note: 以兵源制度沿革为主，比较贵族兵制，民兵制，府兵制、募兵制、征兵制、世兵制、部落兵制与志愿兵制：各自的历史背景、产生原因、兵源组织与财政基础、优缺点，以及制度转型的推动因素；辨析义务兵与职业志愿兵，避免将制度演变写成简单的线性进步。
+    anchors:
+      - 府兵制
+      - 募兵制
+      - 义务兵役制
+      - 志愿兵制
+      - 雇佣兵制
+      - 常备募兵与职业军队
+      - 现代全民征兵与总动员
+      - 未来 AI 会不会改变兵源制度？
+    lang: zh-CN
 

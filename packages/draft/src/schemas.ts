@@ -97,6 +97,11 @@ export const ArticleFrontmatterSchema = z
      *  resolveImageSourcesMode coerces unknown values at the use site.
      *  Absent means "on" — the default lives in ONE place, there. */
     historical_images: z.string().optional(),
+    /** Public-domain footage retrieval for scene backgrounds: "on" or
+     *  "off". Plain string like historical_images; the default is "off"
+     *  (resolveVideoSourcesMode owns that default) until the first live
+     *  run is reviewed. */
+    video_sources: z.string().optional(),
     /** CS-01: cross-video channel grammar (narrative voice, captions,
      *  motion defaults, brand chrome) — distinct from `image_style`,
      *  which is the per-film art style. Carried article → storyboard

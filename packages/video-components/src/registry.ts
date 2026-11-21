@@ -10,6 +10,7 @@ import {
 import { EndCard } from "./components/EndCard.js";
 import { Image } from "./components/Image.js";
 import { ImageBackground } from "./components/ImageBackground.js";
+import { VideoBackground } from "./components/VideoBackground.js";
 import { Paragraph } from "./components/Paragraph.js";
 import { Title } from "./components/Title.js";
 
@@ -113,6 +114,15 @@ const imageBackgroundProps = z
      *  text-overlay pass. Composited between the background image
      *  and the bottom captions strip. */
     textOverlaySrc: z.string().optional(),
+  })
+  .passthrough();
+
+const videoBackgroundProps = z
+  .object({
+    /** staticFile() path inside the Remotion public dir — the render
+     *  step copies assets/video/scene_N.mp4 there before rendering. */
+    videoSrc: z.string().min(1),
+    fit: z.enum(["cover", "contain"]).default("cover"),
   })
   .passthrough();
 
@@ -241,6 +251,10 @@ export const REGISTRY: Record<string, RegistryEntry> = {
     propsSchema: imageBackgroundProps,
     component: ImageBackground as ComponentType<unknown>,
   },
+  VideoBackground: {
+    propsSchema: videoBackgroundProps,
+    component: VideoBackground as ComponentType<unknown>,
+  },
   DoodleScene: {
     propsSchema: DoodleScenePropsSchema,
     component: DoodleScene as ComponentType<unknown>,
@@ -262,5 +276,9 @@ export type RegistryPropsByName = {
     fit?: "cover" | "contain";
     kenBurnsScale?: number;
     textOverlaySrc?: string;
+  };
+  VideoBackground: {
+    videoSrc: string;
+    fit?: "cover" | "contain";
   };
 };

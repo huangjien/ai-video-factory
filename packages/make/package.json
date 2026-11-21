@@ -32,6 +32,7 @@
     "@video/tts": "workspace:*",
     "@video/video-renderer": "workspace:*",
     "@video/workflow": "workspace:*",
-    "yaml": "^2.7.0"
+    "yaml": "^2.7.0",
+    "@video/video-sources": "workspace:*"
   }
 }

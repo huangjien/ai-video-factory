@@ -7,7 +7,12 @@ export {
   captionBlockLineCount,
   type CaptionCue,
 } from "./captions.js";
-export { probeAudioDuration, probeAudioDurationOrNull } from "./probe.js";
+export {
+  probeAudioDuration,
+  probeAudioDurationOrNull,
+  probeVideoMetaOrNull,
+  type VideoProbeMeta,
+} from "./probe.js";
 export { mp3ToWav, MAX_TOP_UP_SEC } from "./convert.js";
 export {
   readSceneTimings,

@@ -1,8 +1,6 @@
-import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import { createHash } from "node:crypto";
 import type { Command } from "commander";
-import { parse as parseYaml, stringify as yamlStringify } from "yaml";
+import { parse as parseYaml } from "yaml";
 import {
   chatWithFallback,
   extractFencedYaml,
@@ -17,6 +15,23 @@ import {
   type BacklogEntry,
   type BacklogStatus,
 } from "./backlog-store.js";
+import {
+  expectedJudgeIds,
+  JUDGE_CACHE_SCHEMA,
+  judgeCachePath,
+  judgeFingerprint,
+  judgeRoute,
+  latestAnalyticsReport,
+  makeJudgeCacheRecord,
+  readJudgeCache,
+  removeLegacyJudgeCaches,
+  validCachedRanking,
+  writeJudgeCache,
+  type JudgeRank,
+} from "./backlog-judge-cache.js";
+
+export { latestAnalyticsReport } from "./backlog-judge-cache.js";
+export type { JudgeRank } from "./backlog-judge-cache.js";
 
 /**
  * Deterministic backlog scoring + the optional LLM judge (design §打分,
@@ -32,10 +47,9 @@ import {
  * at 100.
  *
  * `judge` is the real judgment a sum cannot make: ONE batched LLM call
- * ranks all open entries. The parsed reply is cached at
- * runs/backlog-judge-<sha256(sorted open ids+topics)>.yaml — as long as
- * the open set is unchanged, re-running is a cache hit and the LLM is
- * never called. The prompt carries id/topic/note (capped at 200
+ * ranks all open entries. The parsed reply is cached in the single rolling
+ * runs/backlog-judge.yaml snapshot and validated against every prompt input.
+ * The prompt carries id/topic/note (capped at 200
  * chars)/anchors, NEVER the full content: the judge ranks ideas, not
  * drafts, and content is an unbounded dump.
  */
@@ -120,52 +134,13 @@ export function sortForList(
   });
 }
 
-export interface JudgeRank {
-  id: string;
-  rank: number;
-  reason: string;
-}
-
 export interface BacklogJudgeOptions {
   json?: boolean;
   model?: "minimax" | "glm";
   cwd?: string;
 }
 
-const JUDGE_CACHE_SCHEMA = "backlog-judge/1";
 const NOTE_PROMPT_CAP = 200;
-const JUDGE_CACHE_FILE = "backlog-judge";
-
-interface JudgeCacheFile {
-  schema: string;
-  hash: string;
-  provider: string;
-  created: string;
-  ranking: JudgeRank[];
-}
-
-/** Cache key = the open set + the analytics evidence + the produced
- *  stories: add/rename/reorder an entry, ship a NEW weekly report, or
- *  produce another video and the hash moves; nothing else about the
- *  store (statuses of closed entries, notes, content) can invalidate a
- *  ranking of ids+topics. */
-function openEntriesHash(
-  open: BacklogEntry[],
-  evidenceDate?: string,
-  produced?: { topic: string }[],
-): string {
-  const canonical = [...open]
-    .sort((a, b) => a.id.localeCompare(b.id))
-    .map((e) => `${e.id}\n${e.topic}`)
-    .join("\n");
-  const producedLine = (produced ?? [])
-    .map((p) => p.topic)
-    .sort()
-    .join("|");
-  return createHash("sha256")
-    .update(canonical + (evidenceDate ?? "") + producedLine)
-    .digest("hex");
-}
 
 const JUDGE_SYSTEM_PROMPT = `You rank video topic ideas for a knowledge channel.
 Decide which open backlog idea is most worth turning into a video next.
@@ -191,25 +166,6 @@ Rules:
 - the reason states the decisive factor, it does not restate the topic.`;
 
 const REPORT_PROMPT_CAP = 6000;
-
-/** Newest docs/analytics/*-report.md — the periodic viewing-data review
- *  (scripts/channel-analytics.py writes it). Null when the channel has
- *  never run analytics. */
-export function latestAnalyticsReport(
-  repoRoot: string,
-): { date: string; content: string } | null {
-  const dir = path.join(repoRoot, "docs", "analytics");
-  if (!existsSync(dir)) return null;
-  const reports = readdirSync(dir)
-    .filter((f) => /^\d{4}-\d{2}-\d{2}-report\.md$/.test(f))
-    .sort();
-  const file = reports.at(-1);
-  if (file === undefined) return null;
-  return {
-    date: file.slice(0, 10),
-    content: readFileSync(path.join(dir, file), "utf8"),
-  };
-}
 
 function buildJudgeMessages(
   open: BacklogEntry[],
@@ -349,9 +305,10 @@ export async function runBacklogJudge(
     console.error(`✗ ${(err as Error).message}`);
     return 1;
   }
-  const open = store.ideas.filter(
-    (e) => e.status === "idea" || e.status === "proposed",
-  );
+  removeLegacyJudgeCaches(repoRoot);
+  const open = store.ideas
+    .filter((e) => e.status === "idea" || e.status === "proposed")
+    .sort((a, b) => a.id.localeCompare(b.id));
   if (open.length === 0) {
     console.log(
       store.ideas.length === 0
@@ -374,93 +331,74 @@ export async function runBacklogJudge(
   }
   // Already-produced stories: the judge cannot know 玄武门之变 was filmed
   // yesterday, so a reworded twin ranked #2 over fresher ideas (measured
-  // 2026-11-19). The produced set rides in the prompt AND the hash.
+  // 2026-11-19). The produced set rides in the prompt AND the fingerprint.
   const produced = store.ideas
     .filter((e) => e.status === "drafted")
-    .map((e) => ({ topic: e.topic, ...(e.project !== undefined ? { project: e.project } : {}) }));
-  const hash = openEntriesHash(open, report?.date, produced);
-  // runs/backlog-judge-<hash>.yaml; an unparseable reply is dumped beside
-  // it with a -failed suffix so the raw evidence survives the exit 1.
-  const cachePath = path.join(repoRoot, "runs", `${JUDGE_CACHE_FILE}-${hash}.yaml`);
-  const failedPath = cachePath.replace(/\.yaml$/, "-failed.yaml");
+    .map((e) => ({ topic: e.topic, ...(e.project !== undefined ? { project: e.project } : {}) }))
+    .sort((a, b) => a.topic.localeCompare(b.topic) || (a.project ?? "").localeCompare(b.project ?? ""));
+  const cfg = loadProviderConfig();
+  const route = judgeRoute(cfg, opts.model);
+  const fingerprint = judgeFingerprint(repoRoot, store, route);
+  // Legacy hash-named artifacts are cleaned up; all outcomes use one snapshot.
+  const cachePath = judgeCachePath(repoRoot);
 
   let ranking: JudgeRank[] | null = null;
-  let providerName = "unknown";
-  let judgedAt = "";
+  let providerName = route.primary;
+  let judgedAt = new Date().toISOString();
 
   // Same open set as last time → reuse. A corrupt cache is a miss with a
   // warning, never a crash: it gets overwritten by the fresh judgment.
-  if (existsSync(cachePath)) {
-    try {
-      const raw = parseYaml(readFileSync(cachePath, "utf8")) as
-        | Partial<JudgeCacheFile>
-        | null;
-      const rows = raw?.ranking;
-      const shapeOk =
-        raw?.schema === JUDGE_CACHE_SCHEMA &&
-        Array.isArray(rows) &&
-        rows.every(
-          (r) =>
-            r !== null &&
-            typeof r.id === "string" &&
-            Number.isFinite(r.rank),
-        );
-      if (raw !== null && shapeOk && rows !== undefined) {
-        console.log(
-          `✓ judge cache hit — ${path.relative(repoRoot, cachePath)} (entries unchanged since ${raw.created ?? "unknown"})`,
-        );
-        ranking = rows;
-        providerName = raw.provider ?? "unknown";
-        judgedAt = raw.created ?? "";
-      } else {
-        console.error(`  ! judge cache unreadable — re-judging`);
-      }
-    } catch {
-      console.error(`  ! judge cache unreadable — re-judging`);
-    }
+  const cached = readJudgeCache(repoRoot);
+  ranking = validCachedRanking(cached, fingerprint, expectedJudgeIds(store));
+  if (ranking !== null && cached !== null) {
+    console.log(
+      `✓ judge cache hit — ${path.relative(repoRoot, cachePath)} (unchanged since ${cached.created})`,
+    );
+    providerName = cached.provider;
+    judgedAt = cached.created;
+  } else if (cached?.failure !== undefined) {
+    console.error(`  previous judge failed: ${cached.failure.message}`);
   }
 
   if (ranking === null) {
-    const cfg = loadProviderConfig();
-    const reviewCfg = cfg["review"];
-    const chosenName = opts.model ?? reviewCfg.primary;
-    const fallbackName =
-      chosenName === reviewCfg.primary
-        ? reviewCfg.fallback
-        : chosenName === reviewCfg.fallback
-          ? reviewCfg.primary
-          : undefined;
-
     const messages = buildJudgeMessages(open, report ?? undefined, produced);
     let rawReply = "";
-    // ONE automatic retry on an unusable reply: ranking 74 rows is
-    // stochastic and the model occasionally duplicates a row (measured
-    // 2026-11-19); a fresh sample usually parses. Both failures dump.
-    // Assigns the OUTER `ranking` — do not shadow it here or the cache
-    // hit/miss paths split into two variables (2026-11-19 regression).
+    // ONE automatic retry on an unusable reply; only the latest failure is
+    // retained in the snapshot.
     for (let attempt = 1; attempt <= 2 && ranking === null; attempt++) {
       try {
         // Low temperature: a ranking should not shuffle between identical runs.
         const out = await chatWithFallback(
-          providerInstance(chosenName),
-          fallbackName !== undefined ? providerInstance(fallbackName) : null,
+          providerInstance(route.primary),
+          route.fallback !== undefined ? providerInstance(route.fallback) : null,
           { messages, temperature: 0.2 },
         );
         rawReply = out.response.content;
         providerName = out.provider;
         judgedAt = new Date().toISOString();
       } catch (err) {
-        console.error(`✗ judge LLM call failed: ${(err as Error).message}`);
+        const message = `judge LLM call failed: ${(err as Error).message}`;
+        writeJudgeCache(repoRoot, makeJudgeCacheRecord({
+          fingerprint,
+          provider: providerName,
+          created: new Date().toISOString(),
+          failure: { message },
+        }));
+        console.error(`✗ ${message}`);
         return 1;
       }
       try {
         ranking = parseJudgeRanking(rawReply, open.map((e) => e.id));
       } catch (err) {
         if (attempt === 2) {
-          mkdirSync(path.dirname(failedPath), { recursive: true });
-          writeFileSync(failedPath, rawReply, "utf8");
-          console.error(`✗ judge output unusable after retry: ${(err as Error).message}`);
-          console.error(`  raw reply dumped to ${path.relative(repoRoot, failedPath)}`);
+          const message = `judge output unusable after retry: ${(err as Error).message}`;
+          writeJudgeCache(repoRoot, makeJudgeCacheRecord({
+            fingerprint,
+            provider: providerName,
+            created: new Date().toISOString(),
+            failure: { message, raw_reply: rawReply },
+          }));
+          console.error(`✗ ${message}`);
           return 1;
         }
         console.error(`  ! judge reply unusable (${(err as Error).message}) — retrying once`);
@@ -470,15 +408,37 @@ export async function runBacklogJudge(
     // the narrowing the loop cannot express.
     if (ranking === null) return 1;
 
-    mkdirSync(path.dirname(cachePath), { recursive: true });
-    const record: JudgeCacheFile = {
-      schema: JUDGE_CACHE_SCHEMA,
-      hash,
+    let currentStore;
+    try {
+      currentStore = loadBacklogStore(repoRoot);
+    } catch (err) {
+      const message = `backlog changed while judging: ${(err as Error).message}`;
+      writeJudgeCache(repoRoot, makeJudgeCacheRecord({
+        fingerprint,
+        provider: providerName,
+        created: new Date().toISOString(),
+        failure: { message },
+      }));
+      console.error(`✗ ${message}`);
+      return 1;
+    }
+    if (judgeFingerprint(repoRoot, currentStore, judgeRoute(loadProviderConfig(), opts.model)) !== fingerprint) {
+      const message = "backlog or judge evidence changed while judging; run judge again";
+      writeJudgeCache(repoRoot, makeJudgeCacheRecord({
+        fingerprint,
+        provider: providerName,
+        created: new Date().toISOString(),
+        failure: { message },
+      }));
+      console.error(`✗ ${message}`);
+      return 1;
+    }
+    writeJudgeCache(repoRoot, makeJudgeCacheRecord({
+      fingerprint,
       provider: providerName,
       created: judgedAt,
       ranking,
-    };
-    writeFileSync(cachePath, yamlStringify(record) + "\n", "utf8");
+    }));
   }
 
   // Every refusal path above returned, so the loop only exits with a
@@ -502,7 +462,7 @@ export async function runBacklogJudge(
     console.log(
       JSON.stringify({
         schema: JUDGE_CACHE_SCHEMA,
-        hash,
+        hash: fingerprint,
         provider: providerName,
         judged_at: judgedAt,
         ranking: rows,
@@ -524,7 +484,7 @@ export function addJudgeCommand(backlog: Command): void {
   backlog
     .command("judge")
     .description(
-      "one batched LLM ranking of the open ideas, cached by ids+topics hash (runs/backlog-judge-<hash>.yaml)",
+      "one batched LLM ranking of open ideas, stored in runs/backlog-judge.yaml",
     )
     .option("--json", "machine-readable output (full ranked object)")
     .option("--model <provider>", "model provider: minimax|glm (default from config)")

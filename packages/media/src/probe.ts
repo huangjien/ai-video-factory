@@ -3,6 +3,63 @@ import { promisify } from "node:util";
 
 const execFileAsync = promisify(execFile);
 
+/** Geometry + duration + audio presence of a video file — the checks the
+ *  VDSL validator runs on a scene clip (1080×1920, no audio track,
+ *  covers the scene). */
+export interface VideoProbeMeta {
+  width: number;
+  height: number;
+  durationSec: number;
+  hasAudio: boolean;
+}
+
+/** Null when ffprobe cannot read the file — the validator treats that as
+ *  an error-level finding, but the probe itself never throws so the
+ *  message stays in one place. */
+export async function probeVideoMetaOrNull(
+  file: string,
+): Promise<VideoProbeMeta | null> {
+  try {
+    const stdout = await execFileAsync("ffprobe", [
+      "-v",
+      "error",
+      "-show_entries",
+      "format=duration:stream=index,codec_type,width,height",
+      "-of",
+      "json",
+      file,
+    ]);
+    const parsed = JSON.parse(stdout.stdout) as {
+      streams?: {
+        index: number;
+        codec_type?: string;
+        width?: number;
+        height?: number;
+      }[];
+      format?: { duration?: string };
+    };
+    const video = parsed.streams?.find((s) => s.codec_type === "video");
+    const durationStr = parsed.format?.duration;
+    const durationSec =
+      durationStr !== undefined ? Number.parseFloat(durationStr) : Number.NaN;
+    if (
+      video?.width === undefined ||
+      video.height === undefined ||
+      Number.isNaN(durationSec)
+    ) {
+      return null;
+    }
+    return {
+      width: video.width,
+      height: video.height,
+      durationSec,
+      hasAudio: (parsed.streams ?? []).some((s) => s.codec_type === "audio"),
+    };
+  } catch {
+    return null;
+  }
+}
+
 export async function probeAudioDuration(file: string): Promise<number> {
   const { stdout } = await execFileAsync("ffprobe", [
     "-v",

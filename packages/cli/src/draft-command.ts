@@ -6,11 +6,18 @@ import { existsSync } from "node:fs";
 import {
   GLMProvider,
   MiniMaxProvider,
+  GeminiProvider,
+  OpenAIProvider,
+  availableGenerators,
   judgePickForName,
   loadProviderConfig,
+  pickGenerator,
   pickJudgeProvider,
   providerForRole,
+  type GeneratorName,
+  type JudgePick,
   type Provider,
+  type ProviderConfig,
   type ProviderTelemetry,
 } from "@video/llm";
 import { MiniMaxWebSearch, callResearch } from "@video/research";
@@ -67,10 +74,14 @@ export interface DraftOptions {
    *  judged, the review's findings are applied surgically, and the
    *  quality loop continues from there. */
   fromReview?: string;
-  model?: "minimax" | "glm";
+  /** Generator provider. "auto" (the default) picks at random from the
+   *  pool — openai | gemini | glm, whichever hold a key (owner call
+   *  2026-11-21). */
+  model?: "auto" | "minimax" | "glm" | "openai" | "gemini";
   /** Judge provider for the article review loop (2026-10-26 cross-model
-   *  design). Default: the review role, flipped off the generator when
-   *  they collide — see `pickJudgeProvider`. */
+   *  design). Default: minimax when its key is set, else the review
+   *  role, flipped off the generator when they collide — see
+   *  `pickJudgeProvider`. */
   judgeModel?: "minimax" | "glm";
   lang?: "zh-CN" | "en-US";
   duration?: number;
@@ -179,9 +190,11 @@ export interface DraftOptions {
   candidates?: number;
 }
 
-function providerInstance(name: string): Provider {
+export function providerInstance(name: string): Provider {
   if (name === "glm") return new GLMProvider();
   if (name === "minimax") return new MiniMaxProvider();
+  if (name === "openai") return new OpenAIProvider();
+  if (name === "gemini") return new GeminiProvider();
   throw new Error(`unsupported provider: ${name}`);
 }
 
@@ -189,7 +202,10 @@ function providerInstance(name: string): Provider {
  *  SERVING provider (it may differ from the configured one after a
  *  failover); the model is what that provider runs. */
 function modelFor(name: string): string {
-  return name === "glm" ? "glm-5.3" : "MiniMax-M3";
+  if (name === "glm") return "glm-5.3";
+  if (name === "openai") return "gpt-6.1-sol";
+  if (name === "gemini") return "gemini-3.5-flash";
+  return "MiniMax-M3";
 }
 
 function safeGitHead(cwd: string): string {
@@ -515,6 +531,50 @@ export async function writeAudioConfigIfAbsent(
   }
 }
 
+/** The generator the pool draws, or null when the caller named one
+ *  explicitly. "auto" (and an absent --model) asks for the pool; a
+ *  named provider is honoured verbatim. */
+export function resolvePoolPick(
+  model: string | undefined,
+  pool: GeneratorName[],
+  rng: () => number = Math.random,
+): GeneratorName | null {
+  if (model !== undefined && model !== "auto") return null;
+  return pickGenerator(pool, rng);
+}
+
+/** The generator that writes the article (and the storyboard derived
+ *  from it): the pool pick when there is one, the named provider when
+ *  the caller named it, and the research role's primary otherwise. */
+export function resolveGeneratorName(
+  model: string | undefined,
+  poolPick: GeneratorName | null,
+  cfg: ProviderConfig,
+): string {
+  if (poolPick !== null) return poolPick;
+  if (model !== undefined && model !== "auto") return model;
+  return providerForRole(cfg, "research");
+}
+
+/** The judge. An explicit --judge-model wins; otherwise MiniMax when it
+ *  holds a key (owner call 2026-11-21: the grader stays fixed while the
+ *  generators rotate); otherwise the review role, flipped off the
+ *  generator when they collide. */
+export function resolveJudgePick(opts: {
+  judgeModel?: string | undefined;
+  generator: string;
+  cfg: ProviderConfig;
+  minimaxCanJudge: boolean;
+}): JudgePick {
+  if (opts.judgeModel !== undefined) {
+    return judgePickForName(opts.judgeModel, opts.cfg);
+  }
+  if (opts.minimaxCanJudge && opts.generator !== "minimax") {
+    return { name: "minimax", fallback: undefined, flipped: false };
+  }
+  return pickJudgeProvider(opts.cfg, opts.generator);
+}
+
 export async function runDraft(opts: DraftOptions): Promise<number> {
   // Validate input flags before project lookup so the user sees the
   // most useful error first (no point telling them the project is
@@ -656,25 +716,49 @@ export async function runDraft(opts: DraftOptions): Promise<number> {
   const projectRoot = resolvedProject.root;
 
   const cfg = loadProviderConfig();
-  const chosenName = opts.model ?? providerForRole(cfg, "research");
+  const pool = availableGenerators();
+  const poolPick = resolvePoolPick(opts.model, pool);
+  const chosenName = resolveGeneratorName(opts.model, poolPick, cfg);
+  if (chosenName === "auto") {
+    console.error(
+      "✗ --model auto needs at least one of OPENAI_API_KEY / GEMINI_API_KEY / GLM_API_KEY",
+    );
+    return 1;
+  }
   const provider = providerInstance(chosenName);
   // Per-config fallback (minimax → glm or vice versa). When the chosen
   // provider returns a quota / rate-limit error, `callDraft` retries
   // with the fallback once instead of failing the whole run.
+  // A pool-picked generator falls back to ANOTHER POOL MEMBER — retrying
+  // with the research role's provider would quietly put MiniMax back in
+  // the generator seat, which is the seat the judge is supposed to be
+  // the only occupant of.
+  const poolFallbackName =
+    poolPick !== null
+      ? (pool.find((name) => name !== poolPick) as string | undefined)
+      : undefined;
   const fallbackName =
-    chosenName === cfg.research.primary
+    poolFallbackName ??
+    (chosenName === cfg.research.primary
       ? cfg.research.fallback
       : chosenName === cfg.research.fallback
         ? cfg.research.primary
-        : undefined;
+        : undefined);
   const fallback = fallbackName ? providerInstance(fallbackName) : null;
   // 2026-10-26 cross-model judging: the judge must grade with a different
   // provider than the generator. Judge slots come from the `review` role;
   // a collision flips to the role's fallback (pickJudgeProvider). An
   // explicit --judge-model override wins and never flips.
-  const judgePick = opts.judgeModel
-    ? judgePickForName(opts.judgeModel, cfg)
-    : pickJudgeProvider(cfg, chosenName);
+  // Owner call 2026-11-21: the judge is MiniMax whenever MiniMax holds a
+  // key — the grader stays fixed while the generators rotate.
+  const minimaxCanJudge =
+    (process.env["MINIMAX_API_KEY"] ?? "").trim() !== "";
+  const judgePick = resolveJudgePick({
+    ...(opts.judgeModel !== undefined ? { judgeModel: opts.judgeModel } : {}),
+    generator: chosenName,
+    cfg,
+    minimaxCanJudge,
+  });
   if (judgePick.flipped) {
     console.error(
       `  ! judge flipped to ${judgePick.name} — ${chosenName} generated the draft; scoring must be cross-model`,
@@ -689,8 +773,13 @@ export async function runDraft(opts: DraftOptions): Promise<number> {
   const judgeFallback = judgePick.fallback
     ? providerInstance(judgePick.fallback)
     : null;
+  if (poolPick !== null) {
+    console.log(
+      `  generator: ${poolPick} (pool: ${pool.join(", ")}) · judge: ${judgePick.name}`,
+    );
+  }
   const language = opts.lang ?? "zh-CN";
-  const duration = opts.duration ?? 180;
+  const duration = opts.duration ?? 360;
   const audience = opts.audience ?? "developers";
 
   let webContext: { url: string; title: string; snippet: string }[] | undefined;
@@ -1140,7 +1229,7 @@ export async function runDraft(opts: DraftOptions): Promise<number> {
  *  `--no-ask` arrives folded into `ask: false`. */
 export interface DraftCliOpts {
   cwd?: string;
-  model?: "minimax" | "glm";
+  model?: "auto" | "minimax" | "glm" | "openai" | "gemini";
   judgeModel?: "minimax" | "glm";
   web?: boolean;
   lang?: "zh-CN" | "en-US";
@@ -1255,10 +1344,13 @@ export function registerDraft(program: Command): void {
       "topic — used as project slug (slugify the topic for the directory name). Omit it with --from-review: the project names itself",
     )
     .option("--cwd <dir>", "base directory for the project")
-    .option("--model <provider>", "model provider: minimax|glm (default: glm)")
+    .option(
+      "--model <provider>",
+      "generator: auto (default — random pick from openai|gemini|glm, whichever hold a key) | openai | gemini | glm | minimax",
+    )
     .option(
       "--judge-model <provider>",
-      "judge provider: minimax|glm (default: review role, flipped off the generator so scoring is cross-model)",
+      "judge provider: minimax|glm (default: minimax when its key is set, else the review role flipped off the generator)",
     )
     .option("--no-web", "disable MiniMax web search (use LLM knowledge only)")
     .option("--lang <lang>", "language: zh-CN|en-US (default zh-CN)")
@@ -1268,7 +1360,7 @@ export function registerDraft(program: Command): void {
     )
     .option(
       "--duration <seconds>",
-      "total duration target in seconds (default: 180)",
+      "total duration target in seconds (default: 360)",
       (v) => parseInt(v, 10),
     )
     .option("--audience <text>", "target audience (default: developers)")

@@ -44,6 +44,14 @@ export {
 } from "./structured-agent.js";
 export { GLMProvider, type GLMProviderOptions } from "./glm.js";
 export { MiniMaxProvider, type MiniMaxProviderOptions } from "./minimax.js";
+export { OpenAIProvider, type OpenAIProviderOptions } from "./openai.js";
+export { GeminiProvider, type GeminiProviderOptions } from "./gemini.js";
+export {
+  availableGenerators,
+  pickGenerator,
+  GENERATOR_POOL,
+  type GeneratorName,
+} from "./generator-pool.js";
 export {
   appendDecisionRows,
   buildDecisionFunction,

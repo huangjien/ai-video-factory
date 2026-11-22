@@ -184,8 +184,9 @@ describe("resolveVideoSourcesForScenes — the make-side loop", () => {
 });
 
 describe("mode resolution — off until proven", () => {
-  it("defaults to off; frontmatter or the flag turns it on", () => {
-    expect(resolveVideoSourcesMode(undefined, undefined)).toBe("off");
+  it("defaults to on and respects explicit overrides", () => {
+    expect(resolveVideoSourcesMode(undefined, undefined)).toBe("on");
+    expect(resolveVideoSourcesMode(undefined, "off")).toBe("off");
     expect(resolveVideoSourcesMode(undefined, "on")).toBe("on");
     expect(resolveVideoSourcesMode("on", "off")).toBe("on");
     expect(resolveVideoSourcesMode("off", "on")).toBe("off");

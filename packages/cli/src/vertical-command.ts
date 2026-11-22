@@ -5,11 +5,15 @@ import type { Command } from "commander";
 import { parse as parseYaml, stringify as yamlStringify } from "yaml";
 import { initState, writeProjectState, approveCheckpoint } from "@video/workflow";
 import {
+  callDraft,
   articleToStoryboardYaml,
   parseArticleWithRecovery,
   splitFrontmatterParts,
 } from "@video/draft";
 import { resolveProjectDir } from "./project-path.js";
+import { providerInstance } from "./draft-command.js";
+import { loadProviderConfig } from "@video/llm";
+import { probeDurationSec } from "./shorts-command.js";
 import { runMakeCli } from "./make-command.js";
 
 /**
@@ -76,7 +80,8 @@ export async function runVertical(opts: VerticalOptions): Promise<number> {
   if (existsSync(masterPath) && opts.force !== true) {
     const master = statSync(masterPath).mtimeMs;
     const source = statSync(articlePath).mtimeMs;
-    if (master >= source) {
+    const seconds = await probeDurationSec(masterPath);
+    if (master >= source && seconds > 0 && seconds <= 180) {
       console.log(`✓ vertical master already built: ${masterPath}`);
       console.log(`  (article.md unchanged since — pass --force to re-render)`);
       return 0;
@@ -97,7 +102,24 @@ export async function runVertical(opts: VerticalOptions): Promise<number> {
   }
 
   const sourceMd = readFileSync(articlePath, "utf8");
-  writeFileSync(path.join(verticalRoot, "article.md"), verticalArticleMd(sourceMd), "utf8");
+  const source = parseArticleWithRecovery(sourceMd).article;
+  let derived = verticalArticleMd(sourceMd);
+  if (Math.max(source.frontmatter.duration_target_sec, source.scenes.reduce((sum, scene) => sum + (scene.duration ?? 0), 0)) > 180) {
+    const { primary, fallback } = loadProviderConfig().script;
+    const summary = await callDraft({
+      topic: source.title ?? source.frontmatter.project,
+      audience: "Viewers of the short vertical edition",
+      language: source.frontmatter.language,
+      duration: 150,
+      fromContent: sourceMd,
+      feedback: "Adapt the supplied landscape edition into a self-contained short. Keep the thesis, strongest evidence, essential caveats and conclusion. Drop secondary arguments. Rewrite transitions and narration for the shorter runtime. Use only facts from the source.",
+    }, providerInstance(primary), fallback ? providerInstance(fallback) : null);
+    const body = splitFrontmatterParts(summary.markdown)!.body;
+    const metadata = parseYaml(splitFrontmatterParts(derived)!.frontmatterRaw);
+    metadata.duration_target_sec = 150;
+    derived = `---\n${yamlStringify(metadata)}---\n${body}`;
+  }
+  writeFileSync(path.join(verticalRoot, "article.md"), derived, "utf8");
 
   // The audio plan travels with the film (same voice, BGM, SFX).
   const audioConfig = path.join(projectRoot, "audio-config.yaml");
@@ -146,6 +168,11 @@ export async function runVertical(opts: VerticalOptions): Promise<number> {
   if (code !== 0) {
     console.error(`✗ vertical make failed (exit ${code}) — rerun \`video vertical ${opts.project}\``);
     return code;
+  }
+  const duration = await probeDurationSec(masterPath);
+  if (duration <= 0 || duration > 180) {
+    console.error(`Vertical master failed duration check (${duration}s, maximum 180s).`);
+    return 1;
   }
   console.log(`✓ vertical master: ${masterPath}`);
   return 0;

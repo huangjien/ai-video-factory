@@ -152,7 +152,7 @@ export function registerMake(program: Command): void {
     )
     .option(
       "--video-sources <mode>",
-      "public-domain footage for scene backgrounds: on|off (default off)",
+      "public-domain footage for scene backgrounds: on|off (default on)",
     )
     .option(
       "--bgm-dir <dir>",

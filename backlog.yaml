@@ -1062,7 +1062,7 @@ ideas:
       - bake-text.ts hash convention
   - id: 2026-11-19-why-the-scene-cut-detector-missed-every-
     topic: Why the scene-cut detector missed every single cut
-    status: proposed
+    status: idea
     source: harvest:learnings/improvement-proposals/2026-10-24-experience-batch-1.md
     created: 2026-11-19
     note: "A visual, demoable mystery — sweeping the threshold from 0.4 down to 0.02
@@ -1704,7 +1704,7 @@ ideas:
       - sha256 digest convention
   - id: 2026-11-21-军队招募制度的历史沿革-从府兵-募兵到义务兵与志愿兵
     topic: 军队招募制度的历史沿革：从府兵、募兵到义务兵与志愿兵
-    status: idea
+    status: drafted
     source: manual
     created: 2026-11-21
     note: 以兵源制度沿革为主，比较贵族兵制，民兵制，府兵制、募兵制、征兵制、世兵制、部落兵制与志愿兵制：各自的历史背景、产生原因、兵源组织与财政基础、优缺点，以及制度转型的推动因素；辨析义务兵与职业志愿兵，避免将制度演变写成简单的线性进步。
@@ -1718,4 +1718,7 @@ ideas:
       - 现代全民征兵与总动员
       - 未来 AI 会不会改变兵源制度？
     lang: zh-CN
+    drafting_at: 2026-11-21T21:59:57.043Z
+    project: 军队招募制度的历史沿革-从府兵-募兵到义务兵与志愿兵
+    drafted_at: 2026-11-21T22:55:54.951Z
 

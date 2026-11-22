@@ -3,6 +3,8 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync
 import { tmpdir } from "node:os";
 import path from "node:path";
 
+vi.mock("./shorts-command.js", () => ({ probeDurationSec: async () => 30 }));
+
 const makeMock = vi.fn();
 vi.mock("./make-command.js", () => ({
   runMakeCli: (...a: unknown[]) => (makeMock as (...x: unknown[]) => unknown)(...a),

@@ -392,9 +392,9 @@ PDM only**, retrieved from Wikimedia Commons video files
 military/broadcast footage is copyrighted and never passes the gate.
 
 **How it runs** (`video make --video-sources on`, or `video_sources: on`
-frontmatter; default OFF until a live run is reviewed):
+frontmatter; default ON):
 
-1. PLAN-V — one LLM call marks ≤5 footage-worthy scenes (a Tang court has
+1. PLAN-V — one LLM call marks ≤10 footage-worthy scenes (a Tang court has
    no footage; the Cuban Missile Crisis does — footage EXISTENCE is the
    test).
 2. RETRIEVE — Commons video search, query → subject → single terms.

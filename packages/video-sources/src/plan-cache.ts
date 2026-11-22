@@ -34,7 +34,7 @@ export function videoPlanCacheKey(input: {
   const payload = JSON.stringify({
     title: input.title,
     setting: input.setting ?? "",
-    kind: "video-sources/1",
+    kind: "video-sources/2",
     scenes: input.scenes.map((s) => [
       s.id,
       s.visual,

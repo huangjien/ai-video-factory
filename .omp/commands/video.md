@@ -18,8 +18,13 @@ repo root makes the call. Pass `$ARGUMENTS` as the verbatim CLI args.
                                       + derived storyboard.yaml (quality-gated:
                                       judge scores /30, below 25 regenerates w/
                                       feedback, best of 3). --duration defaults
-                                      to 180 s. --audience, --style, --file <idea>
+                                      to 360 s. --audience, --style, --file <idea>
                                       to seed, --no-review to skip the gate.
+                                      GENERATOR: the article + storyboard come
+                                      from a random pick of openai|gemini|glm
+                                      (whichever hold a key); the JUDGE is
+                                      always minimax. --model <name> pins one,
+                                      --model auto asks for the pool explicitly.
    → HUMAN: read/edit article.md + audio-config.yaml (the two human-edit files)
 3. /video approve storyboard <slug> — HUMAN GATE (make refuses to render until
                                       this passes)
@@ -39,7 +44,7 @@ work whose outputs are newer than its inputs (`--dry-run` previews the plan).
 | `--bgm-dir/--sfx-dir <dir>` | use your own audio library instead of generation. |
 | `--fake` | offline: silent TTS placeholders + no images (`--image-provider none`). |
 | `--image-sources on\|off` | historical-picture retrieval for scene images (default `on`; frontmatter `historical_images:`). |
-| `--video-sources on\|off` | **public-domain footage for scene backgrounds** (default `off`; frontmatter `video_sources:`). When on: plans ≤5 footage-worthy scenes, retrieves PD/CC0/PDM clips from Wikimedia Commons, preprocesses (1080×1920, silent, trimmed to scene length) into `assets/video/scene_N.mp4` — those scenes skip image generation and render as `VideoBackground`. Attribution in `assets/video/scene_N.source.json` + `ATTRIBUTION.md`; the validator rejects clips without a sidecar, wrong geometry, an audio track, or a clip too short for its scene. |
+| `--video-sources on\|off` | **public-domain footage for scene backgrounds** (default `on`; frontmatter `video_sources:`). When on: plans ≤10 footage-worthy scenes, retrieves PD/CC0/PDM clips from Wikimedia Commons, preprocesses (1080×1920, silent, trimmed to scene length) into `assets/video/scene_N.mp4` — those scenes skip image generation and render as `VideoBackground`. Attribution in `assets/video/scene_N.source.json` + `ATTRIBUTION.md`; the validator rejects clips without a sidecar, wrong geometry, an audio track, or a clip too short for its scene. |
 
 ## Fine-grained verbs (back-compat with pre-minimal projects)
 

@@ -41,6 +41,8 @@ Use natural native-level writing rather than literal translation.
 
 The article must feel like a professionally produced video essay, explainer, documentary segment, or educational YouTube video — NOT a generic AI-generated article.
 
+For long-form targets (five minutes or more), develop the central claim through a clear chain of reasoning, corroborating evidence and vivid concrete examples. Give each example enough context to show what it establishes. Use the requested runtime for substance.
+
 Prioritize:
 
 - factual clarity

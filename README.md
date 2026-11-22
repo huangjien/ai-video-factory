@@ -5,6 +5,10 @@ in two commands: `video draft` (LLM writes article.md + audio-config.yaml),
 `video make` (renders the video). Two human-edit files, one output. 39-second
 AI chain-of-thought explainer ships as proof.
 
+The landscape draft targets six minutes by default. After rendering the master,
+run `video vertical <project>` to derive a native portrait edition of up to
+three minutes. [Landscape and vertical workflow](docs/USAGE.md#landscape-master-and-vertical-edition)
+
 ## Principles
 
 > AI generates · Human decides · Code renders · Git remembers — `docs/AI_Video_Factory_Design_and_Plan_v1.1.md` §65.

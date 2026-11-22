@@ -120,7 +120,7 @@ async function isVerticalVideo(file: string): Promise<boolean> {
 }
 
 /** Probe the container duration in seconds (0 when unreadable). */
-async function probeDurationSec(file: string): Promise<number> {
+export async function probeDurationSec(file: string): Promise<number> {
   try {
     const { stdout } = await execFileAsync("ffprobe", [
       "-v",

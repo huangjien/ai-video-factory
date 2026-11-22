@@ -52,7 +52,7 @@ const SCRIM_BOTTOM = 0.75;
  */
 export const SceneBackground: FC<SceneBackgroundProps> = ({
   src,
-  fit = "cover",
+  fit = "contain",
   scrim = true,
   theme = darkTechTheme,
   durationInFrames,
@@ -74,7 +74,7 @@ export const SceneBackground: FC<SceneBackgroundProps> = ({
           width: "100%",
           height: "100%",
           objectFit: fit,
-          transform: `scale(${scale}) translate(${tx}px, ${ty}px)`,
+          transform: fit === "contain" ? undefined : `scale(${scale}) translate(${tx}px, ${ty}px)`,
         }}
       />
       {scrim ? (

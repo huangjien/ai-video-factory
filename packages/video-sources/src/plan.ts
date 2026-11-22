@@ -20,9 +20,8 @@ import type { SceneVideoPlan } from "./types.js";
 /** Body lives in `packages/prompts/prompts/video-source-plan.md`. */
 const SYSTEM_PROMPT = loadPrompt("video-source-plan");
 
-/** Hard cap on footage scenes per film — archival grain against clean
- *  generated art reads as "evidence" only when it is rare. */
-export const MAX_VIDEO_SCENES = 5;
+/** Bound per-film archive retrieval work. */
+export const MAX_VIDEO_SCENES = 10;
 
 export interface PlanVideoSceneInput {
   /** 1-based scene number. */
@@ -69,6 +68,7 @@ export class VideoSourcePlanError extends Error {
  *  testable without a provider. */
 export function buildVideoPlanMessages(input: PlanVideoInput): ChatMessage[] {
   const lines: string[] = [];
+  lines.push(`Select up to ${MAX_VIDEO_SCENES} eligible footage scenes. Prefer footage wherever it directly illustrates the narration.`);
   lines.push(`Video title: ${input.title}`);
   if (input.setting !== undefined && input.setting.trim() !== "") {
     lines.push(`Setting: ${input.setting.trim()}`);
@@ -109,8 +109,7 @@ export async function planSceneVideos(
 
 /** The LLM's plan, reconciled with the article: a scene it skipped or
  *  mismatched is planned as "no clip", a plan entry for a scene that does
- *  not exist is dropped, and the ≤5-scenes cap keeps the strongest claims
- *  (the plan arrives in scene order; the first five win). */
+ *  not exist is dropped, and eligible scenes are kept in order up to the cap. */
 export function normalizeVideoPlan(
   raw: {
     scene: number;

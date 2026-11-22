@@ -859,17 +859,38 @@ is handed to the drafter as context alongside the topic.
 
 Design: [`docs/plans/2026-11-18-backlog-feature-design.md`](./plans/2026-11-18-backlog-feature-design.md).
 
-### Vertical masters
+### Landscape master and vertical edition
 
-`video vertical <project>` re-renders an existing film as a NATIVE 1080x1920
-version: the same article, re-declared `format: vertical` in a sibling
-workdir (`projects/<slug>/vertical/`), rendered with vertical composition,
-the ratio-based caption band, the vertical title card and the scaled
-watermark. A crop of the landscape master cannot substitute — the caption
-band and title card are burned into the frames, so cropping only cuts them
-away. The Shorts cut is then trimmed from the vertical master (no
-distortion). The auto-producer does this automatically for every film it
-publishes (`--no-shorts` skips it).
+Produce the landscape master first with the usual draft, review and make workflow.
+`video draft` targets 360 seconds by default. Plan on at least five minutes for
+a typical essay, extending it when the argument needs more evidence or examples.
+Use `--duration <seconds>` to set a different writing target.
+
+Then run `video vertical <project>`. It derives the vertical script from the
+landscape project's `article.md`. If either the article's target or the sum of
+its scene durations exceeds 180 seconds, the script model adapts it to a
+150-second target, keeping the thesis, strongest evidence, caveats and conclusion.
+Shorter scripts, including those at exactly 180 seconds by both measures, can
+reuse their scenes. The command copies the project's audio configuration and
+renders a native 1080×1920 edition in `vertical/output/final-mixed.mp4`.
+
+The command checks the finished MP4 with ffprobe. An unreadable duration or a
+runtime above 180 seconds fails the command. To package the vertical edition
+for Shorts, run `video shorts <project>/vertical`. The auto-producer runs the
+vertical and Shorts stages unless given `--no-shorts`.
+
+### Photos and archival footage
+
+Still-image components default to `fit: contain`, which preserves the full
+photo at its original aspect ratio. `ImageBackground` defaults to zero zoom.
+A storyboard can request a crop with `fit: cover` or set an explicit
+`kenBurnsScale` on `ImageBackground` for a slow push.
+
+`video make` enables archival footage retrieval by default. It can plan up to
+ten scenes per film and uses `VideoBackground` where it finds a matching
+public-domain clip. Scenes without a match follow the usual visual workflow.
+Disable retrieval with `--video-sources off` or `video_sources: "off"` in
+the article frontmatter. The command-line flag takes precedence.
 
 ### The auto-producer
 

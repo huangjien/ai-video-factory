@@ -108,8 +108,8 @@ const characterProps = z
 const imageBackgroundProps = z
   .object({
     src: z.string().min(1),
-    fit: z.enum(["cover", "contain"]).default("cover"),
-    kenBurnsScale: z.number().min(0).max(0.5).default(0.08),
+    fit: z.enum(["cover", "contain"]).default("contain"),
+    kenBurnsScale: z.number().min(0).max(0.5).default(0),
     /** v0.12: transparent PNG key-info title from the Pillow
      *  text-overlay pass. Composited between the background image
      *  and the bottom captions strip. */

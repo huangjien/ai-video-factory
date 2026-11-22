@@ -1,5 +1,9 @@
 # Project Lifecycle
 
+## 横屏主片与竖屏简版
+
+先按现有起稿、审核、制作流程完成横屏主片。默认目标 6 分钟，一般至少 5 分钟。用具体事例和证据讲清论点，按内容需要延长。随后从横屏定稿派生竖屏简版，保留主张、关键证据和结论，按 150 秒编排，交付成片最多 180 秒。
+
 ## 2. Major commands
 
 Minimal API (v0.3.9+ recommended) — two commands do the whole pipeline:
@@ -15,6 +19,12 @@ video draft "<topic>"   # LLM writes article.md + audio-config.yaml + derived st
                         # packages/draft/src/article-review.ts (runScoredDraft).
                         # Flags: --no-review, --min-score <n>, --max-attempts <n>, --candidates <n> (parallel best-of-N; default auto: 2 for duration >= 240 s, else 1);
                         #         --ask/--no-ask (agent questions, §2.6), --bgm <tag|none>
+                        # Generator pool (2026-11-21): the article (and the storyboard
+                        # derived from it) is written by a RANDOM pick of openai|gemini|glm —
+                        # whichever hold a key — so no two films fail the same way. The
+                        # JUDGE stays minimax, so the grader never reads its own prose.
+                        # --model <provider> pins one; --model auto asks for the pool.
+                        # A pool-picked generator falls back to another pool member.
 video make <project>    # TTS → audio assets → render scenes → mix → final-mixed.mp4
 ```
 
@@ -70,7 +80,7 @@ Full command set:
 | `video status [project]` | Pipeline state |
 | `video thumbnail <project>` | YouTube thumbnail (MiniMax image) — auto-branded: 朱红 canvas border + top-left mascot badge via `scripts/thumbnail-brand.py` + `brand.yaml` `brand.thumbnail` (configurable: colors, widths, diameter) |
 | `video shorts <project>` | Shorts package from the final master (default: the whole film — hook through payoff; `--duration N` cuts a scene-aligned teaser; `--provider minimax` generates an AI teaser from thumbnail + shorts-hook). Aspect-aware — a landscape master is center-cropped, a vertical master is kept whole (remux) or trimmed |
-| `video vertical <project>` | native 1080x1920 vertical MASTER of an existing film — re-renders the scenes with vertical composition (correct captions/title/watermark) into `projects/<slug>/vertical/`; cropping the landscape master cannot work (captions and title are burned into the frames) |
+| `video vertical <project>` | Derives a native 1080×1920 edition from the landscape article. When its target or summed scene durations exceed 180 s, adapts the script to a 150 s target. Checks the rendered `vertical/output/final-mixed.mp4` against the 180 s limit. |
 | `video youtube <project>` | Title / description / chapters / shorts hook; `--upload` publishes final-mixed.mp4 + thumbnail directly (OAuth: `video youtube --auth` once, then `--privacy private\|unlisted\|public`, default private) |
 | `video douyin <project>` | 抖音 (Douyin) submission metadata: title / 文案 / ≤5 话题 / cover prompt → `douyin/package.yaml` + `CHECKLIST.md`, PLUS a vertical 1080×1920 cut of the film at `douyin/video.mp4` (`--cut-mode inset` = blurred backdrop, nothing cropped — the default; `--cut-mode crop` = fills the screen, loses ~43% of the width). `--upload` publishes through the official 开放平台 API and needs `client_key`/`client_secret` in `~/.config/secrets/douyin-client-secret.json` + `DOUYIN_ACCESS_TOKEN` in `~/.config/secrets/ai.env`; without them it stops at the packaging and writes the manual checklist. |
 | `video bilibili <project>` | Bilibili submission metadata: title / 简介 / ≤10 tags / suggested 分区 / cover prompt → `bilibili/package.yaml` + `CHECKLIST.md`. Never hard-fails: a bad model response degrades to a deterministic package with a warning. **Upload is automated**: `python3 scripts/bilibili-upload.py <project>` (stream_gears + cookie login at `~/.config/secrets/biliup-cookies.json`, ~30-day expiry → `--login` re-scans the QR; `--dry-run` prints the submission fields; 分区 tid mapping built in, `--tid` overrides). Verified 2026-11-04: 军种与兵种的组织文化 → BV1EExQ6GEUj in 36 s. EN videos: use `--standalone --video … --title … --desc … --tag … --tid …`. |
@@ -195,7 +205,7 @@ Windows crossfade (1s) into one timeline wav (`assets/audio-assets/bgm/_timeline
 
 ## 2.6 Agent question protocol (video-ask/1, v0.7)
 
-Inside an agent harness (zcode, Claude Code, opencode, pi, OMP), `video draft` auto-detects the agent and — when any style knob was left unspecified — prints a question set to stdout and exits 2 instead of burning a full scored draft on silent defaults (`zh-CN`, 180 s, `flat-vector`, `paper-light`, `calm`). Exit 2 means the run did NOT start: zero spend, zero files written.
+Inside an agent harness (zcode, Claude Code, opencode, pi, OMP), `video draft` auto-detects the agent and — when any style knob was left unspecified — prints a question set to stdout and exits 2 instead of burning a full scored draft on silent defaults (`zh-CN`, 360 s, `flat-vector`, `paper-light`, `calm`). Exit 2 means the run did NOT start: zero spend, zero files written.
 
 | Exit | Meaning |
 |---|---|
@@ -248,7 +258,7 @@ Exit-2 shape (abbreviated):
       "why": "a wrong guess costs a full regen (~4× one draft)"
     }
   ],
-  "resolved": { "lang": "zh-CN", "duration": 180, "audience": "developers",
+  "resolved": { "lang": "zh-CN", "duration": 360, "audience": "developers",
                 "image_style": "flat-vector", "style": "paper-light", "bgm": "calm" }
 }
 ```
@@ -271,7 +281,7 @@ wrong costs a paid re-render.
 | Knob | Flag | Silent default | Why it is worth asking |
 |---|---|---|---|
 | `lang` | `--lang` | `zh-CN` | narration language drives every downstream prompt |
-| `duration` | `--duration` | `180` | scene count scales with it |
+| `duration` | `--duration` | `360` | scene count scales with it |
 | `image_style` | `--image-style` | `flat-vector` | taste call, unrecoverable post-render |
 | `image_provider` | `--image-provider` | `minimax` | decides **cost** and visual character; every scene image re-spends when it changes |
 | `style` | `--style` | `paper-light` | theme repaints every scene |

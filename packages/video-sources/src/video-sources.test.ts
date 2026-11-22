@@ -156,11 +156,11 @@ describe("resolveSceneVideo — a clip must cover the scene", () => {
 
 describe("normalizeVideoPlan — cap, reconcile, drop", () => {
   const scenes: PlanVideoSceneInput[] = Array.from(
-    { length: 8 },
+    { length: MAX_VIDEO_SCENES + 1 },
     (_, i) => ({ scene: i + 1, id: `scene-0${i + 1}`, visual: "something" }),
   );
 
-  it("caps footage scenes at 5 and marks the rest over-cap", () => {
+  it("caps footage scenes at the configured limit and marks the rest over-cap", () => {
     const raw = scenes.map((s) => ({
       scene: s.scene,
       historical: true,
@@ -171,7 +171,7 @@ describe("normalizeVideoPlan — cap, reconcile, drop", () => {
     const plan = normalizeVideoPlan(raw, { title: "t", scenes });
     const historical = plan.filter((p) => p.historical);
     expect(historical).toHaveLength(MAX_VIDEO_SCENES);
-    expect(plan.find((p) => p.scene === 6)?.reason).toBe(
+    expect(plan.find((p) => p.scene === MAX_VIDEO_SCENES + 1)?.reason).toBe(
       "over the per-film footage cap",
     );
   });

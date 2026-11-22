@@ -48,9 +48,7 @@ import {
  * renders exactly as it did before this feature existed.
  */
 
-/** Whether the retrieval runs at all. "off" is the default until the
- *  first live run is reviewed — the default lives in
- *  `resolveVideoSourcesMode`, in ONE place. */
+/** Whether to retrieve public-domain footage. */
 export type VideoSourcesMode = "on" | "off";
 
 /** The mode, from the CLI flag, the article frontmatter, or the default. */
@@ -60,8 +58,7 @@ export function resolveVideoSourcesMode(
 ): VideoSourcesMode {
   if (explicit !== undefined) return explicit;
   const raw = (frontmatter ?? "").trim().toLowerCase();
-  if (raw === "on" || raw === "true" || raw === "yes") return "on";
-  // "off"/typo/absent → OFF. Opt-in until proven.
+  if (raw === "" || raw === "on" || raw === "true" || raw === "yes") return "on";
   return "off";
 }
 

@@ -273,9 +273,9 @@ describe("DRAFT_QUESTIONS", () => {
     ) as AskQuestion;
     expect(duration.flag).toBe("--duration");
     expect(duration.type).toBe("number");
-    expect(duration.suggestions).toEqual([60, 90, 120, 180, 300]);
-    expect(duration.default).toBe(180);
-    expect(duration.recommended).toBe(180);
+    expect(duration.suggestions).toEqual([60, 90, 120, 180, 300, 360]);
+    expect(duration.default).toBe(360);
+    expect(duration.recommended).toBe(360);
     expect(duration.why).toBe("storyboard scene count scales with duration");
   });
 
@@ -474,7 +474,7 @@ describe("emitQuestionsDoc", () => {
     }
     expect(envelope.resolved).toEqual({
       lang: "zh-CN",
-      duration: 180,
+      duration: 360,
       audience: "developers",
       image_style: "flat-vector",
       image_provider: "minimax",

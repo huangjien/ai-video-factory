@@ -11,7 +11,7 @@ export interface ImageProps {
    *  on export. */
   alt?: string;
   /** Object-fit behavior — "cover" fills the frame, "contain" letter-
-   *  boxes. Defaults to "cover". */
+   *  boxes. Defaults to "contain". */
   fit?: "cover" | "contain";
   /** Optional caption shown under the image. */
   caption?: string;
@@ -27,7 +27,7 @@ export const Image: FC<ImageProps> = ({
   theme = darkTechTheme,
   src,
   alt,
-  fit = "cover",
+  fit = "contain",
   caption,
   frame,
 }) => {

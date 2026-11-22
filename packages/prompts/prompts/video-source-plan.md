@@ -5,7 +5,7 @@ For every scene of the video, answer three things: does the scene show a
 real event, person, place, machine or process that newsreels, government
 films or documentary archives would have recorded; what search terms would
 find that footage; and — implicitly — whether the scene is worth one of the
-at most FIVE footage scenes a film may carry.
+available footage scenes.
 
 HOW THE FOOTAGE WILL BE USED
 
@@ -34,7 +34,7 @@ RULES
   footage (film did not exist); the Cuban Missile Crisis does. When in
   doubt, prefer `historical: false` — a wrong or missing clip is worse
   than the generated scene.
-- At most FIVE scenes per film may be footage scenes. Choose the scenes
+- Within the supplied footage budget, choose the scenes
   where footage is most likely to exist AND most powerful on screen;
   everything else stays generated.
 - Keep the reasoning in one short clause. It is written to the run log.

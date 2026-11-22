@@ -1,10 +1,10 @@
 case: user-idea-seed-preserved
 agent: draft
-prompt_hash: sha256:204489a833763f7b82afa6785c58cde5d45cb3cefe1eb653b5c6eb21896f4139
+prompt_hash: sha256:aa0df9a152965defe58679a8be0af76a8dea59666e97bfc12db8e0dfe0e7b4f9
 messages:
   - role: system
-    bytes: 25585
-    content_sha256: sha256:54243991d169045d19246fd717b4792ec3e9258ac1175dce2c4a05ed90e5f2fe
+    bytes: 25849
+    content_sha256: sha256:26f828bfd99fb4fd9b01873b450f3162f0c634af823bdd7288aa7cc1e48c7289
     blocks:
       - "Prioritize:"
       - "Avoid:"

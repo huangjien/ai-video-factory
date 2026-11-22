@@ -112,6 +112,30 @@ scenes:
     }
   });
 
+  it("uses the narration for bottom cues instead of repeating the scene title", () => {
+    const narration =
+      "先秦征发扩大了国家的动员能力，也让普通家庭承担更多兵役与运输负担。".repeat(
+        4,
+      );
+    const storyboard = `schema_version: "0.2"
+project: {id: caption-source, language: zh-CN, fps: 30, width: 1920, height: 1080}
+scenes:
+  - id: scene-01
+    duration: 24
+    narration: {text: "${narration}"}
+    visual: {component: ImageBackground, props: {src: "/image.jpg", caption: "户籍扩大征发能力"}}
+    captions: {source: narration}
+`;
+    const { renderPlan } = compileStoryboard(storyboard, "/proj");
+    const cues = renderPlan.scenes[0]?.captions?.cues ?? [];
+    const renderedText = cues.flatMap((cue) => cue.lines).join("");
+
+    expect(renderedText).toBe(narration);
+    expect(renderedText).not.toContain("户籍扩大征发能力");
+    expect(cues.length).toBeGreaterThan(1);
+    expect(cues.every((cue) => cue.lines.length <= 2)).toBe(true);
+  });
+
   it("offsets caption cues by a scene's lead_in_sec (the opening beat)", () => {
     // The voice starts after the lead-in silence, so the caption must
     // start there too — otherwise the burned caption precedes the words

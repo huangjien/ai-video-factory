@@ -2,9 +2,10 @@ import { existsSync, readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import type { z } from "zod";
 import {
-  CAPTION_BLOCK_MAX_LINES,
+  buildCaptionCues,
   CAPTION_LINE_UNITS,
-  captionBlockLineCount,
+  MAX_CAPTION_LINES,
+  wrapText,
 } from "@video/media";
 import type { VdslError } from "./errors.js";
 import { lineOf, parseYaml } from "./parse.js";
@@ -32,20 +33,14 @@ export interface ValidateProjectOptions {
   } | null>;
 }
 
-// The caption safe-area budget lives in @video/media (CAPTION_LINE_UNITS
-// / CAPTION_BLOCK_MAX_LINES) so the VDSL validator and the article
-// translator measure the same limit.
-//
-// 2026-10-18: the per-scene line cap was bumped 3 → 4. The storyboard
-// LLM naturally produces 70-80 zh-char narrations that wrap to 4 lines at
-// 24 zh/line; rejecting them blocked every make run. Four lines is the
-// render captionStyle's practical ceiling (bottom safe area overflows on
-// the 4th line for 4-character zh lines — acceptable for this project;
-// revisit if a shorter narration strategy lands).
+// Caption constraints are checked on the timed cues produced by the same
+// builder used by rendering and SRT export. Checking the whole scene as one
+// static block incorrectly rejected long narration and pushed callers toward
+// `captions_source: caption`, which repeats the scene title at the bottom.
 const AUDIO_TOLERANCE_S = 0.05;
 
 /** Full project-level validation (§21.1 lines 926-930): registry membership,
- * props schema, asset existence, audio-vs-scene duration, caption safe area.
+ * props schema, asset existence, audio-vs-scene duration, timed-caption safe area.
  * Shape rules run first; failures never auto-retry (§62.1 line 2221). */
 export async function validateProject(
   text: string,
@@ -188,14 +183,22 @@ export async function validateProject(
         ? scene.narration?.text
         : undefined);
     if (captionText !== undefined) {
-      const lineCount = captionBlockLineCount(captionText);
-      if (lineCount > CAPTION_BLOCK_MAX_LINES) {
+      const cues = buildCaptionCues(captionText, scene.duration);
+      const oversizedCue = cues.find(
+        (cue) =>
+          cue.lines.length > MAX_CAPTION_LINES ||
+          cue.lines.some((captionLine) => {
+            const wrapped = wrapText(captionLine, CAPTION_LINE_UNITS);
+            return wrapped.length !== 1 || wrapped[0] !== captionLine;
+          }),
+      );
+      if (oversizedCue !== undefined) {
         errors.push({
           file,
           field: `${base.join(".")}.captions`,
           line: line([...base, "captions"]),
-          message: `Captions wrap to ${lineCount} lines (max ${CAPTION_BLOCK_MAX_LINES} x ${CAPTION_LINE_UNITS} zh units) — exceeds the bottom safe area (§62.4 line 2300).`,
-          fix: "Shorten the caption text or split into more scenes.",
+          message: `A timed caption cue exceeds ${MAX_CAPTION_LINES} lines or ${CAPTION_LINE_UNITS} zh units per line — exceeds the bottom safe area (§62.4 line 2300).`,
+          fix: "Split the caption into shorter timed cues.",
         });
       }
     }
@@ -210,7 +213,9 @@ export async function validateProject(
   // no provenance — error-level, like a missing image.
   const videoDir = path.join(opts.projectRoot, "assets", "video");
   const clipFiles = existsSync(videoDir)
-    ? readdirSync(videoDir).filter((f) => /^scene_\d+\.mp4$/.test(f)).sort()
+    ? readdirSync(videoDir)
+        .filter((f) => /^scene_\d+\.mp4$/.test(f))
+        .sort()
     : [];
   for (const clipFile of clipFiles) {
     const n = parseInt(clipFile.match(/^scene_(\d+)\.mp4$/)?.[1] ?? "0", 10);
@@ -241,9 +246,10 @@ export async function validateProject(
       });
     } else {
       try {
-        const sidecar = JSON.parse(
-          readFileSync(sidecarPath, "utf8"),
-        ) as { schema?: string; license?: string };
+        const sidecar = JSON.parse(readFileSync(sidecarPath, "utf8")) as {
+          schema?: string;
+          license?: string;
+        };
         if (sidecar.schema !== "scene-video-source/1") {
           errors.push({
             file,
@@ -251,9 +257,7 @@ export async function validateProject(
             line: 0,
             message: `Clip sidecar for scene ${n} is not scene-video-source/1 — rewrite it with \`video make --video-sources on\`.`,
           });
-        } else if (
-          !["PD", "CC0", "PDM"].includes(sidecar.license ?? "")
-        ) {
+        } else if (!["PD", "CC0", "PDM"].includes(sidecar.license ?? "")) {
           errors.push({
             file,
             field: `${field}.sidecar`,

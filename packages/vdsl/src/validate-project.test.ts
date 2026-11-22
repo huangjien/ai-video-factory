@@ -155,7 +155,7 @@ describe("validateProject — §21.1 lines 926-930", () => {
     expect(result.ok).toBe(true);
   });
 
-  it("rejects captions that wrap to more than 3 lines (safe area)", async () => {
+  it("splits long caption text into safe timed cues", async () => {
     const longText = "字".repeat(100);
     const yamlText = validStoryboardYaml.replaceAll(
       "AI Agent 为什么需要 Memory？",
@@ -166,12 +166,30 @@ describe("validateProject — §21.1 lines 926-930", () => {
       registry,
       probeAudio: okProbe,
     });
-    expect(result.ok).toBe(false);
-    if (!result.ok) {
-      expect(result.errors.some((e) => e.field.includes("captions"))).toBe(
-        true,
+    expect(result.ok).toBe(true);
+  });
+
+  it("accepts long narration when captions are rendered as timed cues", async () => {
+    const narration =
+      "先秦征发扩大了国家的动员能力，也让普通家庭承担更多兵役与运输负担。".repeat(
+        4,
       );
-    }
+    const yamlText = `schema_version: "0.2"
+project: {id: long-narration, language: zh-CN, fps: 30, width: 1920, height: 1080}
+scenes:
+  - id: scene-01
+    duration: 24
+    narration: {text: "${narration}"}
+    visual: {component: Title, props: {text: "户籍扩大征发能力"}}
+    captions: {source: narration}
+`;
+    const result = await validateProject(yamlText, "storyboard.yaml", {
+      projectRoot: fixtureProject(),
+      registry,
+      probeAudio: okProbe,
+    });
+
+    expect(result.ok).toBe(true);
   });
 
   it("checks image props.src existence", async () => {
@@ -272,9 +290,7 @@ scenes:
 });
 
 describe("validateProject — scene clips must be renderable AND audited", () => {
-  function clipProject(
-    sidecar: Record<string, unknown> | null,
-  ): string {
+  function clipProject(sidecar: Record<string, unknown> | null): string {
     const root = fixtureProject();
     const videoDir = path.join(root, "assets", "video");
     mkdirSync(videoDir, { recursive: true });
@@ -305,56 +321,72 @@ describe("validateProject — scene clips must be renderable AND audited", () =>
 
   it("a silent 1080x1920 clip with a free sidecar validates clean", async () => {
     const root = clipProject(goodSidecar);
-    const result = await validateProject(validStoryboardYaml, "storyboard.yaml", {
-      projectRoot: root,
-      registry,
-      probeVideo: goodProbe,
-    });
+    const result = await validateProject(
+      validStoryboardYaml,
+      "storyboard.yaml",
+      {
+        projectRoot: root,
+        registry,
+        probeVideo: goodProbe,
+      },
+    );
     expect(result.ok).toBe(true);
   });
 
   it("a clip without a sidecar is an error — provenance is mandatory", async () => {
     const root = clipProject(null);
-    const result = await validateProject(validStoryboardYaml, "storyboard.yaml", {
-      projectRoot: root,
-      registry,
-      probeVideo: goodProbe,
-    });
+    const result = await validateProject(
+      validStoryboardYaml,
+      "storyboard.yaml",
+      {
+        projectRoot: root,
+        registry,
+        probeVideo: goodProbe,
+      },
+    );
     expect(result.ok).toBe(false);
     if (!result.ok) {
-      expect(
-        result.errors.map((e) => e.message).join("\n"),
-      ).toMatch(/no attribution sidecar/);
+      expect(result.errors.map((e) => e.message).join("\n")).toMatch(
+        /no attribution sidecar/,
+      );
     }
   });
 
   it("a non-free licence in the sidecar is an error", async () => {
     const root = clipProject({ ...goodSidecar, license: "CC-BY-4.0" });
-    const result = await validateProject(validStoryboardYaml, "storyboard.yaml", {
-      projectRoot: root,
-      registry,
-      probeVideo: goodProbe,
-    });
+    const result = await validateProject(
+      validStoryboardYaml,
+      "storyboard.yaml",
+      {
+        projectRoot: root,
+        registry,
+        probeVideo: goodProbe,
+      },
+    );
     expect(result.ok).toBe(false);
     if (!result.ok) {
-      expect(
-        result.errors.map((e) => e.message).join("\n"),
-      ).toMatch(/only PD \/ CC0 \/ PDM/);
+      expect(result.errors.map((e) => e.message).join("\n")).toMatch(
+        /only PD \/ CC0 \/ PDM/,
+      );
     }
   });
 
   it("geometry, audio, and coverage violations are each reported", async () => {
     const root = clipProject(goodSidecar);
-    const result = await validateProject(validStoryboardYaml, "storyboard.yaml", {
-      projectRoot: root,
-      registry,
-      probeVideo: async () => ({
-        width: 640,
-        height: 480,
-        durationSec: 2,
-        hasAudio: true,
-      }),
-    });
+    const result = await validateProject(
+      validStoryboardYaml,
+      "storyboard.yaml",
+      {
+        projectRoot: root,
+        registry,
+        probeVideo: async () => ({
+          width: 640,
+          height: 480,
+          durationSec: 2,
+          hasAudio: true,
+        }),
+      },
+    );
     if (!result.ok) {
       const text = result.errors.map((e) => e.message).join("\n");
       expect(text).toMatch(/must be 1080x1920/);
@@ -368,24 +400,32 @@ describe("validateProject — scene clips must be renderable AND audited", () =>
     // fixture storyboard's scenes are scene-01/scene-02 — a clip numbered
     // 9 has no owner.
     writeFileSync(path.join(root, "assets/video/scene_9.mp4"), "mp4");
-    const result = await validateProject(validStoryboardYaml, "storyboard.yaml", {
-      projectRoot: root,
-      registry,
-    });
+    const result = await validateProject(
+      validStoryboardYaml,
+      "storyboard.yaml",
+      {
+        projectRoot: root,
+        registry,
+      },
+    );
     expect(result.ok).toBe(false);
     if (!result.ok) {
-      expect(
-        result.errors.map((e) => e.message).join("\n"),
-      ).toMatch(/no matching scene/);
+      expect(result.errors.map((e) => e.message).join("\n")).toMatch(
+        /no matching scene/,
+      );
     }
   });
 
   it("without probeVideo only file-existence and attribution run", async () => {
     const root = clipProject(goodSidecar);
-    const result = await validateProject(validStoryboardYaml, "storyboard.yaml", {
-      projectRoot: root,
-      registry,
-    });
+    const result = await validateProject(
+      validStoryboardYaml,
+      "storyboard.yaml",
+      {
+        projectRoot: root,
+        registry,
+      },
+    );
     expect(result.ok).toBe(true);
   });
 });

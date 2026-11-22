@@ -9,6 +9,14 @@ import path from "node:path";
  * `-`; leading/trailing `-` stripped; truncated to 40 chars; empty falls
  * back to "project".
  *
+ * The trailing `-` is stripped AFTER the truncation, not before it: a 40-char
+ * cut can land mid-word and leave a dangling dash ("...missed-every-"), and
+ * the directory name is produced by slugifying the slug ONE MORE TIME
+ * (`video new` slugifies its argument) — which strips that dash. A slug that
+ * is not idempotent names two different directories: the scaffold creates
+ * "...missed-every", the lookup asks for "...missed-every-", and the draft
+ * dies with "no project matching".
+ *
  * Example: "orca 新一代 ADE 简介" → "orca-新一代-ade-简介"
  */
 export function slugifyProjectName(s: string): string {
@@ -18,7 +26,8 @@ export function slugifyProjectName(s: string): string {
       .trim()
       .replace(/[^a-z0-9\u4e00-\u9fff]+/g, "-")
       .replace(/^-|-$/g, "")
-      .slice(0, 40) || "project"
+      .slice(0, 40)
+      .replace(/-+$/g, "") || "project"
   );
 }
 

@@ -2,7 +2,7 @@ import { describe, expect, it, beforeAll, afterAll } from "vitest";
 import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { resolveProjectDir } from "./project-path.js";
+import { resolveProjectDir, slugifyProjectName } from "./project-path.js";
 
 function seedProject(projectsDir: string, name: string): void {
   const dir = path.join(projectsDir, name);
@@ -68,6 +68,20 @@ describe("resolveProjectDir", () => {
       expect(r.root).toBe(
         path.join(projectsDir, "古人长什么样-reconstructing-what-historical-fi"),
       );
+  });
+
+  it("resolves a topic whose slug was cut mid-word", () => {
+    // The 40-char cut lands on a dangling dash, and the directory name is
+    // produced by slugifying the slug again (which strips it). The slug
+    // must be idempotent, or the scaffold and the lookup disagree.
+    const topic = "Why the scene-cut detector missed every single cut";
+    const slug = slugifyProjectName(topic);
+    expect(slug).not.toMatch(/-$/);
+    expect(slugifyProjectName(slug)).toBe(slug);
+    seedProject(projectsDir, slug);
+    const r = resolveProjectDir(topic, base);
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(r.root).toBe(path.join(projectsDir, slug));
   });
 
   it("resolves a unique prefix", () => {

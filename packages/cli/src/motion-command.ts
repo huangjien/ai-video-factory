@@ -287,9 +287,7 @@ export async function runMotion(opts: MotionOptions): Promise<number> {
     // CS-09: the slow push rides on the scene image, so it only applies to
     // the image-backed components. MapInsert's props schema is strict and
     // has no such field — writing it there would fail validation.
-    const imageComponent =
-      visualObj?.["component"] === "ImageBackground" ||
-      visualObj?.["component"] === "AnimatedIllustration";
+    const imageComponent = visualObj?.["component"] === "ImageBackground";
     if (
       spec.kenBurnsScale !== undefined &&
       propsObj !== undefined &&

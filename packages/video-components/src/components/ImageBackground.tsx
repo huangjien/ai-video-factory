@@ -13,7 +13,7 @@ export interface ImageBackgroundProps {
   /** Image source — data URL (`data:image/jpeg;base64,...`) or any
    * URL the headless browser can resolve. File paths must be converted
    * to data URLs upstream (see renderPlanToVideo). */
-  src: string;
+  src?: string | undefined;
   /** Fit mode — cover fills the frame (may crop); contain fits
    * without cropping. Defaults to contain to preserve the full image. */
   fit?: "cover" | "contain";
@@ -88,18 +88,20 @@ export const ImageBackground: FC<ImageBackgroundProps> = ({
         backgroundColor: theme.colors.background,
       }}
     >
-      <img
-        src={src}
-        alt=""
-        style={{
-          position: "absolute",
-          inset: 0,
-          width: "100%",
-          height: "100%",
-          objectFit: fit,
-          transform: `scale(${scale}) translate(${tx}px, ${ty}px)`,
-        }}
-      />
+      {src ? (
+        <img
+          src={src}
+          alt=""
+          style={{
+            position: "absolute",
+            inset: 0,
+            width: "100%",
+            height: "100%",
+            objectFit: fit,
+            transform: `scale(${scale}) translate(${tx}px, ${ty}px)`,
+          }}
+        />
+      ) : null}
       {/* Optional transparent PNG key-info title (Pillow pass). Layered
           above the background image so the outline is readable on any
           colour, but BELOW the bottom captions strip — the captions

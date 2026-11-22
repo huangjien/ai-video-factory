@@ -201,11 +201,11 @@ const buildTitle: VisualPropsBuilder = (scene, input) => {
 };
 
 // ---------------------------------------------------------------------------
-const buildIllustration: VisualPropsBuilder = (scene, input) => {
-  const language = input.language;
+const buildImageBackground: VisualPropsBuilder = (scene) => {
+  const sceneNumber = Number(scene.id.match(/scene[-_]?([0-9]+)/i)?.[1]);
   return {
-    text: scene.caption,
-    visual: scene.visual,
+    src: `assets/images/scene_${sceneNumber}.jpg`,
+    fit: "cover",
   };
 };
 
@@ -277,11 +277,11 @@ function truncate(s: string, max: number): string {
  * QuoteBlock, StatGrid, BarChart, Leaderboard, Checklist, BigIdea,
  * PyramidDiagram, VennDiagram, CycleDiagram, MapInsert) are removed —
  * see packages/draft/src/visual-classifier.ts for the measurement.
- * What remains covers the paths the pipeline actually ships: the title
- * card, the illustration brief, and the canvas DoodleScene.
+ * The image path is the default for every scene; the title card and
+ * canvas DoodleScene remain available for intentional use.
  */
 export const VISUAL_BUILDERS: Record<string, VisualPropsBuilder> = {
   Title: buildTitle,
   DoodleScene: buildDoodleScene,
-  AnimatedIllustration: buildIllustration,
+  ImageBackground: buildImageBackground,
 };

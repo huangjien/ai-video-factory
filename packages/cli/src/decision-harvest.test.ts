@@ -44,7 +44,7 @@ describe("renderCandidateYaml", () => {
         surface: "visual-class",
         state: "少年立在崖边望向远方",
         expects: { kind: "choice", value: "Checklist" },
-        baseline: "AnimatedIllustration",
+        baseline: "ImageBackground",
         disputed: true,
         dispute: "proposed by a model",
         policy: { rule: "structure-over-photo", note: "confirm the rule" },

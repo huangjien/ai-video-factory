@@ -1,8 +1,8 @@
 # Project Lifecycle
 
-## 横屏主片与竖屏简版
+## 默认四版本交付
 
-先按现有起稿、审核、制作流程完成横屏主片。默认目标 6 分钟，一般至少 5 分钟。用具体事例和证据讲清论点，按内容需要延长。随后从横屏定稿派生竖屏简版，保留主张、关键证据和结论，按 150 秒编排，交付成片最多 180 秒。
+除非用户另有说明，每个主题默认交付四个版本：中文横屏完整版、中文竖屏 Shorts、英文横屏完整版、英文竖屏 Shorts。先完成中文横屏主片，再从定稿翻译英文并制作英文横屏；中英文竖屏版分别从各自语言的横屏定稿改编，保留主张、关键证据和结论，按 150 秒编排，交付成片最多 180 秒。横屏完整版按内容需要讲清前因后果、论据和利弊，不为满足时长压缩观点。竖屏必须使用原生 9:16 构图，不裁切横屏画面。
 
 ## 2. Major commands
 
@@ -79,7 +79,7 @@ Full command set:
 | `video validate <storyboard.yaml>` | VDSL schema check |
 | `video status [project]` | Pipeline state |
 | `video thumbnail <project>` | YouTube thumbnail (MiniMax image) — auto-branded: 朱红 canvas border + top-left mascot badge via `scripts/thumbnail-brand.py` + `brand.yaml` `brand.thumbnail` (configurable: colors, widths, diameter) |
-| `video shorts <project>` | Shorts package from the final master (default: the whole film — hook through payoff; `--duration N` cuts a scene-aligned teaser; `--provider minimax` generates an AI teaser from thumbnail + shorts-hook). Aspect-aware — a landscape master is center-cropped, a vertical master is kept whole (remux) or trimmed |
+| `video shorts <project>` | Shorts package from the final master (default: the whole film — hook through payoff; `--duration N` cuts a scene-aligned teaser; `--provider minimax` generates an AI teaser from thumbnail + shorts-hook). Aspect-aware — a landscape master is shown whole over a blurred vertical backdrop; a vertical master is kept whole (remux) or trimmed |
 | `video vertical <project>` | Derives a native 1080×1920 edition from the landscape article. When its target or summed scene durations exceed 180 s, adapts the script to a 150 s target. Checks the rendered `vertical/output/final-mixed.mp4` against the 180 s limit. |
 | `video youtube <project>` | Title / description / chapters / shorts hook; `--upload` publishes final-mixed.mp4 + thumbnail directly (OAuth: `video youtube --auth` once, then `--privacy private\|unlisted\|public`, default private) |
 | `video douyin <project>` | 抖音 (Douyin) submission metadata: title / 文案 / ≤5 话题 / cover prompt → `douyin/package.yaml` + `CHECKLIST.md`, PLUS a vertical 1080×1920 cut of the film at `douyin/video.mp4` (`--cut-mode inset` = blurred backdrop, nothing cropped — the default; `--cut-mode crop` = fills the screen, loses ~43% of the width). `--upload` publishes through the official 开放平台 API and needs `client_key`/`client_secret` in `~/.config/secrets/douyin-client-secret.json` + `DOUYIN_ACCESS_TOKEN` in `~/.config/secrets/ai.env`; without them it stops at the packaging and writes the manual checklist. |

@@ -8,6 +8,7 @@ import { resolveProjectDir } from "./project-path.js";
 import { existsSync, readFileSync } from "node:fs";
 import { formatRunId } from "@video/workflow";
 import { readSceneTimings } from "@video/media";
+import { verticalFilter } from "@video/douyin";
 import {
   MiniMaxVideoProvider,
   MockVideoProvider,
@@ -56,17 +57,23 @@ async function shortsFfmpeg(
   start: number,
   duration: number,
 ): Promise<void> {
-  // Aspect-aware filter (2026-11-20): a landscape master must be
-  // center-cropped to 9:16, but a VERTICAL master (the native vertical
-  // workdir) must only be trimmed — cropping it would cut the composed
-  // frame and its burned-in captions.
-  const filter = (await isVerticalVideo(src))
-    ? "scale=1080:1920"
-    : "crop=ih*9/16:ih,scale=1080:1920";
+  // Keep the full frame when a landscape master is passed: use the same
+  // blurred inset treatment as Douyin packaging. Native vertical masters
+  // keep their composition and only get scaled.
+  const vertical = await isVerticalVideo(src);
   // A trimmed cut fades its last second out (video + audio) so the
   // out-point reads as an ending, not a hard chop.
   const fadeStart = Math.max(0, start + duration - 1);
-  const vf = duration > 0 ? `${filter},fade=t=out:st=${fadeStart}:d=1` : filter;
+  const vf = vertical
+    ? duration > 0
+      ? `scale=1080:1920,fade=t=out:st=${fadeStart}:d=1`
+      : "scale=1080:1920"
+    : verticalFilter("inset", 1080, 1920, 40).replace(
+        "[v]",
+        duration > 0
+          ? `[base];[base]fade=t=out:st=${fadeStart}:d=1[v]`
+          : "[v]",
+      );
   const af = duration > 0 ? `afade=t=out:st=${fadeStart}:d=1` : undefined;
   await execFileAsync("ffmpeg", [
     "-y",
@@ -75,8 +82,9 @@ async function shortsFfmpeg(
     "-i",
     src,
     ...(duration > 0 ? ["-t", String(duration)] : []),
-    "-vf",
-    vf,
+    ...(vertical
+      ? ["-vf", vf]
+      : ["-filter_complex", vf, "-map", "[v]", "-map", "0:a?"]),
     ...(af ? ["-af", af] : []),
     "-c:v",
     "libx264",

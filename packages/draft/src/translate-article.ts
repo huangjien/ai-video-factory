@@ -789,7 +789,7 @@ export async function translateArticle(
   if (!existsSync(imagesLink)) {
     if (!existsSync(path.join(projectRoot, "assets", "images"))) {
       warnings.push(
-        "canonical assets/images missing — scenes will render as AnimatedIllustration (no generated images to share)",
+        "canonical assets/images missing — scenes without translated images use the theme background",
       );
     }
     await symlink(imagesTarget, imagesLink, "dir");

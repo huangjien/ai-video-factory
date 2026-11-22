@@ -16,23 +16,9 @@ import {
 } from "@video/draft";
 import { generateSceneVisuals, resolveImageProvider } from "./index.js";
 
-/**
- * Regression tests for the bug: `video make --fake` rewrote every scene's
- * `visual.component` from `AnimatedIllustration` to `ImageBackground`,
- * because the make pipeline defaulted `--fake` to imageProvider="mock"
- * and `updateStoryboardForImages` switched every scene to use the mock
- * placeholder as a full-screen background. ImageBackground shows only
- * the image (no caption), so the rendered video looked fine for scene 1
- * (Title component) and then ~9 minutes of blank frames for scenes 2+
- * — users reported "video stops showing pictures and animation at 3-4
- * minutes" (real elapsed: ~28 seconds). The fix: `--fake` resolves to
- * imageProvider="none", which skips image generation entirely and
- * leaves scenes as AnimatedIllustration (caption + animated SVG).
- *
- * `video make`, `video visuals`, and the `--dry-run` impact table all
- * resolve the provider through `resolveImageProvider` — one function, so
- * a regression here breaks every entry point at once.
- */
+/** Offline generation never restores synthetic geometric illustrations.
+ * Cached images stay bound to their scenes; missing images use the theme
+ * background while narration captions remain available. */
 
 const FAKE_ARTICLE = `---
 project: fixture
@@ -69,7 +55,7 @@ scenes:
 `;
 
 describe("resolveImageProvider", () => {
-  it("resolves --fake to none so scenes keep AnimatedIllustration", () => {
+  it("resolves --fake to none so it can reuse cached images offline", () => {
     expect(resolveImageProvider(true, undefined)).toBe("none");
   });
 
@@ -165,45 +151,34 @@ describe("generateSceneVisuals — provider none leaves scenes self-rendered", (
     };
     const scene = board.scenes?.[2];
     scene!.visual = {
-      component: "AnimatedIllustration",
-      props: { kenBurnsScale: value },
+      component: "ImageBackground",
+      props: { src: "assets/images/scene_3.jpg", kenBurnsScale: value },
     };
     writeFileSync(sbPath, stringifyYaml(board), "utf8");
   }
 
-  it("switches nothing when the provider is none", async () => {
+  it("keeps image scenes and removes unavailable image paths when the provider is none", async () => {
     expect(
       await generateSceneVisuals(projectRoot, article, { provider: "none" }),
     ).toEqual([]);
 
     const scenes = readStoryboard(sbPath);
     expect(scenes.length).toBeGreaterThan(0);
-    expect(scenes.map((s) => s.visual?.component)).not.toContain(
-      "ImageBackground",
-    );
+    expect(scenes.map((s) => s.visual?.component)).toContain("ImageBackground");
+    expect(scenes[1]?.visual?.props).not.toHaveProperty("src");
   });
 
-  it("carries the scene caption onto ImageBackground when switched", async () => {
-    // Defense-in-depth for the v0.3.6 blank-frame bug: when images ARE
-    // generated (explicit --image-provider mock, or a real provider that
-    // partially succeeded), updateStoryboardForImages must move the
-    // AnimatedIllustration `text` prop onto ImageBackground as `caption`
-    // — otherwise the switch silently drops the on-screen text.
-    // articleToStoryboardYaml zero-pads ids (`scene-03`) and scenes stay in
-    // article order, so index 2 is the third scene. Only scene 3's visual
-    // falls through the component classifier to AnimatedIllustration.
+  it("uses the generated image without adding a duplicate scene-label caption", async () => {
     const before = readStoryboard(sbPath)[2];
     expect(before?.id).toBe("scene-03");
-    expect(before?.visual?.component).toBe("AnimatedIllustration");
-    const text = before?.visual?.props?.["text"];
-    expect(typeof text).toBe("string");
+    expect(before?.visual?.component).toBe("ImageBackground");
 
     await generateSceneVisuals(projectRoot, article, { provider: "mock" });
 
     const after = readStoryboard(sbPath)[2];
     expect(after?.visual?.component).toBe("ImageBackground");
     expect(after?.visual?.props?.["src"]).toContain("scene_3");
-    expect(after?.visual?.props?.["caption"]).toBe(text);
+    expect(after?.visual?.props).not.toHaveProperty("caption");
   });
 
   it("carries kenBurnsScale onto ImageBackground when switched (CS-09)", async () => {

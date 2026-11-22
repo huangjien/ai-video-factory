@@ -7,11 +7,9 @@ Rules:
 2. Use schema_version: "0.2".
 3. Use the dark-tech theme. `style` accepts ONLY the key `theme`. Omit `style.brand` entirely — it is a structured object with its own required shape, and a free-form string there fails validation. Emit nothing else under `style`: no `notes`, no `palette`, no `art_style`, no written description of the look. VDSL is a STRICT schema, so ONE unrecognised key discards the entire storyboard.
 4. Use components from this registered set ONLY:
-   Title, Paragraph, CodeBlock, Image, EndCard, Character,
-   AnimatedIllustration.
-   PREFER IMAGE-BACKED SCENES. `Image` (with Character where a person is
-   central) is the default choice; `AnimatedIllustration` covers scenes
-   described as a drawing or concept rather than a photograph. Titles and
+   Title, Paragraph, CodeBlock, Image, ImageBackground, EndCard, Character.
+   PREFER IMAGE-BACKED SCENES. `ImageBackground` is the default choice;
+   use `Image` with Character where a person is central. Titles and
    quotes belong on the image (baked at make time), not on separate cards.
 5. Visual durations are in SECONDS; scene count and total duration are driven by the requested target (refer to the "Total duration target (seconds): N" value emitted later):
    - target ≤ 60s  → 5-8 scenes
@@ -58,8 +56,8 @@ scenes:
   - id: scene-02
     duration: 8
     visual:
-      component: AnimatedIllustration
+      component: ImageBackground
       props:
-        text: "问题 → 步骤 1 → 答案"
+        src: assets/images/scene_02.jpg
     animation:
       entrance: fade

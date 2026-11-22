@@ -33,7 +33,7 @@ scenes:
       text: "……"
       audio: assets/audio/scene-01.wav # optional; mounted by video audio flows
     visual:
-      component: AnimatedIllustration
+      component: ImageBackground
       renderer: remotion # remotion (default) | canvas
       background: # optional; see "Scene background image" below
         scrim: true # dark gradient over the photo (default true)
@@ -88,13 +88,13 @@ it). Current pairings:
 
 | renderer   | component(s)                                                                                                                                                                                                                                                                                                       | look                                                                                                                                                                |
 | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `remotion` | Title, Paragraph, CodeBlock, EndCard, Character, Image, ImageBackground, AnimatedIllustration (v0.12 removed the 14 structured/diagram components — FlowChart, Timeline, Callout, QuoteBlock, StatGrid, BarChart, Leaderboard, Checklist, BigIdea, PyramidDiagram, VennDiagram, CycleDiagram, Terminal, MapInsert) | classic motion graphics on the theme background                                                                                                                     |
+| `remotion` | Title, Paragraph, CodeBlock, EndCard, Character, Image, ImageBackground | image-backed scenes; an unavailable image leaves the theme background |
 | `canvas`   | `DoodleScene`                                                                                                                                                                                                                                                                                                      | hand-drawn ink: procedural strokes (circle / star / zigzag / spiral) with seeded wobble, sequential pen-draw, optional `bpm` beat-sync, `background: paper \| dark` |
 
 `props` are validated against the component's own registry schema, so each
-component documents its own shape — `AnimatedIllustration` wants `text`
-and optional `edges[]` ([from, to] index pairs) plus `direction`;
-`Title` wants `text` + optional `subtext`. Synonyms are coerced for
+component documents its own shape — `ImageBackground` accepts an optional
+`src`, `fit`, and `kenBurnsScale`; `Title` wants `text` + optional
+`subtext`. Synonyms are coerced for
 `renderer` before validation (`hand-drawn`/`doodle` → `canvas`); unknown
 values fail loudly at render time rather than silently substituting a
 different look.
@@ -129,7 +129,7 @@ the only control:
 
 ```yaml
 visual:
-  component: AnimatedIllustration
+  component: ImageBackground
   background: { scrim: false } # no dark gradient over the photo
 ```
 

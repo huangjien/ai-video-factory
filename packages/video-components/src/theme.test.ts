@@ -19,10 +19,9 @@ describe("Todo 7 — theme tokens", () => {
     expect(ratio).toBeGreaterThan(7);
   });
 
-  it("registry exports the 10 components (v0.12 — structured components removed)", () => {
+  it("registry omits AnimatedIllustration", () => {
     expect(COMPONENT_NAMES.sort()).toEqual(
       [
-      "AnimatedIllustration",
       "Character",
       "CodeBlock",
       "DoodleScene",
@@ -34,6 +33,7 @@ describe("Todo 7 — theme tokens", () => {
       "VideoBackground"
       ],
     );
+    expect(REGISTRY).not.toHaveProperty("AnimatedIllustration");
   });
 
   it("animation helpers return interpolated values within expected ranges", () => {

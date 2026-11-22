@@ -28,11 +28,9 @@ scenes:
     text: 提交触发构建服务器编译与打包。
     audio: assets/audio/scene-02.wav
   visual:
-    component: AnimatedIllustration
+    component: ImageBackground
     renderer: remotion
-    props:
-      text: process diagram
-      visual: process diagram
+    props: {}
   transition:
     in: cut
     out: cut
@@ -42,11 +40,9 @@ scenes:
     text: 构建产物进入测试环境，自动跑完整测试。
     audio: assets/audio/scene-03.wav
   visual:
-    component: AnimatedIllustration
+    component: ImageBackground
     renderer: remotion
-    props:
-      text: process diagram
-      visual: process diagram
+    props: {}
   transition:
     in: cut
     out: cut
@@ -56,11 +52,9 @@ scenes:
     text: 测试通过后，发布到三台生产实例。
     audio: assets/audio/scene-04.wav
   visual:
-    component: AnimatedIllustration
+    component: ImageBackground
     renderer: remotion
-    props:
-      text: process diagram
-      visual: process diagram
+    props: {}
   transition:
     in: cut
     out: cut
@@ -70,11 +64,9 @@ scenes:
     text: 监控盯着每一台实例的指标。
     audio: assets/audio/scene-05.wav
   visual:
-    component: AnimatedIllustration
+    component: ImageBackground
     renderer: remotion
-    props:
-      text: process diagram
-      visual: process diagram
+    props: {}
   transition:
     in: cut
     out: fade

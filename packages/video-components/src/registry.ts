@@ -1,6 +1,5 @@
 import type { ComponentType } from "react";
 import { z } from "zod";
-import { AnimatedIllustration } from "./components/Illustration.js";
 import { Character } from "./components/Character.js";
 import { CodeBlock } from "./components/CodeBlock.js";
 import {
@@ -64,13 +63,6 @@ const paragraphProps = z
   })
   .passthrough();
 
-const illustrationProps = z
-  .object({
-    text: z.string().min(1),
-    visual: z.string().optional(),
-  })
-  .passthrough();
-
 const codeBlockProps = z
   .object({
     code: z.string().min(1),
@@ -107,7 +99,7 @@ const characterProps = z
 
 const imageBackgroundProps = z
   .object({
-    src: z.string().min(1),
+    src: z.string().min(1).optional(),
     fit: z.enum(["cover", "contain"]).default("contain"),
     kenBurnsScale: z.number().min(0).max(0.5).default(0),
     /** v0.12: transparent PNG key-info title from the Pillow
@@ -227,10 +219,6 @@ export const REGISTRY: Record<string, RegistryEntry> = {
     propsSchema: withAlias("Paragraph", paragraphProps),
     component: Paragraph as ComponentType<unknown>,
   },
-  AnimatedIllustration: {
-    propsSchema: illustrationProps,
-    component: AnimatedIllustration as ComponentType<unknown>,
-  },
   CodeBlock: {
     propsSchema: codeBlockProps,
     component: CodeBlock as ComponentType<unknown>,
@@ -266,13 +254,12 @@ export const COMPONENT_NAMES = Object.keys(REGISTRY);
 export type RegistryPropsByName = {
   Title: { text: string; subtext?: string; bullets?: string[] };
   Paragraph: { text: string; align?: "left" | "center" };
-  AnimatedIllustration: { text: string; visual?: string };
   CodeBlock: { code: string; language?: string; highlightLines?: number[] };
   Image: { src: string; fit?: "contain" | "cover" };
   EndCard: { title: string; subtitle?: string; cta?: string };
   Character: { mouthOpen: number };
   ImageBackground: {
-    src: string;
+    src?: string;
     fit?: "cover" | "contain";
     kenBurnsScale?: number;
     textOverlaySrc?: string;

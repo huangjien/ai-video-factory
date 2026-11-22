@@ -404,18 +404,18 @@ describe("articleToStoryboardYaml (VDSL sync)", () => {
     expect(JSON.stringify(parsed.scenes[0]?.visual.props)).not.toContain("xxx");
   });
 
-  it("explicit component field wins — even over the forced scene-1 Title", () => {
+  it("explicit image component wins — even over the forced scene-1 Title", () => {
     const withComponent: ParsedArticle = {
       ...fixture,
       scenes: fixture.scenes.map((s, i) =>
-        i === 0 ? { ...s, component: "AnimatedIllustration" } : s,
+        i === 0 ? { ...s, component: "ImageBackground" } : s,
       ),
     };
     const yaml = articleToStoryboardYaml(withComponent);
     const parsed = parseYaml(yaml) as {
       scenes: { visual: { component: string } }[];
     };
-    expect(parsed.scenes[0]?.visual.component).toBe("AnimatedIllustration");
+    expect(parsed.scenes[0]?.visual.component).toBe("ImageBackground");
   });
 
   it("unknown component name warns and falls back to keyword classification", () => {
@@ -432,25 +432,20 @@ describe("articleToStoryboardYaml (VDSL sync)", () => {
       scenes: { visual: { component: string } }[];
     };
     // The typo is NOT used: the scene falls back to keyword
-    // classification, and the fixture's "结束画面" carries no cue →
-    // AnimatedIllustration.
-    expect(parsed.scenes[1]?.visual.component).toBe("AnimatedIllustration");
+    // classification, which now uses the scene's image directly.
+    expect(parsed.scenes[1]?.visual.component).toBe("ImageBackground");
   });
 
-  it("uses AnimatedIllustration for subsequent scenes (caption + visual)", () => {
+  it("uses ImageBackground for subsequent scenes", () => {
     const yaml = articleToStoryboardYaml(fixture);
     const parsed = parseYaml(yaml) as {
       scenes: {
         visual: { component: string; props: Record<string, string> };
       }[];
     };
-    expect(parsed.scenes[1]?.visual.component).toBe("AnimatedIllustration");
-    expect(parsed.scenes[1]?.visual.props.text).toBe(
-      fixture.scenes[1]?.caption,
-    );
-    expect(parsed.scenes[1]?.visual.props.visual).toBe(
-      fixture.scenes[1]?.visual,
-    );
+    expect(parsed.scenes[1]?.visual.component).toBe("ImageBackground");
+    expect(parsed.scenes[1]?.visual.props.src).toBe("assets/images/scene_2.jpg");
+    expect(parsed.scenes[1]?.visual.props.fit).toBe("cover");
   });
 
   it("escapes newlines and quotes in narration so the YAML parses", () => {
@@ -688,7 +683,7 @@ describe("articleToStoryboardYaml — theme + captions flags", () => {
       const comps = componentsOf(
         withProfile({ channel_profile: "chinese-storybook" }),
       );
-      expect(comps[0]).toBe("AnimatedIllustration");
+      expect(comps[0]).toBe("ImageBackground");
       expect(comps).not.toContain("Title");
     });
 
@@ -796,9 +791,7 @@ ${sceneLines.map((l) => `  ${l}`).join("\n")}
     expect(yaml).toContain("hold_after_sec: 2.5");
   });
 
-  it("writes an AnimatedIllustration scene with text and visual props", () => {
-    // The FIRST scene always becomes the Title card, so the illustration
-    // scene has to be the second one.
+  it("writes image paths for non-title scenes", () => {
     const yaml = articleToStoryboardYaml(
       articleWithScene([
         "- id: scene_1",
@@ -813,11 +806,11 @@ ${sceneLines.map((l) => `  ${l}`).join("\n")}
         "  narration: 旁白",
       ]),
     );
-    expect(yaml).toContain("component: AnimatedIllustration");
-    expect(yaml).toContain("text:");
+    expect(yaml).toContain("component: ImageBackground");
+    expect(yaml).toContain('src: "assets/images/scene_2.jpg"');
   });
 
-  it("falls a map-style scene through to the illustration builder", () => {
+  it("falls a map-style scene through to the image background builder", () => {
     const yaml = articleToStoryboardYaml(
       articleWithScene([
         "- id: scene_1",
@@ -832,7 +825,7 @@ ${sceneLines.map((l) => `  ${l}`).join("\n")}
         "  narration: 旁白",
       ]),
     );
-    expect(yaml).toContain("component: AnimatedIllustration");
+    expect(yaml).toContain("component: ImageBackground");
   });
 });
 
@@ -987,10 +980,9 @@ describe("articleToStoryboardYaml — visual_mode: image", () => {
     const parsed = parseYaml(yaml) as {
       scenes: { id: string; visual: { component: string } }[];
     };
-    // The first scene keeps the title card (it draws its own image
-    // full-bleed); every other scene is an illustration.
+    // The first scene keeps the title card; all other scenes use images.
     expect(parsed.scenes[0]!.visual.component).toBe("Title");
-    expect(parsed.scenes[1]!.visual.component).toBe("AnimatedIllustration");
+    expect(parsed.scenes[1]!.visual.component).toBe("ImageBackground");
   });
 
   it("still routes by keyword without the mode (the historical behaviour)", () => {
@@ -999,7 +991,7 @@ describe("articleToStoryboardYaml — visual_mode: image", () => {
       scenes: { id: string; visual: { component: string } }[];
     };
     const components = parsed.scenes.map((s) => s.visual.component);
-    expect(components.some((c) => c !== "AnimatedIllustration")).toBe(true);
+    expect(components).not.toContain("AnimatedIllustration");
   });
 
   it("lets an explicit component override the mode (a hand edit)", () => {
@@ -1007,13 +999,13 @@ describe("articleToStoryboardYaml — visual_mode: image", () => {
       ...noisyFixture,
       frontmatter: { ...noisyFixture.frontmatter, visual_mode: "image" },
       scenes: [
-        { ...noisyFixture.scenes[0]!, component: "AnimatedIllustration" },
+        { ...noisyFixture.scenes[0]!, component: "ImageBackground" },
         noisyFixture.scenes[1]!,
       ],
     });
     const parsed = parseYaml(yaml) as {
       scenes: { id: string; visual: { component: string } }[];
     };
-    expect(parsed.scenes[0]!.visual.component).toBe("AnimatedIllustration");
+    expect(parsed.scenes[0]!.visual.component).toBe("ImageBackground");
   });
 });

@@ -26,4 +26,13 @@ describe("ImageBackground Ken-Burns scale", () => {
     expect(markup).toContain("object-fit:contain");
     expect(markup).not.toContain("scale(1.");
   });
+
+  it("uses only the theme background when an image is unavailable", () => {
+    const markup = renderToStaticMarkup(
+      <ImageBackground startFrame={0} frame={0} durationInFrames={60} />,
+    );
+    expect(markup).not.toContain("<img");
+    expect(markup).not.toContain("border-radius:50%");
+    expect(markup).not.toContain("<svg");
+  });
 });

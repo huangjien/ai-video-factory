@@ -149,11 +149,10 @@ Useful flags:
 | `--sfx-dir <dir>`                                                  | Use your own SFX library                                                                                                                                                                                                                                                                     |
 
 `--fake` is the canonical offline mode. It skips both text-to-speech
-(writing silent placeholder WAVs) and real image generation, and scenes
-stay as `AnimatedIllustration` — caption plus animated SVG — so the video
-is visible end to end without any network access. Pass `--image-provider
-mock` explicitly only when you want to exercise the `ImageBackground` path
-with placeholder images.
+(writing silent placeholder WAVs) and real image generation. Existing
+images remain visible; a scene without an image shows the theme background
+and narration captions. No geometric placeholder illustration is rendered.
+Pass `--image-provider mock` only when you want placeholder images.
 
 #### Resolving the project argument
 
@@ -644,7 +643,7 @@ Publishing metadata is not part of `video make`; invoke it separately.
 | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `video youtube <project>`   | The YouTube package: title, description, chapters VTT, thumbnail prompt, Shorts hook                                                                                      |
 | `video thumbnail <project>` | A 1280×720 thumbnail — mock by default, real AI with `--provider minimax` or `--provider minimax-h3 --reference <img>` (H3 edit mode: re-renders the reference's subject) |
-| `video shorts <project>`    | A vertical 9:16 clip extracted from `final-mixed.mp4`                                                                                                                     |
+| `video shorts <project>`    | A vertical 9:16 clip from `final-mixed.mp4`; portrait masters stay intact, landscape masters use a blurred inset so the full frame remains visible |
 | `video bilibili <project>`  | The Bilibili package: title, 简介, tags, suggested 分区, cover brief, and a manual upload checklist                                                                       |
 | `video douyin <project>`    | The 抖音 package: title, 文案, 话题, cover brief, a vertical 9:16 cut of the film, and a manual upload checklist; `--upload` publishes through the official API |
 
@@ -859,24 +858,30 @@ is handed to the drafter as context alongside the topic.
 
 Design: [`docs/plans/2026-11-18-backlog-feature-design.md`](./plans/2026-11-18-backlog-feature-design.md).
 
-### Landscape master and vertical edition
+### Default delivery: Chinese and English, landscape and Shorts
 
-Produce the landscape master first with the usual draft, review and make workflow.
+Unless the user asks otherwise, deliver four editions: Chinese full-length landscape, Chinese vertical Shorts, English full-length landscape, and English vertical Shorts. Produce the Chinese landscape master first with the usual draft, review and make workflow.
 `video draft` targets 360 seconds by default. Plan on at least five minutes for
 a typical essay, extending it when the argument needs more evidence or examples.
 Use `--duration <seconds>` to set a different writing target.
 
-Then run `video vertical <project>`. It derives the vertical script from the
-landscape project's `article.md`. If either the article's target or the sum of
+Translate the approved Chinese article for the English edition, then render its
+full-length landscape master with `video make <project> --lang en-US`. Run
+`video vertical <project>` for Chinese and
+`video vertical <project>/l10n/en-US` for English. Each derives the vertical
+script from that language's landscape `article.md`. If either the article's target or the sum of
 its scene durations exceeds 180 seconds, the script model adapts it to a
 150-second target, keeping the thesis, strongest evidence, caveats and conclusion.
 Shorter scripts, including those at exactly 180 seconds by both measures, can
 reuse their scenes. The command copies the project's audio configuration and
-renders a native 1080×1920 edition in `vertical/output/final-mixed.mp4`.
+renders a native 1080×1920 edition in each language's
+`vertical/output/final-mixed.mp4`.
 
 The command checks the finished MP4 with ffprobe. An unreadable duration or a
-runtime above 180 seconds fails the command. To package the vertical edition
-for Shorts, run `video shorts <project>/vertical`. The auto-producer runs the
+runtime above 180 seconds fails the command. Package both editions for Shorts
+with `video shorts <project>/vertical` and
+`video shorts <project>/l10n/en-US/vertical`. Landscape compositions must not
+be center-cropped to create portrait editions. The auto-producer runs the
 vertical and Shorts stages unless given `--no-shorts`.
 
 ### Photos and archival footage

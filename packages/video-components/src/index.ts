@@ -36,10 +36,6 @@ export {
 
 export { Title, type TitleProps } from "./components/Title.js";
 export { Paragraph, type ParagraphProps } from "./components/Paragraph.js";
-export {
-  AnimatedIllustration,
-  type IllustrationProps,
-} from "./components/Illustration.js";
 export { Background, type BackgroundProps } from "./components/Background.js";
 export {
   ImageBackground,

@@ -45,6 +45,8 @@ flowchart LR
 
 ## 2. 推荐工作流
 
+默认每个主题交付四个版本：中文横屏完整版、中文竖屏 Shorts、英文横屏完整版、英文竖屏 Shorts。先完成中文横屏定稿，再翻译并制作英文横屏；两个竖屏版本分别基于对应语言的横屏定稿改编，目标约 150 秒，最长 180 秒。横屏稿按内容需要交代背景、因果、证据和利弊，不为了时长压缩。竖屏采用原生 9:16 构图，不裁切横屏画面。用户另有说明时按其要求执行。
+
 四条命令、两处人工编辑、一个产出。
 
 ```mermaid
@@ -132,9 +134,9 @@ flowchart TD
 | `--bgm-dir <目录>` | 用你自己的 BGM 库，而不是静音占位 |
 | `--sfx-dir <目录>` | 用你自己的 SFX 库 |
 
-`--fake` 是标准的离线模式。它同时跳过文字转语音（写静音占位 WAV）和真实
-生图，场景保持 `AnimatedIllustration`——字幕加动画 SVG——所以不联网也能看到
-完整的视频。只有当你就是想用占位图走一遍 `ImageBackground` 路径时，才需要
+`--fake` 是标准的离线模式。它跳过文字转语音（写静音占位 WAV）和真实生图；
+已有图片会继续显示，没有图片时显示主题底色和旁白字幕。场景不会回退为圆圈、
+方块等程序化装饰。只有当你想用占位图走一遍 `ImageBackground` 路径时，才需要
 显式传 `--image-provider mock`。
 
 #### 没有 API key？渲染仓库自带的 demo
@@ -586,7 +588,7 @@ agent-ask 门被跳过——项目自己的 frontmatter 就是答案。两条规
 |---|---|
 | `video youtube <项目>` | YouTube 发布包：标题、描述、章节 VTT、缩略图提示、Shorts hook |
 | `video thumbnail <项目>` | 1280×720 缩略图——默认 mock，加 `--provider minimax` 走真实 AI |
-| `video shorts <项目>` | 从 `final-mixed.mp4` 抽出的竖屏 9:16 短片 |
+| `video shorts <项目>` | 从 `final-mixed.mp4` 生成竖屏 9:16 短片；横屏源使用模糊背景衬托完整画面，不裁切主体 |
 | `video bilibili <项目>` | B 站发布包：标题、简介、标签、建议分区、封面提示，以及人工投稿清单 |
 
 `video youtube` 优先读 `article.md`，从中推导标题、hook、章节和章节时间点。

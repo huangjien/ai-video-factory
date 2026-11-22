@@ -642,7 +642,7 @@ const visualSchema = z
      *
      * | renderer   | component      | look |
      * |------------|----------------|------|
-     * | remotion   | Title, Paragraph, CodeBlock, Terminal, FlowChart, Timeline, Callout, EndCard, Character, Image, ImageBackground, AnimatedIllustration | classic motion graphics on the theme background |
+     * | remotion   | Title, Paragraph, CodeBlock, EndCard, Character, Image, ImageBackground | image-backed scenes on the theme background |
      * | canvas     | DoodleScene    | hand-drawn ink: procedural strokes (circle/star/zigzag/spiral) with seeded wobble, sequential pen-draw, optional BPM beat-sync |
      *
      * `props` are validated against the component's own registry schema,

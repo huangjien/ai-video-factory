@@ -288,7 +288,7 @@ export async function resolveImageSources(
             props: { videoSrc: clip },
           };
         }
-        const withSrc = await resolveComponentSrc(scene, warn);
+        const withSrc = await resolveComponentSrc(scene, plan.projectRoot, warn);
         return resolveTextOverlay(withSrc, plan.projectRoot, warn);
       }
       // The title card paints its own art: it needs the picture's
@@ -378,19 +378,25 @@ export async function resolveVideoSources(
 /** Inlines an ImageBackground scene's own `src` as a data URL. */
 async function resolveComponentSrc(
   scene: RenderPlanScene,
+  projectRoot: string | undefined,
   warn: (message: string) => void,
 ): Promise<RenderPlanScene> {
   const src: unknown = scene.props.src;
   if (typeof src !== "string" || src.startsWith("data:")) return scene;
-  if (!existsSync(src)) {
+  const absolute = path.isAbsolute(src)
+    ? src
+    : projectRoot
+      ? path.join(projectRoot, src)
+      : src;
+  if (!existsSync(absolute)) {
     warn(
-      `scene ${scene.id}: ImageBackground src not found: ${src} — rendering the dark background instead`,
+      `scene ${scene.id}: ImageBackground src not found: ${absolute} — rendering the dark background instead`,
     );
     return scene;
   }
   return {
     ...scene,
-    props: { ...scene.props, src: await toDataUrl(src) },
+    props: { ...scene.props, src: await toDataUrl(absolute) },
   };
 }
 

@@ -20,11 +20,9 @@ import {
 /**
  * v0.4 (T3) — image-prompt expansion for the MiniMax image provider.
  *
- * The article's `visual:` field is written for keyword-matching against
- * the `AnimatedIllustration` shape vocabulary — it's a one-liner under
- * 80 chars that mentions a category ("network of nodes", "a formula").
- * For real image generation (`image-01`), that's not enough: image
- * generators want subject + environment + lighting + composition + style.
+ * The article's `visual:` field is a concise seed for generated images.
+ * For image generation (`image-01`), expand it with subject + environment
+ * + lighting + composition + style.
  *
  * `expandScenePrompt` rewrites the visual line into one paragraph that
  * follows a fixed structure — subject, scene, composition, lighting,

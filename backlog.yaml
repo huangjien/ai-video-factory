@@ -1062,7 +1062,7 @@ ideas:
       - bake-text.ts hash convention
   - id: 2026-11-19-why-the-scene-cut-detector-missed-every-
     topic: Why the scene-cut detector missed every single cut
-    status: idea
+    status: dropped
     source: harvest:learnings/improvement-proposals/2026-10-24-experience-batch-1.md
     created: 2026-11-19
     note: "A visual, demoable mystery — sweeping the threshold from 0.4 down to 0.02

@@ -25,11 +25,9 @@ scenes:
     text: AI Agent 通过 MCP Client 连接到外部世界。
     audio: assets/audio/scene-02.wav
   visual:
-    component: AnimatedIllustration
+    component: ImageBackground
     renderer: remotion
-    props:
-      text: process diagram
-      visual: process diagram
+    props: {}
   animation:
     entrance: fade
 - id: scene-03
@@ -38,22 +36,18 @@ scenes:
     text: MCP Client 使用标准协议与 MCP Server 通信。
     audio: assets/audio/scene-03.wav
   visual:
-    component: AnimatedIllustration
+    component: ImageBackground
     renderer: remotion
-    props:
-      text: process diagram
-      visual: process diagram
+    props: {}
 - id: scene-04
   duration: 9
   narration:
     text: MCP Server 一端连接 GitHub、Jenkins、数据库等各种工具。
     audio: assets/audio/scene-04.wav
   visual:
-    component: AnimatedIllustration
+    component: ImageBackground
     renderer: remotion
-    props:
-      text: process diagram
-      visual: process diagram
+    props: {}
 - id: scene-05
   duration: 9
   narration:

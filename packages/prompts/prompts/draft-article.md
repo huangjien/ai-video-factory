@@ -368,7 +368,7 @@ Each scene MAY carry a `component:` field naming the registered
 component the scene renders as. Only two names remain routable:
 
 - `Title` — a section opener (the first scene becomes one automatically).
-- `AnimatedIllustration` — the default: a generated illustration or photo.
+- `ImageBackground` — the default: the scene's generated image.
 
 Omit the field for every scene — generated illustrations are the look of
 a film. Set it only to pin a scene that the model would otherwise

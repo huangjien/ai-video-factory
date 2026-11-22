@@ -198,9 +198,8 @@ scenes:
   - id: scene-01
     duration: 10
     visual:
-      component: AnimatedIllustration
-      props:
-        text: v
+      component: ImageBackground
+      props: {}
 ${overlay}
 `;
 

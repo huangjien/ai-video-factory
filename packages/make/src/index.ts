@@ -353,8 +353,8 @@ export interface MakeOptions {
   dryRun?: boolean;
   /** Image provider for scene visuals: "minimax" | "openai" | "gemini"
    * (hosted AI image APIs), "mock" (deterministic placeholder), or
-   * "none" (skip image generation; scenes fall back to
-   * AnimatedIllustration shapes). */
+   * "none" (skip image generation; scenes without cached images use the
+   * theme background). */
   imageProvider?:
     "minimax" | "minimax-h3" | "openai" | "gemini" | "mock" | "none";
   /** Historical-picture retrieval for the scene images: "on" (default —
@@ -494,8 +494,8 @@ export async function runMake(
 
     // 1. Generate scene visuals from article's visual descriptions.
     //    Produces assets/images/scene_N.jpg used by ImageBackground.
-    //    `--fake` defaults to "none" so scenes stay as AnimatedIllustration
-    //    — mock placeholders are too small to be useful backgrounds.
+    //    `--fake` defaults to "none" so it can use cached images without
+    //    making network requests; missing images remain quiet backgrounds.
     await step("generate-visuals", () =>
       generateSceneVisuals(opts.projectRoot, article, {
         provider: resolveImageProvider(
@@ -702,6 +702,10 @@ export async function deriveStoryboardSync(
   const derivedHash = createHash("sha256")
     .update(
       JSON.stringify({
+        // Bump when article-to-storyboard routing changes so existing
+        // projects are re-derived once instead of keeping retired scene
+        // components indefinitely.
+        derivation_revision: 2,
         fm: {
           no_captions: article.frontmatter["no_captions"] === true,
           captions_source: article.frontmatter["captions_source"],
@@ -884,17 +888,15 @@ export function resolveImageProvider(
  * Generate an AI image for each scene's `visual:` description and save
  * to `assets/images/scene_N.jpg`. Idempotent — skips scenes whose image
  * already exists. When the provider is "none" or a scene has no visual
- * description, it's skipped and the renderer falls back to
- * AnimatedIllustration geometric shapes.
+ * description, it is skipped and the renderer uses a quiet theme background.
  *
  * 2026-11 policy (two halves):
  * - Provider chain: the chosen provider is tried first; on failure the
  *   other real providers take the scene, with MiniMax-H3 ALWAYS last —
  *   H3 is the fallback of last resort, never a default.
- * - No silent doodles: a real-provider run (minimax/minimax-h3/openai/
+ * - No silent fallback art: a real-provider run (minimax/minimax-h3/openai/
  *   gemini) FAILS when any visual-bearing scene still lacks an image
- *   after the chain. Only --fake/mock keeps the AnimatedIllustration
- *   fallback (its documented no-network contract).
+ *   after the chain. Offline runs keep only the theme background.
  *
  * v0.4 (T3): when `--image-provider minimax`, the article's one-line
  * `visual:` is rewritten into a real image prompt (subject · lighting ·
@@ -961,7 +963,10 @@ export async function generateSceneVisuals(
     pictureSources?: PictureSource[] | undefined;
   },
 ): Promise<string[]> {
-  if (opts.provider === "none") return [];
+  if (opts.provider === "none") {
+    updateStoryboardForImages(projectRoot, []);
+    return [];
+  }
 
   const imageDir = path.join(projectRoot, "assets", "images");
   await mkdir(imageDir, { recursive: true });
@@ -1360,7 +1365,7 @@ export async function generateSceneVisuals(
         return { lines, generated: imagePath };
       }
       // Real runs: the post-pool guard below fails the step — no silent
-      // AnimatedIllustration fallback. Mock runs: non-fatal by contract.
+      // fallback art. Mock runs: non-fatal by contract.
       failedScenes.push(i + 1);
       emit({
         kind: "fail",
@@ -1441,8 +1446,7 @@ export async function generateSceneVisuals(
   // 2026-11 policy: a REAL-provider run never ships a self-drawn
   // component in place of a missing image. The chain already gave every
   // configured provider a chance; anything still missing fails the step
-  // loudly. --fake/mock keeps the AnimatedIllustration fallback (its
-  // documented no-network contract).
+  // loudly. Offline/mock runs use a quiet theme background instead.
   if (!isMock && failedScenes.length > 0) {
     throw new Error(
       `image generation failed for scene(s) ${failedScenes.join(", ")} ` +
@@ -1466,15 +1470,13 @@ export async function generateSceneVisuals(
     }
   }
 
-  if (generatedImages.length > 0) {
-    const switched = updateStoryboardForImages(
-      projectRoot,
-      generatedImages,
-      article.frontmatter.no_captions === true,
-    );
+  {
+    const switched = updateStoryboardForImages(projectRoot, generatedImages);
+    if (generatedImages.length > 0) {
     outputs.push(
       `storyboard.yaml: ${switched}/${generatedImages.length} scenes switched to ImageBackground`,
     );
+    }
   }
   for (const { provider: p } of chain) {
     if ("dispose" in p && typeof p.dispose === "function") {
@@ -1484,15 +1486,12 @@ export async function generateSceneVisuals(
   return outputs;
 }
 
-/**
- * Swap AnimatedIllustration → ImageBackground in storyboard.yaml for
- * scenes that have a generated image. Uses yaml parse/stringify (not
- * line regex) because this is a structural change, not a value tweak.
- */
+/** Bind generated stills to image scenes and migrate legacy shape scenes.
+ * Scenes without an image keep only the theme background; no geometric
+ * illustration fallback is ever restored. */
 function updateStoryboardForImages(
   projectRoot: string,
   imagePaths: string[],
-  noCaptions = false,
 ): number {
   const storyboardPath = path.join(
     projectRoot,
@@ -1519,39 +1518,42 @@ function updateStoryboardForImages(
   if (!parsed.scenes) return 0;
 
   let switched = 0;
+  let changed = false;
   for (const scene of parsed.scenes) {
-    if (scene.visual?.component !== "AnimatedIllustration") continue;
+    if (
+      scene.visual?.component !== "AnimatedIllustration" &&
+      scene.visual?.component !== "ImageBackground"
+    ) {
+      continue;
+    }
     const idNum = scene.id?.match(/scene[-_]?(\d+)/)?.[1];
     if (!idNum) continue;
-    const imagePath = imagePaths.find((p) =>
-      p.includes(`scene_${parseInt(idNum, 10)}.`),
-    );
-    if (!imagePath) continue;
-
-    const prevText =
-      typeof scene.visual.props?.text === "string"
-        ? (scene.visual.props.text as string)
-        : undefined;
+    const imagePath =
+      imagePaths.find((p) => p.includes(`scene_${parseInt(idNum, 10)}.`)) ??
+      path.join(projectRoot, "assets", "images", `scene_${parseInt(idNum, 10)}.jpg`);
+    const imageExists = existsSync(imagePath);
+    const previousComponent = scene.visual.component;
     // CS-09: a still-first channel expresses its motion in
-    // visual.props.kenBurnsScale, and this switch rewrites props from
-    // scratch — dropping it here would silently restore the component's
-    // 0.08 default and un-do the still-frame plan on the first make.
+    // visual.props.kenBurnsScale. Keep that motion when binding the image.
     const prevKenBurns =
       typeof scene.visual.props?.kenBurnsScale === "number"
         ? (scene.visual.props.kenBurnsScale as number)
         : undefined;
+    const prevFit =
+      scene.visual.props?.fit === "cover" || scene.visual.props?.fit === "contain"
+        ? scene.visual.props.fit
+        : undefined;
     scene.visual.component = "ImageBackground";
     scene.visual.props = {
-      src: imagePath,
-      // no_captions: true → the Pillow key-info banner is the only burned
-      // text; do NOT resurrect the bottom caption label here (2026-10-26).
-      ...(prevText !== undefined && !noCaptions ? { caption: prevText } : {}),
+      ...(imageExists ? { src: imagePath } : {}),
+      ...(prevFit !== undefined ? { fit: prevFit } : {}),
       ...(prevKenBurns !== undefined ? { kenBurnsScale: prevKenBurns } : {}),
     };
-    switched++;
+    if (previousComponent === "AnimatedIllustration") switched++;
+    changed = true;
   }
 
-  if (switched > 0) {
+  if (changed) {
     writeFileSync(storyboardPath, yamlStringify(parsed), "utf8");
   }
   return switched;

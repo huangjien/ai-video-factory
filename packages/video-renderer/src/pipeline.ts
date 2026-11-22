@@ -1,8 +1,8 @@
 import { existsSync, readFileSync } from "node:fs";
-import { readFile, stat } from "node:fs/promises";
+import { readFile, stat, writeFile } from "node:fs/promises";
 import { execSync } from "node:child_process";
 import path from "node:path";
-import { parse as parseYaml } from "yaml";
+import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
 import {
   brandSchema,
   compileStoryboard,
@@ -86,7 +86,9 @@ export async function loadOrCompileStoryboard(
   await syncSceneDurations(root);
   const storyboardPath = path.join(root, STORYBOARD_REL);
   const vdslPath = path.join(root, VDSL_REL);
-  const text = await readFile(storyboardPath, "utf8");
+  const diskText = await readFile(storyboardPath, "utf8");
+  const text = migrateAnimatedIllustrations(diskText, root);
+  if (text !== diskText) await writeFile(storyboardPath, text, "utf8");
 
   let source = text;
   let compiledFromVdsl = false;
@@ -115,6 +117,43 @@ export async function loadOrCompileStoryboard(
     await mergeBrandConfig(renderPlan, root);
     return { renderPlan, storyboardText: text, compiledFromVdsl: false };
   }
+}
+
+/** Upgrade old shape-based scenes at the render boundary. This is a
+ *  one-way migration: all legacy projects render their scene image (or a
+ *  quiet theme background when no image exists), never the old circles and
+ *  squares. The source storyboard is updated so subsequent tools agree. */
+function migrateAnimatedIllustrations(text: string, root: string): string {
+  let parsed: {
+    scenes?: {
+      id?: string;
+      visual?: { component?: string; props?: Record<string, unknown> };
+    }[];
+  };
+  try {
+    parsed = parseYaml(text) as typeof parsed;
+  } catch {
+    return text;
+  }
+  let changed = false;
+  for (const scene of parsed.scenes ?? []) {
+    if (scene.visual?.component !== "AnimatedIllustration") continue;
+    const number = scene.id?.match(/scene[-_]?([0-9]+)/i)?.[1];
+    const imagePath = number
+      ? path.join(root, "assets", "images", `scene_${Number(number)}.jpg`)
+      : "";
+    const props = scene.visual.props ?? {};
+    scene.visual.component = "ImageBackground";
+    scene.visual.props = {
+      ...(imagePath && existsSync(imagePath) ? { src: imagePath } : {}),
+      ...(typeof props["fit"] === "string" ? { fit: props["fit"] } : {}),
+      ...(typeof props["kenBurnsScale"] === "number"
+        ? { kenBurnsScale: props["kenBurnsScale"] }
+        : {}),
+    };
+    changed = true;
+  }
+  return changed ? stringifyYaml(parsed) : text;
 }
 
 /** Branding resources live at the WORKSPACE root (`<ws>/brand.yaml`,

@@ -321,7 +321,7 @@ export function articleToStoryboardYaml(article: ParsedArticle): string {
     // 1. an explicit `component:` field in the article scene — UNKNOWN
     //    names warn and fall through, a typo must not brick the derive;
     // 2. the keyword classifier (legacy lines);
-    // 3. AnimatedIllustration. An explicit field on scene 1 also beats
+    // 3. ImageBackground. An explicit field on scene 1 also beats
     //    the forced first-scene Title.
     const explicit = s.component;
     const explicitKnown =
@@ -344,17 +344,16 @@ export function articleToStoryboardYaml(article: ParsedArticle): string {
     //  slideshow of geometry: measured on one draft, 40 of 42 scenes
     //  routed to components and ONE to an image.
     //
-    //  In image mode every scene derives as an illustration (the title
-    //  card still draws its generated picture full-bleed), and make's
-    //  switch step gives it the image. An explicit `component:` on the
-    //  scene still wins — that is a hand edit, not an inference.
+    //  In image mode every non-title scene directly uses its generated
+    //  background image. An explicit `component:` on the scene still wins
+    //  when it names a supported component.
     const imageOnly = f.visual_mode === "image";
     const component = useExplicit
       ? (explicit as string)
       : imageOnly
         ? isFirst
           ? "Title"
-          : "AnimatedIllustration"
+          : "ImageBackground"
         : pickVisualComponent(s.visual ?? "", isFirst).component;
     const sectionIdx =
       sections.length === 0
@@ -362,7 +361,7 @@ export function articleToStoryboardYaml(article: ParsedArticle): string {
         : Math.min(Math.floor(i / perSection), sections.length - 1);
     const section = sections[sectionIdx] ?? null;
     const builder: VisualPropsBuilder =
-      VISUAL_BUILDERS[component] ?? VISUAL_BUILDERS.AnimatedIllustration!;
+      VISUAL_BUILDERS[component] ?? VISUAL_BUILDERS.ImageBackground!;
     const props = builder(s, {
       section,
       language: f.language,
@@ -373,12 +372,8 @@ export function articleToStoryboardYaml(article: ParsedArticle): string {
     // is already omitted (captionsOn); without this, image components
     // would still fall back to the scene's caption label at the bottom
     // (captionWiring: the label draws only when no cue track exists).
-    // Image scenes derive as AnimatedIllustration and are swapped to
-    // ImageBackground by make's switch step, which keeps props — so the
-    // deleted caption stays deleted.
-    if (!captionsOn && component === "AnimatedIllustration") {
-      delete (props as Record<string, unknown>)["caption"];
-    }
+    // ImageBackground reads narration from the timed caption track; it has
+    // no static scene-label caption to duplicate it.
     const propsLines = propsToYamlLines(props, "        ");
     lines.push(`  - id: ${id}`);
     lines.push(`    duration: ${s.duration ?? 0}`);

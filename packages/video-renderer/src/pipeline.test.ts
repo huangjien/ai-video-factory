@@ -117,4 +117,27 @@ describe("loadOrCompileStoryboard", () => {
     expect(second.compiledFromVdsl).toBe(true);
     expect(second.renderPlan.scenes).toHaveLength(1);
   });
+
+  it("migrates legacy AnimatedIllustration scenes to images and rewrites the storyboard", async () => {
+    const root = await makeProject(
+      STORYBOARD_YAML("AnimatedIllustration").replace("id: a", "id: scene-01"),
+    );
+    const imagePath = path.join(root, "assets", "images", "scene_1.jpg");
+    await mkdir(path.dirname(imagePath), { recursive: true });
+    await writeFile(imagePath, "image fixture", "utf8");
+
+    const { renderPlan, storyboardText } = await loadOrCompileStoryboard(root);
+    const scene = renderPlan.scenes[0];
+    const savedStoryboard = await readFile(
+      path.join(root, "storyboard", "storyboard.yaml"),
+      "utf8",
+    );
+
+    expect(scene?.component).toBe("ImageBackground");
+    expect(scene?.props["src"]).toBe(imagePath);
+    expect(scene?.props).not.toHaveProperty("text");
+    expect(storyboardText).toContain("component: ImageBackground");
+    expect(savedStoryboard).toContain("component: ImageBackground");
+    expect(savedStoryboard).not.toContain("AnimatedIllustration");
+  });
 });

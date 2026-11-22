@@ -139,9 +139,9 @@ describe("extractEnumeration", () => {
   });
 });
 
-describe("buildIllustration / buildAnimatedIllustration", () => {
-  it("returns caption + visual as plain props", () => {
-    const props = VISUAL_BUILDERS.AnimatedIllustration!(
+describe("buildImageBackground", () => {
+  it("points each scene at its generated image", () => {
+    const props = VISUAL_BUILDERS.ImageBackground!(
       scene({
         id: "scene_7",
         duration: 5,
@@ -150,8 +150,10 @@ describe("buildIllustration / buildAnimatedIllustration", () => {
       }),
       { section: null },
     );
-    expect(props.text).toBe("图");
-    expect(props.visual).toBe("a serene lake at sunset");
+    expect(props).toStrictEqual({
+      src: "assets/images/scene_7.jpg",
+      fit: "cover",
+    });
   });
 });
 describe("buildDoodleScene — seeded hand-drawn strokes", () => {

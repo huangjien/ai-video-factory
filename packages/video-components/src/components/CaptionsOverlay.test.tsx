@@ -145,10 +145,8 @@ describe("CaptionsOverlay — legibility without a plate", () => {
   });
 });
 describe("ImageBackground's own caption — same treatment as the track", () => {
-  // Every ImageBackground scene in the shipped projects carries a caption
-  // prop (make copies AnimatedIllustration's text into it), so this second
-  // caption path is live on image scenes, not dead code. It used to draw at
-  // 48px with an accent glow while the track drew at 45px on a plate.
+  // ImageBackground still supports an intentional static caption, but
+  // generated scenes use the timed narration track and never add this label.
   const render = (theme = darkTechTheme, height = 1080): string =>
     renderToStaticMarkup(
       <ImageBackground

@@ -191,7 +191,7 @@ recorded rather than hidden:
   scene's CAPTION as its state instead of its image. The audit
   (`scripts/audit-decision-corpus.mjs`) caught it. The scene's caption
   reads 清单 (a checklist) but its image is a photograph of two ledger
-  stacks, so the photo rule wins and the label is `AnimatedIllustration`.
+  stacks, so the photo rule wins and the label is `ImageBackground`.
 - `grade-a-with-two-major-findings` — the artifact contradicts itself
   (`passing: true` AND `MAJOR_REVISION_NEEDED`); the rule now settles
   it as `revise`, and the label moved from `pass` to `revise`.

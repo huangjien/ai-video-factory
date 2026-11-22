@@ -63,8 +63,8 @@ export interface BacklogAutoOptions {
   minRemaining?: number;
   /** Skip the vertical-shorts derivative + Shorts upload (default: on). */
   noShorts?: boolean;
-  /** Shorts generation provider: mock (default — ffmpeg center-crop of the
-   *  master, free) | minimax (AI vertical clip from thumbnail + shorts-hook
+  /** Shorts generation provider: mock (default — ffmpeg inset preserving the
+   *  full landscape frame, free) | minimax (AI vertical clip from thumbnail + shorts-hook
    *  — spends video-generation quota). */
   shortsProvider?: "mock" | "minimax";
   installScheduler?: boolean;
@@ -882,7 +882,7 @@ export function addAutoCommand(backlog: Command): void {
     .option("--no-shorts", "skip the vertical-shorts derivative + Shorts upload")
     .option(
       "--shorts-provider <provider>",
-      "shorts generation: mock (ffmpeg center-crop, default, free) | minimax (AI vertical clip, spends quota)",
+      "shorts generation: mock (ffmpeg preserves the landscape frame in a vertical inset, default, free) | minimax (AI vertical clip, spends quota)",
     )
     .option("--cwd <dir>", "repo root (default: walk up to pnpm-workspace.yaml)")
     .action(async (opts: {

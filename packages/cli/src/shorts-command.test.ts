@@ -169,6 +169,28 @@ describe("runShorts", () => {
     expect(logs.join("\n")).toMatch(/full@0/);
   });
 
+  it("preserves both side edges when adapting a landscape master to vertical", async () => {
+    const outDir = path.join(project, "output");
+    await mkdir(outDir, { recursive: true });
+    const source = path.join(outDir, "final-mixed.mp4");
+    execFileSync("ffmpeg", [
+      "-y", "-f", "lavfi", "-i", "color=c=blue:s=1920x1080:d=4:r=15",
+      "-vf", "drawbox=x=0:y=0:w=150:h=1080:color=red:t=fill,drawbox=x=1770:y=0:w=150:h=1080:color=red:t=fill",
+      "-c:v", "libx264", "-pix_fmt", "yuv420p", source,
+    ], { stdio: "ignore" });
+
+    const code = await runShorts({ project: "demo", cwd: root });
+    expect(code).toBe(0);
+    const output = path.join(project, "youtube", "shorts.mp4");
+    for (const x of [20, 1060]) {
+      const pixel = execFileSync("ffmpeg", [
+        "-v", "error", "-i", output, "-frames:v", "1",
+        "-vf", `format=rgb24,crop=1:1:${x}:960`, "-f", "rawvideo", "-",
+      ]);
+      expect(pixel[0] ?? 0).toBeGreaterThan((pixel[2] ?? 0) * 1.5);
+    }
+  });
+
   it("cuts a scene-aligned teaser that keeps the hook when --duration is given", async () => {
     const outDir = path.join(project, "output");
     await mkdir(outDir, { recursive: true });

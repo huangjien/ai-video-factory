@@ -1,10 +1,10 @@
 case: script-and-research-context-order
 agent: storyboard
-prompt_hash: sha256:1ca51c6ff21e164e192338a1ae05ae4f66278dd8f6baf703ff98ee7d50a7486f
+prompt_hash: sha256:0d195b75bc999d727e9a98d8b752c15cf2da736052b34a0c832ed32353e93c03
 messages:
   - role: system
-    bytes: 2839
-    content_sha256: sha256:a03ab4c66c00da642ecf322788f3bb556345705ddb2b3e58353859416044c1d1
+    bytes: 2740
+    content_sha256: sha256:7f21a4621878e8b9f2cf1bb184e508186d32252bfcdd9b87150c6fb0c8e90982
     blocks:
       - "Your ONLY job:"
       - "Rules:"

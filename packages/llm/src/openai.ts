@@ -7,6 +7,7 @@ import type {
 } from "./provider.js";
 import { LLM_TIMEOUT_MS } from "./timeout.js";
 import { chatStream, isHeadersTimeout } from "./stream.js";
+import { defaultModel } from "./config.js";
 import { llmFetch } from "./http.js";
 
 export interface OpenAIProviderOptions {
@@ -15,10 +16,6 @@ export interface OpenAIProviderOptions {
 }
 
 const DEFAULT_BASE = "https://api.openai.com/v1";
-/** The chat API's `gpt-6.x` lines (the Decisions endpoint serves
- *  `gpt-6-luna` only — see decision/openai.ts). `gpt-6.1-sol` is the
- *  model the repo's reviewer role names; override with OPENAI_MODEL. */
-const DEFAULT_MODEL = "gpt-6.1-sol";
 
 /** OpenAI-compatible chat client.
  * Endpoint: `${baseUrl}/chat/completions` · Auth: Bearer `OPENAI_API_KEY`
@@ -34,9 +31,12 @@ export class OpenAIProvider implements Provider {
   private readonly defaultModel: string;
 
   constructor(opts: OpenAIProviderOptions = {}) {
-    this.baseUrl = opts.baseUrl ?? process.env["OPENAI_BASE_URL"] ?? DEFAULT_BASE;
+    this.baseUrl =
+      opts.baseUrl ?? process.env["OPENAI_BASE_URL"] ?? DEFAULT_BASE;
     this.defaultModel =
-      opts.defaultModel ?? process.env["OPENAI_MODEL"] ?? DEFAULT_MODEL;
+      opts.defaultModel ??
+      process.env["OPENAI_MODEL"] ??
+      defaultModel("chat", "openai");
   }
 
   async chat(req: ChatRequest): Promise<ChatResponse> {
@@ -50,7 +50,9 @@ export class OpenAIProvider implements Provider {
     };
     const key = process.env["OPENAI_API_KEY"];
     if (!key) {
-      const err = new Error("OPENAI_API_KEY not set in environment") as ChatError;
+      const err = new Error(
+        "OPENAI_API_KEY not set in environment",
+      ) as ChatError;
       err.provider = this.name;
       throw err;
     }

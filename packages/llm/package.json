@@ -1,6 +1,7 @@
 {
   "name": "@video/llm",
   "version": "0.1.0",
+  "license": "Apache-2.0",
   "files": [
     "dist"
   ],
@@ -20,7 +21,8 @@
     "build": "tsc -p tsconfig.json"
   },
   "dependencies": {
-    "undici": "^8.11.2",
-    "yaml": "^2.7.0"
+    "undici": "^8.13.1",
+    "yaml": "^2.9.1",
+    "zod": "^4.6.7"
   }
 }

@@ -7,7 +7,12 @@ import path from "node:path";
 import { resolveProjectDir } from "./project-path.js";
 import { isHeadless } from "./headless.js";
 import { existsSync } from "node:fs";
-import { GLMProvider, loadProviderConfig, MiniMaxProvider } from "@video/llm";
+import {
+  modelLabel,
+  GLMProvider,
+  loadProviderConfig,
+  MiniMaxProvider,
+} from "@video/llm";
 import {
   YOUTUBE_MANAGE_SCOPE,
   YOUTUBE_UPLOAD_SCOPE,
@@ -60,14 +65,6 @@ function providerInstance(name: string): Provider {
   if (name === "glm") return new GLMProvider();
   if (name === "minimax") return new MiniMaxProvider();
   throw new Error(`unsupported provider: ${name}`);
-}
-
-/** Model id stamped for a provider name — matches each provider's own
- * default (GLM: glm-5.3, MiniMax: MiniMax-M3). Re-derived from the
- * SERVING provider after failover so the run record never claims the
- * wrong model. */
-function modelFor(name: string): string {
-  return name === "glm" ? "glm-5.3" : "MiniMax-M3";
 }
 
 function sha256OfMessages(messages: ChatMessage[]): string {
@@ -136,8 +133,19 @@ export async function resolveYouTubeCredentials(
 export async function runYouTubeAuth(
   clientSecretPath?: string,
   scope: "upload" | "manage" = "upload",
-  opts: { openBrowser?: boolean } = {},
+  opts: { openBrowser?: boolean; waitMinutes?: number } = {},
 ): Promise<number> {
+  const waitMinutes = opts.waitMinutes ?? 30;
+  if (
+    !Number.isSafeInteger(waitMinutes) ||
+    waitMinutes < 1 ||
+    !Number.isSafeInteger(Date.now() + waitMinutes * 60_000)
+  ) {
+    console.error(
+      "OAuth wait time must be a positive whole number of minutes within the supported date range.",
+    );
+    return 1;
+  }
   const file = clientSecretPath ?? defaultClientSecretPath();
   if (!existsSync(file)) {
     console.error(`${MARK_FAIL} client secret not found: ${file}`);
@@ -214,13 +222,23 @@ export async function runYouTubeAuth(
           console.log(`  visit this URL to approve:\n  ${authUrl}\n`);
         }
       });
-      setTimeout(
-        () => {
+      const deadline = Date.now() + waitMinutes * 60_000;
+      let timer: NodeJS.Timeout;
+      function scheduleTimeout(): void {
+        const remaining = deadline - Date.now();
+        if (remaining <= 0) {
           server.close();
-          reject(new Error("consent timed out after 5 minutes"));
-        },
-        5 * 60 * 1000,
-      ).unref();
+          reject(new Error(`consent timed out after ${waitMinutes} minutes`));
+          return;
+        }
+        // Node timers accept at most a signed 32-bit millisecond delay.
+        timer = setTimeout(
+          scheduleTimeout,
+          Math.min(remaining, 2_147_483_647),
+        ).unref();
+      }
+      scheduleTimeout();
+      server.once("close", () => clearTimeout(timer));
     },
   );
   const tokens = await exchangeCodeForTokens({
@@ -428,7 +446,7 @@ export async function runYouTube(opts: YouTubeOptions): Promise<number> {
   // chosen one after failover) and prompt_hash hashes the messages the
   // agent actually sent (result.messages), not a reconstructed placeholder.
   const runId = formatRunId("youtube");
-  const servedModel = modelFor(result.providerName);
+  const servedModel = modelLabel("chat", result.providerName);
   const record = {
     run_id: runId,
     stage: "youtube",
@@ -863,6 +881,10 @@ export function registerYouTube(program: Command): void {
       "one-time OAuth consent: mint YOUTUBE_REFRESH_TOKEN (no project needed)",
     )
     .option(
+      "--auth-wait-minutes <minutes>",
+      "minutes to wait for Google consent (default: 30)",
+    )
+    .option(
       "--client-secret <path>",
       "client_secret.json location (default: $YOUTUBE_CLIENT_SECRET_FILE or ~/.config/secrets/client_secret_youtube.json)",
     )
@@ -892,6 +914,7 @@ export function registerYouTube(program: Command): void {
           upload?: boolean;
           privacy?: string;
           auth?: boolean;
+          authWaitMinutes?: string;
           clientSecret?: string;
           scope?: string;
           videoId?: string;
@@ -905,6 +928,9 @@ export function registerYouTube(program: Command): void {
           process.exitCode = await runYouTubeAuth(
             opts.clientSecret,
             opts.scope === "manage" ? "manage" : "upload",
+            opts.authWaitMinutes === undefined
+              ? {}
+              : { waitMinutes: Number(opts.authWaitMinutes) },
           );
           return;
         }

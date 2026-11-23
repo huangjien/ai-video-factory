@@ -87,6 +87,8 @@ vi.mock("@video/llm", async (importOriginal) => {
   }
   return {
     ...actual,
+    OpenAIProvider: FakeProvider,
+    GeminiProvider: FakeProvider,
     GLMProvider: FakeProvider,
     MiniMaxProvider: FakeProvider,
     // Fixed default shape (config.ts DEFAULT_CONFIG) — deterministic,

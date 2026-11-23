@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from "zod/v3";
 
 /**
  * YouTube Automation output schema — doc §58 Phase 9.

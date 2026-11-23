@@ -68,15 +68,19 @@ describe("runTheme", () => {
   });
 
   afterEach(() => {
+    vi.unstubAllEnvs();
     vi.restoreAllMocks();
   });
 
   it("paints a swatch with the theme's background colour", async () => {
     const { paint } = await import("./theme-command.js");
+    vi.stubEnv("NO_COLOR", "");
     const painted = paint("#112233", "  ");
     expect(painted).toContain("17;34;51");
     // A malformed colour falls back to plain text.
     expect(paint("112233", "  ")).toBe("  ");
+    vi.stubEnv("NO_COLOR", "1");
+    expect(paint("#112233", "  ")).toBe("  ");
   });
 
   it("lists every available theme", async () => {

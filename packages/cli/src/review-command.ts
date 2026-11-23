@@ -6,6 +6,7 @@ import path from "node:path";
 import { resolveProjectDir } from "./project-path.js";
 import { existsSync, readFileSync } from "node:fs";
 import {
+  modelLabel,
   GLMProvider,
   decisionLogPath,
   judgePickForName,
@@ -38,14 +39,6 @@ function providerInstance(name: string): Provider {
   if (name === "glm") return new GLMProvider();
   if (name === "minimax") return new MiniMaxProvider();
   throw new Error(`unsupported provider: ${name}`);
-}
-
-/** Model id stamped for a provider name — matches each provider's own
- * default (GLM: glm-5.3, MiniMax: MiniMax-M3). Re-derived from the
- * SERVING provider after failover so the run record never claims the
- * wrong model. */
-function modelFor(name: string): string {
-  return name === "glm" ? "glm-5.3" : "MiniMax-M3";
 }
 
 /** The project's narration language.
@@ -369,7 +362,7 @@ export async function runReview(opts: ReviewOptions): Promise<number> {
   // chosen one after failover) and prompt_hash hashes the messages the
   // agent actually sent (result.messages), not a reconstructed placeholder.
   const runId = formatRunId("review");
-  const servedModel = modelFor(result.providerName);
+  const servedModel = modelLabel("chat", result.providerName);
   const record = {
     run_id: runId,
     stage: "review",

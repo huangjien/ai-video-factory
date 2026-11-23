@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from "zod/v3";
 
 /** Audio-config.yaml schema — the second human-edit artifact. Captures
  * everything audio-related in one file the human edits in 5 seconds. */

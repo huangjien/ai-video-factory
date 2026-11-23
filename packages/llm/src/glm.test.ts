@@ -1,3 +1,4 @@
+import { defaultModel } from "./config.js";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
   createServer,
@@ -55,11 +56,11 @@ describe("GLMProvider (todo 3) — docs.z.ai/devpack", () => {
     expect(lastAuth).toBe("Bearer glm-test-key");
   });
 
-  it("default model is glm-5.3", async () => {
+  it("uses the configured GLM chat model by default", async () => {
     process.env["GLM_API_KEY"] = "glm-test-key";
     const p = new GLMProvider({ baseUrl });
     await p.chat(baseReq);
-    expect(p["defaultModel"]).toBe("glm-5.3");
+    expect(p["defaultModel"]).toBe(defaultModel("chat", "glm"));
   });
 
   it("never sends a thinking field — GLM-5.3 forces thinking", async () => {

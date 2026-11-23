@@ -17,7 +17,6 @@ export {
 } from "./voicebox.js";
 export {
   MinimaxTTSProvider,
-  MINIMAX_DEFAULT_MODEL,
   type MinimaxTTSProviderOptions,
 } from "./minimax-tts.js";
 export {

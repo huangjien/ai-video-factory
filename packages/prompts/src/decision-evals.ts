@@ -33,7 +33,17 @@ import {
 /** packages/prompts/{src|dist} → ../decisions (same either way). */
 export function decisionsDir(): string {
   const here = path.dirname(fileURLToPath(import.meta.url));
-  return path.resolve(here, "..", "decisions");
+  // Workspace layout (`packages/prompts/{src,dist}` → ../decisions) and the
+  // published bundle (the decisions ship beside it).
+  const candidates = [
+    path.resolve(here, "..", "decisions"),
+    path.resolve(here, "decisions"),
+    path.resolve(here, "..", "vendor", "decisions"),
+  ];
+  for (const candidate of candidates) {
+    if (existsSync(candidate)) return candidate;
+  }
+  return candidates[0]!;
 }
 
 /** What a case expects the decision to be. */

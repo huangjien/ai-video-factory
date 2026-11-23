@@ -1,6 +1,7 @@
 {
   "name": "@video/media-generators",
   "version": "0.1.0",
+  "license": "Apache-2.0",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -15,6 +16,6 @@
   },
   "dependencies": {
     "@video/llm": "workspace:*",
-    "yaml": "^2.7.0"
+    "yaml": "^2.9.1"
   }
 }

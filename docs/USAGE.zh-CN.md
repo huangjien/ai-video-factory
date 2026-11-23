@@ -499,7 +499,9 @@ AI 类命令使用 MiniMax 和 GLM 兼容的 API。对本地渲染路径来说�
 provider 会记录在 `runs/<run-id>.yaml` 里，方便你审计降级是否触发。
 
 按命令用 `--model <provider>` 覆盖路由，或全局通过 `LL_CONFIG` YAML 文件
-配置。
+配置。路由规则和所有模型 id 都在
+[`config/llm.yaml`](../config/llm.yaml) —— 换模型只改这一处；`LL_CONFIG`
+指向的文件只覆盖它写到的键。
 
 ### 10.1.1 跨模型评审
 

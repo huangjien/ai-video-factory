@@ -9,6 +9,7 @@ import {
   GeminiProvider,
   OpenAIProvider,
   availableGenerators,
+  modelLabel,
   judgePickForName,
   loadProviderConfig,
   pickGenerator,
@@ -198,16 +199,6 @@ export function providerInstance(name: string): Provider {
   throw new Error(`unsupported provider: ${name}`);
 }
 
-/** The model a provider serves by default. The run record names the
- *  SERVING provider (it may differ from the configured one after a
- *  failover); the model is what that provider runs. */
-function modelFor(name: string): string {
-  if (name === "glm") return "glm-5.3";
-  if (name === "openai") return "gpt-6.1-sol";
-  if (name === "gemini") return "gemini-3.5-flash";
-  return "MiniMax-M3";
-}
-
 function safeGitHead(cwd: string): string {
   try {
     // stderr is swallowed: a project outside a git repo would otherwise
@@ -268,7 +259,7 @@ async function writeModelRun(
     created_at: new Date().toISOString(),
     duration_ms: args.telemetry?.durationMs ?? 0,
     provider: args.provider,
-    model: modelFor(args.provider),
+    model: modelLabel("chat", args.provider),
     tokens: args.usage,
     estimated_cost_usd:
       (args.usage.input / 1000) * rate + (args.usage.output / 1000) * rate,
@@ -482,14 +473,15 @@ export async function writeAudioConfigIfAbsent(
     return { status: "skipped", reason: "exists" };
   }
   try {
-    const { config, yaml, usage, providerName, telemetry } =
-      await withProgress("audio-plan", () =>
+    const { config, yaml, usage, providerName, telemetry } = await withProgress(
+      "audio-plan",
+      () =>
         callAudioPlan(
           { article, language: article.frontmatter.language },
           provider,
           fallback,
         ),
-      );
+    );
     // The audio plan is a model call too — it belongs in the stage's
     // run records like every other one.
     await writeModelRun(projectRoot, {
@@ -751,8 +743,7 @@ export async function runDraft(opts: DraftOptions): Promise<number> {
   // explicit --judge-model override wins and never flips.
   // Owner call 2026-11-21: the judge is MiniMax whenever MiniMax holds a
   // key — the grader stays fixed while the generators rotate.
-  const minimaxCanJudge =
-    (process.env["MINIMAX_API_KEY"] ?? "").trim() !== "";
+  const minimaxCanJudge = (process.env["MINIMAX_API_KEY"] ?? "").trim() !== "";
   const judgePick = resolveJudgePick({
     ...(opts.judgeModel !== undefined ? { judgeModel: opts.judgeModel } : {}),
     generator: chosenName,
@@ -832,9 +823,7 @@ export async function runDraft(opts: DraftOptions): Promise<number> {
       stage: "draft",
       provider: draft.providerName,
       usage: draft.usage,
-      ...(draft.telemetry !== undefined
-        ? { telemetry: draft.telemetry }
-        : {}),
+      ...(draft.telemetry !== undefined ? { telemetry: draft.telemetry } : {}),
     });
   } else {
     const minScore = opts.minScore ?? DEFAULT_MIN_SCORE;
@@ -1158,7 +1147,6 @@ export async function runDraft(opts: DraftOptions): Promise<number> {
       };
     }
     await writeFile(storyboardPath, articleToStoryboardYaml(article), "utf8");
-
   } catch (err) {
     console.error(
       `  ! could not refresh storyboard.yaml from article.md: ${(err as Error).message}`,
@@ -1306,9 +1294,7 @@ export function draftCliOptsToDraftOptions(
     ...(opts.channelProfile !== undefined
       ? { channelProfile: opts.channelProfile }
       : {}),
-    ...(opts.titleStyle !== undefined
-      ? { titleStyle: opts.titleStyle }
-      : {}),
+    ...(opts.titleStyle !== undefined ? { titleStyle: opts.titleStyle } : {}),
     ...(opts.format !== undefined ? { format: opts.format } : {}),
     ...(opts.tts !== undefined ? { tts: opts.tts } : {}),
     ...(opts.style !== undefined ? { style: opts.style } : {}),
@@ -1324,9 +1310,7 @@ export function draftCliOptsToDraftOptions(
     // `--candidates` was registered but never mapped — the flag was
     // silently dropped and every long film ran the auto default (2
     // parallel candidates = 2× the generation spend).
-    ...(opts.candidates !== undefined
-      ? { candidates: opts.candidates }
-      : {}),
+    ...(opts.candidates !== undefined ? { candidates: opts.candidates } : {}),
     // commander folds `--ask`/`--no-ask` into a single `ask` boolean
     // (never a `noAsk` key): `false` means the user passed `--no-ask`
     // and must reach the gate as `noAsk` (spec §4 precedence — no-ask

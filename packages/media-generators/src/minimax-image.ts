@@ -1,4 +1,4 @@
-import { withRetry } from "@video/llm";
+import { defaultModel, withRetry } from "@video/llm";
 import {
   ImageGenerationError,
   type ImageProvider,
@@ -33,7 +33,6 @@ export interface MiniMaxImageProviderOptions {
   promptOptimizer?: boolean | undefined;
 }
 
-const DEFAULT_MODEL = "image-01";
 const DEFAULT_REQUEST_TIMEOUT_MS = 120_000;
 
 /** `prompt` is documented as max 1500 characters
@@ -91,7 +90,7 @@ export class MiniMaxImageProvider implements ImageProvider {
       opts.apiHost ??
       process.env["MINIMAX_API_HOST"] ??
       "https://api.minimax.io";
-    this.defaultModel = opts.defaultModel ?? DEFAULT_MODEL;
+    this.defaultModel = opts.defaultModel ?? defaultModel("image", "minimax");
     this.retrySleeps = opts.retrySleeps ?? [1000, 2000, 4000];
     this.requestTimeoutMs = opts.requestTimeoutMs ?? DEFAULT_REQUEST_TIMEOUT_MS;
     this.promptOptimizer = opts.promptOptimizer ?? false;

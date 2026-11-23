@@ -1,6 +1,6 @@
 import { isFreeLicense, normalizeLicense } from "@video/image-sources";
 import { fetchJson, qs, stripHtml } from "@video/image-sources";
-import { z } from "zod";
+import { z } from "zod/v3";
 import type { VideoCandidate, VideoSearchOptions, VideoSource } from "../types.js";
 
 /**

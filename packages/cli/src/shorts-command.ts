@@ -9,6 +9,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { formatRunId } from "@video/workflow";
 import { readSceneTimings } from "@video/media";
 import { verticalFilter } from "@video/douyin";
+import { defaultModel } from "@video/llm";
 import {
   MiniMaxVideoProvider,
   MockVideoProvider,
@@ -70,9 +71,7 @@ async function shortsFfmpeg(
       : "scale=1080:1920"
     : verticalFilter("inset", 1080, 1920, 40).replace(
         "[v]",
-        duration > 0
-          ? `[base];[base]fade=t=out:st=${fadeStart}:d=1[v]`
-          : "[v]",
+        duration > 0 ? `[base];[base]fade=t=out:st=${fadeStart}:d=1[v]` : "[v]",
       );
   const af = duration > 0 ? `afade=t=out:st=${fadeStart}:d=1` : undefined;
   await execFileAsync("ffmpeg", [
@@ -256,7 +255,7 @@ export async function runShorts(opts: ShortsOptions): Promise<number> {
     await writeFile(shortsPath, result.bytes);
     runRecord = {
       provider: provider.name,
-      model: "MiniMax-Hailuo-2.3",
+      model: defaultModel("video", "minimax"),
       input_files: [
         "youtube/thumbnail." + thumb.contentType.split("/")[1],
         "youtube/shorts-hook.txt",
@@ -278,7 +277,9 @@ export async function runShorts(opts: ShortsOptions): Promise<number> {
       .map((name) => path.join(outDir, name))
       .find((p) => existsSync(p));
     if (src === undefined) {
-      console.error(`missing final mp4 under ${outDir} (final-faststart.mp4 / final-mixed.mp4)`);
+      console.error(
+        `missing final mp4 under ${outDir} (final-faststart.mp4 / final-mixed.mp4)`,
+      );
       console.error(`  run \`video make <project>\` first`);
       return 1;
     }

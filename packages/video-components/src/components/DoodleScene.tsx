@@ -1,5 +1,5 @@
 import { useLayoutEffect, useRef } from "react";
-import { z } from "zod";
+import { z } from "zod/v3";
 import { darkTechTheme, type Theme } from "../theme.js";
 import {
   buildStrokePlan,

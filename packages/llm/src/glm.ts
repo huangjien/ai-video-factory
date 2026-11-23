@@ -8,6 +8,7 @@ import type {
 import { LLM_TIMEOUT_MS } from "./timeout.js";
 import { chatStream, isHeadersTimeout } from "./stream.js";
 import { llmFetch } from "./http.js";
+import { defaultModel } from "./config.js";
 
 export interface GLMProviderOptions {
   baseUrl?: string | undefined;
@@ -18,7 +19,6 @@ export interface GLMProviderOptions {
 // (api.z.ai/api/coding/paas/v4) uses the same protocol but is tied to a
 // separate Coding Plan balance; override via GLM_BASE_URL to switch.
 const DEFAULT_BASE = "https://open.bigmodel.cn/api/coding/paas/v4";
-const DEFAULT_MODEL = "glm-5.3";
 
 /** OpenAI-compatible GLM (Zhipu) chat client.
  * Endpoint: `${baseUrl}/chat/completions` · Auth: Bearer `GLM_API_KEY`
@@ -30,7 +30,7 @@ export class GLMProvider implements Provider {
 
   constructor(opts: GLMProviderOptions = {}) {
     this.baseUrl = opts.baseUrl ?? process.env["GLM_BASE_URL"] ?? DEFAULT_BASE;
-    this.defaultModel = opts.defaultModel ?? DEFAULT_MODEL;
+    this.defaultModel = opts.defaultModel ?? defaultModel("chat", "glm");
   }
 
   async chat(req: ChatRequest): Promise<ChatResponse> {

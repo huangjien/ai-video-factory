@@ -5,6 +5,7 @@ import path from "node:path";
 import { execSync } from "node:child_process";
 import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
 import {
+  modelLabel,
   GLMProvider,
   MiniMaxProvider,
   judgePickForName,
@@ -75,10 +76,6 @@ function providerInstance(name: string): Provider {
   if (name === "glm") return new GLMProvider();
   if (name === "minimax") return new MiniMaxProvider();
   throw new Error(`unsupported provider: ${name}`);
-}
-
-function modelFor(name: string): string {
-  return name === "glm" ? "glm-5.3" : "MiniMax-M3";
 }
 
 function safeGitHead(cwd: string): string {
@@ -523,7 +520,7 @@ export async function runRevise(opts: ReviseOptions): Promise<number> {
     created_at: new Date().toISOString(),
     duration_ms: Date.now() - startedAt,
     provider: revised.providerName,
-    model: modelFor(revised.providerName),
+    model: modelLabel("chat", revised.providerName),
     tokens: revised.usage,
     estimated_cost_usd:
       (revised.usage.input / 1000) *

@@ -9,14 +9,26 @@
  * `index.ts` was still evaluating — and the cache it writes to would
  * not exist yet.
  */
-import { readdirSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-/** packages/prompts/{src|dist} → ../prompts (same either way). */
+/** packages/prompts/{src|dist} → ../prompts (same either way).
+ *
+ *  The published single-file package inlines this module, so the
+ *  module dir is the bundle dir — the prompts ship beside it. Both
+ *  layouts are probed; the first that exists wins. */
 export function promptsDir(): string {
   const here = path.dirname(fileURLToPath(import.meta.url));
-  return path.resolve(here, "..", "prompts");
+  const candidates = [
+    path.resolve(here, "..", "prompts"),
+    path.resolve(here, "prompts"),
+    path.resolve(here, "..", "vendor", "prompts"),
+  ];
+  for (const candidate of candidates) {
+    if (existsSync(candidate)) return candidate;
+  }
+  return candidates[0]!;
 }
 
 /** Templates historically had no trailing newline; editors add one. */

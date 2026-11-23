@@ -886,7 +886,16 @@ export async function runPromptEvals(
     }
   }
 
-  await writeText(reportPath(root), renderReportYaml(structural, judged));
+  // The report is a convenience, not the result: an installed package may
+  // live in a read-only directory (a root-owned global install), and a
+  // golden-set run must not fail because it could not write its summary.
+  try {
+    await writeText(reportPath(root), renderReportYaml(structural, judged));
+  } catch (err) {
+    console.log(
+      `  (report not written — ${(err as Error).message.slice(0, 80)})`,
+    );
+  }
   log(`\nreport  ${reportPath(root)}`);
 
   if (opts.updateRecorded) {

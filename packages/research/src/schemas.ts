@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from "zod/v3";
 
 /**
  * Research output schemas — doc §55 (lines 1128-1158).

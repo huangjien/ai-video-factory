@@ -1,6 +1,7 @@
 {
   "name": "@video/learn",
   "version": "0.1.0",
+  "license": "Apache-2.0",
   "description": "Human-review learning loop: question set, lesson store, prompt-rule derivation, skill-update proposals",
   "files": [
     "dist"
@@ -21,7 +22,7 @@
     "build": "tsc -p tsconfig.json"
   },
   "dependencies": {
-    "yaml": "^2.7.0",
-    "zod": "^3.25.0"
+    "yaml": "^2.9.1",
+    "zod": "^4.6.7"
   }
 }

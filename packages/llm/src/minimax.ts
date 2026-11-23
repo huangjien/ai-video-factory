@@ -7,14 +7,13 @@ import type {
 } from "./provider.js";
 import { LLM_TIMEOUT_MS } from "./timeout.js";
 import { chatStream, isHeadersTimeout } from "./stream.js";
+import { defaultModel } from "./config.js";
 import { llmFetch } from "./http.js";
 
 export interface MiniMaxProviderOptions {
   apiHost?: string | undefined;
   defaultModel?: string | undefined;
 }
-
-const DEFAULT_MODEL = "MiniMax-M3";
 
 /** OpenAI-compatible MiniMax chat client.
  * Endpoint: `${apiHost}/v1/chat/completions` · Auth: Bearer `MINIMAX_API_KEY`
@@ -30,7 +29,7 @@ export class MiniMaxProvider implements Provider {
       opts.apiHost ??
       process.env["MINIMAX_API_HOST"] ??
       "https://api.minimax.io";
-    this.defaultModel = opts.defaultModel ?? DEFAULT_MODEL;
+    this.defaultModel = opts.defaultModel ?? defaultModel("chat", "minimax");
   }
 
   async chat(req: ChatRequest): Promise<ChatResponse> {

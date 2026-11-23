@@ -1,6 +1,7 @@
 {
   "name": "@video/draft",
   "version": "0.1.0",
+  "license": "Apache-2.0",
   "files": [
     "dist"
   ],
@@ -26,8 +27,8 @@
     "@video/review": "workspace:*",
     "@video/theme": "workspace:*",
     "@video/tts": "workspace:*",
-    "yaml": "^2.7.0",
-    "zod": "^3.25.0"
+    "yaml": "^2.9.1",
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@video/video-components": "workspace:*"

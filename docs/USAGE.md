@@ -576,7 +576,9 @@ served is recorded in `runs/<run-id>.yaml`, so you can audit whether the
 fallback fired.
 
 Override the routing per command with `--model <provider>`, or globally via
-the `LL_CONFIG` YAML file.
+the `LL_CONFIG` YAML file. The routing and every model id live in
+[`config/llm.yaml`](../config/llm.yaml) — the single place to change a
+model; `LL_CONFIG` points at a file that overrides only the keys it names.
 
 ### 10.1.1 Cross-model judging
 
@@ -659,9 +661,8 @@ does not error — it files the video into an unrelated section, and nobody
 notices until after publishing. A name you can check against the dropdown
 fails loudly instead.
 
-Direct upload to YouTube is available too — the package includes the
-metadata, and the upload path handles the OAuth verification that YouTube
-requires. See the release notes for the current state of that flow.
+Use `video youtube <project> --upload` to upload the prepared video.
+For initial consent and recurring uploads, see [YouTube authorization](#youtube-authorization).
 
 `video douyin` publishes to 抖音 (Douyin), which is vertical: the command
 cuts the 16:9 master into 1080×1920 before it uploads. Two cut modes —
@@ -672,6 +673,35 @@ away ~43% of the width. Douyin HAS an official publishing API (开放平台 →
 `client_key`/`client_secret` in `~/.config/secrets/douyin-client-secret.json`
 and `DOUYIN_ACCESS_TOKEN` in `~/.config/secrets/ai.env`. Without them the
 command stops at the packaging and writes the manual checklist instead.
+
+### YouTube authorization
+
+**For unattended uploads over several months**, check the publishing status of
+the uploader’s OAuth project in [Google Auth Platform → Audience](https://console.cloud.google.com/auth/audience).
+An External app in Testing receives refresh tokens that expire after seven days
+when requesting YouTube upload access. For ongoing use, switch the app to
+**In production**, then run `video youtube --auth` and approve the target channel.
+Save the new `YOUTUBE_REFRESH_TOKEN` in `~/.config/secrets/ai.env` and reload
+the environment used by the uploader or scheduled job.
+
+The uploader uses the saved refresh token to obtain an access token for each
+upload. Production tokens can remain valid for months. Google can invalidate
+them earlier, including when the user revokes access or a token goes unused for
+six months. If Google reports that the token has expired or been revoked
+(`invalid_grant`), authorize again and replace the saved token.
+[Google’s refresh token expiration rules](https://developers.google.com/identity/protocols/oauth2#expiration)
+
+**To allow more time to click Allow**, set the local callback timeout in whole
+minutes. The default is 30 minutes.
+
+```bash
+video youtube --auth --auth-wait-minutes 43200    # 30 days
+video youtube --auth --auth-wait-minutes 259200   # 180 days
+```
+
+Keep the CLI process running until consent completes. Google may ask you to
+sign in again during a long wait. This option controls only how long the local
+process listens for the callback. Google sets the token lifetime separately.
 
 ### Headless mode (`VIDEO_HEADLESS=1`)
 
@@ -882,7 +912,7 @@ runtime above 180 seconds fails the command. Package both editions for Shorts
 with `video shorts <project>/vertical` and
 `video shorts <project>/l10n/en-US/vertical`. Landscape compositions must not
 be center-cropped to create portrait editions. The auto-producer runs the
-vertical and Shorts stages unless given `--no-shorts`.
+vertical and Shorts stages for both languages unless given `--no-shorts`. A missing Shorts export in either language fails the production run.
 
 ### Photos and archival footage
 

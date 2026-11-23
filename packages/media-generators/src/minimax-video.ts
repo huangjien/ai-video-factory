@@ -1,5 +1,6 @@
 import { ImageGenerationError } from "./image.js";
 import type { VideoProvider, VideoRequest, VideoResult } from "./video.js";
+import { defaultModel } from "@video/llm";
 
 export interface MiniMaxVideoProviderOptions {
   apiHost?: string | undefined;
@@ -12,15 +13,17 @@ export interface MiniMaxVideoProviderOptions {
   retrySleeps?: number[] | undefined;
 }
 
-const DEFAULT_MODEL = "MiniMax-Hailuo-2.3";
-
 type TaskStatus = "Preparing" | "Queueing" | "Processing" | "Success" | "Fail";
 
 /** Map the request to a supported MiniMax resolution tier.
  * Hailuo-2.3 (re-verified against platform.minimax.io 2026-10-26) only
  * accepts tier enums "768P" / "1080P" — WxH strings fail with envelope
  * error 2013. 1080P supports 6s only; 10s clips must use 768P. */
-function pickResolution(_width: number, _height: number, durationSec: number): string {
+function pickResolution(
+  _width: number,
+  _height: number,
+  durationSec: number,
+): string {
   return durationSec > 6 ? "768P" : "1080P";
 }
 
@@ -45,7 +48,7 @@ export class MiniMaxVideoProvider implements VideoProvider {
       opts.apiHost ??
       process.env["MINIMAX_API_HOST"] ??
       "https://api.minimax.io";
-    this.defaultModel = opts.defaultModel ?? DEFAULT_MODEL;
+    this.defaultModel = opts.defaultModel ?? defaultModel("video", "minimax");
     this.pollIntervalMs = opts.pollIntervalMs ?? 5000;
     this.timeoutMs = opts.timeoutMs ?? 10 * 60 * 1000;
     this.retrySleeps = opts.retrySleeps ?? [1000, 2000, 4000];

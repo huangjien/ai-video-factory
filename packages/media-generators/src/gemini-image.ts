@@ -1,4 +1,4 @@
-import { withRetry } from "@video/llm";
+import { defaultModel, withRetry } from "@video/llm";
 import {
   ImageGenerationError,
   type ImageProvider,
@@ -12,9 +12,6 @@ export interface GeminiImageProviderOptions {
   /** Override the default retry sleeps (default: [1000, 2000, 4000]). Tests use [1,1,1]. */
   retrySleeps?: number[] | undefined;
 }
-
-/** Nano Banana 2.1 — the current general-purpose image model. */
-const DEFAULT_MODEL = "gemini-3.1-flash-image";
 
 /** Aspect ratios the API accepts for image output. */
 const ASPECT_RATIOS: { ratio: string; w: number; h: number }[] = [
@@ -68,7 +65,7 @@ export class GeminiImageProvider implements ImageProvider {
       opts.apiBaseUrl ??
       process.env["GEMINI_API_BASE_URL"] ??
       "https://generativelanguage.googleapis.com/v1beta";
-    this.defaultModel = opts.defaultModel ?? DEFAULT_MODEL;
+    this.defaultModel = opts.defaultModel ?? defaultModel("image", "gemini");
     this.retrySleeps = opts.retrySleeps ?? [1000, 2000, 4000];
   }
 

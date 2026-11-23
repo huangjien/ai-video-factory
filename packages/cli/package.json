@@ -1,6 +1,7 @@
 {
   "name": "@video/cli",
   "version": "0.11.2",
+  "license": "Apache-2.0",
   "description": "AI Video Factory command-line interface",
   "type": "module",
   "files": [
@@ -52,7 +53,7 @@
     "@video/video-renderer": "workspace:*",
     "@video/workflow": "workspace:*",
     "@video/youtube": "workspace:*",
-    "commander": "^13.0.0",
-    "yaml": "^2.7.0"
+    "commander": "^15.1.0",
+    "yaml": "^2.9.1"
   }
 }

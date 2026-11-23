@@ -5,6 +5,8 @@ import { createHash } from "node:crypto";
 import { execSync } from "node:child_process";
 import path from "node:path";
 import {
+  defaultModel,
+  modelLabel,
   GLMProvider,
   loadProviderConfig,
   MiniMaxProvider,
@@ -37,10 +39,6 @@ function providerInstance(name: string): Provider {
   if (name === "glm") return new GLMProvider();
   if (name === "minimax") return new MiniMaxProvider();
   throw new Error(`unsupported provider: ${name}`);
-}
-
-function modelFor(providerName: string): string {
-  return providerName === "glm" ? "glm-5.3" : "MiniMax-M3";
 }
 
 function sha256OfMessages(
@@ -231,7 +229,7 @@ export async function runMotion(opts: MotionOptions): Promise<number> {
             ...(channelProfile !== undefined ? { channelProfile } : {}),
           },
           provider,
-          { model: modelFor(chosenName), temperature: 0.4 },
+          { model: defaultModel("chat", chosenName), temperature: 0.4 },
           fallback,
         );
         spec = result.spec;
@@ -328,7 +326,7 @@ export async function runMotion(opts: MotionOptions): Promise<number> {
         : providerNames.size === 0
           ? "baseline"
           : "mixed",
-    ...(opts.baseline ? {} : { model: modelFor(chosenName) }),
+    ...(opts.baseline ? {} : { model: modelLabel("chat", chosenName) }),
     ...(lastMessages.length > 0
       ? { prompt_hash: sha256OfMessages(lastMessages) }
       : {}),

@@ -12,11 +12,12 @@ import {
   type DecisionRequest,
   type DecisionValue,
 } from "./contract.js";
+import { defaultModel } from "../config.js";
 
 export interface GoogleDecisionProviderOptions {
   /** API root. Default `https://generativelanguage.googleapis.com/v1beta`. */
   baseUrl?: string | undefined;
-  /** Model id. Default `gemini-decision-1`. */
+  /** Model id. Default `models.decision.google` in `config/llm.yaml`. */
   model?: string | undefined;
   /** API key. Default: `GEMINI_API_KEY` from the environment. */
   apiKey?: string | undefined;
@@ -25,7 +26,6 @@ export interface GoogleDecisionProviderOptions {
 }
 
 const DEFAULT_BASE_URL = "https://generativelanguage.googleapis.com/v1beta";
-const DEFAULT_MODEL = "gemini-decision-1";
 const DEFAULT_TIMEOUT_MS = 30_000;
 
 interface GoogleDecisionQuestion {
@@ -63,7 +63,7 @@ export class GoogleDecisionProvider implements DecisionProvider {
 
   constructor(opts: GoogleDecisionProviderOptions = {}) {
     this.baseUrl = (opts.baseUrl ?? DEFAULT_BASE_URL).replace(/\/+$/, "");
-    this.model = opts.model ?? DEFAULT_MODEL;
+    this.model = opts.model ?? defaultModel("decision", "google");
     this.apiKey = opts.apiKey ?? process.env["GEMINI_API_KEY"];
     this.timeoutMs = opts.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   }

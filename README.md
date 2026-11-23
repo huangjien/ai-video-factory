@@ -26,12 +26,25 @@ from those two files.
 - `@video/llm` owns one shared structured-agent call loop, so the reasoning-strip fix cannot drift between agents
 - Vitest for tests; Playwright-style render tests via ffprobe
 
-## Quickstart
+## Install
+
+**From npm** (once published) — one bundled package, no build step:
 
 ```bash
-# One-time setup (Node 22+, pnpm 12.5+, macOS)
+npm install -g @video/cli
+video --help
+```
+
+Requires Node 22+ and FFmpeg (with `ffprobe`). The curated BGM library
+(`assets/bgm/`) is not part of the npm package — point `--bgm-dir` at a
+local library, or clone the repo for the full catalogue.
+
+**From a clone** — the development path (also the only one with the
+Remotion Studio workflow and the prompt golden-set tooling):
+
+```bash
 brew install ffmpeg          # required by §4
-npm install -g pnpm@12.5.1   # or use corepack: corepack enable pnpm
+corepack enable              # the pinned pnpm (12.x)
 pnpm install                  # workspace deps
 pnpm build                    # compile the workspace (tsc -b)
 
@@ -166,8 +179,9 @@ on quota / rate-limit errors (HTTP 429 / 402 / 403, or bodies
 containing `insufficient_balance` / `quota_exceeded`). The provider
 that actually served is recorded in `runs/<id>.yaml` under
 `provider:` so you can audit whether fallback fired. Override the
-routing per-command with `--model <provider>` or globally via the
-`LL_CONFIG` YAML file.
+routing per-command with `--model <provider>`. The routing and every model
+id live in [`config/llm.yaml`](config/llm.yaml); `LL_CONFIG` points at a
+YAML file that overrides it.
 
 The fine-grained per-stage verbs (`video research`, `video script`, `video storyboard`, `video audio`, `video audio-asset`, `video mix`, `video motion`, `video qa`, `video scene`, `video final`, `video preview`, `video approve`/`reject`/`rollback`, `video review`, `video revise`, `video youtube`, `video thumbnail`, `video shorts`, `video bilibili`, `video douyin`, `video status`/`video resume`, `video validate`, `video studio`, `video theme`, `video learn`, `video prompts`, `video character`) remain wired for back-compat with projects created before the minimal API but are not part of the recommended path.
 
@@ -907,3 +921,8 @@ caption` burns the scene's short `caption:` label instead — but that
   `article.md` for the next render.
 - **CLI banner** (`video` / `video --help`): minimal-API quickstart appears
   above the verb list.
+
+## License
+
+Apache-2.0 — see [LICENSE](./LICENSE). The published npm package carries the
+same licence.

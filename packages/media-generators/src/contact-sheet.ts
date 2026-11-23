@@ -31,10 +31,21 @@ export interface ContactSheetResult {
 }
 
 /** packages/media-generators/{dist|src} → ../python (same either way).
- *  Shared by every uv-run helper in this package. */
+ *  Shared by every uv-run helper in this package.
+ *
+ *  The published single-file package inlines this module, so the module
+ *  dir is the bundle dir — the python helpers ship under
+ *  assets/media-generators/python. Both layouts are probed. */
 export function resolvePythonDir(): string {
   const here = path.dirname(fileURLToPath(import.meta.url));
-  return path.resolve(here, "..", "python");
+  const candidates = [
+    path.resolve(here, "..", "python"),
+    path.resolve(here, "assets", "media-generators", "python"),
+  ];
+  for (const candidate of candidates) {
+    if (existsSync(candidate)) return candidate;
+  }
+  return candidates[0]!;
 }
 
 export async function buildContactSheet(

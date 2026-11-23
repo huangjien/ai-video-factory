@@ -18,6 +18,12 @@
     generation entirely.
   - `--fake` always resolves to `none` — scenes stay
     `AnimatedIllustration` (caption + animated SVG).
+- **Model ids and provider roles live in `config/llm.yaml`** (one file, no
+  built-in copies — `defaultModel(kind, provider)` in `@video/llm` reads it).
+  Kinds: `chat`, `decision`, `image`, `video`, `tts`. To retire or rename a
+  model, edit that file; `LL_CONFIG` points at an override that replaces
+  only the keys it names. A missing id throws
+  `no model id for <kind>/<provider>` — it is never defaulted.
 - TTS: `--fake` (offline placeholder). Real narration backends select per
   project via `article.md` frontmatter: `tts_provider: minimax` + `voice:` =
   MiniMax voice_id — T2A v2, needs `MINIMAX_API_KEY`, and **voice CLONING
@@ -42,9 +48,9 @@
   script ranked it first on both quality and speed; the local F5-TTS
   clone came LAST (a 10–15 s reference cannot carry sentence-level
   intonation, which is what "the voice sounds bad" usually means).
-  `MINIMAX_DEFAULT_MODEL` in `packages/tts/src/minimax-tts.ts` is the
-  single source; the model joins the TTS cache key, so a tier change
-  re-synthesizes instead of replaying the old audio.
+  `models.tts.minimax` in `config/llm.yaml` is the single source; the
+  model joins the TTS cache key, so a tier change re-synthesizes instead
+  of replaying the old audio.
   **The backend and the voice id are ONE decision** — a voice id only
   means something to the backend that owns it, and an Edge id handed to
   MiniMax fails at synthesis, not at config time. `resolveNarrationConfig`

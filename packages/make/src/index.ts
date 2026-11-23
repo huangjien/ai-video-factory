@@ -10,6 +10,7 @@ import {
 } from "node:fs/promises";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import {
   parseArticleWithRecovery,
   articleToStoryboardYaml,
@@ -182,18 +183,30 @@ export const noopEmit: ProgressEmit = () => {};
  *
  * Returns the list of generated overlay files for the run report.
  */
+/** A repo script the pipeline shells out to. Two layouts: the source
+ *  repo (`<cwd>/scripts/<name>`) and the published single-file package
+ *  (the scripts ship under `assets/scripts/` beside the bundle). The
+ *  first that exists wins; null means "not available here". */
+function resolveRepoScript(name: string): string | null {
+  const here = path.dirname(fileURLToPath(import.meta.url));
+  const candidates = [
+    path.resolve(process.cwd(), "scripts", name),
+    path.resolve(here, "assets", "scripts", name),
+  ];
+  for (const candidate of candidates) {
+    if (existsSync(candidate)) return candidate;
+  }
+  return null;
+}
+
 async function runTextOverlayPass(projectRoot: string): Promise<string[]> {
   // The script lives at <repo>/scripts/pillow-text-overlay.py. The
   // `make` step runs from the repo root (CLI cwd), so the relative
   // path is stable regardless of which project triggered the run.
-  const scriptPath = path.resolve(
-    process.cwd(),
-    "scripts",
-    "pillow-text-overlay.py",
-  );
-  if (!existsSync(scriptPath)) {
+  const scriptPath = resolveRepoScript("pillow-text-overlay.py");
+  if (scriptPath === null) {
     return [
-      `text-overlay: skipped — ${path.relative(process.cwd(), scriptPath)} not found`,
+      "text-overlay: skipped — scripts/pillow-text-overlay.py not found (it ships with the source repo; a published install can point VIDEO_PYTHON at a local copy)",
     ];
   }
   // Find a python that has Pillow + PyYAML installed. The CLI's

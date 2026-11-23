@@ -1,6 +1,6 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
-import type { z } from "zod";
+import type { z } from "zod/v3";
 import {
   buildCaptionCues,
   CAPTION_LINE_UNITS,

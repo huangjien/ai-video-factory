@@ -13,11 +13,12 @@ import {
 import { stateToText } from "./contract.js";
 import { deriveValueFromDistribution } from "./derive.js";
 import { extractJsonObject } from "../structured-agent.js";
+import { defaultModel } from "../config.js";
 
 export interface MiniMaxDecisionProviderOptions {
   /** API host. Default `https://api.minimax.io`. */
   apiHost?: string | undefined;
-  /** Model id. Default `MiniMax-M3.1-Flash`. */
+  /** Model id. Default `models.decision.minimax` in `config/llm.yaml`. */
   model?: string | undefined;
   /** API key. Default: `MINIMAX_API_KEY` from the environment. */
   apiKey?: string | undefined;
@@ -38,7 +39,6 @@ export interface MiniMaxDecisionProviderOptions {
 }
 
 const DEFAULT_API_HOST = "https://api.minimax.io";
-const DEFAULT_MODEL = "MiniMax-M3.1-Flash";
 const DEFAULT_TIMEOUT_MS = 60_000;
 const DEFAULT_MAX_TOKENS = 2048;
 
@@ -215,7 +215,7 @@ export class MiniMaxDecisionProvider implements DecisionProvider {
 
   constructor(opts: MiniMaxDecisionProviderOptions = {}) {
     this.apiHost = (opts.apiHost ?? DEFAULT_API_HOST).replace(/\/+$/, "");
-    this.model = opts.model ?? DEFAULT_MODEL;
+    this.model = opts.model ?? defaultModel("decision", "minimax");
     this.apiKey = opts.apiKey ?? process.env["MINIMAX_API_KEY"];
     this.timeoutMs = opts.timeoutMs ?? DEFAULT_TIMEOUT_MS;
     this.maxTokens = opts.maxTokens ?? DEFAULT_MAX_TOKENS;

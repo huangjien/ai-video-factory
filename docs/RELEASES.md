@@ -15,6 +15,46 @@ video research → script → storyboard → audio (TTS) → audio-asset (BGM+SF
        video review                          → Content/Visual/Technical review YAMLs
 ```
 
+## Unreleased — the public install: Apache-2.0, one bundled npm package
+
+**Licence.** The repository is Apache-2.0 (`LICENSE`), and every package
+manifest carries `license: "Apache-2.0"`.
+
+**Model ids in one file.** Every model id the pipeline serves — chat,
+decision, image, video, TTS — and the provider routing per role now live in
+[`config/llm.yaml`](../config/llm.yaml). There are no built-in copies: the
+thirteen hard-coded ids (and seven copies of a `modelFor` helper that
+recorded every unknown provider as `MiniMax-M3`) are gone, and
+`defaultModel(kind, provider)` reads the file. `LL_CONFIG` overrides only
+the keys it names; on the API path a missing or blank id throws instead of
+defaulting (a run record writes `unknown` rather than fail its step), and a
+malformed file is reported with the offending key. The published bundle
+ships the file under `assets/config/`.
+
+**One package to install.** `scripts/build-bundle.mjs` inlines all 28
+`@video/*` packages into a single ESM file (`cli.js`), keeps the ten
+third-party dependencies external, vendors the runtime files the inlined
+packages read from disk (the Remotion `Root.js`, the prompt bodies, the
+python helpers, the prompt golden set), and drops compiled test files:
+**1.3 MB packed, 237 files** — against 545 for the unbundled package.
+
+```
+pnpm run build:bundle     # tsc -b + esbuild → packages/cli/dist-bundle/
+pnpm run pack:cli        # … + npm pack → video-cli-<version>.tgz
+pnpm run publish:cli     # … + npm publish --access public
+```
+
+The npm scope is `@video` (unclaimed; first-come per package name).
+
+Three runtime dependencies broke under bundling and are now dual-layout
+(workspace **and** installed): the Remotion Root's absolute path, the
+prompt bodies' directory, and the python helpers the pipeline shells out
+to. Verified by installing the tarball into an empty directory and
+rendering a real MP4 there.
+
+Not in the published package: the curated BGM library (171 MB — use
+`--bgm-dir`) and `video studio` (needs the source checkout).
+
 ## v0.12 (2026-11-16) — the decision layer, the 2.6 image provider, and two films
 
 Three things shipped together:

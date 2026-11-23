@@ -1,27 +1,23 @@
 import type { TTSProvider, TTSRequest, TTSResult } from "./provider.js";
 import { TTSError } from "./provider.js";
-
-/**
- * The T2A model the narration pipeline uses by default.
- *
- * `speech-2.8-hd` is the quality tier — measurably better sentence
- * intonation and prosody than `speech-2.8-turbo` on Chinese narration,
- * and still ~0.2x realtime, so the extra cost is invisible next to a
- * render. It became the default on 2026-10-28 after an A/B of seven
- * backends on the same script: the local F5-TTS clone lost on prosody
- * (a 10-15 s reference cannot carry sentence-level intonation) and
- * `speech-2.8-hd` won on both quality and speed over turbo.
- *
- * The model is part of the TTS cache key — see `ttsCacheModelFor` in
- * @video/make — because the bytes differ.
- */
-export const MINIMAX_DEFAULT_MODEL = "speech-2.8-hd";
+import { defaultModel } from "@video/llm";
 
 export interface MinimaxTTSProviderOptions {
   /** API host. Default: $MINIMAX_API_HOST or https://api.minimax.io — the
    * same env the image/video/music providers already honor. */
   apiHost?: string;
-  /** T2A model. Default {@link MINIMAX_DEFAULT_MODEL} ("speech-2.8-hd"). */
+  /** T2A model. Default `models.tts.minimax` in `config/llm.yaml`.
+   *
+   * `speech-2.8-hd` is the quality tier — measurably better sentence
+   * intonation and prosody than `speech-2.8-turbo` on Chinese narration,
+   * and still ~0.2x realtime, so the extra cost is invisible next to a
+   * render. It became the default on 2026-10-28 after an A/B of seven
+   * backends on the same script: the local F5-TTS clone lost on prosody
+   * (a 10-15 s reference cannot carry sentence-level intonation) and
+   * `speech-2.8-hd` won on both quality and speed over turbo.
+   *
+   * The model is part of the TTS cache key — see `ttsCacheModelFor` in
+   * @video/make — because the bytes differ. */
   model?: string;
   /** voice_setting passthrough: speed 0.5–2, vol >0–10, pitch −12–12. */
   speed?: number;
@@ -69,7 +65,7 @@ export class MinimaxTTSProvider implements TTSProvider {
       process.env["MINIMAX_API_HOST"] ??
       "https://api.minimax.io"
     ).replace(/\/+$/, "");
-    this.model = opts.model ?? MINIMAX_DEFAULT_MODEL;
+    this.model = opts.model ?? defaultModel("tts", "minimax");
     this.speed = opts.speed;
     this.vol = opts.vol;
     this.pitch = opts.pitch;

@@ -21,7 +21,18 @@ import { parse as parseYaml, stringify as yamlStringify } from "yaml";
 /** packages/prompts/{src|dist} → ../evals (same either way). */
 export function evalsDir(): string {
   const here = path.dirname(fileURLToPath(import.meta.url));
-  return path.resolve(here, "..", "evals");
+  // Two layouts: the workspace (`packages/prompts/{src,dist}` → ../evals)
+  // and the published single-file package (the evals ship beside the
+  // bundle). The first that exists wins.
+  const candidates = [
+    path.resolve(here, "..", "evals"),
+    path.resolve(here, "evals"),
+    path.resolve(here, "..", "vendor", "evals"),
+  ];
+  for (const candidate of candidates) {
+    if (existsSync(candidate)) return candidate;
+  }
+  return candidates[0]!;
 }
 
 export interface EvalExpectation {

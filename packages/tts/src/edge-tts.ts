@@ -137,10 +137,21 @@ export class EdgeTTSProvider implements TTSProvider {
   }
 }
 
-/** packages/tts/{dist|src} → ../python (same either way). */
+/** packages/tts/{dist|src} → ../python (same either way).
+ *
+ *  The published single-file package inlines this module, so the module
+ *  dir is the bundle dir — the helper ships under assets/tts/python.
+ *  Both layouts are probed. */
 function resolvePythonDir(): string {
   const here = path.dirname(fileURLToPath(import.meta.url));
-  return path.resolve(here, "..", "python");
+  const candidates = [
+    path.resolve(here, "..", "python"),
+    path.resolve(here, "assets", "tts", "python"),
+  ];
+  for (const candidate of candidates) {
+    if (existsSync(candidate)) return candidate;
+  }
+  return candidates[0]!;
 }
 
 /** Split text on sentence-ending punctuation. Captured separators

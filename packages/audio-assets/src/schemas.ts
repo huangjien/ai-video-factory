@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from "zod/v3";
 
 /** Background-music / sound-effect asset provider abstraction (doc §60
  * "Advanced Audio"). v0.3.3 ships two provider implementations:

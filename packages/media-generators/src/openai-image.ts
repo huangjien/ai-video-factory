@@ -1,4 +1,4 @@
-import { withRetry } from "@video/llm";
+import { defaultModel, withRetry } from "@video/llm";
 import {
   ImageGenerationError,
   type ImageProvider,
@@ -20,7 +20,7 @@ export interface OpenAIImageProviderOptions {
   retrySleeps?: number[] | undefined;
 }
 
-/** `flare` is the fast everyday model; `sunburst` is the editing-precision
+/* `flare` is the fast everyday model; `sunburst` is the editing-precision
  * one. Both bill at the same token rate.
  *
  * The default moved to **2.6** on 2026-11-16, measured against
@@ -36,8 +36,9 @@ export interface OpenAIImageProviderOptions {
  *
  * So `low` costs what image-01 costs, renders twice as fast, and is
  * the only one of the three that drew the diagram the prompt asked
- * for. The 2.5 models stay reachable through `defaultModel`. */
-const DEFAULT_MODEL = "gpt-image-2.6-flare";
+ * for. The 2.5 models stay reachable through `defaultModel`.
+ *
+ * The default itself lives in `config/llm.yaml` (`models.image.openai`). */
 
 /**
  * Sizes the Images API documents as recommended. Custom `WIDTHxHEIGHT`
@@ -116,7 +117,7 @@ export class OpenAIImageProvider implements ImageProvider {
       opts.apiBaseUrl ??
       process.env["OPENAI_API_BASE_URL"] ??
       "https://api.openai.com/v1";
-    this.defaultModel = opts.defaultModel ?? DEFAULT_MODEL;
+    this.defaultModel = opts.defaultModel ?? defaultModel("image", "openai");
     this.quality = opts.quality ?? "low";
     this.retrySleeps = opts.retrySleeps ?? [1000, 2000, 4000];
   }

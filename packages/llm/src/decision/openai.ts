@@ -12,13 +12,14 @@ import {
   type DecisionRequest,
   type DecisionValue,
 } from "./contract.js";
+import { defaultModel } from "../config.js";
 
 export interface OpenAIDecisionProviderOptions {
   /** API root. Default `https://api.openai.com/v1`. */
   baseUrl?: string | undefined;
-  /** Model id. Default `gpt-6-luna` — the model that answers on the
-   *  Decisions endpoint (`gpt-4o-mini` and the `gpt-5`/`gpt-6.1` lines
-   *  are not available there). */
+  /** Model id. Default `models.decision.openai` in `config/llm.yaml` — the
+   *  model that answers on the Decisions endpoint (`gpt-4o-mini` and the
+   *  `gpt-5`/`gpt-6.1` lines are not available there). */
   model?: string | undefined;
   /** API key. Default: `OPENAI_API_KEY` from the environment. */
   apiKey?: string | undefined;
@@ -27,7 +28,6 @@ export interface OpenAIDecisionProviderOptions {
 }
 
 const DEFAULT_BASE_URL = "https://api.openai.com/v1";
-const DEFAULT_MODEL = "gpt-6-luna";
 const DEFAULT_TIMEOUT_MS = 30_000;
 
 /** The Decisions API question payload for one of our questions. */
@@ -91,7 +91,7 @@ export class OpenAIDecisionProvider implements DecisionProvider {
 
   constructor(opts: OpenAIDecisionProviderOptions = {}) {
     this.baseUrl = (opts.baseUrl ?? DEFAULT_BASE_URL).replace(/\/+$/, "");
-    this.model = opts.model ?? DEFAULT_MODEL;
+    this.model = opts.model ?? defaultModel("decision", "openai");
     this.apiKey = opts.apiKey ?? process.env["OPENAI_API_KEY"];
     this.timeoutMs = opts.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   }

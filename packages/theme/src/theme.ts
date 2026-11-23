@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from "zod/v3";
 
 /**
  * Theme system (doc §25 — "single theme today" was the v0.1 state; v0.2

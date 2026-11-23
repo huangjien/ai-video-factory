@@ -1,7 +1,7 @@
 import type { ChatMessage, Provider } from "@video/llm";
 import { callStructuredAgent } from "@video/llm";
 import { loadPrompt } from "@video/prompts";
-import { z } from "zod";
+import { z } from "zod/v3";
 
 /**
  * Matching a subject to the clips an archive returned.

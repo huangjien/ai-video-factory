@@ -1,3 +1,4 @@
+import { defaultModel } from "@video/llm";
 import { execFileSync } from "node:child_process";
 import {
   createServer,
@@ -140,7 +141,7 @@ describe("video research end-to-end (todo 4) — mock MiniMax", () => {
     expect(files.length).toBe(1);
     const record = readFileSync(path.join(runsDir, files[0] ?? ""), "utf8");
     expect(record).toContain("provider: glm");
-    expect(record).toContain("model: glm-5.3");
+    expect(record).toContain(`model: ${defaultModel("chat", "glm")}`);
     expect(record).toContain("prompt_hash: sha256:");
   });
 

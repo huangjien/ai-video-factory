@@ -3,7 +3,7 @@ import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { z } from "zod";
+import { z } from "zod/v3";
 import type { ComponentRegistry } from "./validate-project.js";
 import { validateProject } from "./validate-project.js";
 import { validStoryboardYaml } from "./test-fixtures.js";

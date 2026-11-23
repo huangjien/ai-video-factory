@@ -1,3 +1,4 @@
+import { defaultModel } from "@video/llm";
 import { describe, expect, it, beforeAll, afterAll, vi } from "vitest";
 import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
@@ -693,7 +694,7 @@ describe("runDraft — run records", () => {
     const draft = records.find((r) => r.stage === "draft");
     expect(draft).toBeDefined();
     expect(draft?.provider).toBe("glm");
-    expect(draft?.model).toBe("glm-5.3");
+    expect(draft?.model).toBe(defaultModel("chat", "glm"));
     expect(draft?.tokens).toEqual({ input: 5, output: 7 });
     // The point of the record: what the call did on the wire.
     expect(draft?.telemetry?.requests).toBe(1);

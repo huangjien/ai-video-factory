@@ -18,6 +18,7 @@ import { bundle } from "@remotion/bundler";
 import { renderMedia, selectComposition } from "@remotion/renderer";
 import { isTitleStyle, TITLE_FONTS } from "@video/video-components";
 import { sharedBrowser, type BrowserPool } from "./browser.js";
+import { resolveRootSourcePath } from "./root-source.js";
 import {
   slicePlanScene,
   type RenderPlan,
@@ -28,8 +29,7 @@ const execFileAsync = promisify(execFile);
 
 const rendererFile = fileURLToPath(import.meta.url);
 const rendererDir = path.dirname(rendererFile);
-const ext = rendererFile.endsWith(".ts") ? "tsx" : "js";
-const rootSrcPath = `${rendererDir}/Root.${ext}`;
+const rootSrcPath = resolveRootSourcePath(rendererFile);
 
 /** Remotion's bundler leaks a ~26MB `remotion-webpack-bundle-*` dir in
  * os.tmpdir() per render (plus `remotion-v*-assets*` dirs) and never
@@ -68,7 +68,13 @@ async function sweepRemotionTemp(maxAgeMs: number = 3600_000): Promise<number> {
 
 const renderEntryTemplate = (
   renderPlan: RenderPlan,
-): string => `import { registerRoot, Composition } from "remotion";
+): string => {
+  if (rootSrcPath === null) {
+    throw new Error(
+      "Remotion Root source not found — the published package vendors it under vendor/Root.js; reinstall @video/cli, or run `pnpm run build` in the workspace",
+    );
+  }
+  return `import { registerRoot, Composition } from "remotion";
 import { Root } from "${rootSrcPath}";
 
 // staticFile() resolves against this base; the bundler copies the
@@ -92,6 +98,7 @@ const App = () => (
 
 registerRoot(App);
 `;
+};
 
 /** Which visual renderers are wired, and to which component families
  * (plan §9/T4.3): remotion renders every REGISTRY component; canvas

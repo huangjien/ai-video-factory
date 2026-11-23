@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from "zod/v3";
 import { DEFAULT_THEME_NAME } from "@video/theme";
 
 /**

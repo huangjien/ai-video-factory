@@ -1,10 +1,7 @@
 import { createHash } from "node:crypto";
 import type { ParsedArticle } from "@video/draft";
-import {
-  MINIMAX_DEFAULT_MODEL,
-  defaultVoiceForProvider,
-  edgeSystemVoice,
-} from "@video/tts";
+import { defaultModel } from "@video/llm";
+import { defaultVoiceForProvider, edgeSystemVoice } from "@video/tts";
 
 /**
  * TTS cache key + default voices (v0.8 G2: extracted from index.ts so the
@@ -60,7 +57,7 @@ export function effectiveTtsVoice(
  * Both the render and the dry-run table call this with their provider
  * name, so the two cannot disagree about which tier they mean. */
 export function ttsCacheModelFor(providerName: string): string | undefined {
-  if (providerName === "minimax-tts") return MINIMAX_DEFAULT_MODEL;
+  if (providerName === "minimax-tts") return defaultModel("tts", "minimax");
   return undefined;
 }
 

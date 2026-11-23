@@ -5,6 +5,7 @@ import type {
   Provider,
   ProviderTelemetry,
 } from "./provider.js";
+import { defaultModel } from "./config.js";
 import { LLM_TIMEOUT_MS } from "./timeout.js";
 import { llmFetch } from "./http.js";
 
@@ -14,9 +15,6 @@ export interface GeminiProviderOptions {
 }
 
 const DEFAULT_BASE = "https://generativelanguage.googleapis.com/v1beta";
-/** The current stable flash flagship (the repo's image model is the
- *  `gemini-3.1-flash-image` sibling); override with GEMINI_MODEL. */
-const DEFAULT_MODEL = "gemini-3.5-flash";
 
 /** Google Gemini chat client.
  * Endpoint: `${baseUrl}/models/{model}:generateContent` ·
@@ -37,7 +35,9 @@ export class GeminiProvider implements Provider {
     this.baseUrl =
       opts.baseUrl ?? process.env["GEMINI_BASE_URL"] ?? DEFAULT_BASE;
     this.defaultModel =
-      opts.defaultModel ?? process.env["GEMINI_MODEL"] ?? DEFAULT_MODEL;
+      opts.defaultModel ??
+      process.env["GEMINI_MODEL"] ??
+      defaultModel("chat", "gemini");
   }
 
   async chat(req: ChatRequest): Promise<ChatResponse> {
@@ -51,7 +51,9 @@ export class GeminiProvider implements Provider {
     };
     const key = process.env["GEMINI_API_KEY"];
     if (!key) {
-      const err = new Error("GEMINI_API_KEY not set in environment") as ChatError;
+      const err = new Error(
+        "GEMINI_API_KEY not set in environment",
+      ) as ChatError;
       err.provider = this.name;
       throw err;
     }
@@ -79,10 +81,10 @@ export class GeminiProvider implements Provider {
     }
     const requestBody = {
       contents,
-      ...(system !== "" ? { systemInstruction: { parts: [{ text: system }] } } : {}),
-      ...(Object.keys(generationConfig).length > 0
-        ? { generationConfig }
+      ...(system !== ""
+        ? { systemInstruction: { parts: [{ text: system }] } }
         : {}),
+      ...(Object.keys(generationConfig).length > 0 ? { generationConfig } : {}),
     };
     let body: string;
     try {

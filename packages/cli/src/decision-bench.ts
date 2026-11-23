@@ -37,6 +37,7 @@ import {
   registerDecisionHarvest,
 } from "./decision-harvest.js";
 import {
+  defaultModel,
   MiniMaxDecisionProvider,
   GoogleDecisionProvider,
   OpenAIDecisionProvider,
@@ -179,27 +180,29 @@ export function benchProviderSpecs(opts: {
     {
       id: "openai",
       label: "OpenAI Decisions API",
-      model: opts.model ?? "gpt-6-luna",
+      model: opts.model ?? defaultModel("decision", "openai"),
       make: () =>
-        new OpenAIDecisionProvider({ model: opts.model ?? "gpt-6-luna" }),
+        new OpenAIDecisionProvider({
+          model: opts.model ?? defaultModel("decision", "openai"),
+        }),
     },
     {
       id: "minimax",
       label: "MiniMax function calling",
-      model: opts.model ?? "MiniMax-M3.1-Flash",
+      model: opts.model ?? defaultModel("decision", "minimax"),
       make: () =>
         new MiniMaxDecisionProvider({
-          model: opts.model ?? "MiniMax-M3.1-Flash",
+          model: opts.model ?? defaultModel("decision", "minimax"),
           samples,
         }),
     },
     {
       id: "google",
       label: "Google Gemini Decisions API",
-      model: opts.model ?? "gemini-decision-1",
+      model: opts.model ?? defaultModel("decision", "google"),
       make: () =>
         new GoogleDecisionProvider({
-          model: opts.model ?? "gemini-decision-1",
+          model: opts.model ?? defaultModel("decision", "google"),
         }),
     },
   ];

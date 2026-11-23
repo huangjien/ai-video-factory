@@ -129,10 +129,11 @@ function chatReplyOnce(reply: string): void {
   );
 }
 
+/** The judge keeps ONE snapshot (runs/backlog-judge.yaml) — the legacy
+ *  per-hash files are removed on sight. */
 function cacheFiles(): string[] {
-  const runs = path.join(repoRoot, "runs");
-  if (!existsSync(runs)) return [];
-  return readdirSync(runs).filter((f) => f.startsWith("backlog-judge-"));
+  const file = path.join(repoRoot, "runs", "backlog-judge.yaml");
+  return existsSync(file) ? ["backlog-judge.yaml"] : [];
 }
 
 describe("scoreBacklogEntry — weights", () => {
@@ -169,7 +170,12 @@ describe("scoreBacklogEntry — weights", () => {
     expect(scoreBacklogEntry({ ...none, note: "n" }, NOW)).toBe(75);
     expect(scoreBacklogEntry({ ...none, anchors: ["a"] }, NOW)).toBe(70);
     expect(scoreBacklogEntry({ ...none, content: "c" }, NOW)).toBe(75);
-    expect(scoreBacklogEntry({ ...none, note: "n", anchors: ["a"], content: "c" }, NOW)).toBe(100);
+    expect(
+      scoreBacklogEntry(
+        { ...none, note: "n", anchors: ["a"], content: "c" },
+        NOW,
+      ),
+    ).toBe(100);
     // whitespace-only fields are not completeness
     expect(scoreBacklogEntry({ ...none, note: "   " }, NOW)).toBe(60);
   });
@@ -238,7 +244,9 @@ describe("parseJudgeRanking", () => {
 
   it("rejects unknown, duplicated, or missing ids and duplicated ranks", () => {
     expect(() =>
-      parseJudgeRanking(judgeYaml([{ id: "zzz", rank: 1, reason: "r" }]), ["a"]),
+      parseJudgeRanking(judgeYaml([{ id: "zzz", rank: 1, reason: "r" }]), [
+        "a",
+      ]),
     ).toThrow(/neither a valid position n nor an exact open id/);
     expect(() =>
       parseJudgeRanking(
@@ -249,7 +257,9 @@ describe("parseJudgeRanking", () => {
         ["a"],
       ),
     ).toThrow(/twice/);
-    expect(() => parseJudgeRanking("```yaml\nranking: []\n```", ["a"])).toThrow(/missing ids/);
+    expect(() => parseJudgeRanking("```yaml\nranking: []\n```", ["a"])).toThrow(
+      /missing ids/,
+    );
     expect(() =>
       parseJudgeRanking(
         judgeYaml([
@@ -274,7 +284,10 @@ describe("parseJudgeRanking", () => {
 
   it("rejects out-of-range positions", () => {
     expect(() =>
-      parseJudgeRanking(judgeYaml([{ n: 3, rank: 1, reason: "r" }]), ["a", "b"]),
+      parseJudgeRanking(judgeYaml([{ n: 3, rank: 1, reason: "r" }]), [
+        "a",
+        "b",
+      ]),
     ).toThrow(/not a position between 1 and 2/);
     expect(() =>
       parseJudgeRanking(judgeYaml([{ n: 0, rank: 1, reason: "r" }]), ["a"]),
@@ -291,39 +304,59 @@ describe("runBacklogJudge — viewing-data evidence", () => {
       "# 频道分析 2026-11-11\n\n- 陆军班排连营 13.9 播放/天\n- AI幻觉评测 0.4 播放/天",
     );
     let userMessage = "";
-    chatMock.mockImplementation(async (req: ChatRequest): Promise<ChatResponse> => {
-      userMessage = req.messages[1]?.content ?? "";
-      return { content: judgeYaml([{ n: 1, rank: 1, reason: "r" }]), usage: { input: 10, output: 5 } };
-    });
+    chatMock.mockImplementation(
+      async (req: ChatRequest): Promise<ChatResponse> => {
+        userMessage = req.messages[1]?.content ?? "";
+        return {
+          content: judgeYaml([{ n: 1, rank: 1, reason: "r" }]),
+          usage: { input: 10, output: 5 },
+        };
+      },
+    );
     expect(await runBacklogJudge({ model: "glm", cwd: repoRoot })).toBe(0);
     expect(userMessage).toContain("REAL viewing data");
     expect(userMessage).toContain("analytics report 2026-11-11");
     expect(userMessage).toContain("陆军班排连营 13.9 播放/天");
-    expect(consoleOutput.join("\n")).toMatch(/viewing-data evidence: analytics report 2026-11-11/);
+    expect(consoleOutput.join("\n")).toMatch(
+      /viewing-data evidence: analytics report 2026-11-11/,
+    );
   });
 
   it("a NEW report date invalidates the cache → re-judge", async () => {
     seedEntry({ id: "2026-11-01-alpha", topic: "停电的城市", status: "idea" });
     mkdirSync(path.join(repoRoot, "docs", "analytics"), { recursive: true });
-    writeFileSync(path.join(repoRoot, "docs", "analytics", "2026-11-04-report.md"), "# old\n");
+    writeFileSync(
+      path.join(repoRoot, "docs", "analytics", "2026-11-04-report.md"),
+      "# old\n",
+    );
     chatReplyOnce(judgeYaml([{ n: 1, rank: 1, reason: "r" }]));
     await runBacklogJudge({ model: "glm", cwd: repoRoot });
-    expect(cacheFiles().filter((f) => !f.endsWith("-failed.yaml"))).toHaveLength(1);
+    expect(cacheFiles()).toHaveLength(1);
 
-    writeFileSync(path.join(repoRoot, "docs", "analytics", "2026-11-11-report.md"), "# new\n");
+    writeFileSync(
+      path.join(repoRoot, "docs", "analytics", "2026-11-11-report.md"),
+      "# new\n",
+    );
     chatReplyOnce(judgeYaml([{ n: 1, rank: 1, reason: "r" }]));
     await runBacklogJudge({ model: "glm", cwd: repoRoot });
     expect(chatMock).toHaveBeenCalledTimes(2);
-    expect(cacheFiles().filter((f) => !f.endsWith("-failed.yaml"))).toHaveLength(2);
+    // One snapshot — but the new report changed the fingerprint, so the
+    // judge ran again and rewrote it.
+    expect(cacheFiles()).toHaveLength(1);
   });
 
   it("lists ALREADY PRODUCED stories and re-judges when the produced set grows", async () => {
     seedEntry({ id: "2026-11-01-alpha", topic: "停电的城市", status: "idea" });
     let userMessage = "";
-    chatMock.mockImplementation(async (req: ChatRequest): Promise<ChatResponse> => {
-      userMessage = req.messages[1]?.content ?? "";
-      return { content: judgeYaml([{ n: 1, rank: 1, reason: "r" }]), usage: { input: 10, output: 5 } };
-    });
+    chatMock.mockImplementation(
+      async (req: ChatRequest): Promise<ChatResponse> => {
+        userMessage = req.messages[1]?.content ?? "";
+        return {
+          content: judgeYaml([{ n: 1, rank: 1, reason: "r" }]),
+          usage: { input: 10, output: 5 },
+        };
+      },
+    );
     await runBacklogJudge({ model: "glm", cwd: repoRoot });
     expect(userMessage).not.toContain("ALREADY PRODUCED");
 
@@ -355,8 +388,16 @@ describe("runBacklogJudge — viewing-data evidence", () => {
 
 describe("runBacklogJudge", () => {
   it("ranks open entries in one LLM call, prints reasons, writes the cache", async () => {
-    const alpha = seedEntry({ id: "2026-11-01-alpha", topic: "停电的城市", status: "idea" });
-    const beta = seedEntry({ id: "2026-11-02-beta", topic: "深海热泉", status: "proposed" });
+    const alpha = seedEntry({
+      id: "2026-11-01-alpha",
+      topic: "停电的城市",
+      status: "idea",
+    });
+    const beta = seedEntry({
+      id: "2026-11-02-beta",
+      topic: "深海热泉",
+      status: "proposed",
+    });
     seedEntry({ id: "2026-11-03-closed", topic: "已画完", status: "drafted" });
     chatReplyOnce(
       judgeYaml([
@@ -379,27 +420,39 @@ describe("runBacklogJudge", () => {
 
     const caches = cacheFiles();
     expect(caches).toHaveLength(1);
-    expect(caches[0]).toMatch(/^backlog-judge-[0-9a-f]{64}\.yaml$/);
-    const cached = readFileSync(path.join(repoRoot, "runs", caches[0]!), "utf8");
-    expect(cached).toContain("schema: backlog-judge/1");
+    expect(caches[0]).toBe("backlog-judge.yaml");
+    const cached = readFileSync(
+      path.join(repoRoot, "runs", caches[0]!),
+      "utf8",
+    );
+    expect(cached).toContain("schema: backlog-judge/2");
+    expect(cached).toContain("fingerprint:");
     expect(cached).toContain("provider: glm");
     expect(cached).toContain("钩子更强");
   });
 
   it("second run with unchanged entries hits the cache and never calls the LLM again", async () => {
     seedEntry({ id: "2026-11-01-alpha", topic: "停电的城市", status: "idea" });
-    chatReplyOnce(judgeYaml([{ id: "2026-11-01-alpha", rank: 1, reason: "唯一候选" }]));
+    chatReplyOnce(
+      judgeYaml([{ id: "2026-11-01-alpha", rank: 1, reason: "唯一候选" }]),
+    );
     expect(await runBacklogJudge({ model: "glm", cwd: repoRoot })).toBe(0);
     expect(await runBacklogJudge({ model: "glm", cwd: repoRoot })).toBe(0);
     expect(chatMock).toHaveBeenCalledTimes(1);
     expect(consoleOutput.join("\n")).toContain("judge cache hit");
   });
 
-  it("changing an entry's topic changes the hash → re-judge and a second cache file", async () => {
+  it("changing an entry's topic changes the fingerprint → re-judge, same snapshot rewritten", async () => {
     seedEntry({ id: "2026-11-01-alpha", topic: "停电的城市", status: "idea" });
-    chatReplyOnce(judgeYaml([{ id: "2026-11-01-alpha", rank: 1, reason: "先做" }]));
+    chatReplyOnce(
+      judgeYaml([{ id: "2026-11-01-alpha", rank: 1, reason: "先做" }]),
+    );
     await runBacklogJudge({ model: "glm", cwd: repoRoot });
     expect(cacheFiles()).toHaveLength(1);
+    const first = readFileSync(
+      path.join(repoRoot, "runs", "backlog-judge.yaml"),
+      "utf8",
+    );
 
     const store = loadBacklogStore(repoRoot);
     const alpha = store.ideas.find((e) => e.id === "2026-11-01-alpha");
@@ -409,15 +462,24 @@ describe("runBacklogJudge", () => {
     expect(await runBacklogJudge({ model: "glm", cwd: repoRoot })).toBe(0);
 
     expect(chatMock).toHaveBeenCalledTimes(2);
-    const caches = cacheFiles();
-    expect(caches).toHaveLength(2);
-    expect(new Set(caches).size).toBe(2);
+    // One snapshot file, but a DIFFERENT fingerprint — that is what
+    // invalidated the cache.
+    expect(cacheFiles()).toHaveLength(1);
+    const second = readFileSync(
+      path.join(repoRoot, "runs", "backlog-judge.yaml"),
+      "utf8",
+    );
+    expect(second).not.toBe(first);
   });
 
   it("--model override reaches the fallback seam and lands in the cache record", async () => {
     seedEntry({ id: "2026-11-01-alpha", topic: "停电的城市", status: "idea" });
-    chatReplyOnce(judgeYaml([{ id: "2026-11-01-alpha", rank: 1, reason: "先做" }]));
-    expect(await runBacklogJudge({ model: "minimax", cwd: repoRoot, json: true })).toBe(0);
+    chatReplyOnce(
+      judgeYaml([{ id: "2026-11-01-alpha", rank: 1, reason: "先做" }]),
+    );
+    expect(
+      await runBacklogJudge({ model: "minimax", cwd: repoRoot, json: true }),
+    ).toBe(0);
     const parsed = JSON.parse(consoleOutput[0] ?? "") as { provider: string };
     expect(parsed.provider).toBe("minimax");
   });
@@ -431,12 +493,21 @@ describe("runBacklogJudge", () => {
 
     expect(code).toBe(1);
     expect(chatMock).toHaveBeenCalledTimes(2);
-    const failed = cacheFiles().filter((f) => f.endsWith("-failed.yaml"));
-    expect(failed).toHaveLength(1);
-    expect(failed[0]).toMatch(/^backlog-judge-[0-9a-f]{64}-failed\.yaml$/);
-    expect(readFileSync(path.join(repoRoot, "runs", failed[0]!), "utf8")).toBe(raw);
-    expect(consoleErrors.join("\n")).toContain("judge output unusable after retry");
-    expect(cacheFiles().some((f) => !f.endsWith("-failed.yaml"))).toBe(false);
+    // The failure lands in the single snapshot as a failure record (no
+    // ranking) — there is no separate "-failed" file any more.
+    const caches = cacheFiles();
+    expect(caches).toHaveLength(1);
+    const recorded = readFileSync(
+      path.join(repoRoot, "runs", caches[0]!),
+      "utf8",
+    );
+    expect(recorded).toContain("failure:");
+    expect(recorded).toContain("judge output unusable after retry");
+    expect(recorded).toContain(raw);
+    expect(recorded).not.toContain("ranking:");
+    expect(consoleErrors.join("\n")).toContain(
+      "judge output unusable after retry",
+    );
   });
 
   it("a duplicate-row reply retries once and the fresh sample wins", async () => {
@@ -459,20 +530,30 @@ describe("runBacklogJudge", () => {
   });
 
   it("--json prints one parseable ranked object sorted by rank", async () => {
-    const alpha = seedEntry({ id: "2026-11-01-alpha", topic: "停电的城市", status: "idea" });
-    const beta = seedEntry({ id: "2026-11-02-beta", topic: "深海热泉", status: "proposed" });
+    const alpha = seedEntry({
+      id: "2026-11-01-alpha",
+      topic: "停电的城市",
+      status: "idea",
+    });
+    const beta = seedEntry({
+      id: "2026-11-02-beta",
+      topic: "深海热泉",
+      status: "proposed",
+    });
     chatReplyOnce(
       judgeYaml([
         { id: alpha.id, rank: 2, reason: "次之" },
         { id: beta.id, rank: 1, reason: "最优" },
       ]),
     );
-    expect(await runBacklogJudge({ model: "glm", cwd: repoRoot, json: true })).toBe(0);
+    expect(
+      await runBacklogJudge({ model: "glm", cwd: repoRoot, json: true }),
+    ).toBe(0);
     const parsed = JSON.parse(consoleOutput[0] ?? "") as {
       schema: string;
       ranking: { id: string; rank: number; reason: string }[];
     };
-    expect(parsed.schema).toBe("backlog-judge/1");
+    expect(parsed.schema).toBe("backlog-judge/2");
     expect(parsed.ranking.map((r) => r.id)).toEqual([beta.id, alpha.id]);
     expect(parsed.ranking[0]!).toMatchObject({ rank: 1, reason: "最优" });
   });
@@ -490,7 +571,11 @@ describe("runBacklogJudge", () => {
 
   it("corrupt store fails loudly instead of judging", async () => {
     mkdirSync(repoRoot, { recursive: true });
-    writeFileSync(path.join(repoRoot, "backlog.yaml"), "schema: wrong/9\nideas: []\n", "utf8");
+    writeFileSync(
+      path.join(repoRoot, "backlog.yaml"),
+      "schema: wrong/9\nideas: []\n",
+      "utf8",
+    );
     expect(await runBacklogJudge({ model: "glm", cwd: repoRoot })).toBe(1);
     expect(chatMock).not.toHaveBeenCalled();
     expect(consoleErrors.join("\n")).toContain("unsupported schema");
@@ -507,15 +592,17 @@ describe("runBacklogJudge", () => {
       status: "idea",
     });
     let userMessage = "";
-    chatMock.mockImplementation(async (req: ChatRequest): Promise<ChatResponse> => {
-      expect(req.messages).toHaveLength(2);
-      expect(req.messages[0]?.role).toBe("system");
-      userMessage = req.messages[1]?.content ?? "";
-      return {
-        content: judgeYaml([{ n: 1, rank: 1, reason: "r" }]),
-        usage: { input: 10, output: 5 },
-      };
-    });
+    chatMock.mockImplementation(
+      async (req: ChatRequest): Promise<ChatResponse> => {
+        expect(req.messages).toHaveLength(2);
+        expect(req.messages[0]?.role).toBe("system");
+        userMessage = req.messages[1]?.content ?? "";
+        return {
+          content: judgeYaml([{ n: 1, rank: 1, reason: "r" }]),
+          usage: { input: 10, output: 5 },
+        };
+      },
+    );
     expect(await runBacklogJudge({ model: "glm", cwd: repoRoot })).toBe(0);
 
     // The model ranks by position number — ids never enter the prompt,

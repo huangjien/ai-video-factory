@@ -26,8 +26,8 @@ describe("resolveDecisionMode (re-export)", () => {
 });
 
 describe("createDecisionProvider (re-export)", () => {
-  it("builds the fallback chain by default (openai → minimax)", () => {
-    expect(createDecisionProvider().name).toBe("openai→minimax");
+  it("builds the fallback chain by default (google → openai → minimax)", () => {
+    expect(createDecisionProvider().name).toBe("google→openai→minimax");
   });
 
   it("pins a single provider on request", () => {

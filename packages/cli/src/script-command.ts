@@ -3,7 +3,12 @@ import { mkdir, writeFile } from "node:fs/promises";
 import { createHash } from "node:crypto";
 import { execSync } from "node:child_process";
 import path from "node:path";
-import { GLMProvider, loadProviderConfig, MiniMaxProvider } from "@video/llm";
+import {
+  modelLabel,
+  GLMProvider,
+  loadProviderConfig,
+  MiniMaxProvider,
+} from "@video/llm";
 import { callScript } from "@video/script";
 import type { ChatMessage, Provider } from "@video/llm";
 import { formatRunId } from "@video/workflow";
@@ -28,14 +33,6 @@ function providerInstance(name: string): Provider {
   if (name === "glm") return new GLMProvider();
   if (name === "minimax") return new MiniMaxProvider();
   throw new Error(`unsupported provider: ${name}`);
-}
-
-/** Model id stamped for a provider name — matches each provider's own
- * default (GLM: glm-5.3, MiniMax: MiniMax-M3). Re-derived from the
- * SERVING provider after failover so the run record never claims the
- * wrong model. */
-function modelFor(name: string): string {
-  return name === "glm" ? "glm-5.3" : "MiniMax-M3";
 }
 
 function sha256OfMessages(messages: ChatMessage[]): string {
@@ -140,7 +137,7 @@ export async function runScript(opts: ScriptOptions): Promise<number> {
   // model reflects the SERVING provider (may differ from the chosen one
   // after failover) and prompt_hash hashes the messages the agent actually
   // sent (result.messages), not a reconstructed placeholder.
-  const servedModel = modelFor(result.providerName);
+  const servedModel = modelLabel("chat", result.providerName);
   const record = {
     run_id: runId,
     stage: "script",

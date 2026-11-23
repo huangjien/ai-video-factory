@@ -1,5 +1,5 @@
 import type { ComponentType } from "react";
-import { z } from "zod";
+import { z } from "zod/v3";
 import { Character } from "./components/Character.js";
 import { CodeBlock } from "./components/CodeBlock.js";
 import {

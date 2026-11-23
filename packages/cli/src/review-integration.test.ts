@@ -1,3 +1,4 @@
+import { defaultModel } from "@video/llm";
 import { execFileSync } from "node:child_process";
 import {
   createServer,
@@ -250,7 +251,7 @@ describe("video review end-to-end (todo 2) — mock MiniMax", () => {
         .split("\n");
       const record = readFileSync(path.join(runsDir, files[0] ?? ""), "utf8");
       expect(record).toContain("provider: glm");
-      expect(record).toContain("model: glm-5.3");
+      expect(record).toContain(`model: ${defaultModel("chat", "glm")}`);
     } finally {
       if (prevLlConfig === undefined) delete process.env["LL_CONFIG"];
       else process.env["LL_CONFIG"] = prevLlConfig;

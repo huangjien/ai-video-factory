@@ -1,4 +1,4 @@
-import { withRetry } from "@video/llm";
+import { defaultModel, withRetry } from "@video/llm";
 import {
   ImageGenerationError,
   type ImageProvider,
@@ -9,7 +9,8 @@ import {
 export interface MiniMaxH3ImageProviderOptions {
   apiHost?: string | undefined;
   /** `MiniMax-H3-Image` (quality) or `MiniMax-H3-Image-Highspeed` (same
-   *  parameters, faster, ~1.6–2× the price). Default: the quality model. */
+   *  parameters, faster, ~1.6–2× the price). Default:
+   *  `models.image.minimax-h3` in `config/llm.yaml` — the quality model. */
   model?: string | undefined;
   /** Let the API rewrite the prompt before generating (its default is
    *  enhancement ON; the rewritten text comes back as `revised_prompt`,
@@ -44,7 +45,6 @@ export const MINIMAX_H3_MODELS = [
   "MiniMax-H3-Image-Highspeed",
 ] as const;
 
-const DEFAULT_MODEL = "MiniMax-H3-Image";
 const DEFAULT_REQUEST_TIMEOUT_MS = 180_000;
 
 /** Output pixel area bounds the API enforces on `size` (platform.minimax.io
@@ -158,7 +158,7 @@ export class MiniMaxH3ImageProvider implements ImageProvider {
       opts.apiHost ??
       process.env["MINIMAX_API_HOST"] ??
       "https://api.minimax.io";
-    this.model = opts.model ?? DEFAULT_MODEL;
+    this.model = opts.model ?? defaultModel("image", "minimax-h3");
     this.disablePromptEnhanced = opts.disablePromptEnhanced ?? false;
     this.constraintGuard = opts.constraintGuard ?? null;
     this.requestTimeoutMs = opts.requestTimeoutMs ?? DEFAULT_REQUEST_TIMEOUT_MS;
@@ -186,7 +186,8 @@ export class MiniMaxH3ImageProvider implements ImageProvider {
         this.name,
       );
     }
-    const ratio = Math.max(req.width, req.height) / Math.min(req.width, req.height);
+    const ratio =
+      Math.max(req.width, req.height) / Math.min(req.width, req.height);
     if (ratio > 3) {
       throw new ImageGenerationError(
         `requested size ${req.width}x${req.height} has a ratio beyond 3:1; the H3 image API accepts 1:3–3:1`,
@@ -221,55 +222,54 @@ export class MiniMaxH3ImageProvider implements ImageProvider {
     const callOnce = async (): Promise<H3ImagesResponse> => {
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), this.requestTimeoutMs);
-        let res: Response;
-        try {
-          res = await fetch(`${this.apiHost}/v1/images/${endpoint}`, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${key}`,
-            },
-            body: JSON.stringify(body),
-            signal: controller.signal,
-          });
-        } catch (err) {
-          if ((err as { name?: string }).name === "AbortError") {
-            const e = new ImageGenerationError(
-              `MiniMax H3 image request timed out after ${this.requestTimeoutMs}ms`,
-              this.name,
-            );
-            (e as ImageGenerationError & { timeoutMs: number }).timeoutMs =
-              this.requestTimeoutMs;
-            throw e;
-          }
-          throw err;
-        } finally {
-          clearTimeout(timer);
-        }
-        const text = await res.text();
-        if (!res.ok) {
-          const excerpt = text.slice(0, 200);
-          const err = new ImageGenerationError(
-            `MiniMax H3 image API ${res.status}: ${excerpt.slice(0, 80)}`,
+      let res: Response;
+      try {
+        res = await fetch(`${this.apiHost}/v1/images/${endpoint}`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${key}`,
+          },
+          body: JSON.stringify(body),
+          signal: controller.signal,
+        });
+      } catch (err) {
+        if ((err as { name?: string }).name === "AbortError") {
+          const e = new ImageGenerationError(
+            `MiniMax H3 image request timed out after ${this.requestTimeoutMs}ms`,
             this.name,
           );
-          (err as ImageGenerationError & { status: number }).status = res.status;
-          (
-            err as ImageGenerationError & { body_excerpt: string }
-          ).body_excerpt = excerpt;
-          throw err;
+          (e as ImageGenerationError & { timeoutMs: number }).timeoutMs =
+            this.requestTimeoutMs;
+          throw e;
         }
-        return JSON.parse(text) as H3ImagesResponse;
+        throw err;
+      } finally {
+        clearTimeout(timer);
+      }
+      const text = await res.text();
+      if (!res.ok) {
+        const excerpt = text.slice(0, 200);
+        const err = new ImageGenerationError(
+          `MiniMax H3 image API ${res.status}: ${excerpt.slice(0, 80)}`,
+          this.name,
+        );
+        (err as ImageGenerationError & { status: number }).status = res.status;
+        (err as ImageGenerationError & { body_excerpt: string }).body_excerpt =
+          excerpt;
+        throw err;
+      }
+      return JSON.parse(text) as H3ImagesResponse;
     };
 
     let data = await withRetry(callOnce, {
-        // Retry transient/network failures; never a 4xx (the client's own
-        // bad request will not improve) and never a client-side timeout
-        // (each attempt re-spends; a hung connection is reported instead).
-        isRetriable: (err) =>
-          !/MiniMax H3 image API (?:4\d\d|request timed out)/.test(String(err)),
-        sleeps: this.retrySleeps,
-      });
+      // Retry transient/network failures; never a 4xx (the client's own
+      // bad request will not improve) and never a client-side timeout
+      // (each attempt re-spends; a hung connection is reported instead).
+      isRetriable: (err) =>
+        !/MiniMax H3 image API (?:4\d\d|request timed out)/.test(String(err)),
+      sleeps: this.retrySleeps,
+    });
 
     // The constraint guard: enhancement rewrites the prompt, and the
     // rewritten text is what the model drew from. If the rewrite dropped
@@ -282,7 +282,8 @@ export class MiniMaxH3ImageProvider implements ImageProvider {
     ) {
       const revised = data.data[0]!.revised_prompt ?? "";
       const dropped = guardMarkers.filter(
-        (marker: string) => !revised.toLowerCase().includes(marker.toLowerCase()),
+        (marker: string) =>
+          !revised.toLowerCase().includes(marker.toLowerCase()),
       );
       if (dropped.length > 0) {
         console.error(
@@ -291,7 +292,9 @@ export class MiniMaxH3ImageProvider implements ImageProvider {
         body["disable_prompt_enhanced"] = true;
         data = await withRetry(callOnce, {
           isRetriable: (err) =>
-            !/MiniMax H3 image API (?:4\d\d|request timed out)/.test(String(err)),
+            !/MiniMax H3 image API (?:4\d\d|request timed out)/.test(
+              String(err),
+            ),
           sleeps: this.retrySleeps,
         });
       }
@@ -308,7 +311,8 @@ export class MiniMaxH3ImageProvider implements ImageProvider {
     const first = images.find((item) => typeof item.b64_json === "string");
     if (!first) {
       const blocked = images.some((item) => item.error !== undefined);
-      const detail = images.find((item) => item.error !== undefined)?.error?.message;
+      const detail = images.find((item) => item.error !== undefined)?.error
+        ?.message;
       throw new ImageGenerationError(
         blocked
           ? `no image generated — rejected (${detail ?? "content safety or balance"})`

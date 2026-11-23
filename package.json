@@ -1,10 +1,11 @@
 {
   "name": "video-agent",
   "version": "0.11.2",
+  "license": "Apache-2.0",
   "private": true,
   "type": "module",
-  "description": "AI Video Factory \u2014 structured-content-to-video production system (v0.1)",
-  "packageManager": "pnpm@12.15.0",
+  "description": "AI Video Factory — structured-content-to-video production system (v0.1)",
+  "packageManager": "pnpm@12.23.0",
   "engines": {
     "node": ">=22"
   },
@@ -16,6 +17,9 @@
     "test": "vitest run --coverage --coverage.thresholds.lines=80 --coverage.thresholds.functions=78 --coverage.thresholds.branches=62 --coverage.thresholds.statements=80",
     "publish:packages:dry-run": "pnpm run build && pnpm publish --filter \"./packages/*\" --access public --dry-run",
     "publish:packages": "pnpm run build && pnpm publish --filter \"./packages/*\" --access public",
+    "build:bundle": "pnpm run build && node scripts/build-bundle.mjs",
+    "pack:cli": "pnpm run build:bundle && cd packages/cli/dist-bundle && npm pack",
+    "publish:cli": "pnpm run build:bundle && cd packages/cli/dist-bundle && npm publish --access public",
     "benchmark:verify": "node scripts/benchmark-verify.mjs",
     "prompts:eval": "pnpm run build && node packages/cli/dist/index.js prompts eval --offline",
     "prompts:eval:judge": "pnpm run build && node packages/cli/dist/index.js prompts eval --judge glm",
@@ -24,13 +28,14 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
-    "@types/node": "^26.6.5",
-    "@vitest/coverage-v8": "^5.0.5",
-    "eslint": "^10.13.0",
-    "globals": "^17.13.0",
-    "prettier": "^3.9.10",
+    "@types/node": "^26.6.6",
+    "@vitest/coverage-v8": "^5.1.1",
+    "esbuild": "0.28.2",
+    "eslint": "^10.15.0",
+    "globals": "^17.14.0",
+    "prettier": "^3.10.1",
     "typescript": "^7.0.2",
-    "vitest": "^5.0.5",
+    "vitest": "^5.1.1",
     "yaml": "^2.9.1"
   }
 }

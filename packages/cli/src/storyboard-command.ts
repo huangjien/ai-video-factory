@@ -5,7 +5,13 @@ import { createHash } from "node:crypto";
 import path from "node:path";
 import { execSync } from "node:child_process";
 import type { ChatMessage, Provider } from "@video/llm";
-import { GLMProvider, loadProviderConfig, MiniMaxProvider } from "@video/llm";
+import {
+  defaultModel,
+  modelLabel,
+  GLMProvider,
+  loadProviderConfig,
+  MiniMaxProvider,
+} from "@video/llm";
 import { callAgent } from "@video/agent-storyboard";
 import { DEFAULT_THEME_NAME } from "@video/theme";
 import { formatRunId } from "@video/workflow";
@@ -33,14 +39,6 @@ function providerInstance(name: string): Provider {
   if (name === "glm") return new GLMProvider();
   if (name === "minimax") return new MiniMaxProvider();
   throw new Error(`unsupported provider: ${name}`);
-}
-
-/** Model id stamped for a provider name — matches each provider's own
- * default (GLM: glm-5.3, MiniMax: MiniMax-M3). Used for the primary
- * request and, after failover, re-derived from the SERVING provider
- * so the run record never claims the wrong model. */
-function modelFor(name: string): string {
-  return name === "glm" ? "glm-5.3" : "MiniMax-M3";
 }
 
 function sha256OfMessages(messages: ChatMessage[]): string {
@@ -94,7 +92,7 @@ export async function runStoryboard(opts: StoryboardOptions): Promise<number> {
         ? roleCfg.primary
         : undefined;
   const fallback = fallbackName ? providerInstance(fallbackName) : null;
-  const model = modelFor(chosenName);
+  const model = defaultModel("chat", chosenName);
 
   // Optional research + script context (v0.2 phases 2 & 3)
   let researchContext: { markdown: string; claimSummary: string } | undefined;
@@ -173,7 +171,7 @@ export async function runStoryboard(opts: StoryboardOptions): Promise<number> {
   // after failover) and prompt_hash hashes the messages the agent actually
   // sent (result.messages), not a reconstructed placeholder.
   const runId = formatRunId("storyboard");
-  const servedModel = modelFor(result.providerName);
+  const servedModel = modelLabel("chat", result.providerName);
   const costUsd = estimateCost(result.providerName, result.usage);
   const record = {
     run_id: runId,

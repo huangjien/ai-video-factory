@@ -14,7 +14,11 @@ import path from "node:path";
 
 /** Write a file and backdate its mtime (the idle scanner reads mtimes). */
 function touch(file: string, when: number): void {
-  writeFileSync(file, existsSync(file) ? readFileSync(file, "utf8") : "", "utf8");
+  writeFileSync(
+    file,
+    existsSync(file) ? readFileSync(file, "utf8") : "",
+    "utf8",
+  );
   utimesSync(file, new Date(when), new Date(when));
 }
 
@@ -26,34 +30,63 @@ const translateMock = vi.fn();
 const judgeMock = vi.fn();
 const approveMock = vi.fn();
 vi.mock("./backlog-draft.js", () => ({
-  runDraftFromBacklog: (...a: unknown[]) => (draftMock as (...x: unknown[]) => unknown)(...a),
+  runDraftFromBacklog: (...a: unknown[]) =>
+    (draftMock as (...x: unknown[]) => unknown)(...a),
 }));
 vi.mock("./make-command.js", () => ({
-  runMakeCli: (...a: unknown[]) => (makeMock as (...x: unknown[]) => unknown)(...a),
+  runMakeCli: (...a: unknown[]) =>
+    (makeMock as (...x: unknown[]) => unknown)(...a),
 }));
 vi.mock("./translate-command.js", () => ({
-  runTranslate: (...a: unknown[]) => (translateMock as (...x: unknown[]) => unknown)(...a),
-  l10nRootOrThrow: (projectRoot: string) => path.join(projectRoot, "l10n", "en-US"),
+  runTranslate: (...a: unknown[]) =>
+    (translateMock as (...x: unknown[]) => unknown)(...a),
+  l10nRootOrThrow: (projectRoot: string) =>
+    path.join(projectRoot, "l10n", "en-US"),
 }));
 const shortsMock = vi.fn();
 vi.mock("./shorts-command.js", () => ({
-  runShorts: (...a: unknown[]) => (shortsMock as (...x: unknown[]) => unknown)(...a),
+  runShorts: (...a: unknown[]) =>
+    (shortsMock as (...x: unknown[]) => unknown)(...a),
+}));
+vi.mock("./youtube-command.js", () => ({
+  resolveYouTubeCredentials: async () => { throw new Error("offline test"); },
+  runYouTube: vi.fn(),
 }));
 const verticalMock = vi.fn();
 vi.mock("./vertical-command.js", () => ({
-  runVertical: (...a: unknown[]) => (verticalMock as (...x: unknown[]) => unknown)(...a),
+  runVertical: (...a: unknown[]) =>
+    (verticalMock as (...x: unknown[]) => unknown)(...a),
 }));
 vi.mock("./backlog-score.js", () => ({
-  runBacklogJudge: (...a: unknown[]) => (judgeMock as (...x: unknown[]) => unknown)(...a),
+  runBacklogJudge: (...a: unknown[]) =>
+    (judgeMock as (...x: unknown[]) => unknown)(...a),
 }));
 vi.mock("@video/workflow", () => ({
   writeRun: vi.fn(async () => undefined),
   formatRunId: (stage: string) => `${stage}-test`,
-  approveCheckpoint: (...a: unknown[]) => (approveMock as (...x: unknown[]) => unknown)(...a),
+  approveCheckpoint: (...a: unknown[]) =>
+    (approveMock as (...x: unknown[]) => unknown)(...a),
 }));
 
-import { runBacklogAuto, minimaxIdleMinutes, acquireAutoLock, fetchMiniMaxQuota } from "./backlog-auto.js";
-import { loadBacklogStore, saveBacklogStore, type BacklogEntry } from "./backlog-store.js";
+import {
+  runBacklogAuto,
+  minimaxIdleMinutes,
+  acquireAutoLock,
+  fetchMiniMaxQuota,
+} from "./backlog-auto.js";
+import {
+  loadBacklogStore,
+  saveBacklogStore,
+  type BacklogEntry,
+} from "./backlog-store.js";
+import {
+  expectedJudgeIds,
+  judgeFingerprint,
+  judgeRoute,
+  makeJudgeCacheRecord,
+  writeJudgeCache,
+} from "./backlog-judge-cache.js";
+import { loadProviderConfig } from "@video/llm";
 
 let repoRoot: string;
 let consoleOutput: string[];
@@ -71,7 +104,18 @@ beforeEach(() => {
   draftMock.mockReset().mockResolvedValue(0);
   makeMock.mockReset().mockResolvedValue(0);
   translateMock.mockReset().mockResolvedValue(0);
-  judgeMock.mockReset().mockResolvedValue(0);
+  verticalMock.mockReset().mockResolvedValue(0);
+  shortsMock.mockReset().mockImplementation(async ({ project }: { project: string }) => {
+    mkdirSync(path.join(project, "youtube"), { recursive: true });
+    writeFileSync(path.join(project, "youtube", "shorts.mp4"), "test");
+    return 0;
+  });
+  // The real judge writes a ranking the contract accepts; the stub must
+  // do the same or the auto flow refuses the pick it just judged.
+  judgeMock.mockReset().mockImplementation(async () => {
+    writeValidJudgeCache();
+    return 0;
+  });
   approveMock.mockReset().mockResolvedValue({ ok: true });
   process.env["MINIMAX_API_KEY"] = "test-key";
 });
@@ -97,14 +141,40 @@ function seed(partial: Partial<BacklogEntry>): BacklogEntry {
   return entry;
 }
 
-function seedJudgeCache(rankFirstId: string): void {
-  const runs = path.join(repoRoot, "runs");
-  mkdirSync(runs, { recursive: true });
-  writeFileSync(
-    path.join(runs, "backlog-judge-" + "a".repeat(64) + ".yaml"),
-    `schema: backlog-judge/1\nhash: abc\nprovider: glm\ncreated: "2026-11-19"\nranking:\n  - id: ${rankFirstId}\n    rank: 1\n    reason: r\n  - id: other-id-not-open\n    rank: 2\n    reason: r\n`,
-    "utf8",
+/** Write a judge cache the CURRENT contract accepts: one row per OPEN
+ *  idea (the ranking length must match), under the fingerprint of the
+ *  current inputs. `rankFirstId`, when still open, goes first. */
+function writeValidJudgeCache(rankFirstId?: string): void {
+  const store = loadBacklogStore(repoRoot);
+  const fingerprint = judgeFingerprint(
+    repoRoot,
+    store,
+    judgeRoute(loadProviderConfig()),
   );
+  const ids = expectedJudgeIds(store);
+  const first =
+    rankFirstId !== undefined && ids.includes(rankFirstId)
+      ? rankFirstId
+      : ids[0];
+  const ordered =
+    first !== undefined ? [first, ...ids.filter((id) => id !== first)] : [];
+  writeJudgeCache(
+    repoRoot,
+    makeJudgeCacheRecord({
+      fingerprint,
+      provider: "glm",
+      created: "2026-11-19T00:00:00.000Z",
+      ranking: ordered.map((id, index) => ({
+        id,
+        rank: index + 1,
+        reason: "r",
+      })),
+    }),
+  );
+}
+
+function seedJudgeCache(rankFirstId: string): void {
+  writeValidJudgeCache(rankFirstId);
 }
 
 /** The quota fetch is the network seam: default = healthy (both windows 90%). */
@@ -113,7 +183,11 @@ function quotaOk(): typeof fetch {
     new Response(
       JSON.stringify({
         model_remains: [
-          { model_name: "general", current_interval_remaining_percent: 90, current_weekly_remaining_percent: 90 },
+          {
+            model_name: "general",
+            current_interval_remaining_percent: 90,
+            current_weekly_remaining_percent: 90,
+          },
         ],
       }),
       { status: 200 },
@@ -121,8 +195,8 @@ function quotaOk(): typeof fetch {
 }
 
 function readyToFire(): Record<string, unknown> {
-  seedJudgeCache("2026-11-19-top-idea");
   seed({ status: "proposed" });
+  seedJudgeCache("2026-11-19-top-idea");
   return {
     cwd: repoRoot,
     fetchImpl: quotaOk(),
@@ -138,11 +212,18 @@ describe("fetchMiniMaxQuota", () => {
 
   it("fails loudly without a key or without the general bucket", async () => {
     delete process.env["MINIMAX_API_KEY"];
-    await expect(fetchMiniMaxQuota(quotaOk())).rejects.toThrow(/MINIMAX_API_KEY is not set/);
+    await expect(fetchMiniMaxQuota(quotaOk())).rejects.toThrow(
+      /MINIMAX_API_KEY is not set/,
+    );
     process.env["MINIMAX_API_KEY"] = "test-key";
     const noBucket = (async () =>
-      new Response(JSON.stringify({ model_remains: [{ model_name: "video" }] }), { status: 200 })) as unknown as typeof fetch;
-    await expect(fetchMiniMaxQuota(noBucket)).rejects.toThrow(/no general-bucket percentages/);
+      new Response(
+        JSON.stringify({ model_remains: [{ model_name: "video" }] }),
+        { status: 200 },
+      )) as unknown as typeof fetch;
+    await expect(fetchMiniMaxQuota(noBucket)).rejects.toThrow(
+      /no general-bucket percentages/,
+    );
   });
 });
 
@@ -184,7 +265,9 @@ describe("acquireAutoLock", () => {
     expect(acquireAutoLock(repoRoot, NOW).acquired).toBe(true);
     const second = acquireAutoLock(repoRoot, NOW);
     expect(second.acquired).toBe(false);
-    expect(second.acquired === false ? second.reason : "").toMatch(/another backlog auto is running/);
+    expect(second.acquired === false ? second.reason : "").toMatch(
+      /another backlog auto is running/,
+    );
   });
 
   it("a stale lock from a dead pid is taken over after 3h", () => {
@@ -192,7 +275,11 @@ describe("acquireAutoLock", () => {
     mkdirSync(runs, { recursive: true });
     const lock = path.join(runs, "backlog-auto.lock");
     writeFileSync(lock, "pid: 999999999\ntaken: 2026-11-19T00:00:00Z\n");
-    utimesSync(lock, new Date(NOW - 4 * 60 * 60 * 1000), new Date(NOW - 4 * 60 * 60 * 1000));
+    utimesSync(
+      lock,
+      new Date(NOW - 4 * 60 * 60 * 1000),
+      new Date(NOW - 4 * 60 * 60 * 1000),
+    );
     expect(acquireAutoLock(repoRoot, NOW).acquired).toBe(true);
   });
 });
@@ -205,7 +292,11 @@ describe("runBacklogAuto — trigger gates", () => {
       new Response(
         JSON.stringify({
           model_remains: [
-            { model_name: "general", current_interval_remaining_percent: 90, current_weekly_remaining_percent: 40 },
+            {
+              model_name: "general",
+              current_interval_remaining_percent: 90,
+              current_weekly_remaining_percent: 40,
+            },
           ],
         }),
         { status: 200 },
@@ -229,7 +320,12 @@ describe("runBacklogAuto — trigger gates", () => {
   });
 
   it("refuses while an idea is stuck mid-pipeline", async () => {
-    seed({ id: "2026-11-19-stuck", topic: "卡住的点子", status: "drafting", drafting_at: new Date().toISOString() });
+    seed({
+      id: "2026-11-19-stuck",
+      topic: "卡住的点子",
+      status: "drafting",
+      drafting_at: new Date().toISOString(),
+    });
     const code = await runBacklogAuto(readyToFire());
     expect(code).toBe(0);
     expect(draftMock).not.toHaveBeenCalled();
@@ -247,21 +343,38 @@ describe("runBacklogAuto — the pipeline", () => {
       draft: { cwd: repoRoot, noAsk: true },
     });
     expect(makeMock).toHaveBeenCalledTimes(2);
-    expect(makeMock.mock.calls[0]?.[0]).toMatchObject({ project: "为什么停火线能冻结几十年", cwd: repoRoot });
-    expect(makeMock.mock.calls[1]?.[0]).toMatchObject({ project: "为什么停火线能冻结几十年", lang: "en-US" });
+    expect(makeMock.mock.calls[0]?.[0]).toMatchObject({
+      project: "为什么停火线能冻结几十年",
+      cwd: repoRoot,
+    });
+    expect(makeMock.mock.calls[1]?.[0]).toMatchObject({
+      project: "为什么停火线能冻结几十年",
+      lang: "en-US",
+    });
     expect(translateMock).toHaveBeenCalledTimes(1);
-    expect(translateMock.mock.calls[0]?.[0]).toMatchObject({ project: "为什么停火线能冻结几十年", lang: "en-US" });
+    expect(translateMock.mock.calls[0]?.[0]).toMatchObject({
+      project: "为什么停火线能冻结几十年",
+      lang: "en-US",
+    });
     // Both storyboards are approved before their renders — the gate that
     // killed the first real auto run (render-preview refuses otherwise).
     expect(approveMock).toHaveBeenCalledTimes(2);
-    expect(approveMock.mock.calls[0]?.[1]).toMatchObject({ stage: "storyboard" });
+    expect(approveMock.mock.calls[0]?.[1]).toMatchObject({
+      stage: "storyboard",
+    });
     expect(String(approveMock.mock.calls[0]?.[0])).toContain("projects");
-    expect(String(approveMock.mock.calls[1]?.[0])).toContain(path.join("l10n", "en-US"));
+    expect(String(approveMock.mock.calls[1]?.[0])).toContain(
+      path.join("l10n", "en-US"),
+    );
     // The draft stage is mocked here, so the FINAL drafted stamp belongs
     // to the real draft — auto's own visible effect is the approval.
-    const entry = loadBacklogStore(repoRoot).ideas.find((e) => e.id === "2026-11-19-top-idea");
+    const entry = loadBacklogStore(repoRoot).ideas.find(
+      (e) => e.id === "2026-11-19-top-idea",
+    );
     expect(entry?.status).toBe("idea");
-    expect(existsSync(path.join(repoRoot, "runs", "backlog-auto.lock"))).toBe(false);
+    expect(existsSync(path.join(repoRoot, "runs", "backlog-auto.lock"))).toBe(
+      false,
+    );
   });
 
   it("auto-approves a proposed entry and takes the first OPEN ranked idea when the top one is drafted", async () => {
@@ -275,9 +388,15 @@ describe("runBacklogAuto — the pipeline", () => {
     seed({ id: "2026-11-19-second", topic: "第二个点子", status: "idea" });
     seed({ id: "2026-11-19-top-idea", status: "drafted", project: "x" });
 
-    const code = await runBacklogAuto({ cwd: repoRoot, fetchImpl: quotaOk(), runPublish: async () => 0 });
+    const code = await runBacklogAuto({
+      cwd: repoRoot,
+      fetchImpl: quotaOk(),
+      runPublish: async () => 0,
+    });
     expect(code).toBe(0);
-    expect(draftMock.mock.calls[0]?.[0]).toMatchObject({ id: "2026-11-19-second" });
+    expect(draftMock.mock.calls[0]?.[0]).toMatchObject({
+      id: "2026-11-19-second",
+    });
   });
 
   it("a failed stage aborts, keeps the lock released, and leaves the idea approved-but-unstamped", async () => {
@@ -286,11 +405,15 @@ describe("runBacklogAuto — the pipeline", () => {
     expect(code).toBe(1);
     expect(translateMock).not.toHaveBeenCalled();
     expect(draftMock).toHaveBeenCalledTimes(1);
-    const entry = loadBacklogStore(repoRoot).ideas.find((e) => e.id === "2026-11-19-top-idea");
+    const entry = loadBacklogStore(repoRoot).ideas.find(
+      (e) => e.id === "2026-11-19-top-idea",
+    );
     // The real draft stamps drafting→drafted; with it mocked the entry
     // rests at the auto-approved state, ready for a manual resume.
     expect(entry?.status).toBe("idea");
-    expect(existsSync(path.join(repoRoot, "runs", "backlog-auto.lock"))).toBe(false);
+    expect(existsSync(path.join(repoRoot, "runs", "backlog-auto.lock"))).toBe(
+      false,
+    );
     expect(consoleErrors.join("\n")).toMatch(/stage make-zh failed/);
   });
 
@@ -307,13 +430,17 @@ describe("runBacklogAuto — the pipeline", () => {
     expect(code).toBe(0);
     expect(draftMock).not.toHaveBeenCalled();
     expect(loadBacklogStore(repoRoot).ideas[0]?.status).toBe("proposed");
-    expect(existsSync(path.join(repoRoot, "runs", "backlog-auto.lock"))).toBe(false);
+    expect(existsSync(path.join(repoRoot, "runs", "backlog-auto.lock"))).toBe(
+      false,
+    );
     expect(consoleOutput.join("\n")).toMatch(/dry run — nothing executed/);
   });
 
-  it("picks the NEWEST judge cache by mtime, not filename order", async () => {
-    // Two caches whose hashes sort so the OLDER file is alphabetically
-    // last — the old name-order pick would read the stale one.
+  it("ignores the legacy per-hash judge caches", async () => {
+    // The judge cache is ONE file (runs/backlog-judge.yaml, fingerprinted
+    // against the current inputs). The old per-hash files are removed on
+    // sight and must never decide the pick — here they rank a stale entry
+    // first, and the pick must still be the open idea.
     const runs = path.join(repoRoot, "runs");
     mkdirSync(runs, { recursive: true });
     writeFileSync(
@@ -335,9 +462,15 @@ describe("runBacklogAuto — the pipeline", () => {
       new Date(st.mtimeMs - 60_000),
       new Date(st.mtimeMs - 60_000),
     );
-    const code = await runBacklogAuto({ cwd: repoRoot, fetchImpl: quotaOk(), runPublish: async () => 0 });
+    const code = await runBacklogAuto({
+      cwd: repoRoot,
+      fetchImpl: quotaOk(),
+      runPublish: async () => 0,
+    });
     expect(code).toBe(0);
-    expect(draftMock.mock.calls[0]?.[0]).toMatchObject({ id: "2026-11-19-top-idea" });
+    expect(draftMock.mock.calls[0]?.[0]).toMatchObject({
+      id: "2026-11-19-top-idea",
+    });
   });
 
   it("runs the judge first when no cache exists", async () => {
@@ -346,7 +479,11 @@ describe("runBacklogAuto — the pipeline", () => {
       seedJudgeCache("2026-11-19-top-idea");
       return 0;
     });
-    const code = await runBacklogAuto({ cwd: repoRoot, fetchImpl: quotaOk(), runPublish: async () => 0 });
+    const code = await runBacklogAuto({
+      cwd: repoRoot,
+      fetchImpl: quotaOk(),
+      runPublish: async () => 0,
+    });
     expect(code).toBe(0);
     expect(judgeMock).toHaveBeenCalledTimes(1);
     expect(draftMock).toHaveBeenCalled();
@@ -392,41 +529,37 @@ describe("runBacklogAuto — the pipeline", () => {
       "douyin-zh",
       "douyin-en",
     ]);
-    expect(consoleErrors.join("\n")).toMatch(/publish-yt-zh failed .* non-fatal/);
+    expect(consoleErrors.join("\n")).toMatch(
+      /publish-yt-zh failed .* non-fatal/,
+    );
   });
 
   it("runs the shorts derivative + uploads to YouTube Shorts + writes the TikTok lane", async () => {
-    let shortsUploadInput: { slug: string; topic: string } | undefined;
+    const uploads: { slug: string; topic: string }[] = [];
     const seeded = seed({});
     seedJudgeCache(seeded.id);
-    shortsMock.mockResolvedValue(0);
-    verticalMock.mockResolvedValue(0);
-    // The mocked vertical/shorts stages don't write anything; the pipeline
-    // uploads only when the cut exists, so drop a stand-in first.
-    const ytDir = path.join(
-      repoRoot,
-      "projects",
-      "为什么停火线能冻结几十年",
-      "vertical",
-      "youtube",
-    );
-    mkdirSync(ytDir, { recursive: true });
-    writeFileSync(path.join(ytDir, "shorts.mp4"), Buffer.alloc(8));
+    const enYoutube = path.join(repoRoot, "projects", seeded.topic, "l10n/en-US/youtube");
+    mkdirSync(enYoutube, { recursive: true });
+    writeFileSync(path.join(enYoutube, "title.txt"), "Why ceasefire lines freeze");
     const code = await runBacklogAuto({
       cwd: repoRoot,
       fetchImpl: quotaOk(),
       runPublish: async () => 0,
       uploadShorts: async (input) => {
-        shortsUploadInput = input;
+        uploads.push(input);
         return 0;
       },
-      shortsCredentials: { clientId: "c", clientSecret: "s", refreshToken: "r" },
+      shortsCredentials: {
+        clientId: "c",
+        clientSecret: "s",
+        refreshToken: "r",
+      },
     });
     expect(code).toBe(0);
-    expect(shortsUploadInput).toMatchObject({
+    expect(uploads).toMatchObject([{
       slug: "为什么停火线能冻结几十年",
       topic: seeded.topic,
-    });
+    }, { slug: seeded.topic + "/l10n/en-US", topic: "Why ceasefire lines freeze" }]);
     const tiktokPath = path.join(
       repoRoot,
       "projects",
@@ -443,6 +576,22 @@ describe("runBacklogAuto — the pipeline", () => {
     expect(tiktok.visibility).toBe("public");
   });
 
+  it("fails the run when the English Shorts export is missing", async () => {
+    const entry = seed({});
+    seedJudgeCache(entry.id);
+    shortsMock.mockImplementationOnce(async ({ project }: { project: string }) => {
+      mkdirSync(path.join(project, "youtube"), { recursive: true });
+      writeFileSync(path.join(project, "youtube", "shorts.mp4"), "test");
+      return 0;
+    }).mockResolvedValueOnce(0);
+    const code = await runBacklogAuto({
+      cwd: repoRoot, fetchImpl: quotaOk(), runPublish: async () => 0,
+      uploadShorts: async () => 0,
+    });
+    expect(code).toBe(1);
+    expect(consoleErrors.join("\n")).toContain("shorts-en");
+  });
+
   it("--no-shorts skips the derivative, the upload, and the TikTok lane", async () => {
     seed({});
     seedJudgeCache("2026-11-19-top");
@@ -457,7 +606,12 @@ describe("runBacklogAuto — the pipeline", () => {
     expect(code).toBe(0);
     expect(uploadShorts).not.toHaveBeenCalled();
     expect(verticalMock).not.toHaveBeenCalled();
-    const runsDir = path.join(repoRoot, "projects", "为什么停火线能冻结几十年", "tiktok");
+    const runsDir = path.join(
+      repoRoot,
+      "projects",
+      "为什么停火线能冻结几十年",
+      "tiktok",
+    );
     expect(existsSync(runsDir)).toBe(false);
   });
 });
@@ -477,7 +631,11 @@ describe("runBacklogAuto — scheduler flags", () => {
     expect(code).toBe(0);
     expect(launchArgs[0]?.[0]).toBe("load");
     const plist = readFileSync(
-      path.join(repoRoot, "LaunchAgents", "com.aivideofactory.backlog-auto.plist"),
+      path.join(
+        repoRoot,
+        "LaunchAgents",
+        "com.aivideofactory.backlog-auto.plist",
+      ),
       "utf8",
     );
     expect(plist).toContain("com.aivideofactory.backlog-auto");
@@ -491,7 +649,10 @@ describe("minimaxIdleMinutes — self-poisoning guard", () => {
     const runs = path.join(repoRoot, "runs");
     mkdirSync(runs, { recursive: true });
     const f = path.join(runs, "backlog-auto-2026-11-19T17:04:31Z-001.yaml");
-    writeFileSync(f, "provider: minimax+glm\nstage: backlog-auto\nstatus: succeeded\n");
+    writeFileSync(
+      f,
+      "provider: minimax+glm\nstage: backlog-auto\nstatus: succeeded\n",
+    );
     touch(f, NOW - 5 * 60 * 1000);
     expect(minimaxIdleMinutes(repoRoot, NOW)).toBe(Number.POSITIVE_INFINITY);
   });

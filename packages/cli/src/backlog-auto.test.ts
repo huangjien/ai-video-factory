@@ -73,6 +73,8 @@ import {
   minimaxIdleMinutes,
   acquireAutoLock,
   fetchMiniMaxQuota,
+  publishModel,
+  shortsDescription,
 } from "./backlog-auto.js";
 import {
   loadBacklogStore,
@@ -655,5 +657,60 @@ describe("minimaxIdleMinutes — self-poisoning guard", () => {
     );
     touch(f, NOW - 5 * 60 * 1000);
     expect(minimaxIdleMinutes(repoRoot, NOW)).toBe(Number.POSITIVE_INFINITY);
+  });
+});
+
+describe("publishModel", () => {
+  afterEach(() => {
+    delete process.env["BACKLOG_PUBLISH_MODEL"];
+  });
+
+  it("defaults to minimax — the GLM lane content-filters and breaks bilibili tags", () => {
+    expect(publishModel()).toBe("minimax");
+  });
+
+  it("honours an explicit BACKLOG_PUBLISH_MODEL=glm override", () => {
+    process.env["BACKLOG_PUBLISH_MODEL"] = "glm";
+    expect(publishModel()).toBe("glm");
+  });
+});
+
+describe("shortsDescription", () => {
+  let dir: string;
+
+  beforeEach(() => {
+    dir = mkdtempSync(path.join(tmpdir(), "video-shorts-desc-"));
+    mkdirSync(path.join(dir, "youtube"), { recursive: true });
+  });
+  afterEach(() => {
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  it("keeps only the spoken section of the hook file, not the cover prompt", () => {
+    writeFileSync(
+      path.join(dir, "youtube", "shorts-hook.txt"),
+      "古代中国武士、战车车夫 · 镜头采用连续三个中景\n\n口播钩子（0—5秒）：\n同样是英雄，为什么有人等待封神？\n",
+      "utf8",
+    );
+    const out = shortsDescription(dir, "TOPIC");
+    expect(out).toContain("同样是英雄，为什么有人等待封神？");
+    expect(out).not.toContain("镜头采用连续三个中景");
+    expect(out.endsWith("TOPIC")).toBe(true);
+  });
+
+  it("falls back to the film description when the hook has no spoken section", () => {
+    writeFileSync(
+      path.join(dir, "youtube", "shorts-hook.txt"),
+      "cover prompt only, no spoken script\n",
+      "utf8",
+    );
+    writeFileSync(path.join(dir, "youtube", "description.md"), "FILM DESCRIPTION\n", "utf8");
+    const out = shortsDescription(dir, "TOPIC");
+    expect(out).toContain("FILM DESCRIPTION");
+    expect(out).not.toContain("cover prompt only");
+  });
+
+  it("falls back to the topic when neither file exists", () => {
+    expect(shortsDescription(dir, "TOPIC")).toBe("TOPIC");
   });
 });

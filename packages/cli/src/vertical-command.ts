@@ -1,5 +1,7 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { statSync } from "node:fs";
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
 import path from "node:path";
 import type { Command } from "commander";
 import { parse as parseYaml, stringify as yamlStringify } from "yaml";
@@ -13,8 +15,43 @@ import {
 import { resolveProjectDir } from "./project-path.js";
 import { providerInstance } from "./draft-command.js";
 import { loadProviderConfig } from "@video/llm";
-import { probeDurationSec } from "./shorts-command.js";
+import { probeDurationSec, selectShortsWindow } from "./shorts-command.js";
+import { readSceneTimings } from "@video/media";
 import { runMakeCli } from "./make-command.js";
+
+const execFileAsync = promisify(execFile);
+
+/** YouTube Shorts cap for a vertical master. */
+const SHORTS_CAP_SEC = 180;
+
+/**
+ * Trim a rendered master to `seconds` (re-encode, so the cut lands on a
+ * clean frame with intact audio). The master is replaced in place.
+ */
+async function trimMaster(masterPath: string, seconds: number): Promise<void> {
+  const tmp = `${masterPath}.trimmed.mp4`;
+  await execFileAsync("ffmpeg", [
+    "-y",
+    "-i",
+    masterPath,
+    "-t",
+    String(seconds),
+    "-c:v",
+    "libx264",
+    "-preset",
+    "fast",
+    "-crf",
+    "23",
+    "-c:a",
+    "aac",
+    "-b:a",
+    "128k",
+    "-movflags",
+    "+faststart",
+    tmp,
+  ]);
+  renameSync(tmp, masterPath);
+}
 
 /**
  * `video vertical <project>` — a NATIVE vertical master of an existing
@@ -170,9 +207,45 @@ export async function runVertical(opts: VerticalOptions): Promise<number> {
     return code;
   }
   const duration = await probeDurationSec(masterPath);
-  if (duration <= 0 || duration > 180) {
-    console.error(`Vertical master failed duration check (${duration}s, maximum 180s).`);
+  if (duration <= 0) {
+    console.error(`Vertical master failed duration check (${duration}s, maximum ${SHORTS_CAP_SEC}s).`);
     return 1;
+  }
+  if (duration > SHORTS_CAP_SEC) {
+    // The narration can run longer than the scripted scene durations (the
+    // Edge voice reads slower than planned), so a master lands a few
+    // seconds over the cap. Trim to the last scene boundary that fits
+    // instead of failing the whole render — measured 2026-11-23: a
+    // 150 s script produced a 183.8 s master and the stage failed.
+    const timings = await readSceneTimings(verticalRoot).catch(() => []);
+    const window = selectShortsWindow(timings, duration, SHORTS_CAP_SEC);
+    const boundary = Math.floor(window.end);
+    // Cut on a scene edge when the render tracks the script. When the TTS
+    // outran the scripted durations (183.8 s rendered from a 150 s script),
+    // the boundaries are stale and cutting on one would drop a whole
+    // scene — trim the tail instead.
+    const cut =
+      boundary > 0 && duration - boundary <= 15
+        ? Math.min(boundary, SHORTS_CAP_SEC - 1)
+        : SHORTS_CAP_SEC - 1;
+    if (cut <= 0) {
+      console.error(`Vertical master failed duration check (${duration}s, maximum ${SHORTS_CAP_SEC}s).`);
+      return 1;
+    }
+    try {
+      await trimMaster(masterPath, cut);
+    } catch (err) {
+      console.error(`✗ could not trim the vertical master: ${(err as Error).message}`);
+      return 1;
+    }
+    const trimmed = await probeDurationSec(masterPath);
+    if (trimmed <= 0 || trimmed > SHORTS_CAP_SEC) {
+      console.error(
+        `Vertical master failed duration check after trim (${trimmed}s, maximum ${SHORTS_CAP_SEC}s).`,
+      );
+      return 1;
+    }
+    console.log(`  ! vertical master trimmed ${duration}s → ${trimmed}s (${SHORTS_CAP_SEC}s Shorts cap)`);
   }
   console.log(`✓ vertical master: ${masterPath}`);
   return 0;

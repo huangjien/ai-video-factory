@@ -9,6 +9,15 @@ The landscape draft targets six minutes by default. After rendering the master,
 run `video vertical <project>` to derive a native portrait edition of up to
 three minutes. [Landscape and vertical workflow](docs/USAGE.md#landscape-master-and-vertical-edition)
 
+## Published videos
+
+Watch *Why AI Maps Get Place Names Wrong* as a full-length explainer or a vertical Short.
+
+| Language | Full video | Short |
+| --- | --- | --- |
+| 中文 | [YouTube](https://www.youtube.com/watch?v=dMElCa6FDU0) · [哔哩哔哩](https://www.bilibili.com/video/BV15VyQzhE3w) | [YouTube Shorts](https://www.youtube.com/shorts/mXvoS7YUvzs) |
+| English | [YouTube](https://www.youtube.com/watch?v=9MIqtJ7yjtk) · [Bilibili](https://www.bilibili.com/video/BV1VVyQzhEyG) | [YouTube Shorts](https://www.youtube.com/shorts/mdrRQ7GjlrQ) |
+
 ## Principles
 
 > AI generates · Human decides · Code renders · Git remembers — `docs/AI_Video_Factory_Design_and_Plan_v1.1.md` §65.

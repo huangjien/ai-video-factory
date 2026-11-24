@@ -9,6 +9,8 @@ import {
   DEFAULT_HARVEST_LABEL,
   addScheduleCommand,
   plistContentFor,
+  publishEnv,
+  readSecretsEnv,
   runBacklogSchedule,
 } from "./backlog-schedule.js";
 
@@ -260,6 +262,7 @@ describe("runBacklogSchedule — install", () => {
       distEntry: fixtureDist(),
       install: true,
       runLaunchctl: async () => 0,
+      secretsFile: path.join(tmpdir(), "video-secrets-absent.env"),
     });
     delete process.env["MINIMAX_API_KEY"];
     expect(code).toBe(0);
@@ -282,12 +285,40 @@ describe("runBacklogSchedule — install", () => {
       distEntry: fixtureDist(),
       install: true,
       runLaunchctl: async () => 0,
+      secretsFile: path.join(tmpdir(), "video-secrets-absent.env"),
     });
     for (const [key, value] of Object.entries(saved)) {
       if (value !== undefined) process.env[key] = value;
     }
     expect(code).toBe(0);
     expect(consoleOutput.join("\n")).toMatch(/env baked in: \(none found/);
+  });
+
+  it("bakes the secrets store's token into the plist when the shell has none", async () => {
+    captureConsole();
+    const dir = mkdtempSync(path.join(tmpdir(), "video-secrets-"));
+    const secrets = path.join(dir, "ai.env");
+    writeFileSync(secrets, "YOUTUBE_REFRESH_TOKEN=fresh-store-token\n", "utf8");
+    const saved = process.env["YOUTUBE_REFRESH_TOKEN"];
+    delete process.env["YOUTUBE_REFRESH_TOKEN"];
+    try {
+      const code = await runBacklogSchedule({
+        plistDir: fixturePlistDir(),
+        distEntry: fixtureDist(),
+        install: true,
+        runLaunchctl: async () => 0,
+        secretsFile: secrets,
+      });
+      expect(code).toBe(0);
+      const plist = readFileSync(
+        path.join(fixturePlistDir(), `${DEFAULT_HARVEST_LABEL}.plist`),
+        "utf8",
+      );
+      expect(plist).toContain("fresh-store-token");
+    } finally {
+      if (saved !== undefined) process.env["YOUTUBE_REFRESH_TOKEN"] = saved;
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 });
 
@@ -379,3 +410,64 @@ function captureConsole() {
   console.log = (...a: unknown[]) => consoleOutput.push(a.join(" "));
   console.error = (...a: unknown[]) => consoleErrors.push(a.join(" "));
 }
+
+describe("readSecretsEnv", () => {
+  it("parses KEY=value and export KEY=value lines, strips quotes, skips comments", () => {
+    const dir = mkdtempSync(path.join(tmpdir(), "video-secrets-"));
+    const file = path.join(dir, "ai.env");
+    writeFileSync(
+      file,
+      [
+        "# a comment",
+        "",
+        "PLAIN=one",
+        "export EXPORTED=two",
+        'QUOTED="three"',
+        "SINGLE='four'",
+        "SPACED = five",
+        "not-an-env-line",
+        "lower=ignored",
+        "EMPTY=",
+      ].join("\n"),
+      "utf8",
+    );
+    try {
+      const env = readSecretsEnv(file);
+      expect(env.PLAIN).toBe("one");
+      expect(env.EXPORTED).toBe("two");
+      expect(env.QUOTED).toBe("three");
+      expect(env.SINGLE).toBe("four");
+      expect(env.SPACED).toBe("five");
+      expect(env.lower).toBeUndefined();
+      expect(env.EMPTY).toBeUndefined();
+      expect(env["not-an-env-line"]).toBeUndefined();
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("returns an empty map for a missing file", () => {
+    expect(readSecretsEnv(path.join(tmpdir(), "video-secrets-missing.env"))).toEqual({});
+  });
+});
+
+describe("publishEnv", () => {
+  it("prefers the secrets store over the shell snapshot", () => {
+    const env = publishEnv(
+      { YOUTUBE_REFRESH_TOKEN: "stale-shell-token", GLM_API_KEY: "shell-glm" },
+      { YOUTUBE_REFRESH_TOKEN: "fresh-store-token" },
+    );
+    expect(env.YOUTUBE_REFRESH_TOKEN).toBe("fresh-store-token");
+    expect(env.GLM_API_KEY).toBe("shell-glm");
+  });
+
+  it("falls back to the shell when the store has no value", () => {
+    const env = publishEnv({ YOUTUBE_REFRESH_TOKEN: "shell-token" }, {});
+    expect(env.YOUTUBE_REFRESH_TOKEN).toBe("shell-token");
+  });
+
+  it("drops empty values", () => {
+    const env = publishEnv({ YOUTUBE_REFRESH_TOKEN: "" }, {});
+    expect(env.YOUTUBE_REFRESH_TOKEN).toBeUndefined();
+  });
+});

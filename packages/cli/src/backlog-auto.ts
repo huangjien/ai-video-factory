@@ -352,6 +352,16 @@ function spawnUpload(args: string[], cwd: string): Promise<{ code: number; outpu
   });
 }
 
+/** The publishing lanes package their metadata with MiniMax, not the
+ *  review-role default (GLM): the GLM lane rejects mythology-adjacent
+ *  copy with a contentFilter 400, and its bilibili tags break the
+ *  20-char-per-tag cap the uploader enforces (bilibili code 21005).
+ *  Both hit the nightly lane on 2026-11-23. Override with
+ *  BACKLOG_PUBLISH_MODEL=glm to go back. */
+export function publishModel(): "minimax" | "glm" {
+  return process.env["BACKLOG_PUBLISH_MODEL"] === "glm" ? "glm" : "minimax";
+}
+
 /** The real publish step. YouTube stays PRIVATE: testing-mode OAuth apps
  *  lock uploads private anyway, and going public stays a human call in
  *  Studio. bilibili is the channel's public surface, matching every
@@ -368,6 +378,7 @@ async function defaultPublish(step: PublishStep): Promise<number> {
       upload: true,
       privacy: "private",
       thumbnailProvider: "minimax",
+      model: publishModel(),
     });
   }
   if (step.kind === "douyin-zh" || step.kind === "douyin-en") {
@@ -384,10 +395,15 @@ async function defaultPublish(step: PublishStep): Promise<number> {
       cwd: step.repoRoot,
       upload: true,
       cutMode: "inset",
+      model: publishModel(),
     });
   }
   if (step.kind === "bili-zh") {
-    const pkg = await runBilibili({ project: step.slug, cwd: step.repoRoot });
+    const pkg = await runBilibili({
+      project: step.slug,
+      cwd: step.repoRoot,
+      model: publishModel(),
+    });
     if (pkg !== 0) return pkg;
     const up = await spawnUpload([step.slug], step.repoRoot);
     return up.code;
@@ -447,6 +463,31 @@ async function defaultPublish(step: PublishStep): Promise<number> {
 
 // --- shorts derivative publishing ---------------------------------------
 
+/** The description of a Shorts upload.
+ *
+ *  The packager's `shorts-hook.txt` starts with a cover-IMAGE prompt —
+ *  it is written for the image model, not for the viewer. Only the part
+ *  after a 口播 marker is spoken copy. English packs often carry the
+ *  prompt alone (no spoken section at all), so the film's
+ *  `youtube/description.md` is the fallback. Using the raw hook file put
+ *  a 900-character image prompt into the public description of the
+ *  English Shorts (2026-11-24).
+ */
+export function shortsDescription(workdir: string, topic: string): string {
+  const hookPath = path.join(workdir, "youtube", "shorts-hook.txt");
+  let body = "";
+  if (existsSync(hookPath)) {
+    const text = readFileSync(hookPath, "utf8");
+    const marker = text.search(/口播(文案|钩子|稿)/);
+    body = (marker < 0 ? "" : text.slice(marker)).trim();
+  }
+  if (body === "") {
+    const descPath = path.join(workdir, "youtube", "description.md");
+    if (existsSync(descPath)) body = readFileSync(descPath, "utf8").trim();
+  }
+  return (body !== "" ? `${body}\n\n` : "") + topic;
+}
+
 /** Upload youtube/shorts.mp4 as a YouTube Shorts (private — the human
  *  flips public). Title = topic + #Shorts (100-char cap); description =
  *  the LLM shorts-hook. Failures return non-zero; the mp4 stays on disk. */
@@ -469,18 +510,11 @@ async function uploadShortsToYouTube(input: {
   const shortsPath =
     input.shortsPath ??
     path.join(input.repoRoot, "projects", input.slug, "youtube", "shorts.mp4");
-  const hookPath = path.join(
-    input.repoRoot,
-    "projects",
-    input.slug,
-    "youtube",
-    "shorts-hook.txt",
+  const description = shortsDescription(
+    path.join(input.repoRoot, "projects", input.slug),
+    input.topic,
   );
-  const hook = existsSync(hookPath)
-    ? readFileSync(hookPath, "utf8").trim()
-    : "";
   const title = `${input.topic} #Shorts`.slice(0, 100);
-  const description = (hook !== "" ? `${hook}\n\n` : "") + input.topic;
   const videoBytes = new Uint8Array(readFileSync(shortsPath));
   try {
     const { videoId, watchUrl } = await uploadVideo({

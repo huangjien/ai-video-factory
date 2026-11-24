@@ -1,5 +1,5 @@
 import { execFileSync, spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import path from "node:path";
 import type { Command } from "commander";
@@ -155,6 +155,9 @@ export interface BacklogScheduleOptions {
   command?: string;
   /** TEST SEAM: replaces launchctl execution; receives the argv after "launchctl". */
   runLaunchctl?: (args: string[]) => Promise<number>;
+  /** TEST SEAM: overrides the secrets store the installer reads provider
+   *  keys from (default ~/.config/secrets/ai.env). */
+  secretsFile?: string;
 }
 
 function defaultRunLaunchctl(args: string[]): Promise<number> {
@@ -272,6 +275,70 @@ const ENV_KEYS = [
   "LL_CONFIG",
 ] as const;
 
+/** The secrets store this repo already documents (`~/.zshrc` sources
+ *  every `~/.config/secrets/*.env` into the shell). */
+const SECRETS_ENV_FILE = path.join(
+  homedir(),
+  ".config",
+  "secrets",
+  "ai.env",
+);
+
+/**
+ * Read KEY=VALUE pairs out of the secrets store. `export KEY=value` lines
+ * are accepted too — the store's own README says to write them that way.
+ */
+export function readSecretsEnv(
+  file: string = SECRETS_ENV_FILE,
+): Record<string, string> {
+  const out: Record<string, string> = {};
+  if (!existsSync(file)) return out;
+  let raw: string;
+  try {
+    raw = readFileSync(file, "utf8");
+  } catch {
+    return out;
+  }
+  for (const line of raw.split("\n")) {
+    const trimmed = line.trim();
+    if (trimmed === "" || trimmed.startsWith("#")) continue;
+    const body = trimmed.startsWith("export ") ? trimmed.slice(7).trim() : trimmed;
+    const eq = body.indexOf("=");
+    if (eq <= 0) continue;
+    const key = body.slice(0, eq).trim();
+    if (!/^[A-Z_][A-Z0-9_]*$/.test(key)) continue;
+    let value = body.slice(eq + 1).trim();
+    if (
+      (value.startsWith('"') && value.endsWith('"') && value.length >= 2) ||
+      (value.startsWith("'") && value.endsWith("'") && value.length >= 2)
+    ) {
+      value = value.slice(1, -1);
+    }
+    if (value !== "") out[key] = value;
+  }
+  return out;
+}
+
+/**
+ * The env baked into the plist. The secrets store wins over the shell:
+ * the shell export is a snapshot taken when the shell started, so a
+ * re-minted token (a fresh `video youtube --auth`) is only visible in
+ * the store. Preferring the shell baked a REVOKED refresh token into the
+ * nightly plist on 2026-11-23 and every auto-run's YouTube uploads
+ * failed with `invalid_grant`.
+ */
+export function publishEnv(
+  shell: NodeJS.ProcessEnv = process.env,
+  secrets: Record<string, string> = readSecretsEnv(),
+): Record<string, string> {
+  const env: Record<string, string> = {};
+  for (const key of ENV_KEYS) {
+    const value = secrets[key] ?? shell[key];
+    if (value !== undefined && value !== "") env[key] = value;
+  }
+  return env;
+}
+
 async function doInstall(opts: BacklogScheduleOptions): Promise<number> {
   const dist = resolveDistEntry(opts);
   if (dist === null) {
@@ -283,11 +350,10 @@ async function doInstall(opts: BacklogScheduleOptions): Promise<number> {
   const kind = plistKind(opts);
   const target = plistPath(opts);
   mkdirSync(path.dirname(target), { recursive: true });
-  const env: Record<string, string> = {};
-  for (const key of ENV_KEYS) {
-    const value = process.env[key];
-    if (value !== undefined && value !== "") env[key] = value;
-  }
+  const env: Record<string, string> = publishEnv(
+    process.env,
+    readSecretsEnv(opts.secretsFile ?? SECRETS_ENV_FILE),
+  );
   const embedded = Object.keys(env);
   const content = plistContentFor(kind, {
     command: opts.command ?? process.execPath,

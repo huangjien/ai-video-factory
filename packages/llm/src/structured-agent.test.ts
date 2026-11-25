@@ -11,6 +11,7 @@ import {
   extractJsonObject,
   extractReplyBody,
   structuredYamlParser,
+  quoteColonScalars,
 } from "./structured-agent.js";
 
 /** A provider that answers with whatever it is handed, in order. */
@@ -217,5 +218,79 @@ describe("structuredYamlParser — the schema path as a parser", () => {
     });
     expect(parse("a: 1", "fake")).toEqual({ a: 1 });
     expect(() => parse("b: 1", "fake")).toThrow(/fake: Thing schema invalid/);
+  });
+
+  it("reads an answer whose plain scalar carries ': ' — a web page title copied in verbatim", () => {
+    const parse = structuredYamlParser({
+      schema,
+      schemaLabel: "Thing schema",
+      toError: (message, providerName) =>
+        new Error(`${providerName}: ${message}`),
+    });
+    // Line 53 of a research answer that was lost to this (2026-11-25).
+    const answer = [
+      "a:",
+      "  - id: s5",
+      "    url: https://www.reddit.com/r/AskHistorians/comments/1qj5p8s/",
+      "    title: 美国军队每2-4年调动部队的历史是什么？ : r/AskHistorians",
+      "    accessed: 未提供（仅任务内搜索摘要，未直接访问）",
+    ].join("\n");
+    expect(parse(answer, "fake")).toEqual({
+      a: [
+        {
+          id: "s5",
+          url: "https://www.reddit.com/r/AskHistorians/comments/1qj5p8s/",
+          title: "美国军队每2-4年调动部队的历史是什么？ : r/AskHistorians",
+          accessed: "未提供（仅任务内搜索摘要，未直接访问）",
+        },
+      ],
+    });
+  });
+
+  it("still fails on a malformation it cannot repair", () => {
+    const parse = structuredYamlParser({
+      schema,
+      schemaLabel: "Thing schema",
+      toError: (message, providerName) =>
+        new Error(`${providerName}: ${message}`),
+    });
+    expect(() => parse("a: [1, 2", "fake")).toThrow(/fake: YAML parse failed/);
+  });
+});
+
+describe("quoteColonScalars — only the lines YAML cannot read", () => {
+  it("quotes a plain scalar that carries ': ' and leaves every valid line as written", () => {
+    const text = [
+      "title: 美国军队每2-4年调动部队的历史是什么？ : r/AskHistorians",
+      "trailing: ends with a colon:",
+      "- item: x : y",
+      "url: https://example.com/a:b",
+      "fullwidth: 标题：副标题",
+      'quoted: "a: b"',
+      "flow: {a: 1, b: 2}",
+      "commented: 1  # note: x",
+      "note: |",
+      "  kept: as written",
+      "",
+      "  still: block",
+      "after: ok",
+    ].join("\n");
+    expect(quoteColonScalars(text)).toEqual(
+      [
+        'title: "美国军队每2-4年调动部队的历史是什么？ : r/AskHistorians"',
+        'trailing: "ends with a colon:"',
+        '- item: "x : y"',
+        "url: https://example.com/a:b",
+        "fullwidth: 标题：副标题",
+        'quoted: "a: b"',
+        "flow: {a: 1, b: 2}",
+        "commented: 1  # note: x",
+        "note: |",
+        "  kept: as written",
+        "",
+        "  still: block",
+        "after: ok",
+      ].join("\n"),
+    );
   });
 });

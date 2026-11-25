@@ -16,6 +16,8 @@ import {
   stampFrontmatterKey,
   writeAudioConfigIfAbsent,
 } from "./draft-command.js";
+import * as draftAgent from "@video/draft";
+import * as researchAgent from "@video/research";
 import { parseArticle } from "@video/draft";
 
 const DRAFT_JSON = {
@@ -85,6 +87,63 @@ afterAll(async () => {
   }
   await new Promise<void>((r) => server.close(() => r()));
   await rm(projectsRoot, { recursive: true, force: true }).catch(() => {});
+});
+
+it("records the elapsed time, claim, and provider when a draft fact check fails", async () => {
+  const claim = "A claim that needs a source";
+  const stop = new Error("end after fact check");
+  const topic = "failed-fact-check";
+  const project = path.join(projectsRoot, "projects", topic);
+  await mkdir(project, { recursive: true });
+  await writeProjectState(project, initState(topic));
+
+  const research = vi
+    .spyOn(researchAgent, "callResearch")
+    .mockImplementationOnce(async () => {
+      vi.setSystemTime(Date.now() + 112_000);
+      throw new researchAgent.ResearchError(
+        "malformed source response",
+        "minimax",
+      );
+    });
+  const draft = vi
+    .spyOn(draftAgent, "runScoredDraft")
+    .mockImplementationOnce(async (_input, _provider, _fallback, opts) => {
+      await expect(opts?.research?.([claim])).rejects.toThrow(
+        "malformed source response",
+      );
+      throw stop;
+    });
+  vi.useFakeTimers({ toFake: ["Date"] });
+  try {
+    await expect(
+      runDraft({
+        topic,
+        cwd: projectsRoot,
+        model: "glm",
+        noWeb: true,
+        noAsk: true,
+      }),
+    ).rejects.toThrow(stop);
+    const runs = path.join(project, "runs");
+    const file = (await readdir(runs)).find((name) =>
+      name.startsWith("draft-research-"),
+    );
+    expect(
+      parseYaml(await readFile(path.join(runs, file!), "utf8")),
+    ).toMatchObject({
+      stage: "draft-research",
+      status: "failed",
+      claim,
+      duration_ms: 112_000,
+      provider: "minimax",
+      error: "malformed source response",
+    });
+  } finally {
+    vi.useRealTimers();
+    draft.mockRestore();
+    research.mockRestore();
+  }
 });
 
 describe("runDraft — flag validation", () => {

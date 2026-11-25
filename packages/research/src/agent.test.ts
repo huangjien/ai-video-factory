@@ -16,6 +16,13 @@ class CannedProvider implements Provider {
     return {
       content,
       usage: { input: 200, output: 80 },
+      telemetry: {
+        requests: 1,
+        streams: 1,
+        headersTimeoutRetries: 0,
+        reasoningTokens: 55,
+        durationMs: 120,
+      },
     };
   }
 }
@@ -59,6 +66,11 @@ describe("callResearch (todo 3) — §55", () => {
     );
     expect(r.output.claims).toHaveLength(2);
     expect(r.output.meta.provider).toBe("minimax");
+    expect(r.telemetry).toMatchObject({
+      requests: 1,
+      streams: 1,
+      reasoningTokens: 55,
+    });
   });
 
   it("rejects missing fenced block with ResearchError", async () => {

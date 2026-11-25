@@ -1,9 +1,5 @@
-import { parse as parseYaml } from "yaml";
-import type {
-  ChatMessage,
-  Provider,
-  ProviderTelemetry,
-} from "./provider.js";
+import { LineCounter, parseDocument, parse as parseYaml } from "yaml";
+import type { ChatMessage, Provider, ProviderTelemetry } from "./provider.js";
 import { addTelemetry, emptyTelemetry } from "./provider.js";
 import { chatWithFallback } from "./retry.js";
 import { stripReasoning } from "./stream.js";
@@ -322,6 +318,42 @@ export function formatSchemaIssues(error: {
     .join("; ");
 }
 
+/** Quote the value of a `key: value` line whose plain scalar carries
+ *  ": ". YAML has no reading for such a line — ": " ends a plain scalar
+ *  and starts a mapping — so one web page title copied in verbatim
+ *  (`title: …的历史是什么？ : r/AskHistorians`, two of six research
+ *  answers on 2026-11-25) lost the whole answer. Content of an open `|`
+ *  / `>` block, and values that are already quoted or a flow collection,
+ *  are left as written. */
+export function quoteColonScalars(yamlText: string): string {
+  // `key: value` whose value is a plain scalar carrying ": ". A value
+  // with a ` #` is left alone: the ": " may sit in its comment, and
+  // that line is valid as written.
+  const colonScalar =
+    /^(\s*(?:-\s+)?[^\s"'{}[\]]+:\s+)([^\s"'|>&*!#[{].*:(?:\s|$).*)$/;
+  const lineCounter = new LineCounter();
+  const { errors } = parseDocument(yamlText, {
+    lineCounter,
+    prettyErrors: false,
+  });
+  const linesToRepair = new Set(
+    errors
+      .filter((error) => error.code === "BLOCK_AS_IMPLICIT_KEY")
+      .map((error) => lineCounter.linePos(error.pos[0]).line),
+  );
+  return yamlText
+    .split("\n")
+    .map((text, index) => {
+      if (!linesToRepair.has(index + 1)) return text;
+      const match = colonScalar.exec(text);
+      const value = match?.[2];
+      return match === null || value === undefined || /\s#/.test(value)
+        ? text
+        : match[1]! + JSON.stringify(value);
+    })
+    .join("\n");
+}
+
 /** One-shot content → validated data. Extracts, parses, and validates; on
  *  any failure throws through `toError` so each agent keeps its own error
  *  class. */
@@ -342,11 +374,17 @@ export function parseStructuredYaml<T>(
   try {
     parsed = parseYaml(yamlText);
   } catch (err) {
-    throw opts.toError(
-      `YAML parse failed: ${(err as Error).message}`,
-      providerName,
-      err,
-    );
+    // The repair runs only on text that already failed to parse, so no
+    // answer that parsed before is read differently now.
+    try {
+      parsed = parseYaml(quoteColonScalars(yamlText));
+    } catch {
+      throw opts.toError(
+        `YAML parse failed: ${(err as Error).message}`,
+        providerName,
+        err,
+      );
+    }
   }
   const result = opts.schema.safeParse(parsed);
   if (!result.success) {

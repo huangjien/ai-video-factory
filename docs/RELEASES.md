@@ -55,6 +55,36 @@ rendering a real MP4 there.
 Not in the published package: the curated BGM library (171 MB — use
 `--bgm-dir`) and `video studio` (needs the source checkout).
 
+**A night that finishes sooner.** The pipeline's own clock was the one
+number nobody had: the run records carried per-call durations but no
+stage trace, so a slow night could not be attributed. Four serial waits
+now run in parallel, each measured on this machine:
+
+| What | Before | After |
+|---|---|---|
+| Remotion bundle, 15 scenes (`RENDER_POOL=2`) | 137 s (a bundle per scene) | 98 s (built once, reused) |
+| Narration, 15-scene article (181 s of speech) | 36.9 s | 10.5 s (four scenes at once) |
+| The draft's two judge samples | 70 s of calls | 40 s of wall time |
+| Fact checks, three `FACT_*` claims | 267 s of calls | 112 s of wall time |
+
+The bundle is cached per entry-hash under `VIDEO_BUNDLE_CACHE`
+(`off` forces a private bundle per scene), narration runs four at a time
+for a remote provider and one at a time for a local model server
+(`TTS_POOL` overrides both), and the draft's samples and fact checks are
+requested together — the fact-check notes still reach the reviser in
+claim order. Each stage of the auto producer now records its own wall
+time, so the next slow night says where it went. Every fact-check call
+writes a `draft-research` run record, failures included.
+
+**One malformed line no longer loses a research answer.** A web page
+title copied verbatim into a YAML value (`title: …的历史是什么？ :
+r/AskHistorians`) leaves a plain scalar YAML cannot read — ": " ends a
+scalar and starts a mapping — and the whole answer was lost: twice in
+six research calls on 2026-11-25, each after two minutes of searching.
+The shared YAML reader now quotes such a value and parses it again. The
+repair runs only on text that already failed to parse, so no answer that
+parsed before is read differently now.
+
 ## v0.12 (2026-11-16) — the decision layer, the 2.6 image provider, and two films
 
 Three things shipped together:

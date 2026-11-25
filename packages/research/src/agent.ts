@@ -1,4 +1,4 @@
-import type { ChatMessage, Provider } from "@video/llm";
+import type { ChatMessage, Provider, ProviderTelemetry } from "@video/llm";
 import { callStructuredAgent } from "@video/llm";
 import { buildMessages, type ResearchInput } from "./prompt.js";
 import {
@@ -33,6 +33,7 @@ export interface CallResearchDeps {
 export interface CallResearchResult {
   output: ResearchOutput;
   usage: { input: number; output: number };
+  telemetry: ProviderTelemetry;
   /** Name of the provider that actually served the request
    * (primary or its fallback, per `chatWithFallback`). */
   providerName: string;
@@ -99,6 +100,7 @@ export async function callResearch(
   return {
     output,
     usage: r.usage,
+    telemetry: r.telemetry,
     providerName: r.providerName,
     messages: r.messages,
   };

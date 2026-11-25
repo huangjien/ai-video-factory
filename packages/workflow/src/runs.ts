@@ -23,6 +23,7 @@ export interface RunRecord {
   error?: string | undefined;
   provider?: string | undefined;
   model?: string | undefined;
+  claim?: string | undefined;
   prompt_hash?: string | undefined;
   tokens?: { input: number; output: number } | undefined;
   estimated_cost_usd?: number | undefined;

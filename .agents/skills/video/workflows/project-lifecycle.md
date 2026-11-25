@@ -106,6 +106,10 @@ Full command set:
 
 Every command accepts `--cwd <dir>` (default `projects/`). Every step writes `runs/<id>.yaml` and updates `state.yaml`.
 
+The auto producer's run record carries a per-stage wall time
+(`draft-zh 55m | make-zh 9m | translate-en 16m | …`), so a slow night can
+be attributed without re-running it.
+
 ### Picking from the backlog (`video draft --from-backlog <id>`, 2026-11-18)
 
 `video draft --from-backlog <id>` drafts a stored idea: the entry's topic

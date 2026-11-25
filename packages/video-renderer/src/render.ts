@@ -1,4 +1,5 @@
 import { execFile } from "node:child_process";
+import { createHash, type Hash } from "node:crypto";
 import {
   mkdtemp,
   mkdir,
@@ -8,10 +9,12 @@ import {
   stat,
   readFile,
   copyFile,
+  rename,
 } from "node:fs/promises";
 import { existsSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { homedir, tmpdir } from "node:os";
 import path from "node:path";
+import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
 import { bundle } from "@remotion/bundler";
@@ -19,6 +22,7 @@ import { renderMedia, selectComposition } from "@remotion/renderer";
 import { isTitleStyle, TITLE_FONTS } from "@video/video-components";
 import { sharedBrowser, type BrowserPool } from "./browser.js";
 import { resolveRootSourcePath } from "./root-source.js";
+import { RENDERER_REVISION } from "./scene-cache.js";
 import {
   slicePlanScene,
   type RenderPlan,
@@ -66,9 +70,11 @@ async function sweepRemotionTemp(maxAgeMs: number = 3600_000): Promise<number> {
   return removed;
 }
 
-const renderEntryTemplate = (
-  renderPlan: RenderPlan,
-): string => {
+/** The Remotion entry. It is byte-identical for every scene and every
+ *  film — the render plan arrives as `inputProps`, never as source — so
+ *  its webpack bundle is built once and reused (`cachedBundle`).
+ *  Measured 2026-11-25: bundling was 3.4 s of an 8.9 s scene render. */
+function staticEntry(): string {
   if (rootSrcPath === null) {
     throw new Error(
       "Remotion Root source not found — the published package vendors it under vendor/Root.js; reinstall @video/cli, or run `pnpm run build` in the workspace",
@@ -82,23 +88,179 @@ import { Root } from "${rootSrcPath}";
 // Without it, OffthreadVideo requests bundle-root paths and 404s.
 window.remotion_staticBase = "/public";
 
-const renderPlan = ${JSON.stringify(renderPlan)};
-
 const App = () => (
   <Composition
     id="video-factory"
     component={Root}
-    durationInFrames={renderPlan.totalFrames}
-    fps={renderPlan.project.fps}
-    width={renderPlan.project.width}
-    height={renderPlan.project.height}
-    defaultProps={{ renderPlan }}
+    durationInFrames={1}
+    fps={30}
+    width={1920}
+    height={1080}
+    calculateMetadata={async ({ props }) => {
+      const plan = props.renderPlan;
+      return {
+        durationInFrames: plan.totalFrames,
+        fps: plan.project.fps,
+        width: plan.project.width,
+        height: plan.project.height,
+      };
+    }}
   />
 );
 
 registerRoot(App);
 `;
-};
+}
+
+/** Where reused bundles live. `~/.cache` rather than os.tmpdir(): the OS
+ *  cleans temp files piecemeal, and a half-deleted bundle is a render that
+ *  fails on a missing chunk. Override with `VIDEO_BUNDLE_CACHE=<dir>`. */
+function bundleCacheRoot(): string {
+  const explicit = process.env["VIDEO_BUNDLE_CACHE"];
+  return explicit !== undefined && explicit !== ""
+    ? path.resolve(explicit)
+    : path.join(homedir(), ".cache", "video-renderer", "bundles");
+}
+
+async function hashTree(dir: string, hash: Hash): Promise<void> {
+  const entries = await readdir(dir, { withFileTypes: true });
+  entries.sort((a, b) => a.name.localeCompare(b.name));
+  for (const entry of entries) {
+    const full = path.join(dir, entry.name);
+    if (entry.isDirectory()) await hashTree(full, hash);
+    else if (entry.isFile()) {
+      hash.update(entry.name);
+      hash.update(await readFile(full));
+    }
+  }
+}
+
+/** The package directory behind a resolved entry file. */
+async function packageDirOf(entryFile: string): Promise<string> {
+  let dir = path.dirname(entryFile);
+  for (let hops = 0; hops < 8; hops++) {
+    if (existsSync(path.join(dir, "package.json"))) return dir;
+    dir = path.dirname(dir);
+  }
+  return path.dirname(entryFile);
+}
+
+/** Identity of everything the static entry compiles: the Root, the
+ *  component and theme packages' BUILT output, and the remotion and react
+ *  versions. A bundle cached under any other key is a different program.
+ *  The two workspace packages are content-hashed because their version
+ *  (0.1.0) does not move when their code does. Computed once per process. */
+let bundleKeyPromise: Promise<string> | null = null;
+function bundleCacheKey(): Promise<string> {
+  bundleKeyPromise ??= (async () => {
+    const hash = createHash("sha256");
+    hash.update(staticEntry());
+    hash.update(RENDERER_REVISION);
+    if (rootSrcPath !== null) {
+      hash.update(await readFile(rootSrcPath));
+      // Resolved the way webpack resolves them: the Root's own import from
+      // the Root, and the component package's imports from that package —
+      // pnpm does not hoist `@video/theme` to the renderer.
+      const resolveFromRoot = createRequire(rootSrcPath);
+      const componentsDir = await packageDirOf(
+        resolveFromRoot.resolve("@video/video-components"),
+      );
+      const resolveFromComponents = createRequire(
+        path.join(componentsDir, "package.json"),
+      );
+      const inputs: [string, string][] = [
+        ["@video/video-components", componentsDir],
+        [
+          "@video/theme",
+          await packageDirOf(resolveFromComponents.resolve("@video/theme")),
+        ],
+        [
+          "remotion",
+          await packageDirOf(resolveFromComponents.resolve("remotion")),
+        ],
+        ["react", await packageDirOf(resolveFromComponents.resolve("react"))],
+      ];
+      for (const [name, dir] of inputs) {
+        const manifest = JSON.parse(
+          await readFile(path.join(dir, "package.json"), "utf8"),
+        ) as { version?: string };
+        hash.update(`${name}@${manifest.version ?? ""}`);
+        const dist = path.join(dir, "dist");
+        if (name.startsWith("@video/") && existsSync(dist)) {
+          await hashTree(dist, hash);
+        }
+      }
+    }
+    return hash.digest("hex").slice(0, 16);
+  })().catch((error: unknown) => {
+    bundleKeyPromise = null;
+    throw error;
+  });
+  return bundleKeyPromise;
+}
+
+/** The static entry's webpack bundle, built once per `bundleCacheKey`.
+ *  Single-flight per process: the scene pool's workers all arrive here
+ *  together on a cold start. Returns the bundle directory to serve.
+ *
+ *  The completeness marker is written INSIDE the build directory, before
+ *  the atomic rename — a bundle at its final path is therefore always
+ *  whole, and a concurrent builder that loses the rename simply reuses
+ *  the winner's. */
+let bundlePromise: Promise<string> | null = null;
+function cachedBundle(): Promise<string> {
+  bundlePromise ??= (async () => {
+    const key = await bundleCacheKey();
+    const root = bundleCacheRoot();
+    const finalDir = path.join(root, `bundle-${key}`);
+    if (existsSync(path.join(finalDir, ".complete"))) return finalDir;
+    await mkdir(root, { recursive: true });
+    const workDir = await mkdtemp(path.join(root, "build-"));
+    try {
+      const outDir = path.join(workDir, "out");
+      const publicDir = path.join(workDir, "public");
+      const entry = path.join(workDir, "entry.tsx");
+      await mkdir(publicDir, { recursive: true });
+      await writeFile(entry, staticEntry(), "utf8");
+      await bundle({
+        entryPoint: entry,
+        outDir,
+        // Remotion's default public dir resolves from the process cwd —
+        // meaningless in a render pipeline. The static bundle serves no
+        // files of its own (a footage clip gets a private bundle).
+        publicDir,
+        // Webpack's persistent cache writes a 250–575MB snapshot per
+        // build (69GB observed in node_modules/.cache/webpack) and can
+        // never hit across machines. NOTE: cache:false inside
+        // webpackOverride does NOT work — Remotion's
+        // computeHashAndFinalConfig assigns `cache` AFTER the override
+        // runs; enableCaching is the option that actually reaches it.
+        enableCaching: false,
+      });
+      await writeFile(path.join(outDir, ".complete"), key, "utf8");
+      try {
+        await rename(outDir, finalDir);
+      } catch {
+        // The slot is taken by a complete bundle (another process, or an
+        // earlier run) — the marker-inside-then-rename rule guarantees
+        // it is whole. Use it.
+        if (!existsSync(path.join(finalDir, ".complete"))) {
+          throw new Error(
+            `bundle cache slot is not a complete bundle: ${finalDir}`,
+          );
+        }
+      }
+    } finally {
+      await rm(workDir, { recursive: true, force: true }).catch(() => {});
+    }
+    // Another process may still be serving bundles from older keys.
+    return finalDir;
+  })().finally(() => {
+    // Recheck the marker on the next call and allow a failed build to retry.
+    bundlePromise = null;
+  });
+  return bundlePromise;
+}
 
 /** Which visual renderers are wired, and to which component families
  * (plan §9/T4.3): remotion renders every REGISTRY component; canvas
@@ -184,30 +346,42 @@ export async function renderPlanToVideo(
   void sweepRemotionTemp().catch(() => {});
   await mkdir(path.dirname(outPath), { recursive: true });
   const resolvedPlan = await resolveImageSources(renderPlan);
-  const workDir = await mkdtemp(path.join(tmpdir(), "video-render-"));
-  // Remotion's bundler serves `<entryDir>/public` — the entry lives at
-  // the workDir root, so clips copied here resolve via staticFile().
-  const publicDir = path.join(workDir, "public");
-  const planWithVideo = await resolveVideoSources(resolvedPlan, publicDir);
-  const entry = path.join(workDir, "entry.tsx");
-  await writeFile(entry, renderEntryTemplate(planWithVideo), "utf8");
+  // A footage clip is served from its bundle's public dir, so a scene that
+  // carries one gets a private bundle; every other scene reuses the
+  // cached static bundle (3.4 s of webpack per scene, saved).
+  // `VIDEO_BUNDLE_CACHE=off` forces a private bundle for every scene —
+  // the escape hatch when the reused bundle is under suspicion.
+  const hasClip = resolvedPlan.scenes.some(
+    (scene) => scene.component === "VideoBackground",
+  );
+  const workDir =
+    hasClip || process.env["VIDEO_BUNDLE_CACHE"] === "off"
+      ? await mkdtemp(path.join(tmpdir(), "video-render-"))
+      : null;
+  let planWithVideo = resolvedPlan;
+  let serveUrl: string;
   try {
-    const serveUrl = await bundle({
-      entryPoint: entry,
-      // Remotion's default public dir resolves from the process cwd —
-      // meaningless in a render pipeline. Point it at the workDir copy
-      // resolveVideoSources made; the bundler copies it into the bundle
-      // so staticFile()/OffthreadVideo can serve the clips.
-      publicDir,
-      // The entry embeds the renderPlan (with base64 image data URLs), so
-      // its content changes every render — webpack's persistent cache can
-      // never hit and instead writes a fresh 250–575MB snapshot per render
-      // (69GB observed in node_modules/.cache/webpack). NOTE: cache:false
-      // inside webpackOverride does NOT work — Remotion's
-      // computeHashAndFinalConfig assigns `cache` AFTER the override runs;
-      // enableCaching is the option that actually reaches the config.
-      enableCaching: false,
-    });
+    if (workDir === null) {
+      serveUrl = await cachedBundle();
+    } else {
+      // Remotion's bundler serves `<entryDir>/public` — the entry lives at
+      // the workDir root, so clips copied here resolve via staticFile().
+      const publicDir = path.join(workDir, "public");
+      if (hasClip) {
+        planWithVideo = await resolveVideoSources(resolvedPlan, publicDir);
+      }
+      const entry = path.join(workDir, "entry.tsx");
+      await writeFile(entry, staticEntry(), "utf8");
+      serveUrl = await bundle({
+        entryPoint: entry,
+        // Remotion's default public dir resolves from the process cwd —
+        // meaningless in a render pipeline. Point it at the workDir copy
+        // resolveVideoSources made; the bundler copies it into the bundle
+        // so staticFile()/OffthreadVideo can serve the clips.
+        publicDir,
+        enableCaching: false,
+      });
+    }
     // Per-worker browser pool when called from the parallel scene pool;
     // the module singleton (serial pipeline default) otherwise. Sharing
     // one Chrome across concurrent renderMedia calls was never designed
@@ -238,7 +412,9 @@ export async function renderPlanToVideo(
       throw err;
     }
   } finally {
-    await rm(workDir, { recursive: true, force: true }).catch(() => {});
+    if (workDir !== null) {
+      await rm(workDir, { recursive: true, force: true }).catch(() => {});
+    }
   }
 }
 

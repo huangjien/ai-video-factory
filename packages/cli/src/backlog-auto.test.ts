@@ -70,6 +70,7 @@ vi.mock("@video/workflow", () => ({
 
 import {
   runBacklogAuto,
+  stageTook,
   minimaxIdleMinutes,
   acquireAutoLock,
   fetchMiniMaxQuota,
@@ -89,6 +90,7 @@ import {
   writeJudgeCache,
 } from "./backlog-judge-cache.js";
 import { loadProviderConfig } from "@video/llm";
+import { writeRun } from "@video/workflow";
 
 let repoRoot: string;
 let consoleOutput: string[];
@@ -226,6 +228,14 @@ describe("fetchMiniMaxQuota", () => {
     await expect(fetchMiniMaxQuota(noBucket)).rejects.toThrow(
       /no general-bucket percentages/,
     );
+  });
+});
+describe("stageTook", () => {
+  it("reads seconds under a minute, then minutes, then hours and minutes", () => {
+    expect(stageTook(45_400)).toBe("45s");
+    expect(stageTook(59_900)).toBe("1m");
+    expect(stageTook(3_301_000)).toBe("55m");
+    expect(stageTook(4_320_000)).toBe("1h12m");
   });
 });
 
@@ -377,6 +387,28 @@ describe("runBacklogAuto — the pipeline", () => {
     expect(existsSync(path.join(repoRoot, "runs", "backlog-auto.lock"))).toBe(
       false,
     );
+  });
+
+  it("records how long each stage took", async () => {
+    // Only Date is faked — the make stub moves the clock, nothing waits.
+    vi.useFakeTimers({ toFake: ["Date"] });
+    try {
+      vi.setSystemTime(NOW);
+      makeMock.mockImplementationOnce(async () => {
+        vi.setSystemTime(NOW + 37 * 60_000);
+        return 0;
+      });
+      const code = await runBacklogAuto(readyToFire());
+      expect(code).toBe(0);
+      const written = vi.mocked(writeRun).mock.calls.at(-1)?.[1] as {
+        error?: string;
+      };
+      expect(written?.error).toMatch(
+        /draft-zh 0s \| approve-storyboard-zh 0s \| make-zh 37m \| translate-en 0s/,
+      );
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("auto-approves a proposed entry and takes the first OPEN ranked idea when the top one is drafted", async () => {

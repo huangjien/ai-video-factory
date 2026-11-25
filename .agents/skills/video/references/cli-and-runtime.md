@@ -65,7 +65,10 @@
   `--tts voicebox:<profile>|minimax-system|f5tts|edge`; server down ⇒ no
   question, default minimax-system). Cache key is provider- AND
   model-namespaced; re-drafts reset `voice:` (drafter-owned) but
-  preserve `tts_provider:`.
+  preserve `tts_provider:`. Scenes synthesize together — 4 at once for a
+  remote provider, 1 for a local model server (`TTS_POOL` overrides).
+  Measured 2026-11-25 on a 15-scene article (181 s of speech): 36.9 s →
+  10.5 s, per-call latency unchanged.
 - Web search in research: `--no-web` (LLM knowledge only)
 
 Provider fallback (minimax → glm) is automatic on quota / rate-limit errors.
@@ -130,6 +133,13 @@ packages/
   renders in a worker pool, one private Chrome per worker (2026-10-25;
   28-scene benchmark: 419 s → 363 s). Set `RENDER_POOL=1` to restore the
   serial shared-browser path on constrained machines.
+- **The Remotion bundle is built once, not per scene** (2026-11-25): the
+  entry is byte-identical for every scene, so its webpack bundle is cached
+  on disk per entry-hash (`VIDEO_BUNDLE_CACHE=<dir>`, `off` forces a
+  private bundle per scene). Older bundles are retained so parallel runs
+  can keep serving them. A 15-scene film at pool 2 went 137 s → 98 s.
+  Pool 6 measured no faster than pool 2 on this machine — the CPU, not
+  the worker count, is the limit.
 - **Storyboard schema mismatch**: `video validate projects/<id>/storyboard/storyboard.yaml --root projects/<id>`.
 - **Edge TTS fails**: try `--fake` to confirm pipeline; fall back to a different voice via `audio-config.yaml`.
 - **Style consistency across scenes**: sampling drifts ground dominance (warm cream vs cool teal) even inside a locked-palette style. Steer per-scene grounds in the `visual:` line ("on a warm cream ground") when the block must match; regenerate rejects by deleting `scene_N.jpg` + `scene_N.cache.json`. Sketch idioms (whiteboard) render poorly on minimax (thin pen ink, palette drift) — prefer painted styles there, or `--image-provider openai`.
@@ -154,6 +164,7 @@ packages/
 | `runs/draft-*.yaml` | the generation call |
 | `runs/draft-judge-*.yaml` | the scoring call (often another provider) |
 | `runs/draft-audio-plan-*.yaml` | the audio plan call |
+| `runs/draft-research-*.yaml` | the loop's fact-check call — one per checked claim, failures included |
 
 Each carries the serving `provider`, the `model`, the `tokens`, a real
 `duration_ms` (the other stages used to write `0`), and a `telemetry` block:
@@ -182,6 +193,8 @@ every sample's tokens are counted. Measured: the pair-averages have sd
 **1.28** against the single samples' 1.85. `article-review.yaml` records
 the spread (`judge_samples`, `judge_sample_scores`) — the score is the
 MEAN of those judgments.
+The samples are requested together: measured 2026-11-25, two samples
+cost 40 s of wall time against 70 s of call time.
 
 The loop's progress test no longer reads the raw score. A revision counts
 as progress when **the defect load shrank** (Critical 3, Major 2, Moderate
@@ -189,6 +202,20 @@ as progress when **the defect load shrank** (Critical 3, Major 2, Moderate
 that shrank the defects but left the score flat keeps the surgical line
 alive instead of being thrown away for a blind rewrite; the blind rewrite
 stays as the escape hatch when neither the defects nor the score moved.
+
+### Fact checks run together
+
+A judgment can flag up to four `FACT_*` claims, and each is its own web
+search plus a full research-agent answer — 3.5–4 minutes on the claims of
+a real run. They are researched four at a time (`FACT_CHECK_POOL`), and
+the notes still reach the reviser in claim order. Measured 2026-11-25:
+three claims took 112 s of wall time against 267 s of call time.
+
+A failed check is not retried. It leaves no notes, and the reviser
+softens the claim instead of citing something new. The
+`draft-research` record names the claim's failure — a malformed YAML
+answer and the provider's content filter (`1301`) are the two seen so
+far.
 
 ### The rubric and the drafter agree
 

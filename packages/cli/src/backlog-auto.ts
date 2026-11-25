@@ -537,6 +537,17 @@ async function uploadShortsToYouTube(input: {
 interface StageResult {
   stage: string;
   code: number;
+  /** Wall time from the previous stage's close to this one's. */
+  ms: number;
+}
+
+/** "45s" under a minute, else "12m" / "1h12m" — where a slow night went
+ *  reads at a glance in the run record. */
+export function stageTook(ms: number): string {
+  const total = Math.round(ms / 1000);
+  if (total < 60) return `${total}s`;
+  const m = Math.floor(total / 60);
+  return m < 60 ? `${m}m` : `${Math.floor(m / 60)}h${m % 60}m`;
 }
 
 /** Exit-code runner for `video backlog auto`. */
@@ -667,9 +678,20 @@ export async function runBacklogAuto(opts: BacklogAutoOptions): Promise<number> 
   }
   const slug = slugifyProjectName(entry.topic);
   const stages: StageResult[] = [];
+  let stageStartedAt = Date.now();
+  /** Closes a stage with its wall time. The timer covers the stretch
+   *  since the previous stage closed, so the run record's stage trace
+   *  is also a timing breakdown of the night. */
+  const record = (stage: string, code: number): void => {
+    const now = Date.now();
+    stages.push({ stage, code, ms: now - stageStartedAt });
+    stageStartedAt = now;
+  };
+  const stageTrace = (): string[] =>
+    stages.map((s) => `${s.stage} ${stageTook(s.ms)}`);
   const publishFailures: string[] = [];
   const fail = async (stage: string, code: number): Promise<number> => {
-    stages.push({ stage, code });
+    record(stage, code);
     console.error(`✗ stage ${stage} failed (exit ${code}) — entry left in drafting; resume or \`video backlog reset ${entry.id}\``);
     await recordRun(repoRoot, "failed", [...conditions, `failed at ${stage} (exit ${code})`], startedAt, slug);
     releaseAutoLock(repoRoot);
@@ -683,7 +705,7 @@ export async function runBacklogAuto(opts: BacklogAutoOptions): Promise<number> 
     draft: { cwd: repoRoot, noAsk: true },
   });
   if (draftCode !== 0) return fail("draft-zh", draftCode);
-  stages.push({ stage: "draft-zh", code: 0 });
+  record("draft-zh", 0);
 
   // make's render step gates on an approved storyboard (measured
   // 2026-11-19: render-preview refused without it). The gate exists so a
@@ -692,11 +714,11 @@ export async function runBacklogAuto(opts: BacklogAutoOptions): Promise<number> 
   const zhRoot = path.join(repoRoot, "projects", slug);
   const approveZh = await approveCheckpoint(zhRoot, { stage: "storyboard" });
   if (!approveZh.ok) return fail("approve-storyboard-zh", 1);
-  stages.push({ stage: "approve-storyboard-zh", code: 0 });
+  record("approve-storyboard-zh", 0);
 
   const makeZhCode = await runMakeCli({ project: slug, cwd: repoRoot });
   if (makeZhCode !== 0) return fail("make-zh", makeZhCode);
-  stages.push({ stage: "make-zh", code: 0 });
+  record("make-zh", 0);
 
   const translateCode = await runTranslate({
     project: slug,
@@ -704,12 +726,12 @@ export async function runBacklogAuto(opts: BacklogAutoOptions): Promise<number> 
     cwd: repoRoot,
   });
   if (translateCode !== 0) return fail("translate-en", translateCode);
-  stages.push({ stage: "translate-en", code: 0 });
+  record("translate-en", 0);
 
   const enRoot = l10nRootOrThrow(zhRoot, "en-US");
   const approveEn = await approveCheckpoint(enRoot, { stage: "storyboard" });
   if (!approveEn.ok) return fail("approve-storyboard-en", 1);
-  stages.push({ stage: "approve-storyboard-en", code: 0 });
+  record("approve-storyboard-en", 0);
 
   const makeEnCode = await runMakeCli({
     project: slug,
@@ -717,7 +739,7 @@ export async function runBacklogAuto(opts: BacklogAutoOptions): Promise<number> 
     cwd: repoRoot,
   });
   if (makeEnCode !== 0) return fail("make-en", makeEnCode);
-  stages.push({ stage: "make-en", code: 0 });
+  record("make-en", 0);
 
   // Publishing (owner mandate 2026-11-19: upload without waiting): zh
   // bilibili (public) + zh YouTube (private) + en YouTube (private) +
@@ -735,7 +757,7 @@ export async function runBacklogAuto(opts: BacklogAutoOptions): Promise<number> 
     const code = await (opts.runPublish ?? defaultPublish)(
       { kind, slug, repoRoot, anchors },
     );
-    stages.push({ stage: `publish-${kind}`, code });
+    record(`publish-${kind}`, code);
     if (code !== 0) {
       publishFailures.push(`publish-${kind}`);
       console.error(
@@ -761,10 +783,10 @@ export async function runBacklogAuto(opts: BacklogAutoOptions): Promise<number> 
       const shortsPath = path.join(verticalRoot, "youtube", "shorts.mp4");
       try {
         const verticalCode = await runVertical({ project: root, cwd: repoRoot });
-        stages.push({ stage: `vertical-${language}`, code: verticalCode });
+        record(`vertical-${language}`, verticalCode);
         if (verticalCode !== 0) throw new Error("vertical render failed");
         const shortsCode = await runShorts({ project: verticalRoot, cwd: repoRoot });
-        stages.push({ stage: `shorts-${language}`, code: shortsCode });
+        record(`shorts-${language}`, shortsCode);
         if (shortsCode !== 0 || !existsSync(shortsPath)) throw new Error("Shorts export missing");
       } catch (error) {
         missingShorts.push(language);
@@ -808,7 +830,7 @@ export async function runBacklogAuto(opts: BacklogAutoOptions): Promise<number> 
         ...(entry.anchors !== undefined ? { anchors: entry.anchors } : {}),
         ...(opts.shortsCredentials !== undefined ? { creds: opts.shortsCredentials } : {}),
       });
-      stages.push({ stage: `shorts-upload-${language}`, code: upCode });
+      record(`shorts-upload-${language}`, upCode);
       if (upCode !== 0) publishFailures.push(`shorts-upload-${language}`);
     }
   }
@@ -819,7 +841,7 @@ export async function runBacklogAuto(opts: BacklogAutoOptions): Promise<number> 
     "succeeded",
     [
       ...conditions,
-      ...stages.map((s) => s.stage),
+      ...stageTrace(),
       ...publishFailures.map((f) => `publish failed (non-fatal): ${f}`),
     ],
     startedAt,

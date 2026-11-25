@@ -21,7 +21,7 @@ import {
   type ProviderConfig,
   type ProviderTelemetry,
 } from "@video/llm";
-import { MiniMaxWebSearch, callResearch } from "@video/research";
+import { MiniMaxWebSearch, ResearchError, callResearch } from "@video/research";
 import { runDraftDecisionShadow } from "@video/draft";
 import { decisionLogPath, resolveDecisionMode } from "@video/llm";
 import {
@@ -228,9 +228,11 @@ function safeGitHead(cwd: string): string {
 async function writeModelRun(
   projectRoot: string,
   args: {
-    stage: "draft" | "draft-judge" | "draft-audio-plan";
+    stage: "draft" | "draft-judge" | "draft-research" | "draft-audio-plan";
     provider: string;
     usage: { input: number; output: number };
+    durationMs?: number;
+    claim?: string;
     telemetry?: ProviderTelemetry | undefined;
     error?: string | undefined;
   },
@@ -247,7 +249,9 @@ async function writeModelRun(
         ? "video-draft"
         : args.stage === "draft-judge"
           ? "video-draft-judge"
-          : "video-draft-audio-plan",
+          : args.stage === "draft-research"
+            ? "video-draft-research"
+            : "video-draft-audio-plan",
     input_commit: safeGitHead(projectRoot),
     input_files: [],
     output_files:
@@ -257,7 +261,8 @@ async function writeModelRun(
           ? ["audio-config.yaml"]
           : [],
     created_at: new Date().toISOString(),
-    duration_ms: args.telemetry?.durationMs ?? 0,
+    duration_ms: args.durationMs ?? args.telemetry?.durationMs ?? 0,
+    ...(args.claim !== undefined ? { claim: args.claim } : {}),
     provider: args.provider,
     model: modelLabel("chat", args.provider),
     tokens: args.usage,
@@ -860,23 +865,53 @@ export async function runDraft(opts: DraftOptions): Promise<number> {
           // loop, never an abort.
           research: async (claims) => {
             const claim = claims[0] ?? "";
-            const out = await callResearch(
-              { topic: claim, audience, language, duration },
-              provider,
-              {
-                web: opts.noWeb === true ? null : new MiniMaxWebSearch(),
-                webQuery: claim,
-              },
-              fallback,
-            );
-            return out.output.claims.map((c) => ({
-              claim: c.claim,
-              verdict:
-                c.status === "fact"
-                  ? ("supported" as const)
-                  : ("unclear" as const),
-              notes: c.note ?? "",
-            }));
+            // One record per fact-check call. It is the loop's most
+            // expensive side call (measured 3.5–4 minutes each) and,
+            // before 2026-11-25, the only one that left no trace: the
+            // time between a judgment and the next attempt was a gap
+            // nobody could attribute. The record is never allowed to
+            // change the outcome — a failure to write it is dropped.
+            const startedAt = Date.now();
+            try {
+              const out = await callResearch(
+                { topic: claim, audience, language, duration },
+                provider,
+                {
+                  web: opts.noWeb === true ? null : new MiniMaxWebSearch(),
+                  webQuery: claim,
+                },
+                fallback,
+              );
+              await writeModelRun(projectRoot, {
+                stage: "draft-research",
+                provider: out.providerName,
+                usage: out.usage,
+                claim,
+                durationMs: Date.now() - startedAt,
+                telemetry: out.telemetry,
+              }).catch(() => {});
+              return out.output.claims.map((c) => ({
+                claim: c.claim,
+                verdict:
+                  c.status === "fact"
+                    ? ("supported" as const)
+                    : ("unclear" as const),
+                notes: c.note ?? "",
+              }));
+            } catch (err) {
+              await writeModelRun(projectRoot, {
+                stage: "draft-research",
+                provider:
+                  err instanceof ResearchError
+                    ? err.providerName
+                    : provider.name,
+                claim,
+                durationMs: Date.now() - startedAt,
+                usage: { input: 0, output: 0 },
+                error: (err as Error).message,
+              }).catch(() => {});
+              throw err;
+            }
           },
           onAttempt: async (a, total) => {
             // One run record per model call: the generation and the

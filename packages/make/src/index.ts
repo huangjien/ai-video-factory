@@ -21,7 +21,7 @@ import {
   IMAGE_PROMPT_REVISION,
   type ParsedArticle,
 } from "@video/draft";
-import { MiniMaxProvider } from "@video/llm";
+import { MiniMaxProvider, withRetry } from "@video/llm";
 import { parse as parseYaml, stringify as yamlStringify } from "yaml";
 import {
   FakeTTSProvider,
@@ -30,6 +30,7 @@ import {
   MinimaxTTSProvider,
   f5ttsStatus,
   voiceboxStatus,
+  TTSError,
   type TTSProvider,
 } from "@video/tts";
 import { resolveNarration } from "./narration.js";
@@ -1810,12 +1811,10 @@ async function runTts(
   return outputs;
 }
 
-/** Per-scene narration synthesis with the content-keyed TTS cache — the
- *  one loop behind both `video make`'s tts step and the `video audio`
- *  verb (one WAV-sniff, one cache, one hold-padding rule). Callers own
- *  provider selection: make resolves the voicebox/minimax degradation
- *  chain, the verb passes its Edge/Fake choice. */
-export async function synthesizeSceneAudio(params: {
+/** What a scene-pool synthesis run needs. Callers own provider
+ *  selection: make resolves the voicebox/minimax degradation chain, the
+ *  `video audio` verb passes its Edge/Fake choice. */
+export interface SceneAudioParams {
   projectRoot: string;
   scenes: TtsScene[];
   provider: TTSProvider;
@@ -1829,22 +1828,40 @@ export async function synthesizeSceneAudio(params: {
     minDurationSec: number,
   ) => Promise<Uint8Array>;
   onEvent?: ProgressEmit;
-}): Promise<{
+}
+
+/** The outcome of a synthesis run. `outputs` and `synthesized` list only
+ *  the scenes that were synthesized, in SCENE order. */
+export interface SceneAudioResult {
   outputs: string[];
   synthesized: string[];
   cached: string[];
   totalDurationMs: number;
-}> {
+}
+
+/** Per-scene narration synthesis with the content-keyed TTS cache — the
+ *  one loop behind both `video make`'s tts step and the `video audio`
+ *  verb (one WAV-sniff, one cache, one hold-padding rule). */
+export async function synthesizeSceneAudio(
+  params: SceneAudioParams,
+): Promise<SceneAudioResult> {
   const convertMp3 = params.convertMp3 ?? mp3ToWav;
   const onEvent = params.onEvent ?? noopEmit;
   const audioDir = path.join(params.projectRoot, "assets", "audio");
   await mkdir(audioDir, { recursive: true });
 
-  const outputs: string[] = [];
-  const synthesized: string[] = [];
   const cached: string[] = [];
-  let totalDurationMs = 0;
   const total = params.scenes.length;
+
+  // Pass 1 — the cache. Every scene is keyed and checked before any
+  // synthesis starts, so the pool only ever carries real work.
+  interface PendingScene {
+    idx: number;
+    scene: TtsScene;
+    wavPath: string;
+    cacheKey: string;
+  }
+  const pending: PendingScene[] = [];
   for (const [idx, scene] of params.scenes.entries()) {
     if (!scene.narration) continue; // nothing to say — keep any placeholder
     const wavPath = path.join(audioDir, `${scene.id}.wav`);
@@ -1869,24 +1886,38 @@ export async function synthesizeSceneAudio(params: {
       cached.push(scene.id);
       continue;
     }
+    pending.push({ idx, scene, wavPath, cacheKey });
+  }
+
+  /** One scene's synthesis, conversion and padding — the body of the old
+   *  serial loop, now a unit the pool can run. Returns the speech length. */
+  const synthesizeOne = async (job: PendingScene): Promise<number> => {
+    const { idx, scene, wavPath, cacheKey } = job;
     const itemLabel = `tts ${scene.id}`;
     const itemAt = { index: idx + 1, total };
     const itemT0 = Date.now();
     onEvent({ kind: "start", label: itemLabel, ...itemAt });
     let result;
     try {
-      result = await heartbeat(
-        itemLabel,
+      result = await withRetry(
         () =>
-          params.provider.synthesize({
-            text: scene.narration,
-            voice: params.voice,
-            language: params.language,
-            ...(params.pauseSec !== undefined
-              ? { pauseBetweenSentencesSec: params.pauseSec }
-              : {}),
-          }),
-        onEvent,
+          heartbeat(
+            itemLabel,
+            () =>
+              params.provider.synthesize({
+                text: scene.narration,
+                voice: params.voice,
+                language: params.language,
+                ...(params.pauseSec !== undefined
+                  ? { pauseBetweenSentencesSec: params.pauseSec }
+                  : {}),
+              }),
+            onEvent,
+          ),
+        // Only the rate limit is retried, and only because the pool can
+        // cause it: concurrent scenes may arrive faster than the provider
+        // allows. Everything else fails exactly as the serial loop did.
+        { isRetriable: ttsCallWasRateLimited },
       );
     } catch (err) {
       onEvent({
@@ -1938,12 +1969,65 @@ export async function synthesizeSceneAudio(params: {
       cacheKey,
       synthesizedAt: new Date().toISOString(),
     });
-    outputs.push(`assets/audio/${scene.id}.wav`);
-    synthesized.push(scene.id);
-    totalDurationMs += result.durationMs;
+    return result.durationMs;
+  };
+
+  // Pass 2 — the pool (2026-11-25). A remote provider is one HTTP call per
+  // scene and the calls are independent, so the serial loop left the
+  // network idle for every scene but one. A worker that fails stops the
+  // others from starting new work; the first error surfaces as before.
+  const width = Math.min(ttsPoolWidth(params.provider.name), pending.length);
+  const speechMs = new Map<number, number>();
+  let next = 0;
+  let failure: { error: unknown } | undefined;
+  const worker = async (): Promise<void> => {
+    for (;;) {
+      if (failure !== undefined) return;
+      const job = pending[next++];
+      if (job === undefined) return;
+      try {
+        speechMs.set(job.idx, await synthesizeOne(job));
+      } catch (err) {
+        failure ??= { error: err };
+        return;
+      }
+    }
+  };
+  await Promise.all(Array.from({ length: width }, () => worker()));
+  if (failure !== undefined) throw failure.error;
+
+  // Fold in SCENE order, so the returned lists read the same as a
+  // serial run whatever order the pool finished in.
+  const outputs: string[] = [];
+  const synthesized: string[] = [];
+  let totalDurationMs = 0;
+  for (const job of pending) {
+    outputs.push(`assets/audio/${job.scene.id}.wav`);
+    synthesized.push(job.scene.id);
+    totalDurationMs += speechMs.get(job.idx) ?? 0;
   }
 
   return { outputs, synthesized, cached, totalDurationMs };
+}
+
+/** How many scenes may synthesize at once. A remote provider is one HTTP
+ *  call per scene and the calls are independent; a local model server
+ *  (voicebox, f5tts) is bounded by the GPU, so extra requests would only
+ *  queue there. `TTS_POOL` overrides both. */
+function ttsPoolWidth(providerName: string): number {
+  const raw = process.env["TTS_POOL"];
+  const override = Number(raw);
+  if (raw !== undefined && Number.isFinite(override) && override >= 1) {
+    return Math.floor(override);
+  }
+  return providerName === "voicebox" || providerName === "f5tts" ? 1 : 4;
+}
+
+/** MiniMax reports a rate limit as HTTP 429, or inside a 200 as
+ *  `base_resp.status_code` 1002 (minimax-tts.ts surfaces both as the
+ *  error's `status`). Nothing else about a TTS call is worth retrying. */
+function ttsCallWasRateLimited(err: unknown): boolean {
+  return err instanceof TTSError && (err.status === 429 || err.status === 1002);
 }
 
 /** Sidecar shape for the TTS cache (`scene_N.wav.json`). */

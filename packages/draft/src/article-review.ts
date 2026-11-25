@@ -532,6 +532,69 @@ export function mergeScores(samples: ArticleScore[]): ArticleScore {
  *  treating it as progress (or as regression) is reading noise. */
 export const IMPROVEMENT_MARGIN = 1.0;
 
+/** How many fact-check claims are researched at once. A judgment can
+ *  flag four claims in one round; each is its own web search and model
+ *  call, and nothing is shared between them. */
+const FACT_CHECK_POOL = 4;
+
+/** The loop's fact check (improvement #3): one research call per unique
+ *  FACT_* claim, remembered for the caller's lifetime. A research failure
+ *  degrades to empty notes — the reviser then softens the claim instead
+ *  of citing something new — and research must never kill the loop.
+ *
+ *  The uncached claims are researched TOGETHER (2026-11-25): each call is
+ *  a web search plus a full research-agent answer — measured at 3.5–4
+ *  minutes each — and one judgment can flag four, which serially was a
+ *  14-minute silence between an attempt and the next. The notes still
+ *  come back in CLAIM order, so the reviser sees what it always saw. */
+export interface FactChecker {
+  /** Every claim's notes, in claim order; undefined when there are none. */
+  notesFor(findings: ReviseFinding[]): Promise<ResearchNote[] | undefined>;
+  /** The notes a claim was verified with — empty when it was not. */
+  verifiedFor(claim: string): ResearchNote[];
+}
+
+export function createFactChecker(
+  research: (claims: string[]) => Promise<ResearchNote[]>,
+): FactChecker {
+  const cache = new Map<string, ResearchNote[]>();
+  return {
+    async notesFor(findings) {
+      const claims = [
+        ...new Set(
+          findings
+            .filter((f) => f.code.startsWith("FACT_"))
+            .map((f) => f.quote.trim()),
+        ),
+      ].filter((c) => c.length > 0);
+      if (claims.length === 0) return undefined;
+      const uncached = claims.filter((claim) => !cache.has(claim));
+      let nextClaim = 0;
+      const worker = async (): Promise<void> => {
+        for (;;) {
+          const claim = uncached[nextClaim++];
+          if (claim === undefined) return;
+          let notesForClaim: ResearchNote[] = [];
+          try {
+            notesForClaim = await research([claim]);
+          } catch {
+            notesForClaim = []; // degrade, never throw
+          }
+          cache.set(claim, notesForClaim);
+        }
+      };
+      await Promise.all(
+        Array.from({ length: Math.min(FACT_CHECK_POOL, uncached.length) }, () =>
+          worker(),
+        ),
+      );
+      const notes = claims.flatMap((claim) => cache.get(claim) ?? []);
+      return notes.length > 0 ? notes : undefined;
+    },
+    verifiedFor: (claim) => cache.get(claim) ?? [],
+  };
+}
+
 /** The defect load of a scorecard: Critical findings dominate, then
  *  Major, then Moderate; Minor findings are a whisper but still count
  *  as progress.
@@ -1072,16 +1135,16 @@ export async function runScoredDraft(
     score: ArticleScore | null;
     scoreError: string | undefined;
   }> => {
-    const samples: ArticleScore[] = [];
-    let scoreError: string | undefined;
-    for (let sample = 0; sample < judgeSamples; sample++) {
-      const out = await judgeOnce(markdown);
-      if (out.score === null) {
-        scoreError = out.scoreError;
-        continue;
-      }
-      samples.push(out.score);
-    }
+    // The samples judge the same text independently, so they run
+    // together. Serially they cost `judgeSamples` judge calls per
+    // attempt — measured 2 × ~40 s, on every one of up to 8 attempts.
+    const outs = await Promise.all(
+      Array.from({ length: judgeSamples }, () => judgeOnce(markdown)),
+    );
+    const samples = outs.flatMap((out) =>
+      out.score === null ? [] : [out.score],
+    );
+    const scoreError = outs.find((out) => out.score === null)?.scoreError;
     if (samples.length === 0) return { score: null, scoreError };
     return { score: mergeScores(samples), scoreError: undefined };
   };
@@ -1222,39 +1285,9 @@ export async function runScoredDraft(
   let reviseFindings: ReviseFinding[] = [];
   let researchNotesBlock: { researchNotes: ResearchNote[] } | undefined;
 
-  /** Improvement #3 — one research call per unique FACT_* claim,
-   *  cached for the rest of the run. A research failure degrades to
-   *  empty notes (the reviser then softens the claim instead of citing
-   *  something new). */
-  const researchCache = new Map<string, ResearchNote[]>();
-  const researchNotesFor = async (
-    findings: ReviseFinding[],
-  ): Promise<ResearchNote[] | undefined> => {
-    if (opts.research === undefined) return undefined;
-    const claims = [
-      ...new Set(
-        findings
-          .filter((f) => f.code.startsWith("FACT_"))
-          .map((f) => f.quote.trim()),
-      ),
-    ].filter((c) => c.length > 0);
-    if (claims.length === 0) return undefined;
-    const notes: ResearchNote[] = [];
-    for (const claim of claims) {
-      let cached = researchCache.get(claim);
-      if (cached === undefined) {
-        cached = [];
-        try {
-          cached = await opts.research([claim]);
-        } catch {
-          cached = []; // degrade, never throw
-        }
-        researchCache.set(claim, cached);
-      }
-      notes.push(...cached);
-    }
-    return notes.length > 0 ? notes : undefined;
-  };
+  // The loop's fact check — none when the caller passed no research.
+  const factChecker =
+    opts.research === undefined ? null : createFactChecker(opts.research);
 
   /** Point the revision stage at a base + its quotable findings (and
    *  refresh the fact-check notes for them). Returns the base so callers
@@ -1275,13 +1308,18 @@ export async function runScoredDraft(
     findings: ReviseFinding[],
   ): Promise<ScoredAttempt> => {
     reviseBase = base;
-    const notes = await researchNotesFor(findings);
+    const notes =
+      factChecker === null ? undefined : await factChecker.notesFor(findings);
     researchNotesBlock =
       notes === undefined ? undefined : { researchNotes: notes };
     reviseFindings = findings.map((f) => {
       if (!f.code.startsWith("FACT_")) return f;
-      const verified = researchCache.get(f.quote.trim()) ?? [];
-      if (verified.length > 0) return f;
+      if (
+        factChecker !== null &&
+        factChecker.verifiedFor(f.quote.trim()).length > 0
+      ) {
+        return f;
+      }
       return guardUnverifiedFact(f);
     });
     return base;

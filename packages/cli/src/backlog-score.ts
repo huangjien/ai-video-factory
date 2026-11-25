@@ -7,6 +7,7 @@ import {
   GLMProvider,
   loadProviderConfig,
   MiniMaxProvider,
+  quoteColonScalars,
 } from "@video/llm";
 import type { ChatMessage, Provider } from "@video/llm";
 import { findRepoRoot } from "./learn-command.js";
@@ -225,7 +226,16 @@ export function parseJudgeRanking(
   try {
     parsed = parseYaml(body);
   } catch (err) {
-    throw new Error(`judge reply is not valid YAML: ${(err as Error).message}`);
+    // A reason that carries prose ("…: …") is not valid YAML. The
+    // repair quotes the offending value and reads it again; if that
+    // fails too, the original complaint is the honest one to report.
+    try {
+      parsed = parseYaml(quoteColonScalars(body));
+    } catch {
+      throw new Error(
+        `judge reply is not valid YAML: ${(err as Error).message}`,
+      );
+    }
   }
   const ranking = (parsed as { ranking?: unknown } | null)?.ranking;
   if (!Array.isArray(ranking)) {

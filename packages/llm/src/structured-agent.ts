@@ -318,33 +318,50 @@ export function formatSchemaIssues(error: {
     .join("; ");
 }
 
-/** Quote the value of a `key: value` line whose plain scalar carries
- *  ": ". YAML has no reading for such a line — ": " ends a plain scalar
- *  and starts a mapping — so one web page title copied in verbatim
- *  (`title: …的历史是什么？ : r/AskHistorians`, two of six research
- *  answers on 2026-11-25) lost the whole answer. Content of an open `|`
- *  / `>` block, and values that are already quoted or a flow collection,
- *  are left as written. */
+/** Repair the `key: value` lines YAML could not read, so one malformed
+ *  line does not lose a whole answer. Two shapes are known, both from
+ *  model replies that pasted prose into a value:
+ *
+ *  - a plain scalar carrying ": " (`title: …的历史是什么？ :
+ *    r/AskHistorians`) — ": " ends a plain scalar and starts a mapping;
+ *  - a quoted scalar with trailing text (`reason: 'We cannot even
+ *    measure this' as a decisive answer`) — the text after the closing
+ *    quote is a second scalar where the line allows one.
+ *
+ *  Only the lines the parser itself complained about are touched, and
+ *  only when the value is one of those two shapes. Content of an open
+ *  `|` / `>` block, a value that is a flow collection, and a line whose
+ *  trailing text is a comment are left as written. */
 export function quoteColonScalars(yamlText: string): string {
   // `key: value` whose value is a plain scalar carrying ": ". A value
   // with a ` #` is left alone: the ": " may sit in its comment, and
   // that line is valid as written.
   const colonScalar =
     /^(\s*(?:-\s+)?[^\s"'{}[\]]+:\s+)([^\s"'|>&*!#[{].*:(?:\s|$).*)$/;
+  // `key: 'quoted' and more text` — one quoted scalar, then a second.
+  const quotedThenMore =
+    /^(\s*(?:-\s+)?[^\s"'{}[\]]+:\s+)('[^']*'|"[^"]*")\s+(\S.*)$/;
   const lineCounter = new LineCounter();
   const { errors } = parseDocument(yamlText, {
     lineCounter,
     prettyErrors: false,
   });
-  const linesToRepair = new Set(
+  // Every error's line — the shape of the error does not matter, the
+  // position does.
+  const brokenLines = new Set(
     errors
-      .filter((error) => error.code === "BLOCK_AS_IMPLICIT_KEY")
+      .filter((error) => error.pos.length > 0)
       .map((error) => lineCounter.linePos(error.pos[0]).line),
   );
   return yamlText
     .split("\n")
     .map((text, index) => {
-      if (!linesToRepair.has(index + 1)) return text;
+      if (!brokenLines.has(index + 1)) return text;
+      const more = quotedThenMore.exec(text);
+      if (more !== null && !more[3]!.trim().startsWith("#")) {
+        // The model's own text is kept whole; the value becomes one scalar.
+        return more[1]! + JSON.stringify(`${more[2]!} ${more[3]!.trim()}`);
+      }
       const match = colonScalar.exec(text);
       const value = match?.[2];
       return match === null || value === undefined || /\s#/.test(value)

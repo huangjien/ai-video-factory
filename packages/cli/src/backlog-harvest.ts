@@ -11,7 +11,12 @@ import { execSync } from "node:child_process";
 import path from "node:path";
 import type { Command } from "commander";
 import { parse as parseYaml } from "yaml";
-import { GLMProvider, loadProviderConfig, MiniMaxProvider } from "@video/llm";
+import {
+  GLMProvider,
+  loadProviderConfig,
+  MiniMaxProvider,
+  quoteColonScalars,
+} from "@video/llm";
 import { extractFencedYaml } from "@video/llm";
 import type { ChatMessage, Provider } from "@video/llm";
 import { formatRunId, writeRun } from "@video/workflow";
@@ -137,11 +142,18 @@ ${docText}
 /** Parse the model reply into candidates. Returns null on garbage — the
  * caller dumps the raw output rather than guessing. */
 function parseCandidates(reply: string): TopicCandidate[] | null {
+  const body = extractFencedYaml(reply);
   let parsed: unknown;
   try {
-    parsed = parseYaml(extractFencedYaml(reply));
+    parsed = parseYaml(body);
   } catch {
-    return null;
+    // A note or a why that carries prose ("…: …") is not valid YAML;
+    // the repair quotes the offending value and reads it again.
+    try {
+      parsed = parseYaml(quoteColonScalars(body));
+    } catch {
+      return null;
+    }
   }
   if (parsed === null || typeof parsed !== "object") return null;
   if (!("topics" in parsed) || !Array.isArray(parsed.topics)) return null;

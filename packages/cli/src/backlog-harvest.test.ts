@@ -138,6 +138,24 @@ describe("runBacklogHarvest — happy path", () => {
     expect(chatMock).toHaveBeenCalledTimes(1);
   });
 
+  it("reads a note that carries prose instead of dropping the candidate", async () => {
+    const root = mkFixture();
+    chatMock.mockResolvedValue({
+      content: reply([
+        {
+          topic: "为什么停火线能冻结几十年",
+          note: "停火≠和平: 监督机制冻结利益",
+        },
+      ]),
+    });
+    captureConsole();
+    const code = await runBacklogHarvest({ cwd: root });
+    expect(code).toBe(0);
+    const store = loadStore(root);
+    expect(store.ideas).toHaveLength(1);
+    expect(store.ideas[0]?.note).toContain("停火≠和平: 监督机制冻结利益");
+  });
+
   it("dedups candidates whose topic slug already exists", async () => {
     const root = mkFixture();
     writeFileSync(

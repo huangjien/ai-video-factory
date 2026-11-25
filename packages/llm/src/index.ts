@@ -40,6 +40,7 @@ export {
   extractReplyBody,
   formatSchemaIssues,
   parseStructuredYaml,
+  quoteColonScalars,
   structuredYamlParser,
   type SafeParseResult,
   type SafeParseSchema,

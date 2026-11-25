@@ -309,4 +309,17 @@ describe("quoteColonScalars — only the lines YAML cannot read", () => {
       ].join("\n"),
     );
   });
+
+  it("quotes a value that is a quoted scalar followed by bare text", () => {
+    // The backlog judge's own failure (2026-11-25): a reason that opens
+    // with a quoted phrase and then keeps talking.
+    const text = [
+      "ranking:",
+      "  - n: 1",
+      "    reason: 'We cannot even measure this' as a decisive answer; tight scope",
+    ].join("\n");
+    expect(quoteColonScalars(text)).toContain(
+      "reason: \"'We cannot even measure this' as a decisive answer; tight scope\"",
+    );
+  });
 });

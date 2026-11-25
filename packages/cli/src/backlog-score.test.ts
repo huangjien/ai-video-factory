@@ -282,6 +282,27 @@ describe("parseJudgeRanking", () => {
     expect(rows.map((r) => r.id)).toEqual(["beta", "alpha"]);
   });
 
+  it("reads reasons that carry prose instead of failing on the YAML", () => {
+    // Both shapes the judge actually produced on 2026-11-25 — a reason
+    // with ": " and a quoted phrase followed by bare text.
+    const raw = [
+      "```yaml",
+      "ranking:",
+      "  - n: 1",
+      "    rank: 1",
+      "    reason: 59 stale mp4s incident: dashboard-lies tension plus a fix",
+      "  - n: 2",
+      "    rank: 2",
+      "    reason: 'We cannot even measure this' as a decisive answer; tight scope",
+      "```",
+    ].join("\n");
+    const rows = parseJudgeRanking(raw, ["a", "b"]);
+    expect(rows.map((r) => r.reason)).toEqual([
+      "59 stale mp4s incident: dashboard-lies tension plus a fix",
+      "'We cannot even measure this' as a decisive answer; tight scope",
+    ]);
+  });
+
   it("rejects out-of-range positions", () => {
     expect(() =>
       parseJudgeRanking(judgeYaml([{ n: 3, rank: 1, reason: "r" }]), [

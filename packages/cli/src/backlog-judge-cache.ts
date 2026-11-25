@@ -14,7 +14,10 @@ import type { BacklogEntry, BacklogStore } from "./backlog-store.js";
 
 export const JUDGE_CACHE_SCHEMA = "backlog-judge/2";
 export const JUDGE_CACHE_FILENAME = "backlog-judge.yaml";
-export const JUDGE_PROMPT_VERSION = "1";
+/** Bumped whenever the judge's instructions change, so a ranking cached
+ *  under the old ones is never served. "2": the report grew engagement and
+ *  topic-lane evidence, and the prompt learned how to read them. */
+export const JUDGE_PROMPT_VERSION = "2";
 
 export interface JudgeRank {
   id: string;
@@ -73,7 +76,10 @@ export function judgeFingerprint(
   const produced = store.ideas
     .filter((entry) => entry.status === "drafted")
     .map((entry) => ({ topic: entry.topic, project: entry.project ?? "" }))
-    .sort((a, b) => a.topic.localeCompare(b.topic) || a.project.localeCompare(b.project));
+    .sort(
+      (a, b) =>
+        a.topic.localeCompare(b.topic) || a.project.localeCompare(b.project),
+    );
   const report = latestAnalyticsReport(repoRoot);
   const input = {
     schema: JUDGE_CACHE_SCHEMA,
@@ -135,14 +141,19 @@ export function readJudgeCache(repoRoot: string): JudgeCacheRecord | null {
   const file = judgeCachePath(repoRoot);
   if (!existsSync(file)) return null;
   try {
-    const parsed = parseYaml(readFileSync(file, "utf8")) as JudgeCacheRecord | null;
+    const parsed = parseYaml(
+      readFileSync(file, "utf8"),
+    ) as JudgeCacheRecord | null;
     return parsed !== null && typeof parsed === "object" ? parsed : null;
   } catch {
     return null;
   }
 }
 
-export function writeJudgeCache(repoRoot: string, record: JudgeCacheRecord): void {
+export function writeJudgeCache(
+  repoRoot: string,
+  record: JudgeCacheRecord,
+): void {
   const target = judgeCachePath(repoRoot);
   mkdirSync(path.dirname(target), { recursive: true });
   const temporary = `${target}.${process.pid}.${Date.now()}.tmp`;
@@ -198,6 +209,9 @@ export function makeJudgeCacheRecord(args: {
 
 export function expectedJudgeIds(store: BacklogStore): string[] {
   return store.ideas
-    .filter((entry: BacklogEntry) => entry.status === "idea" || entry.status === "proposed")
+    .filter(
+      (entry: BacklogEntry) =>
+        entry.status === "idea" || entry.status === "proposed",
+    )
     .map((entry) => entry.id);
 }

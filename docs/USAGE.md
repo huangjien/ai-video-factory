@@ -932,6 +932,39 @@ public-domain clip. Scenes without a match follow the usual visual workflow.
 Disable retrieval with `--video-sources off` or `video_sources: "off"` in
 the article frontmatter. The command-line flag takes precedence.
 
+### The evidence the judge ranks by
+
+`video backlog judge` ranks every open idea in one LLM call, and it reads
+the channel's own numbers first. `video analytics` produces them: it pulls
+the public YouTube videos and the hundred most recent Bilibili videos —
+views, likes, comments, and on Bilibili coins, favorites, shares and
+danmaku — and writes `docs/analytics/<date>-report.md`. The report opens
+with a ranked digest that the judge is told to read before the tables:
+which topic lanes lead and lag on each platform, which lengths get
+watched, Shorts against long-form, Chinese against English, and the videos
+few people saw but the ones who did valued.
+
+```bash
+video analytics            # pull both platforms, write the report (about 40 s)
+video analytics --offline  # re-render today's report from the saved snapshot
+```
+
+Views say what was clicked; engagement says what was valued. A lane with
+high engagement and few views is an appetite the channel has not reached
+yet, and the judge is instructed to bump it rather than discount it. The
+digest's first line says where the channel is actually watched, so a topic
+is judged on the platform that watches it. Videos younger than three days
+are reported as a launch size, never as a rate. A pull that cannot run
+exits non-zero and names the fix — it never writes a report that says the
+channel has no videos.
+
+The YouTube token needs a read scope: `video youtube --auth --scope manage`
+(plain `--auth` mints an upload-only one). The token in
+`~/.config/secrets/ai.env` is read before the shell's
+`YOUTUBE_REFRESH_TOKEN`, which is a copy that goes stale. Retention and
+subscriber counts need the YouTube Analytics API enabled on the Google
+Cloud project; until it is, the report says so and stands without them.
+
 ### The auto-producer
 
 `video backlog auto` turns spare MiniMax capacity into finished videos. It

@@ -83,7 +83,7 @@ function safeGitHead(cwd: string): string {
 }
 
 /** Where client_secret.json lives unless --client-secret says otherwise. */
-function defaultClientSecretPath(): string {
+export function defaultClientSecretPath(): string {
   return (
     process.env["YOUTUBE_CLIENT_SECRET_FILE"] ??
     path.join(

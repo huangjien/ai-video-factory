@@ -101,6 +101,7 @@ review → approve review (GATE) → final
 | `theme [name]`             | palette inspector (list / one / resolve project)   |
 | `learn <project>`          | human-review learning loop (`--ask`/`--answer`/`--status`/`--propose`) |
 | `prompts [show <name>]`    | inspect the central prompt registry (`packages/prompts`) |
+| `analytics`                | channel evidence for the backlog judge: YouTube + Bilibili views, likes, comments, coins, favorites, shares, danmaku → `docs/analytics/<date>-report.md` with a ranked digest (platform split, topic lanes, engagement, length, Shorts, language). `--offline` re-renders from the saved snapshot; needs `video youtube --auth --scope manage` |
 
 Every step writes `runs/<id>.yaml` and updates `state.yaml`.
 

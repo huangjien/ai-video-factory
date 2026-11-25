@@ -173,13 +173,12 @@ cpSync(
   path.join(outDir, "assets", "config", "llm.yaml"),
 );
 // The python helpers the pipeline shells out to (text overlay, thumbnail
-// branding, bilibili upload, channel analytics). The make pipeline
-// probes both `<cwd>/scripts/` and `assets/scripts/` beside the bundle.
+// branding, bilibili upload). The make pipeline probes both `<cwd>/scripts/`
+// and `assets/scripts/` beside the bundle.
 const RUNTIME_SCRIPTS = [
   "pillow-text-overlay.py",
   "thumbnail-brand.py",
   "bilibili-upload.py",
-  "channel-analytics.py",
 ];
 mkdirSync(path.join(outDir, "assets", "scripts"), { recursive: true });
 for (const name of RUNTIME_SCRIPTS) {

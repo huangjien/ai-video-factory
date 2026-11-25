@@ -11,6 +11,10 @@ dist-bundle/
 *.log
 .omo/run-continuation/
 coverage/
+# Raw per-video snapshots behind docs/analytics/<date>-report.md. The
+# report is the durable artifact; a snapshot only serves the next report's
+# "since last time" comparison (video analytics).
+docs/analytics/*-data.json
 
 # Python venv (uv) for the Pillow contact-sheet helper (never tracked)
 packages/media-generators/python/.venv/

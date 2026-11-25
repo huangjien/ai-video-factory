@@ -89,7 +89,10 @@ function completenessScore(entry: BacklogEntry): number {
   if (entry.note !== undefined && entry.note.trim() !== "") {
     score += COMPLETENESS_PARTS.note;
   }
-  if (entry.anchors !== undefined && entry.anchors.some((a) => a.trim() !== "")) {
+  if (
+    entry.anchors !== undefined &&
+    entry.anchors.some((a) => a.trim() !== "")
+  ) {
     score += COMPLETENESS_PARTS.anchors;
   }
   if (entry.content !== undefined && entry.content.trim() !== "") {
@@ -150,7 +153,16 @@ channel has not covered — NOT how long or polished the note is.
 When the prompt includes REAL viewing data from the channel, use it: ideas
 in topic spaces that demonstrably overperform deserve a bump, ideas in
 spaces the audience ignored deserve a discount — and the reason must name
-which evidence drove that call.
+which evidence drove that call. Read the data for what it is:
+- views say what was CLICKED; engagement (likes, comments, coins,
+  favorites) says what the audience VALUED. A lane with high engagement and
+  few views is an appetite the channel has not reached yet — a bump, not a
+  discount.
+- judge a topic on the platform and format where it is actually watched;
+  the digest's first line says which. Low numbers where nothing is watched
+  are not a verdict on the topic.
+- fewer than three videos, or videos younger than three days, is not a
+  trend: read it as a signal of size, and say so in the reason.
 Output STRICTLY one fenced yaml block shaped:
 
 \`\`\`yaml
@@ -167,6 +179,40 @@ Rules:
 - the reason states the decisive factor, it does not restate the topic.`;
 
 const REPORT_PROMPT_CAP = 6000;
+
+/** The retry's conversation: the task, the reply that was rejected, and
+ *  the parser's complaint about it — the model cannot fix what it is not
+ *  told. */
+function retryTurns(
+  messages: ChatMessage[],
+  reply: string,
+  complaint: string | undefined,
+  count: number,
+): ChatMessage[] {
+  if (complaint === undefined) return messages;
+  return [
+    ...messages,
+    ...(reply === "" ? [] : [{ role: "assistant" as const, content: reply }]),
+    {
+      role: "user",
+      content: `That reply was rejected: ${complaint}. Answer again in the SAME yaml shape. List all ${count} entries: every number n from 1 to ${count} EXACTLY once, and each rank from 1 to ${count} exactly once.`,
+    },
+  ];
+}
+
+/** The part of the report the judge reads: its digest and its topic-lane
+ *  table, whole. Everything after is per-video lists the digest already
+ *  summarized, and cutting the report at a character count landed
+ *  mid-table — with the full report in the prompt the model listed one
+ *  entry twice on both attempts (2026-11-25). A report without that
+ *  second heading is read up to the cap. */
+export function evidenceExcerpt(content: string): string {
+  const cut = content.search(/^## 2\. /m);
+  return (cut === -1 ? content : content.slice(0, cut)).slice(
+    0,
+    REPORT_PROMPT_CAP,
+  );
+}
 
 function buildJudgeMessages(
   open: BacklogEntry[],
@@ -187,9 +233,13 @@ function buildJudgeMessages(
   }
   if (produced !== undefined && produced.length > 0) {
     lines.push("");
-    lines.push("ALREADY PRODUCED by this channel (do not re-tell these stories):");
+    lines.push(
+      "ALREADY PRODUCED by this channel (do not re-tell these stories):",
+    );
     for (const p of produced) {
-      lines.push(`- ${p.topic}${p.project !== undefined ? ` (project: ${p.project})` : ""}`);
+      lines.push(
+        `- ${p.topic}${p.project !== undefined ? ` (project: ${p.project})` : ""}`,
+      );
     }
     lines.push(
       "An open idea that retells one of these gets the LAST ranks with reason 'story already told' — unless it is a genuinely different angle, in which case say what is new.",
@@ -198,9 +248,9 @@ function buildJudgeMessages(
   if (report !== undefined) {
     lines.push("");
     lines.push(
-      `REAL viewing data for this channel (analytics report ${report.date} — views/day by video, both platforms):`,
+      `REAL viewing data for this channel (analytics report ${report.date}): views/day, ENGAGEMENT (likes, comments, coins, favorites), topic lanes, length, Shorts vs long-form, Chinese vs English — both platforms. It opens with a ranked digest; read that before the tables:`,
     );
-    lines.push(report.content.slice(0, REPORT_PROMPT_CAP));
+    lines.push(evidenceExcerpt(report.content));
   }
   lines.push("");
   lines.push(`Rank ALL ${open.length} entries now.`);
@@ -244,6 +294,7 @@ export function parseJudgeRanking(
   const expected = new Set(expectedIds);
   const seenIds = new Set<string>();
   const seenRanks = new Set<number>();
+  const duplicated: string[] = [];
   const out: JudgeRank[] = [];
   for (const [i, item] of ranking.entries()) {
     const row = item as {
@@ -269,7 +320,10 @@ export function parseJudgeRanking(
       );
     }
     if (seenIds.has(id)) {
-      throw new Error(`ranking lists "${id}" twice`);
+      // Reported at the end, next to what the duplication left out: "X
+      // twice and Y missing" is what a retry needs to hear.
+      duplicated.push(id);
+      continue;
     }
     const rank =
       typeof row.rank === "number"
@@ -292,8 +346,16 @@ export function parseJudgeRanking(
     });
   }
   const missing = [...expected].filter((id) => !seenIds.has(id));
-  if (missing.length > 0) {
-    throw new Error(`judge reply is missing ids: ${missing.join(", ")}`);
+  if (duplicated.length > 0 || missing.length > 0) {
+    const twice =
+      duplicated.length === 0
+        ? ""
+        : `ranking lists ${duplicated.map((id) => `"${id}"`).join(", ")} ${duplicated.length === 1 ? "twice" : "more than once"}`;
+    const omitted =
+      missing.length === 0 ? "" : `missing ids: ${missing.join(", ")}`;
+    throw new Error(
+      [twice, omitted].filter((part) => part !== "").join(" and "),
+    );
   }
   return out.sort((a, b) => a.rank - b.rank);
 }
@@ -331,10 +393,11 @@ export async function runBacklogJudge(
   const report = latestAnalyticsReport(repoRoot);
   // --json means stdout is machine-readable ONLY; evidence notices go to
   // stderr there (same convention as the ask protocol).
-  const notice = (m: string): void => (opts.json === true ? console.error(m) : console.log(m));
+  const notice = (m: string): void =>
+    opts.json === true ? console.error(m) : console.log(m);
   if (report === null) {
     notice(
-      "  no analytics report in docs/analytics/ — ranking without viewing-data evidence (run scripts/channel-analytics.py to add it)",
+      "  no analytics report in docs/analytics/ — ranking without viewing-data evidence (run `video analytics` to add it)",
     );
   } else {
     notice(`  viewing-data evidence: analytics report ${report.date}`);
@@ -344,8 +407,15 @@ export async function runBacklogJudge(
   // 2026-11-19). The produced set rides in the prompt AND the fingerprint.
   const produced = store.ideas
     .filter((e) => e.status === "drafted")
-    .map((e) => ({ topic: e.topic, ...(e.project !== undefined ? { project: e.project } : {}) }))
-    .sort((a, b) => a.topic.localeCompare(b.topic) || (a.project ?? "").localeCompare(b.project ?? ""));
+    .map((e) => ({
+      topic: e.topic,
+      ...(e.project !== undefined ? { project: e.project } : {}),
+    }))
+    .sort(
+      (a, b) =>
+        a.topic.localeCompare(b.topic) ||
+        (a.project ?? "").localeCompare(b.project ?? ""),
+    );
   const cfg = loadProviderConfig();
   const route = judgeRoute(cfg, opts.model);
   const fingerprint = judgeFingerprint(repoRoot, store, route);
@@ -373,6 +443,10 @@ export async function runBacklogJudge(
   if (ranking === null) {
     const messages = buildJudgeMessages(open, report ?? undefined, produced);
     let rawReply = "";
+    // The retry is told WHAT was wrong. Re-sending the same prompt at a low
+    // temperature only reproduced the mistake (2026-11-25: with the richer
+    // evidence the model listed one entry twice, on both attempts).
+    let complaint: string | undefined;
     // ONE automatic retry on an unusable reply; only the latest failure is
     // retained in the snapshot.
     for (let attempt = 1; attempt <= 2 && ranking === null; attempt++) {
@@ -380,38 +454,55 @@ export async function runBacklogJudge(
         // Low temperature: a ranking should not shuffle between identical runs.
         const out = await chatWithFallback(
           providerInstance(route.primary),
-          route.fallback !== undefined ? providerInstance(route.fallback) : null,
-          { messages, temperature: 0.2 },
+          route.fallback !== undefined
+            ? providerInstance(route.fallback)
+            : null,
+          {
+            messages: retryTurns(messages, rawReply, complaint, open.length),
+            temperature: 0.2,
+          },
         );
         rawReply = out.response.content;
         providerName = out.provider;
         judgedAt = new Date().toISOString();
       } catch (err) {
         const message = `judge LLM call failed: ${(err as Error).message}`;
-        writeJudgeCache(repoRoot, makeJudgeCacheRecord({
-          fingerprint,
-          provider: providerName,
-          created: new Date().toISOString(),
-          failure: { message },
-        }));
+        writeJudgeCache(
+          repoRoot,
+          makeJudgeCacheRecord({
+            fingerprint,
+            provider: providerName,
+            created: new Date().toISOString(),
+            failure: { message },
+          }),
+        );
         console.error(`✗ ${message}`);
         return 1;
       }
       try {
-        ranking = parseJudgeRanking(rawReply, open.map((e) => e.id));
+        ranking = parseJudgeRanking(
+          rawReply,
+          open.map((e) => e.id),
+        );
       } catch (err) {
         if (attempt === 2) {
           const message = `judge output unusable after retry: ${(err as Error).message}`;
-          writeJudgeCache(repoRoot, makeJudgeCacheRecord({
-            fingerprint,
-            provider: providerName,
-            created: new Date().toISOString(),
-            failure: { message, raw_reply: rawReply },
-          }));
+          writeJudgeCache(
+            repoRoot,
+            makeJudgeCacheRecord({
+              fingerprint,
+              provider: providerName,
+              created: new Date().toISOString(),
+              failure: { message, raw_reply: rawReply },
+            }),
+          );
           console.error(`✗ ${message}`);
           return 1;
         }
-        console.error(`  ! judge reply unusable (${(err as Error).message}) — retrying once`);
+        complaint = (err as Error).message;
+        console.error(
+          `  ! judge reply unusable (${complaint}) — retrying once`,
+        );
       }
     }
     // Both attempts either parse or return — unreachable, but it gives TS
@@ -423,32 +514,48 @@ export async function runBacklogJudge(
       currentStore = loadBacklogStore(repoRoot);
     } catch (err) {
       const message = `backlog changed while judging: ${(err as Error).message}`;
-      writeJudgeCache(repoRoot, makeJudgeCacheRecord({
-        fingerprint,
-        provider: providerName,
-        created: new Date().toISOString(),
-        failure: { message },
-      }));
+      writeJudgeCache(
+        repoRoot,
+        makeJudgeCacheRecord({
+          fingerprint,
+          provider: providerName,
+          created: new Date().toISOString(),
+          failure: { message },
+        }),
+      );
       console.error(`✗ ${message}`);
       return 1;
     }
-    if (judgeFingerprint(repoRoot, currentStore, judgeRoute(loadProviderConfig(), opts.model)) !== fingerprint) {
-      const message = "backlog or judge evidence changed while judging; run judge again";
-      writeJudgeCache(repoRoot, makeJudgeCacheRecord({
-        fingerprint,
-        provider: providerName,
-        created: new Date().toISOString(),
-        failure: { message },
-      }));
+    if (
+      judgeFingerprint(
+        repoRoot,
+        currentStore,
+        judgeRoute(loadProviderConfig(), opts.model),
+      ) !== fingerprint
+    ) {
+      const message =
+        "backlog or judge evidence changed while judging; run judge again";
+      writeJudgeCache(
+        repoRoot,
+        makeJudgeCacheRecord({
+          fingerprint,
+          provider: providerName,
+          created: new Date().toISOString(),
+          failure: { message },
+        }),
+      );
       console.error(`✗ ${message}`);
       return 1;
     }
-    writeJudgeCache(repoRoot, makeJudgeCacheRecord({
-      fingerprint,
-      provider: providerName,
-      created: judgedAt,
-      ranking,
-    }));
+    writeJudgeCache(
+      repoRoot,
+      makeJudgeCacheRecord({
+        fingerprint,
+        provider: providerName,
+        created: judgedAt,
+        ranking,
+      }),
+    );
   }
 
   // Every refusal path above returned, so the loop only exits with a
@@ -464,7 +571,15 @@ export async function runBacklogJudge(
       const r = rankById.get(e.id);
       return r === undefined
         ? []
-        : [{ id: e.id, topic: e.topic, status: e.status, rank: r.rank, reason: r.reason }];
+        : [
+            {
+              id: e.id,
+              topic: e.topic,
+              status: e.status,
+              rank: r.rank,
+              reason: r.reason,
+            },
+          ];
     })
     .sort((a, b) => a.rank - b.rank);
 
@@ -481,9 +596,12 @@ export async function runBacklogJudge(
     return 0;
   }
 
-  console.log(`✓ judge ranking of ${rows.length} open entries (${providerName}):`);
+  console.log(
+    `✓ judge ranking of ${rows.length} open entries (${providerName}):`,
+  );
   for (const row of rows) {
-    const reason = row.reason.replace(/\s+/g, " ").trim() || "(no reason given)";
+    const reason =
+      row.reason.replace(/\s+/g, " ").trim() || "(no reason given)";
     console.log(`  ${row.rank}. ${row.id}  ${row.topic} — ${reason}`);
   }
   console.log(`  cache: ${path.relative(repoRoot, cachePath)}`);
@@ -497,8 +615,14 @@ export function addJudgeCommand(backlog: Command): void {
       "one batched LLM ranking of open ideas, stored in runs/backlog-judge.yaml",
     )
     .option("--json", "machine-readable output (full ranked object)")
-    .option("--model <provider>", "model provider: minimax|glm (default from config)")
-    .option("--cwd <dir>", "repo root (default: walk up to pnpm-workspace.yaml)")
+    .option(
+      "--model <provider>",
+      "model provider: minimax|glm (default from config)",
+    )
+    .option(
+      "--cwd <dir>",
+      "repo root (default: walk up to pnpm-workspace.yaml)",
+    )
     .action(async (opts: { json?: boolean; model?: string; cwd?: string }) => {
       process.exitCode = await runBacklogJudge({
         ...(opts.json === true ? { json: true } : {}),

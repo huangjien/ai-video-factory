@@ -37,6 +37,7 @@ vi.mock("@video/llm", async (importOriginal) => {
 });
 
 import {
+  evidenceExcerpt,
   parseJudgeRanking,
   runBacklogJudge,
   scoreBacklogEntry,
@@ -303,6 +304,48 @@ describe("parseJudgeRanking", () => {
     ]);
   });
 
+  it("names what a duplication left out — a retry needs to hear both", () => {
+    expect(() =>
+      parseJudgeRanking(
+        judgeYaml([
+          { id: "a", rank: 1, reason: "r" },
+          { id: "a", rank: 2, reason: "r" },
+          { id: "c", rank: 3, reason: "r" },
+        ]),
+        ["a", "b", "c"],
+      ),
+    ).toThrow(/ranking lists "a" twice and missing ids: b/);
+  });
+
+  it("the judge reads the digest and the lane table, not the lists after them", () => {
+    const report = [
+      "# 频道分析 2026-11-25",
+      "",
+      "## 评委证据摘要",
+      "",
+      "- 平台分工：…",
+      "",
+      "## 1. 题材赛道 × 播放与参与",
+      "",
+      "| 平台 | 赛道 |",
+      "|---|---|",
+      "",
+      "## 2. 长度 × 播放",
+      "",
+      "| 长度段 |",
+      "",
+      "## 3. 长度 × 参与度",
+      "",
+    ].join("\n");
+    // Whole sections, cut between them — never a table half-way through.
+    expect(evidenceExcerpt(report)).toBe(
+      report.slice(0, report.indexOf("## 2. 长度 × 播放")),
+    );
+    // A report without that heading (the views-only format) is read to
+    // the cap.
+    expect(evidenceExcerpt("- x".repeat(5000))).toHaveLength(6000);
+  });
+
   it("rejects out-of-range positions", () => {
     expect(() =>
       parseJudgeRanking(judgeYaml([{ n: 3, rank: 1, reason: "r" }]), [
@@ -325,8 +368,10 @@ describe("runBacklogJudge — viewing-data evidence", () => {
       "# 频道分析 2026-11-11\n\n- 陆军班排连营 13.9 播放/天\n- AI幻觉评测 0.4 播放/天",
     );
     let userMessage = "";
+    let systemMessage = "";
     chatMock.mockImplementation(
       async (req: ChatRequest): Promise<ChatResponse> => {
+        systemMessage = req.messages[0]?.content ?? "";
         userMessage = req.messages[1]?.content ?? "";
         return {
           content: judgeYaml([{ n: 1, rank: 1, reason: "r" }]),
@@ -341,6 +386,12 @@ describe("runBacklogJudge — viewing-data evidence", () => {
     expect(consoleOutput.join("\n")).toMatch(
       /viewing-data evidence: analytics report 2026-11-11/,
     );
+    // The report carries engagement and topic lanes now; the framing says
+    // so, and the system prompt says how to read them.
+    expect(userMessage).toContain("ENGAGEMENT");
+    expect(userMessage).toContain("topic lanes");
+    expect(systemMessage).toContain("engagement (likes, comments, coins,");
+    expect(systemMessage).toContain("actually watched");
   });
 
   it("a NEW report date invalidates the cache → re-judge", async () => {
@@ -364,6 +415,69 @@ describe("runBacklogJudge — viewing-data evidence", () => {
     // One snapshot — but the new report changed the fingerprint, so the
     // judge ran again and rewrote it.
     expect(cacheFiles()).toHaveLength(1);
+  });
+
+  it("a RICHER report under the same date invalidates the cache → re-judge", async () => {
+    seedEntry({ id: "2026-11-01-alpha", topic: "停电的城市", status: "idea" });
+    mkdirSync(path.join(repoRoot, "docs", "analytics"), { recursive: true });
+    const report = path.join(
+      repoRoot,
+      "docs",
+      "analytics",
+      "2026-11-25-report.md",
+    );
+    // 2026-11-25: the day's first report held views only; running
+    // `video analytics` again wrote one with engagement under the same name.
+    writeFileSync(report, "# 频道分析 2026-11-25\n\nviews only\n");
+    chatReplyOnce(judgeYaml([{ n: 1, rank: 1, reason: "r" }]));
+    await runBacklogJudge({ model: "glm", cwd: repoRoot });
+    writeFileSync(
+      report,
+      "# 频道分析 2026-11-25\n\n## 评委证据摘要\n\n- engagement\n",
+    );
+    chatReplyOnce(judgeYaml([{ n: 1, rank: 1, reason: "r" }]));
+    await runBacklogJudge({ model: "glm", cwd: repoRoot });
+    expect(chatMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("the retry is told what was wrong with the first reply", async () => {
+    seedEntry({ id: "2026-11-01-alpha", topic: "停电的城市", status: "idea" });
+    seedEntry({ id: "2026-11-02-beta", topic: "深海热泉", status: "idea" });
+    const prompts: ChatRequest["messages"][] = [];
+    chatMock.mockImplementation(
+      async (req: ChatRequest): Promise<ChatResponse> => {
+        prompts.push(req.messages);
+        return {
+          // First reply: the first entry twice, the second one left out.
+          content:
+            prompts.length === 1
+              ? judgeYaml([
+                  { n: 1, rank: 1, reason: "r" },
+                  { n: 1, rank: 2, reason: "r" },
+                ])
+              : judgeYaml([
+                  { n: 2, rank: 1, reason: "r" },
+                  { n: 1, rank: 2, reason: "r" },
+                ]),
+          usage: { input: 10, output: 5 },
+        };
+      },
+    );
+    expect(await runBacklogJudge({ model: "glm", cwd: repoRoot })).toBe(0);
+    expect(chatMock).toHaveBeenCalledTimes(2);
+    expect(prompts[0]!.map((turn) => turn.role)).toEqual(["system", "user"]);
+    // The task again, the rejected reply, then the complaint about it.
+    const retry = prompts[1]!;
+    expect(retry.map((turn) => turn.role)).toEqual([
+      "system",
+      "user",
+      "assistant",
+      "user",
+    ]);
+    expect(retry[2]!.content).toContain("n: 1");
+    expect(retry[3]!.content).toBe(
+      'That reply was rejected: ranking lists "2026-11-01-alpha" twice and missing ids: 2026-11-02-beta. Answer again in the SAME yaml shape. List all 2 entries: every number n from 1 to 2 EXACTLY once, and each rank from 1 to 2 exactly once.',
+    );
   });
 
   it("lists ALREADY PRODUCED stories and re-judges when the produced set grows", async () => {

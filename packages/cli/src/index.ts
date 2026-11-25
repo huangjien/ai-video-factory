@@ -39,6 +39,7 @@ import { registerFinal } from "./render-command.js";
 import { registerRetrospect } from "./retrospect-command.js";
 import { registerLearn } from "./learn-command.js";
 import { registerBacklog } from "./backlog-command.js";
+import { registerAnalytics } from "./channel-analytics.js";
 import { registerVertical } from "./vertical-command.js";
 import { registerPrompts } from "./prompts-command.js";
 import { registerTranslate } from "./translate-command.js";
@@ -95,6 +96,7 @@ for (const register of [
   registerRetrospect,
   registerLearn,
   registerBacklog,
+  registerAnalytics,
   registerVertical,
   registerPrompts,
   registerTranslate,

@@ -85,6 +85,24 @@ The shared YAML reader now quotes such a value and parses it again. The
 repair runs only on text that already failed to parse, so no answer that
 parsed before is read differently now.
 
+**The judge ranks by what the audience valued, not only by what it
+clicked.** `video analytics` (new) replaces the views-only Python script.
+It pulls the public YouTube videos and the hundred most recent Bilibili
+videos — views, likes, comments, and on Bilibili coins, favorites, shares
+and danmaku — and writes `docs/analytics/<date>-report.md`, opening with
+a ranked digest: which topic lanes lead and lag on each platform, which
+lengths get watched, Shorts against long-form, Chinese against English,
+and the videos few people saw but the ones who did valued. The backlog
+judge reads that digest first and is told how to read it: engagement is
+an appetite a lane has not reached yet; a topic is judged where it is
+actually watched (on 2026-11-25: YouTube's views are Shorts, 33.8 against
+0.2 views/day for long-form, and long-form lives on Bilibili); a video
+younger than three days is a launch size, not a rate. The analysis is
+pure and tested against the real catalogue, every platform reply is read
+through a guard, and a pull that cannot run exits non-zero with the fix
+in its message. Retention and subscribers need the YouTube Analytics API
+enabled on the project — until then the report says so.
+
 ## v0.12 (2026-11-16) — the decision layer, the 2.6 image provider, and two films
 
 Three things shipped together:

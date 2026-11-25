@@ -3,12 +3,14 @@ import {
   mkdirSync,
   mkdtempSync,
   readdirSync,
+  rmSync,
+  utimesSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { execFileSync } from "node:child_process";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { brandSchema, compileStoryboard, type RenderPlan } from "@video/vdsl";
 import { renderPlanToVideo, resolveImageSources, resolveVideoSources } from "./render.js";
 
@@ -55,30 +57,45 @@ const samplePlan: RenderPlan = {
 };
 
 describe("renderPlanToVideo (todo 10)", () => {
-  it("produces a 1920x1080 30fps MP4 with duration ~7s", async () => {
+  it("produces a 1920x1080 30fps MP4 from a relative cache without removing older bundles", async () => {
     const outDir = mkdtempSync(path.join(tmpdir(), "video-render-"));
     const mp4Path = path.join(outDir, "out.mp4");
-    await renderPlanToVideo(samplePlan, mp4Path);
-    const out = execFileSync(
-      "ffprobe",
-      [
-        "-v",
-        "error",
-        "-select_streams",
-        "v:0",
-        "-show_entries",
-        "stream=width,height,r_frame_rate,duration",
-        "-of",
-        "json",
-        mp4Path,
-      ],
-      { encoding: "utf8" },
-    );
-    const s = JSON.parse(out).streams[0];
-    expect(s.width).toBe(1920);
-    expect(s.height).toBe(1080);
-    expect(s.r_frame_rate).toBe("30/1");
-    expect(Math.abs(parseFloat(s.duration) - 7.0)).toBeLessThan(0.2);
+    const cache = path.join(outDir, "cache");
+    vi.stubEnv("VIDEO_BUNDLE_CACHE", path.relative(process.cwd(), cache));
+    try {
+      writeFileSync(cache, "temporary file blocking the cache directory");
+      await expect(renderPlanToVideo(samplePlan, mp4Path)).rejects.toThrow();
+      rmSync(cache);
+      const olderBundle = path.join(cache, "bundle-older");
+      mkdirSync(olderBundle, { recursive: true });
+      const older = new Date(Date.now() - 31 * 86_400_000);
+      utimesSync(olderBundle, older, older);
+      await renderPlanToVideo(samplePlan, mp4Path);
+      expect(existsSync(olderBundle)).toBe(true);
+      const out = execFileSync(
+        "ffprobe",
+        [
+          "-v",
+          "error",
+          "-select_streams",
+          "v:0",
+          "-show_entries",
+          "stream=width,height,r_frame_rate,duration",
+          "-of",
+          "json",
+          mp4Path,
+        ],
+        { encoding: "utf8" },
+      );
+      const s = JSON.parse(out).streams[0];
+      expect(s.width).toBe(1920);
+      expect(s.height).toBe(1080);
+      expect(s.r_frame_rate).toBe("30/1");
+      expect(Math.abs(parseFloat(s.duration) - 7.0)).toBeLessThan(0.2);
+    } finally {
+      vi.unstubAllEnvs();
+      rmSync(outDir, { recursive: true, force: true });
+    }
   }, 120_000);
 
   it("paints the bound scene background behind a non-ImageBackground component", async () => {

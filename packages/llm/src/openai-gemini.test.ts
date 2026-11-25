@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import {
   createServer,
   type Server,
@@ -8,6 +8,7 @@ import {
 import type { AddressInfo } from "node:net";
 import { OpenAIProvider } from "./openai.js";
 import { GeminiProvider } from "./gemini.js";
+import { defaultModel } from "./config.js";
 
 const baseReq = { messages: [{ role: "user" as const, content: "hi" }] };
 
@@ -68,12 +69,20 @@ describe("OpenAIProvider — chat/completions", () => {
     expect(lastPath).toBe("/chat/completions");
   });
 
-  it("defaults to gpt-6.1-sol and honours an explicit model", async () => {
+  it("uses the configured default and honours an explicit model", async () => {
     process.env["OPENAI_API_KEY"] = "openai-test-key";
-    await new OpenAIProvider({ baseUrl }).chat(baseReq);
-    expect(lastBody["model"]).toBe("gpt-6.1-sol");
-    await new OpenAIProvider({ baseUrl }).chat({ ...baseReq, model: "gpt-5.2" });
-    expect(lastBody["model"]).toBe("gpt-5.2");
+    vi.stubEnv("OPENAI_MODEL", undefined);
+    try {
+      await new OpenAIProvider({ baseUrl }).chat(baseReq);
+      expect(lastBody["model"]).toBe(defaultModel("chat", "openai"));
+      await new OpenAIProvider({ baseUrl }).chat({
+        ...baseReq,
+        model: "gpt-5.2",
+      });
+      expect(lastBody["model"]).toBe("gpt-5.2");
+    } finally {
+      vi.unstubAllEnvs();
+    }
   });
 
   it("passes response_format through and never sends a thinking field", async () => {

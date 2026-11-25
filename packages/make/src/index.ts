@@ -1055,9 +1055,7 @@ export async function generateSceneVisuals(
     opts.videoSources,
     article.frontmatter.video_sources,
   );
-  const sceneDurations = await readSceneTimings(projectRoot).catch(
-    () => [],
-  );
+  const sceneDurations = await readSceneTimings(projectRoot).catch(() => []);
   const video = await resolveVideoSourcesForScenes({
     projectRoot,
     article,
@@ -1196,7 +1194,8 @@ export async function generateSceneVisuals(
 
     // Borrow the picture, if this scene has one. The download happens HERE,
     // after the cache check, so a cached scene spends no network.
-    let borrowed: { bytes: Uint8Array; record: SceneSourceRecord } | null = null;
+    let borrowed: { bytes: Uint8Array; record: SceneSourceRecord } | null =
+      null;
     if (resolution !== undefined && resolution.candidate !== null) {
       const candidate = resolution.candidate;
       const downloaded = await downloadCandidate(candidate);
@@ -1493,9 +1492,9 @@ export async function generateSceneVisuals(
   {
     const switched = updateStoryboardForImages(projectRoot, generatedImages);
     if (generatedImages.length > 0) {
-    outputs.push(
-      `storyboard.yaml: ${switched}/${generatedImages.length} scenes switched to ImageBackground`,
-    );
+      outputs.push(
+        `storyboard.yaml: ${switched}/${generatedImages.length} scenes switched to ImageBackground`,
+      );
     }
   }
   for (const { provider: p } of chain) {
@@ -1550,7 +1549,12 @@ function updateStoryboardForImages(
     if (!idNum) continue;
     const imagePath =
       imagePaths.find((p) => p.includes(`scene_${parseInt(idNum, 10)}.`)) ??
-      path.join(projectRoot, "assets", "images", `scene_${parseInt(idNum, 10)}.jpg`);
+      path.join(
+        projectRoot,
+        "assets",
+        "images",
+        `scene_${parseInt(idNum, 10)}.jpg`,
+      );
     const imageExists = existsSync(imagePath);
     const previousComponent = scene.visual.component;
     // CS-09: a still-first channel expresses its motion in
@@ -1560,7 +1564,8 @@ function updateStoryboardForImages(
         ? (scene.visual.props.kenBurnsScale as number)
         : undefined;
     const prevFit =
-      scene.visual.props?.fit === "cover" || scene.visual.props?.fit === "contain"
+      scene.visual.props?.fit === "cover" ||
+      scene.visual.props?.fit === "contain"
         ? scene.visual.props.fit
         : undefined;
     scene.visual.component = "ImageBackground";

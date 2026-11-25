@@ -247,6 +247,22 @@ describe("structuredYamlParser — the schema path as a parser", () => {
     });
   });
 
+  it("preserves commented block scalar text while repairing another field", () => {
+    const parse = structuredYamlParser({
+      schema,
+      schemaLabel: "Thing schema",
+      toError: (message) => new Error(message),
+    });
+    expect(
+      parse(
+        "a:\n  note: | # explanation\n    Copy: this: literally\n  title: broken: title",
+        "fake",
+      ),
+    ).toEqual({
+      a: { note: "Copy: this: literally\n", title: "broken: title" },
+    });
+  });
+
   it("still fails on a malformation it cannot repair", () => {
     const parse = structuredYamlParser({
       schema,

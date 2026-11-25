@@ -471,7 +471,11 @@ export async function resolveImageSources(
             props: { videoSrc: clip },
           };
         }
-        const withSrc = await resolveComponentSrc(scene, plan.projectRoot, warn);
+        const withSrc = await resolveComponentSrc(
+          scene,
+          plan.projectRoot,
+          warn,
+        );
         return resolveTextOverlay(withSrc, plan.projectRoot, warn);
       }
       // The title card paints its own art: it needs the picture's
@@ -678,12 +682,10 @@ async function resolveTitleCard(
   scene: RenderPlanScene,
 ): Promise<RenderPlanScene> {
   const artFile = findSceneImage(plan, scene);
-  const artSrc =
-    artFile === null ? undefined : await toDataUrl(artFile);
+  const artSrc = artFile === null ? undefined : await toDataUrl(artFile);
   const style = isTitleStyle(scene.props.style) ? scene.props.style : "kai";
   const fontFile = findFontFile(plan.projectRoot, TITLE_FONTS[style].file);
-  const fontSrc =
-    fontFile === null ? undefined : await toFontDataUrl(fontFile);
+  const fontSrc = fontFile === null ? undefined : await toFontDataUrl(fontFile);
   return {
     ...scene,
     props: {
@@ -722,7 +724,8 @@ async function toDataUrl(file: string): Promise<string> {
 /** A font file → a data URL the browser can register as a FontFace. */
 async function toFontDataUrl(file: string): Promise<string> {
   const bytes = await readFile(file);
-  const mime = path.extname(file).toLowerCase() === ".otf" ? "font/otf" : "font/ttf";
+  const mime =
+    path.extname(file).toLowerCase() === ".otf" ? "font/otf" : "font/ttf";
   return `data:${mime};base64,${Buffer.from(bytes).toString("base64")}`;
 }
 

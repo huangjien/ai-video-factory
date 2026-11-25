@@ -49,7 +49,9 @@ vi.mock("./shorts-command.js", () => ({
     (shortsMock as (...x: unknown[]) => unknown)(...a),
 }));
 vi.mock("./youtube-command.js", () => ({
-  resolveYouTubeCredentials: async () => { throw new Error("offline test"); },
+  resolveYouTubeCredentials: async () => {
+    throw new Error("offline test");
+  },
   runYouTube: vi.fn(),
 }));
 const verticalMock = vi.fn();
@@ -109,11 +111,13 @@ beforeEach(() => {
   makeMock.mockReset().mockResolvedValue(0);
   translateMock.mockReset().mockResolvedValue(0);
   verticalMock.mockReset().mockResolvedValue(0);
-  shortsMock.mockReset().mockImplementation(async ({ project }: { project: string }) => {
-    mkdirSync(path.join(project, "youtube"), { recursive: true });
-    writeFileSync(path.join(project, "youtube", "shorts.mp4"), "test");
-    return 0;
-  });
+  shortsMock
+    .mockReset()
+    .mockImplementation(async ({ project }: { project: string }) => {
+      mkdirSync(path.join(project, "youtube"), { recursive: true });
+      writeFileSync(path.join(project, "youtube", "shorts.mp4"), "test");
+      return 0;
+    });
   // The real judge writes a ranking the contract accepts; the stub must
   // do the same or the auto flow refuses the pick it just judged.
   judgeMock.mockReset().mockImplementation(async () => {
@@ -411,6 +415,24 @@ describe("runBacklogAuto — the pipeline", () => {
     }
   });
 
+  it("records stage timings when production fails", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    try {
+      vi.setSystemTime(NOW);
+      makeMock.mockImplementationOnce(async () => {
+        vi.setSystemTime(NOW + 37 * 60_000);
+        return 1;
+      });
+      await runBacklogAuto(readyToFire());
+      expect(vi.mocked(writeRun).mock.calls.at(-1)?.[1]).toMatchObject({
+        status: "failed",
+        error: expect.stringMatching(/draft-zh 0s .* make-zh 37m/),
+      });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("auto-approves a proposed entry and takes the first OPEN ranked idea when the top one is drafted", async () => {
     const runs = path.join(repoRoot, "runs");
     mkdirSync(runs, { recursive: true });
@@ -572,9 +594,17 @@ describe("runBacklogAuto — the pipeline", () => {
     const uploads: { slug: string; topic: string }[] = [];
     const seeded = seed({});
     seedJudgeCache(seeded.id);
-    const enYoutube = path.join(repoRoot, "projects", seeded.topic, "l10n/en-US/youtube");
+    const enYoutube = path.join(
+      repoRoot,
+      "projects",
+      seeded.topic,
+      "l10n/en-US/youtube",
+    );
     mkdirSync(enYoutube, { recursive: true });
-    writeFileSync(path.join(enYoutube, "title.txt"), "Why ceasefire lines freeze");
+    writeFileSync(
+      path.join(enYoutube, "title.txt"),
+      "Why ceasefire lines freeze",
+    );
     const code = await runBacklogAuto({
       cwd: repoRoot,
       fetchImpl: quotaOk(),
@@ -590,10 +620,16 @@ describe("runBacklogAuto — the pipeline", () => {
       },
     });
     expect(code).toBe(0);
-    expect(uploads).toMatchObject([{
-      slug: "为什么停火线能冻结几十年",
-      topic: seeded.topic,
-    }, { slug: seeded.topic + "/l10n/en-US", topic: "Why ceasefire lines freeze" }]);
+    expect(uploads).toMatchObject([
+      {
+        slug: "为什么停火线能冻结几十年",
+        topic: seeded.topic,
+      },
+      {
+        slug: seeded.topic + "/l10n/en-US",
+        topic: "Why ceasefire lines freeze",
+      },
+    ]);
     const tiktokPath = path.join(
       repoRoot,
       "projects",
@@ -613,13 +649,17 @@ describe("runBacklogAuto — the pipeline", () => {
   it("fails the run when the English Shorts export is missing", async () => {
     const entry = seed({});
     seedJudgeCache(entry.id);
-    shortsMock.mockImplementationOnce(async ({ project }: { project: string }) => {
-      mkdirSync(path.join(project, "youtube"), { recursive: true });
-      writeFileSync(path.join(project, "youtube", "shorts.mp4"), "test");
-      return 0;
-    }).mockResolvedValueOnce(0);
+    shortsMock
+      .mockImplementationOnce(async ({ project }: { project: string }) => {
+        mkdirSync(path.join(project, "youtube"), { recursive: true });
+        writeFileSync(path.join(project, "youtube", "shorts.mp4"), "test");
+        return 0;
+      })
+      .mockResolvedValueOnce(0);
     const code = await runBacklogAuto({
-      cwd: repoRoot, fetchImpl: quotaOk(), runPublish: async () => 0,
+      cwd: repoRoot,
+      fetchImpl: quotaOk(),
+      runPublish: async () => 0,
       uploadShorts: async () => 0,
     });
     expect(code).toBe(1);
@@ -736,7 +776,11 @@ describe("shortsDescription", () => {
       "cover prompt only, no spoken script\n",
       "utf8",
     );
-    writeFileSync(path.join(dir, "youtube", "description.md"), "FILM DESCRIPTION\n", "utf8");
+    writeFileSync(
+      path.join(dir, "youtube", "description.md"),
+      "FILM DESCRIPTION\n",
+      "utf8",
+    );
     const out = shortsDescription(dir, "TOPIC");
     expect(out).toContain("FILM DESCRIPTION");
     expect(out).not.toContain("cover prompt only");

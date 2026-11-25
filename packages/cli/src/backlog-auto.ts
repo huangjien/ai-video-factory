@@ -1,5 +1,13 @@
 import { execSync, spawn } from "node:child_process";
-import { existsSync, readdirSync, readFileSync, statSync, mkdirSync, unlinkSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  readdirSync,
+  readFileSync,
+  statSync,
+  mkdirSync,
+  unlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { homedir, tmpdir } from "node:os";
 import path from "node:path";
 import { parse as parseYaml } from "yaml";
@@ -110,7 +118,9 @@ export async function fetchMiniMaxQuota(
 ): Promise<MiniMaxQuota> {
   const key = process.env["MINIMAX_API_KEY"];
   if (key === undefined || key === "") {
-    throw new Error("MINIMAX_API_KEY is not set — cannot read Token Plan quota");
+    throw new Error(
+      "MINIMAX_API_KEY is not set — cannot read Token Plan quota",
+    );
   }
   const res = await fetchImpl(TOKEN_PLAN_URL, {
     headers: { Authorization: `Bearer ${key}` },
@@ -154,9 +164,16 @@ function* filesUnder(dir: string, yamlOnly: boolean): Generator<string> {
   }
 }
 
-function isMinimaxEvidence(file: string, stat: { mtimeMs: number }, now: number): boolean {
+function isMinimaxEvidence(
+  file: string,
+  stat: { mtimeMs: number },
+  now: number,
+): boolean {
   // TTS and scene images leave no run record; their artifacts ARE the record.
-  if (file.includes(`${path.sep}assets${path.sep}audio`) || file.includes(`${path.sep}assets${path.sep}images`)) {
+  if (
+    file.includes(`${path.sep}assets${path.sep}audio`) ||
+    file.includes(`${path.sep}assets${path.sep}images`)
+  ) {
     return true;
   }
   if (now - stat.mtimeMs > 24 * 60 * 60 * 1000) return false;
@@ -180,14 +197,17 @@ export function minimaxIdleMinutes(
   now: number = Date.now(),
 ): number {
   const projectsDir = path.join(repoRoot, "projects");
-  const candidates: string[] = [path.join(repoRoot, "runs"), path.join(projectsDir, "*", "runs"), path.join(projectsDir, "*", "assets", "audio"), path.join(projectsDir, "*", "assets", "images")]
-    .flatMap((pattern) => {
-      if (!pattern.includes("*")) return [pattern];
-      const base = pattern.slice(0, pattern.indexOf("*"));
-      if (!existsSync(base)) return [];
-      return readdirSync(base)
-        .map((name) => pattern.replace("*", name));
-    });
+  const candidates: string[] = [
+    path.join(repoRoot, "runs"),
+    path.join(projectsDir, "*", "runs"),
+    path.join(projectsDir, "*", "assets", "audio"),
+    path.join(projectsDir, "*", "assets", "images"),
+  ].flatMap((pattern) => {
+    if (!pattern.includes("*")) return [pattern];
+    const base = pattern.slice(0, pattern.indexOf("*"));
+    if (!existsSync(base)) return [];
+    return readdirSync(base).map((name) => pattern.replace("*", name));
+  });
   let newest = -1;
   for (const dir of candidates) {
     // Asset dirs scan EVERY file (scene-1.wav is TTS evidence); run-record
@@ -233,22 +253,39 @@ export function acquireAutoLock(
   const target = lockPath(repoRoot);
   if (existsSync(target)) {
     try {
-      const raw = parseYaml(readFileSync(target, "utf8")) as { pid?: number } | null;
+      const raw = parseYaml(readFileSync(target, "utf8")) as {
+        pid?: number;
+      } | null;
       const pid = raw?.pid;
       if (typeof pid === "number" && pidAlive(pid)) {
-        return { acquired: false, reason: `another backlog auto is running (pid ${pid})` };
+        return {
+          acquired: false,
+          reason: `another backlog auto is running (pid ${pid})`,
+        };
       }
       const age = now - statSync(target).mtimeMs;
       if (age < LOCK_STALE_MS) {
-        return { acquired: false, reason: `stale lock from a dead pid (written ${Math.round(age / 60000)} min ago) — delete ${path.relative(repoRoot, target)} to override` };
+        return {
+          acquired: false,
+          reason: `stale lock from a dead pid (written ${Math.round(age / 60000)} min ago) — delete ${path.relative(repoRoot, target)} to override`,
+        };
       }
-      console.log(`  ! taking over a stale auto lock (>3h old, owner pid dead)`);
+      console.log(
+        `  ! taking over a stale auto lock (>3h old, owner pid dead)`,
+      );
     } catch {
-      return { acquired: false, reason: `unreadable lock at ${path.relative(repoRoot, target)}` };
+      return {
+        acquired: false,
+        reason: `unreadable lock at ${path.relative(repoRoot, target)}`,
+      };
     }
   }
   mkdirSync(path.dirname(target), { recursive: true });
-  writeFileSync(target, `pid: ${process.pid}\ntaken: ${new Date(now).toISOString()}\n`, "utf8");
+  writeFileSync(
+    target,
+    `pid: ${process.pid}\ntaken: ${new Date(now).toISOString()}\n`,
+    "utf8",
+  );
   return { acquired: true };
 }
 
@@ -265,11 +302,15 @@ async function pickTopOpenId(
 ): Promise<{ id?: string; message: string }> {
   const store = loadBacklogStore(repoRoot);
   const openIds = new Set(
-    store.ideas.filter((e) => e.status === "idea" || e.status === "proposed").map((e) => e.id),
+    store.ideas
+      .filter((e) => e.status === "idea" || e.status === "proposed")
+      .map((e) => e.id),
   );
   removeLegacyJudgeCaches(repoRoot);
   if (openIds.size === 0) {
-    return { message: "no open entries — the backlog needs new ideas (harvest or add)" };
+    return {
+      message: "no open entries — the backlog needs new ideas (harvest or add)",
+    };
   }
   const route = judgeRoute(loadProviderConfig());
   const fingerprint = judgeFingerprint(repoRoot, store, route);
@@ -279,15 +320,22 @@ async function pickTopOpenId(
     expectedJudgeIds(store),
   );
   if (ranking === null) {
-    console.log("  no valid ranking for current inputs — running the judge first");
+    console.log(
+      "  no valid ranking for current inputs — running the judge first",
+    );
     const code = await runBacklogJudge({ cwd: repoRoot });
     if (code !== 0) {
-      return { message: `judge failed (exit ${code}) — no ranking to pick from` };
+      return {
+        message: `judge failed (exit ${code}) — no ranking to pick from`,
+      };
     }
     const currentStore = loadBacklogStore(repoRoot);
     const currentFingerprint = judgeFingerprint(repoRoot, currentStore, route);
     if (currentFingerprint !== fingerprint) {
-      return { message: "backlog or judge evidence changed while judging — refusing stale pick" };
+      return {
+        message:
+          "backlog or judge evidence changed while judging — refusing stale pick",
+      };
     }
     ranking = validCachedRanking(
       readJudgeCache(repoRoot),
@@ -295,15 +343,23 @@ async function pickTopOpenId(
       expectedJudgeIds(currentStore),
     );
     if (ranking === null) {
-      return { message: "judge wrote no valid ranking for current inputs — cannot pick" };
+      return {
+        message:
+          "judge wrote no valid ranking for current inputs — cannot pick",
+      };
     }
   }
   const top = ranking[0];
   if (top !== undefined && !openIds.has(top.id)) {
-    return { message: "validated ranking no longer matches open backlog — refusing stale pick" };
+    return {
+      message:
+        "validated ranking no longer matches open backlog — refusing stale pick",
+    };
   }
   if (top === undefined) {
-    return { message: "every ranked idea is already drafted — harvest new ideas first" };
+    return {
+      message: "every ranked idea is already drafted — harvest new ideas first",
+    };
   }
   return { id: top.id, message: `judge rank ${top.rank}` };
 }
@@ -311,12 +367,7 @@ async function pickTopOpenId(
 // --- publishing ---------------------------------------------------------
 
 export type PublishStepKind =
-  | "bili-zh"
-  | "yt-zh"
-  | "yt-en"
-  | "bili-en"
-  | "douyin-zh"
-  | "douyin-en";
+  "bili-zh" | "yt-zh" | "yt-en" | "bili-en" | "douyin-zh" | "douyin-en";
 
 export interface PublishStep {
   kind: PublishStepKind;
@@ -325,16 +376,29 @@ export interface PublishStep {
   anchors: string[];
 }
 
-const BILI_UPLOAD_PY = path.join(homedir(), ".venvs", "biliup", "bin", "python");
+const BILI_UPLOAD_PY = path.join(
+  homedir(),
+  ".venvs",
+  "biliup",
+  "bin",
+  "python",
+);
 
-function spawnUpload(args: string[], cwd: string): Promise<{ code: number; output: string }> {
+function spawnUpload(
+  args: string[],
+  cwd: string,
+): Promise<{ code: number; output: string }> {
   // Promise.withResolvers would be cleaner but the package's TS lib target
   // predates es2024.
   return new Promise((resolve) => {
-    const child = spawn(BILI_UPLOAD_PY, [path.join(cwd, "scripts", "bilibili-upload.py"), ...args], {
-      cwd,
-      env: process.env,
-    });
+    const child = spawn(
+      BILI_UPLOAD_PY,
+      [path.join(cwd, "scripts", "bilibili-upload.py"), ...args],
+      {
+        cwd,
+        env: process.env,
+      },
+    );
     let output = "";
     child.stdout.on("data", (d: Buffer) => {
       output += d.toString();
@@ -435,7 +499,14 @@ async function defaultPublish(step: PublishStep): Promise<number> {
     [
       "--standalone",
       "--video",
-      path.join("projects", step.slug, "l10n", "en-US", "output", "final-mixed.mp4"),
+      path.join(
+        "projects",
+        step.slug,
+        "l10n",
+        "en-US",
+        "output",
+        "final-mixed.mp4",
+      ),
       "--title",
       meta.title ?? step.slug,
       "--desc",
@@ -445,7 +516,14 @@ async function defaultPublish(step: PublishStep): Promise<number> {
       "--tid",
       "202",
       "--cover",
-      path.join("projects", step.slug, "l10n", "en-US", "youtube", "thumbnail.jpg"),
+      path.join(
+        "projects",
+        step.slug,
+        "l10n",
+        "en-US",
+        "youtube",
+        "thumbnail.jpg",
+      ),
     ],
     step.repoRoot,
   );
@@ -454,7 +532,14 @@ async function defaultPublish(step: PublishStep): Promise<number> {
   // published tier reads it.
   const bv = up.output.match(/BV[0-9A-Za-z]{10}/)?.[0];
   if (bv !== undefined) {
-    const dir = path.join(step.repoRoot, "projects", step.slug, "l10n", "en-US", "bilibili");
+    const dir = path.join(
+      step.repoRoot,
+      "projects",
+      step.slug,
+      "l10n",
+      "en-US",
+      "bilibili",
+    );
     mkdirSync(dir, { recursive: true });
     writeFileSync(path.join(dir, "bvid.txt"), bv + "\n", "utf8");
   }
@@ -524,7 +609,9 @@ async function uploadShortsToYouTube(input: {
       description,
       privacyStatus: "private",
     });
-    console.log(`  ✓ shorts uploaded: https://youtu.be/${videoId} (${watchUrl})`);
+    console.log(
+      `  ✓ shorts uploaded: https://youtu.be/${videoId} (${watchUrl})`,
+    );
     return 0;
   } catch (err) {
     console.error(`  ! shorts upload failed: ${(err as Error).message}`);
@@ -551,8 +638,14 @@ export function stageTook(ms: number): string {
 }
 
 /** Exit-code runner for `video backlog auto`. */
-export async function runBacklogAuto(opts: BacklogAutoOptions): Promise<number> {
-  if (opts.installScheduler === true || opts.removeScheduler === true || opts.schedulerStatus === true) {
+export async function runBacklogAuto(
+  opts: BacklogAutoOptions,
+): Promise<number> {
+  if (
+    opts.installScheduler === true ||
+    opts.removeScheduler === true ||
+    opts.schedulerStatus === true
+  ) {
     return runBacklogSchedule({
       ...(opts.installScheduler === true ? { install: true } : {}),
       ...(opts.removeScheduler === true ? { remove: true } : {}),
@@ -560,7 +653,9 @@ export async function runBacklogAuto(opts: BacklogAutoOptions): Promise<number> 
       kind: "auto",
       ...(opts.cwd !== undefined ? { cwd: opts.cwd } : {}),
       ...(opts.plistDir !== undefined ? { plistDir: opts.plistDir } : {}),
-      ...(opts.runLaunchctl !== undefined ? { runLaunchctl: opts.runLaunchctl } : {}),
+      ...(opts.runLaunchctl !== undefined
+        ? { runLaunchctl: opts.runLaunchctl }
+        : {}),
     });
   }
 
@@ -591,8 +686,13 @@ export async function runBacklogAuto(opts: BacklogAutoOptions): Promise<number> 
   } catch (err) {
     return refuse(`quota unavailable: ${(err as Error).message}`);
   }
-  conditions.push(`quota: 5h ${quota.intervalRemaining}%, week ${quota.weeklyRemaining}% (bar ${minRemaining}%)`);
-  if (quota.intervalRemaining < minRemaining || quota.weeklyRemaining < minRemaining) {
+  conditions.push(
+    `quota: 5h ${quota.intervalRemaining}%, week ${quota.weeklyRemaining}% (bar ${minRemaining}%)`,
+  );
+  if (
+    quota.intervalRemaining < minRemaining ||
+    quota.weeklyRemaining < minRemaining
+  ) {
     return refuse(`MiniMax quota below ${minRemaining}%`);
   }
 
@@ -603,14 +703,20 @@ export async function runBacklogAuto(opts: BacklogAutoOptions): Promise<number> 
     : ">24 h";
   conditions.push(`minimax idle: ${idleText}`);
   if (idleMinutes < IDLE_THRESHOLD_MIN) {
-    return refuse(`MiniMax worked ${idleText} ago (< ${IDLE_THRESHOLD_MIN} min idle)`);
+    return refuse(
+      `MiniMax worked ${idleText} ago (< ${IDLE_THRESHOLD_MIN} min idle)`,
+    );
   }
 
   // One idea at a time: a stuck drafting entry is a resume, not a new pick.
   const stuck = store.ideas.filter((e) => e.status === "drafting");
   if (stuck.length > 0) {
-    const names = stuck.map((e) => `${e.id}${isStaleDrafting(e) ? " (stale)" : ""}`).join(", ");
-    return refuse(`idea(s) mid-pipeline: ${names} — resume manually or \`video backlog reset <id>\``);
+    const names = stuck
+      .map((e) => `${e.id}${isStaleDrafting(e) ? " (stale)" : ""}`)
+      .join(", ");
+    return refuse(
+      `idea(s) mid-pipeline: ${names} — resume manually or \`video backlog reset <id>\``,
+    );
   }
 
   const pick = await pickTopOpenId(repoRoot);
@@ -620,7 +726,10 @@ export async function runBacklogAuto(opts: BacklogAutoOptions): Promise<number> 
   try {
     store = loadBacklogStore(repoRoot);
   } catch (err) {
-    return refuse(`backlog changed after ranking: ${(err as Error).message}`, 1);
+    return refuse(
+      `backlog changed after ranking: ${(err as Error).message}`,
+      1,
+    );
   }
   const currentRoute = judgeRoute(loadProviderConfig());
   const currentRanking = validCachedRanking(
@@ -629,7 +738,9 @@ export async function runBacklogAuto(opts: BacklogAutoOptions): Promise<number> 
     expectedJudgeIds(store),
   );
   if (currentRanking?.[0]?.id !== pick.id) {
-    return refuse("backlog or judge inputs changed after ranking — refusing stale pick");
+    return refuse(
+      "backlog or judge inputs changed after ranking — refusing stale pick",
+    );
   }
   conditions.push(`pick: ${pick.id} (${pick.message})`);
   console.log(`✓ conditions met — top idea: ${pick.id}`);
@@ -648,7 +759,10 @@ export async function runBacklogAuto(opts: BacklogAutoOptions): Promise<number> 
     store = loadBacklogStore(repoRoot);
   } catch (err) {
     releaseAutoLock(repoRoot);
-    return refuse(`backlog changed before drafting: ${(err as Error).message}`, 1);
+    return refuse(
+      `backlog changed before drafting: ${(err as Error).message}`,
+      1,
+    );
   }
   const lockedRanking = validCachedRanking(
     readJudgeCache(repoRoot),
@@ -657,11 +771,16 @@ export async function runBacklogAuto(opts: BacklogAutoOptions): Promise<number> 
   );
   if (lockedRanking?.[0]?.id !== pick.id) {
     releaseAutoLock(repoRoot);
-    return refuse("backlog or judge inputs changed before drafting — refusing stale pick");
+    return refuse(
+      "backlog or judge inputs changed before drafting — refusing stale pick",
+    );
   }
 
   const entry = store.ideas.find((e) => e.id === pick.id);
-  if (entry === undefined || (entry.status !== "idea" && entry.status !== "proposed")) {
+  if (
+    entry === undefined ||
+    (entry.status !== "idea" && entry.status !== "proposed")
+  ) {
     releaseAutoLock(repoRoot);
     return refuse(`selected idea ${pick.id} is no longer open`);
   }
@@ -692,8 +811,16 @@ export async function runBacklogAuto(opts: BacklogAutoOptions): Promise<number> 
   const publishFailures: string[] = [];
   const fail = async (stage: string, code: number): Promise<number> => {
     record(stage, code);
-    console.error(`✗ stage ${stage} failed (exit ${code}) — entry left in drafting; resume or \`video backlog reset ${entry.id}\``);
-    await recordRun(repoRoot, "failed", [...conditions, `failed at ${stage} (exit ${code})`], startedAt, slug);
+    console.error(
+      `✗ stage ${stage} failed (exit ${code}) — entry left in drafting; resume or \`video backlog reset ${entry.id}\``,
+    );
+    await recordRun(
+      repoRoot,
+      "failed",
+      [...conditions, ...stageTrace(), `failed at ${stage} (exit ${code})`],
+      startedAt,
+      slug,
+    );
     releaseAutoLock(repoRoot);
     return code;
   };
@@ -754,9 +881,12 @@ export async function runBacklogAuto(opts: BacklogAutoOptions): Promise<number> 
     "douyin-zh",
     "douyin-en",
   ] as const) {
-    const code = await (opts.runPublish ?? defaultPublish)(
-      { kind, slug, repoRoot, anchors },
-    );
+    const code = await (opts.runPublish ?? defaultPublish)({
+      kind,
+      slug,
+      repoRoot,
+      anchors,
+    });
     record(`publish-${kind}`, code);
     if (code !== 0) {
       publishFailures.push(`publish-${kind}`);
@@ -776,34 +906,60 @@ export async function runBacklogAuto(opts: BacklogAutoOptions): Promise<number> 
 
   const missingShorts: string[] = [];
   if (!opts.noShorts) {
-    for (const [language, root] of [["zh", zhRoot], ["en", enRoot]] as const) {
+    for (const [language, root] of [
+      ["zh", zhRoot],
+      ["en", enRoot],
+    ] as const) {
       const edition = path.relative(path.join(repoRoot, "projects"), root);
       const verticalRoot = path.join(root, "vertical");
       const master = path.join(verticalRoot, "output", "final-mixed.mp4");
       const shortsPath = path.join(verticalRoot, "youtube", "shorts.mp4");
       try {
-        const verticalCode = await runVertical({ project: root, cwd: repoRoot });
+        const verticalCode = await runVertical({
+          project: root,
+          cwd: repoRoot,
+        });
         record(`vertical-${language}`, verticalCode);
         if (verticalCode !== 0) throw new Error("vertical render failed");
-        const shortsCode = await runShorts({ project: verticalRoot, cwd: repoRoot });
+        const shortsCode = await runShorts({
+          project: verticalRoot,
+          cwd: repoRoot,
+        });
         record(`shorts-${language}`, shortsCode);
-        if (shortsCode !== 0 || !existsSync(shortsPath)) throw new Error("Shorts export missing");
+        if (shortsCode !== 0 || !existsSync(shortsPath))
+          throw new Error("Shorts export missing");
       } catch (error) {
         missingShorts.push(language);
-        console.error(`✗ ${edition}: ${error} — retry video vertical "${root}" and video shorts "${verticalRoot}"`);
+        console.error(
+          `✗ ${edition}: ${error} — retry video vertical "${root}" and video shorts "${verticalRoot}"`,
+        );
         continue;
       }
 
-      conditions.push(`Shorts ${language}: ${path.relative(repoRoot, shortsPath)}`);
+      conditions.push(
+        `Shorts ${language}: ${path.relative(repoRoot, shortsPath)}`,
+      );
       const englishTitle = path.join(root, "youtube", "title.txt");
-      const topic = language === "zh" ? entry.topic :
-        (existsSync(englishTitle) && readFileSync(englishTitle, "utf8").trim()) ||
-        (existsSync(path.join(root, "article.md")) && readFileSync(path.join(root, "article.md"), "utf8").match(/^# (.+)$/m)?.[1]) ||
-        "English edition";
+      const topic =
+        language === "zh"
+          ? entry.topic
+          : (existsSync(englishTitle) &&
+              readFileSync(englishTitle, "utf8").trim()) ||
+            (existsSync(path.join(root, "article.md")) &&
+              readFileSync(path.join(root, "article.md"), "utf8").match(
+                /^# (.+)$/m,
+              )?.[1]) ||
+            "English edition";
       if (language === "zh") {
         // TikTok lane reserved: metadata lands as JSON; the upload itself
         // awaits the Content Posting API (app review) — upload manually.
-        const hookPath = path.join(repoRoot, "projects", slug, "youtube", "shorts-hook.txt");
+        const hookPath = path.join(
+          repoRoot,
+          "projects",
+          slug,
+          "youtube",
+          "shorts-hook.txt",
+        );
         const tiktokDir = path.join(repoRoot, "projects", slug, "tiktok");
         mkdirSync(tiktokDir, { recursive: true });
         writeFileSync(
@@ -811,10 +967,18 @@ export async function runBacklogAuto(opts: BacklogAutoOptions): Promise<number> 
           JSON.stringify(
             {
               platform: "tiktok",
-              video: path.relative(path.join(repoRoot, "projects", slug), shortsPath),
-              master: path.relative(path.join(repoRoot, "projects", slug), master),
+              video: path.relative(
+                path.join(repoRoot, "projects", slug),
+                shortsPath,
+              ),
+              master: path.relative(
+                path.join(repoRoot, "projects", slug),
+                master,
+              ),
               title: entry.topic,
-              description: existsSync(hookPath) ? readFileSync(hookPath, "utf8").trim() : "",
+              description: existsSync(hookPath)
+                ? readFileSync(hookPath, "utf8").trim()
+                : "",
               tags: entry.anchors ?? [],
               visibility: "public",
               note: "TikTok API lane reserved (Content Posting API needs app review) — upload manually at tiktok.com",
@@ -826,15 +990,22 @@ export async function runBacklogAuto(opts: BacklogAutoOptions): Promise<number> 
         );
       }
       const upCode = await (opts.uploadShorts ?? uploadShortsToYouTube)({
-        repoRoot, slug: edition, topic, shortsPath, verticalMaster: master,
+        repoRoot,
+        slug: edition,
+        topic,
+        shortsPath,
+        verticalMaster: master,
         ...(entry.anchors !== undefined ? { anchors: entry.anchors } : {}),
-        ...(opts.shortsCredentials !== undefined ? { creds: opts.shortsCredentials } : {}),
+        ...(opts.shortsCredentials !== undefined
+          ? { creds: opts.shortsCredentials }
+          : {}),
       });
       record(`shorts-upload-${language}`, upCode);
       if (upCode !== 0) publishFailures.push(`shorts-upload-${language}`);
     }
   }
-  if (missingShorts.length > 0) return fail(`shorts-${missingShorts.join("+")}`, 1);
+  if (missingShorts.length > 0)
+    return fail(`shorts-${missingShorts.join("+")}`, 1);
 
   await recordRun(
     repoRoot,
@@ -870,14 +1041,18 @@ async function recordRun(
     await writeRun(repoRoot, {
       run_id: formatRunId("backlog-auto"),
       stage: "backlog-auto",
-      status: status === "failed" ? ("failed" as const) : ("succeeded" as const),
+      status:
+        status === "failed" ? ("failed" as const) : ("succeeded" as const),
       actor: "agent" as const,
       tool: "video-backlog",
       input_commit: safeGitHead(repoRoot),
       input_files: ["backlog.yaml"],
       output_files:
         slug !== undefined && status === "succeeded"
-          ? [`projects/${slug}/output/final-mixed.mp4`, `projects/${slug}/l10n/en-US/output/final-mixed.mp4`]
+          ? [
+              `projects/${slug}/output/final-mixed.mp4`,
+              `projects/${slug}/l10n/en-US/output/final-mixed.mp4`,
+            ]
           : [],
       created_at: new Date().toISOString(),
       duration_ms: Date.now() - startedAt,
@@ -908,42 +1083,58 @@ export function addAutoCommand(backlog: Command): void {
     .description(
       "spare-capacity producer: when MiniMax is idle 1h and ≥80% quota remains, draft+render the judge's top idea in zh and en-US",
     )
-    .option("--dry-run", "evaluate the trigger conditions and would-pick only — no pipeline, no store writes")
+    .option(
+      "--dry-run",
+      "evaluate the trigger conditions and would-pick only — no pipeline, no store writes",
+    )
     .option(
       "--min-remaining <n>",
       "required remaining percent in both Token Plan windows (default 80)",
       (v) => parseInt(v, 10),
     )
-    .option("--install-scheduler", "install the nightly (01:00-05:00, every 2h) launchd LaunchAgent for this check")
+    .option(
+      "--install-scheduler",
+      "install the nightly (01:00-05:00, every 2h) launchd LaunchAgent for this check",
+    )
     .option("--remove-scheduler", "remove the nightly LaunchAgent")
     .option("--scheduler-status", "report the nightly LaunchAgent state")
-    .option("--no-shorts", "skip both language editions of Shorts and their uploads")
+    .option(
+      "--no-shorts",
+      "skip both language editions of Shorts and their uploads",
+    )
     .option(
       "--shorts-provider <provider>",
       "shorts generation: mock (ffmpeg preserves the landscape frame in a vertical inset, default, free) | minimax (AI vertical clip, spends quota)",
     )
-    .option("--cwd <dir>", "repo root (default: walk up to pnpm-workspace.yaml)")
-    .action(async (opts: {
-      dryRun?: boolean;
-      minRemaining?: number;
-      installScheduler?: boolean;
-      removeScheduler?: boolean;
-      schedulerStatus?: boolean;
-      noShorts?: boolean;
-      shortsProvider?: string;
-      cwd?: string;
-    }) => {
-      process.exitCode = await runBacklogAuto({
-        ...(opts.dryRun === true ? { dryRun: true } : {}),
-        ...(opts.minRemaining !== undefined ? { minRemaining: opts.minRemaining } : {}),
-        ...(opts.installScheduler === true ? { installScheduler: true } : {}),
-        ...(opts.removeScheduler === true ? { removeScheduler: true } : {}),
-        ...(opts.schedulerStatus === true ? { schedulerStatus: true } : {}),
-        ...(opts.noShorts === true ? { noShorts: true } : {}),
-        ...(opts.shortsProvider !== undefined
-          ? { shortsProvider: opts.shortsProvider as "mock" | "minimax" }
-          : {}),
-        ...(opts.cwd !== undefined ? { cwd: opts.cwd } : {}),
-      });
-    });
+    .option(
+      "--cwd <dir>",
+      "repo root (default: walk up to pnpm-workspace.yaml)",
+    )
+    .action(
+      async (opts: {
+        dryRun?: boolean;
+        minRemaining?: number;
+        installScheduler?: boolean;
+        removeScheduler?: boolean;
+        schedulerStatus?: boolean;
+        noShorts?: boolean;
+        shortsProvider?: string;
+        cwd?: string;
+      }) => {
+        process.exitCode = await runBacklogAuto({
+          ...(opts.dryRun === true ? { dryRun: true } : {}),
+          ...(opts.minRemaining !== undefined
+            ? { minRemaining: opts.minRemaining }
+            : {}),
+          ...(opts.installScheduler === true ? { installScheduler: true } : {}),
+          ...(opts.removeScheduler === true ? { removeScheduler: true } : {}),
+          ...(opts.schedulerStatus === true ? { schedulerStatus: true } : {}),
+          ...(opts.noShorts === true ? { noShorts: true } : {}),
+          ...(opts.shortsProvider !== undefined
+            ? { shortsProvider: opts.shortsProvider as "mock" | "minimax" }
+            : {}),
+          ...(opts.cwd !== undefined ? { cwd: opts.cwd } : {}),
+        });
+      },
+    );
 }

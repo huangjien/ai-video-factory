@@ -1205,9 +1205,7 @@ export async function runScoredDraft(
         score.computed.overall_score >= minScore,
       usage: draft.usage,
       providerName: draft.providerName,
-      ...(draft.telemetry !== undefined
-        ? { telemetry: draft.telemetry }
-        : {}),
+      ...(draft.telemetry !== undefined ? { telemetry: draft.telemetry } : {}),
     };
   };
 

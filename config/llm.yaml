@@ -3,6 +3,7 @@
 # Single source of truth. The providers read their model id from this file,
 # so retiring or renaming a model is an edit here, not in the provider source.
 #   roles  — which provider each pipeline role calls
+#   draft  — which providers participate in automatic draft rotation
 #   models — which model id that provider serves by default
 #
 # Precedence, highest first:
@@ -20,12 +21,16 @@ roles:
   motion: { primary: minimax, fallback: glm }
   review: { primary: glm, fallback: minimax }
 
+draft:
+  # Randomly select among these providers that have API keys.
+  generator_pool: [openai, gemini, glm]
+
 models:
   # Conversation models: the draft generator pool (openai / gemini / glm),
   # the article judge (minimax), research, scripts, storyboards, reviews.
   chat:
     glm: glm-5.4
-    openai: gpt-6.1-sol
+    openai: gpt-6.2-sol
     gemini: gemini-3.5-flash
     minimax: MiniMax-M3
   # The Decisions API (typed probability answers), not the chat API — the

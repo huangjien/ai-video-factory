@@ -84,6 +84,11 @@ The project starts in the `DRAFT` state. Workflow state lives in
 It also derives `storyboard/storyboard.yaml` (the VDSL form of the article),
 so the video's length follows the audio rather than a separate guess.
 
+Set `draft.generator_pool` in `config/llm.yaml` to choose which providers
+participate in automatic drafting. By default, the CLI picks randomly from
+OpenAI, Gemini, and GLM providers with API keys. `--model openai` pins that
+provider for one run. An `LL_CONFIG` override can replace the entire list.
+
 `video draft` runs the audio-planning step on the fresh article
 automatically. Two guardrails matter:
 

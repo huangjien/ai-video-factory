@@ -2,20 +2,16 @@
  * The draft generator pool.
  *
  * The article (and the storyboard derived from it) used to come from
- * one fixed provider. The owner's call (2026-11-21): mix the generators
- * — OpenAI, Gemini and GLM, whichever hold a key — and keep MiniMax
- * as the judge, so the grader never reads its own prose.
+ * one fixed provider. The pool is configured under draft.generator_pool
+ * in config/llm.yaml. MiniMax stays available as the independent judge.
  *
  * The pool is about DIVERSITY, not about capability: a different
  * generator per film means a different failure mode per film, and the
  * cross-model judge scores what it did not write.
  */
 
-/** The generator pool. MiniMax is deliberately NOT here — it is the
- *  judge. */
-export const GENERATOR_POOL = ["openai", "gemini", "glm"] as const;
-
-export type GeneratorName = (typeof GENERATOR_POOL)[number];
+import { loadDraftGeneratorPool, type GeneratorName } from "./config.js";
+export { GENERATOR_POOL, type GeneratorName } from "./config.js";
 
 /** The env var that says a generator is usable. */
 const KEY_BY_NAME: Record<GeneratorName, string> = {
@@ -28,7 +24,7 @@ const KEY_BY_NAME: Record<GeneratorName, string> = {
 export function availableGenerators(
   env: Record<string, string | undefined> = process.env,
 ): GeneratorName[] {
-  return GENERATOR_POOL.filter((name) => {
+  return loadDraftGeneratorPool().filter((name) => {
     const key = env[KEY_BY_NAME[name]];
     return key !== undefined && key.trim() !== "";
   });

@@ -418,19 +418,6 @@
     "quiet_master": false,
     "wide_dynamics": true
   },
-  "corporate-synesthesia": {
-    "track": "SYNESTHESIA",
-    "artist": "GalaxyTones",
-    "file": "corporate-synesthesia.mp3",
-    "duration_sec": 197,
-    "loudness_lufs_i": -8.4,
-    "dynamic_range_lu": 12.3,
-    "use_when": "Business, product and analytics explainers; a polished, modern bed.",
-    "avoid_when": "Personal, historical or emotional narratives.",
-    "needs_loop_under_300s": true,
-    "quiet_master": false,
-    "wide_dynamics": true
-  },
   "lofi-herbal-tea": {
     "track": "Herbal Tea",
     "artist": "SmartToaster",

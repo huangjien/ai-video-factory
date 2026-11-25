@@ -2,7 +2,7 @@
 
 This directory is the project's **single source of truth for BGM music**.
 Every video we generate picks its background music from here (no live
-generation, no outside download). The 34 tracks cover distinct types / modes
+generation, no outside download). The 33 tracks cover distinct types / modes
 so the audio-plan agent can pick a mood without overlap.
 
 ## Naming convention
@@ -46,7 +46,6 @@ The slug is a lowercased, hyphen-joined token from the original track title.
 | `hopeful-resolutions` | hopeful / turnaround | RESOLUTIONS | Scott Buckley | LEm_RLKKGBQ |
 | `inspiring-flowing-energy` | inspiring / forward motion | Flowing Energy | Keys of Moon | pBT01U9zgfQ |
 | `romantic-white-petals` | romantic / tender | White Petals | Keys of Moon | uYjUI_zeeJk |
-| `corporate-synesthesia` | corporate / product | SYNESTHESIA | GalaxyTones | ikz1aBQi2v0 |
 | `lofi-herbal-tea` | lofi / study | Herbal Tea | SmartToaster | 6ukEy6FOxZE |
 
 ## Source playlist
@@ -82,8 +81,8 @@ warns and mixes silence rather than failing the render.
 while the mixer applies ONE fixed bed level. A quiet master therefore sits
 several dB under the narration and a loud one swamps it. The quiet end
 (`sad-lonesome-journey`, `japanese-yugen`, `romantic-white-petals`) needs a
-raised bed to be audible at all; the loud end (`war-endless-storm`,
-`corporate-synesthesia`) needs attenuation.
+raised bed to be audible at all. Loud tracks such as `war-endless-storm` need
+attenuation.
 
 `dynamic_range_lu` above ~8 means the track breathes, so the bed swells in
 the gaps between narration — fine under sparse narration, wrong under dense
@@ -104,6 +103,10 @@ inaudible (`epic-phoenix` had the same property — see the removal note
 below).
 
 ## Removed tracks
+
+`corporate-synesthesia` (SYNESTHESIA, GalaxyTones) was removed after a
+copyright claim blocked the Chinese *Shadow Mode* Short on YouTube. The
+replacement Short uses an original instrumental.
 
 `epic-phoenix` (Phoenix, Scott Buckley) was deleted on 2026-11-14 after the
 video it scored — 任务式指挥与 Agent 设计 (YouTube `5D0s18diEf4` /

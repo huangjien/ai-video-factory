@@ -19,6 +19,10 @@ export interface ProviderRef {
 
 export type ProviderConfig = Record<Role, ProviderRef>;
 
+// Keep the historical default for installations with older config files.
+export const GENERATOR_POOL = ["openai", "gemini", "glm"] as const;
+export type GeneratorName = (typeof GENERATOR_POOL)[number];
+
 /** Where a model id lives in the config: `models.<kind>.<provider>`. */
 export const MODEL_KINDS = [
   "chat",
@@ -29,11 +33,11 @@ export const MODEL_KINDS = [
 ] as const;
 export type ModelKind = (typeof MODEL_KINDS)[number];
 
-/** One config file's content: routing and model ids. Both partial — an
- *  override file may name only some of them. */
+/** The routing, model IDs, and draft settings supplied by one config file. */
 export interface LlmConfig {
   roles: Partial<ProviderConfig>;
   models: Partial<Record<ModelKind, Record<string, string>>>;
+  draft?: { generator_pool: GeneratorName[] } | undefined;
 }
 
 const ROLE_NAMES = [
@@ -61,6 +65,12 @@ const configFileSchema = z.object({
   models: z
     .record(z.enum(MODEL_KINDS), z.record(z.string().trim().min(1)))
     .optional(),
+  draft: z.object({
+    generator_pool: z.array(z.enum(GENERATOR_POOL)).nonempty().refine(
+      (providers) => new Set(providers).size === providers.length,
+      "Provider names must be unique",
+    ),
+  }).optional(),
 });
 
 /** The original shape put the role names at the top level; such a file
@@ -72,7 +82,8 @@ const configSchema = z.preprocess((value) => {
     value !== null &&
     !Array.isArray(value) &&
     !("roles" in value) &&
-    !("models" in value)
+    !("models" in value) &&
+    !("draft" in value)
   ) {
     return { roles: value };
   }
@@ -132,6 +143,7 @@ function readConfig(file: string): LlmConfig | null {
   return {
     roles: parsed.data.roles ?? {},
     models: parsed.data.models ?? {},
+    draft: parsed.data.draft,
   };
 }
 
@@ -153,11 +165,16 @@ function mergedConfig(explicit: string | undefined): LlmConfig {
   return {
     roles: { ...(baseParsed?.roles ?? {}), ...(overrideParsed?.roles ?? {}) },
     models,
+    draft: overrideParsed?.draft ?? baseParsed?.draft,
   };
 }
 
 export function loadProviderConfig(configPath?: string): ProviderConfig {
   return { ...DEFAULT_CONFIG, ...mergedConfig(configPath).roles };
+}
+
+export function loadDraftGeneratorPool(): readonly GeneratorName[] {
+  return mergedConfig(undefined).draft?.generator_pool ?? GENERATOR_POOL;
 }
 
 /** Every model id in effect, by kind and provider. */

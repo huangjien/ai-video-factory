@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { loadPrompt } from "@video/prompts";
-import { existsSync, readFileSync, statSync } from "node:fs";
+import { existsSync, lstatSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { mkdtemp, rm, writeFile, mkdir } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -184,7 +184,7 @@ describe("translate prompt — name localization rule", () => {
 });
 
 describe("translateArticle", () => {
-  it("creates an l10n workdir with pinned visuals, rewritten frontmatter, swapped voice, and a shared images symlink", async () => {
+  it("creates an l10n workdir with pinned visuals, rewritten frontmatter, swapped voice, and its own copy of the image store", async () => {
     const root = await makeProject();
     await writeFile(
       path.join(root, "assets", "images", "scene_1.cache.json"),
@@ -219,12 +219,25 @@ describe("translateArticle", () => {
       );
       expect(cfg).toContain("voice: en-US-ChristopherNeural");
       expect(cfg).toContain("bgm: calm");
-      // Images symlink resolves into the canonical store — a sentinel
-      // sidecar in the shared dir is readable through the link.
-      const link = path.join(res.l10nRoot, "assets", "images");
-      expect(statSync(link).isDirectory()).toBe(true);
+      // Images: a COPY of the canonical store, not a symlink. The copy
+      // starts from the Chinese film's pictures and stays independent —
+      // a translated make that regenerates a scene must not overwrite
+      // the canonical images (measured 2026-11-24: the English make
+      // replaced 13 of 36 images in the shared store).
+      const imagesDir = path.join(res.l10nRoot, "assets", "images");
+      expect(statSync(imagesDir).isDirectory()).toBe(true);
+      expect(lstatSync(imagesDir).isSymbolicLink()).toBe(false);
       expect(
-        readFileSync(path.join(link, "scene_1.cache.json"), "utf8"),
+        readFileSync(path.join(imagesDir, "scene_1.cache.json"), "utf8"),
+      ).toContain("sentinel");
+      // The copy is independent: writing into it leaves the canonical
+      // store untouched.
+      writeFileSync(path.join(imagesDir, "scene_1.cache.json"), '{"cacheKey":"changed"}', "utf8");
+      expect(
+        readFileSync(
+          path.join(root, "assets", "images", "scene_1.cache.json"),
+          "utf8",
+        ),
       ).toContain("sentinel");
       // Project-root markers so resolveProjectDir / make accept the workdir.
       expect(existsSync(path.join(res.l10nRoot, "state.yaml"))).toBe(true);

@@ -713,7 +713,7 @@ export async function runDraft(opts: DraftOptions): Promise<number> {
   const chosenName = resolveGeneratorName(opts.model, poolPick, cfg);
   if (chosenName === "auto") {
     console.error(
-      "✗ --model auto needs at least one of OPENAI_API_KEY / GEMINI_API_KEY / GLM_API_KEY",
+      "✗ --model auto needs an API key for a provider in config/llm.yaml → draft.generator_pool",
     );
     return 1;
   }
@@ -1330,7 +1330,7 @@ export function registerDraft(program: Command): void {
     .option("--cwd <dir>", "base directory for the project")
     .option(
       "--model <provider>",
-      "generator: auto (default — random pick from openai|gemini|glm, whichever hold a key) | openai | gemini | glm | minimax",
+      "generator: auto (default — random pick from draft.generator_pool in config/llm.yaml, using providers with API keys) | openai | gemini | glm | minimax",
     )
     .option(
       "--judge-model <provider>",

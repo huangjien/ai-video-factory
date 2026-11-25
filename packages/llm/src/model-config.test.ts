@@ -3,6 +3,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
+  availableGenerators,
   defaultModel,
   GeminiProvider,
   GLMProvider,
@@ -62,6 +63,22 @@ describe("config/llm.yaml — the single source of model ids", () => {
     process.env["LL_CONFIG"] = file;
     return file;
   }
+
+  it("uses the configured draft pool before filtering for API keys", () => {
+    const roles = loadProviderConfig();
+    override("draft: { generator_pool: [glm, openai] }");
+    expect(availableGenerators({ GEMINI_API_KEY: "key", OPENAI_API_KEY: "key" }))
+      .toEqual(["openai"]);
+    expect(loadProviderConfig()).toEqual(roles);
+  });
+
+  it.each(["[]", "[openai, openai]", "[minimax]"])(
+    "rejects an invalid draft pool %s",
+    (pool) => {
+      override(`draft: { generator_pool: ${pool} }`);
+      expect(() => availableGenerators({})).toThrow(/draft\.generator_pool/);
+    },
+  );
 
   it("ships in the repo, and every provider's model id resolves from it", () => {
     expect(repoConfigPath()?.endsWith(path.join("config", "llm.yaml"))).toBe(

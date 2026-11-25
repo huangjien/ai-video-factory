@@ -14,7 +14,7 @@
  *                                   `video make` reuses every picture with
  *                                   zero image spend
  *       audio-config.yaml        ← per-language voice
- *       assets/images -> ../../assets/images   (symlink)
+ *       assets/images -> a COPY of the canonical assets/images
  *       state.yaml, storyboard/, assets/audio/, output/, ...
  *
  * The workdir is a full project root, so every existing verb
@@ -26,8 +26,8 @@
  * A reworded line silently re-spends every scene image — the exact cost
  * this feature exists to avoid.
  */
-import { existsSync, readFileSync } from "node:fs";
-import { mkdir, readFile, symlink, writeFile } from "node:fs/promises";
+import { existsSync, lstatSync, readFileSync } from "node:fs";
+import { cp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { loadPrompt, fillPrompt } from "@video/prompts";
 import {
@@ -649,6 +649,17 @@ function buildMessages(articleMd: string, lang: string, extra: string) {
 }
 
 /** Translate the canonical article into a language workdir. */
+/** True when the path exists at all — a broken symlink counts (existsSync
+ *  follows links and returns false for a dangling one). */
+function lstatExists(p: string): boolean {
+  try {
+    lstatSync(p);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export async function translateArticle(
   opts: TranslateArticleOptions,
 ): Promise<TranslateArticleResult> {
@@ -779,20 +790,33 @@ export async function translateArticle(
     warnings.push("canonical audio-config.yaml missing — write one before make");
   }
 
-  // Share the canonical image store: relative symlink so the project tree
-  // stays movable. The G1 sidecars live INSIDE the shared dir, so image
-  // reuse works across languages by construction.
-  const imagesLink = path.join(l10nRoot, "assets", "images");
-  // Relative target is resolved from the LINK'S PARENT DIR
-  // (l10n/<lang>/assets/), so it takes three ups to reach the project root.
-  const imagesTarget = path.join("..", "..", "..", "assets", "images");
-  if (!existsSync(imagesLink)) {
-    if (!existsSync(path.join(projectRoot, "assets", "images"))) {
-      warnings.push(
-        "canonical assets/images missing — scenes without translated images use the theme background",
-      );
-    }
-    await symlink(imagesTarget, imagesLink, "dir");
+  // Per-language image store: a COPY of the canonical one, not a symlink.
+  //
+  // The symlink was cheap (no duplicated bytes) but WRONG: a translated
+  // make regenerates the scenes whose image inputs changed (the cache key
+  // covers the visual line, the source-picture digest and the baked
+  // text), and it wrote the new files THROUGH the link into the
+  // canonical store — replacing the Chinese film's images with the
+  // translated variant's. Measured 2026-11-24: 13 of 36 images in the
+  // shared store were overwritten by the English make (a borrowed
+  // historical portrait became an AI illustration); the already-rendered
+  // Chinese master kept the old picture, but any re-render of it would
+  // have changed. Copying keeps each language's store independent; the
+  // bytes are ~20 MB per language.
+  const imagesDir = path.join(l10nRoot, "assets", "images");
+  const canonicalImages = path.join(projectRoot, "assets", "images");
+  // A previous run may have left a symlink behind — replace it.
+  if (existsSync(imagesDir) || lstatExists(imagesDir)) {
+    await rm(imagesDir, { recursive: true, force: true });
+  }
+  await mkdir(path.dirname(imagesDir), { recursive: true });
+  if (existsSync(canonicalImages)) {
+    await cp(canonicalImages, imagesDir, { recursive: true });
+  } else {
+    warnings.push(
+      "canonical assets/images missing — scenes without translated images use the theme background",
+    );
+    await mkdir(imagesDir, { recursive: true });
   }
 
   const projectId = path.basename(projectRoot);

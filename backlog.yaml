@@ -265,7 +265,7 @@ ideas:
   - id: 2026-11-23-中印欧神话对比-3-秩序的正当性-德-命运-法-chinese-indian-e
     topic: "中印欧神话对比 3：秩序的正当性——德、命运、法 Chinese-Indian-European myth 3: legitimacy of
       order — virtue, fate, dharma"
-    status: idea
+    status: drafted
     source: manual
     created: 2026-11-23
     note: 凭什么是你坐在上面：中国的德可被史官记录与考核，欧洲的力量靠城邦承认，德国的法高于王权——三种凭证留下三种惩罚的时间结构：一次性放逐、永刑、无限转世
@@ -423,10 +423,13 @@ ideas:
 
       **现代研究**：H. G. Wells《The Outline of History》(1920)；Eric Hobsbawm《The Invention of Tradition》(1983)；H. and R. Tawney《Myth and Method》(1956)；Jonardon Ganeri《The Value of Culture》(2013)；Wendy Doniger《The Hindus》(2009)；James L. Fitzgerald《The Rāma Jānakī》(1991)；M. R. Yechchitala《The Dharmic Order》(1999)。
     lang: zh-CN
+    drafting_at: 2026-11-24T14:42:06.356Z
+    project: 中印欧神话对比-3-秩序的正当性-德-命运-法-chinese-indian-e
+    drafted_at: 2026-11-24T14:47:23.099Z
   - id: 2026-11-23-中印欧神话对比-4-国民性-三种对人的想象-chinese-indian-eur
     topic: "中印欧神话对比 4：国民性——三种对人的想象 Chinese-Indian-European myth 4: national
       character and three images of the human"
-    status: idea
+    status: drafted
     source: manual
     created: 2026-11-23
     note: 国民性不是神话的产物，而是神话被反复征用的产物——任何从神话推民族性格的因果链都必须补上制度中介这一环，否则就是把相关当成了因果
@@ -600,10 +603,13 @@ ideas:
 
       **现代研究**：Eric Hobsbawm & Terence Ranger《The Invention of Tradition》(1983)；Benedict Anderson《Imagined Communities》(1983/1991)；Ian Hacking《The Social Construction of What?》(1999) 与《Our Craftsmen and Ourselves》(2018)；David Armitage《The National Character of the English》(2007)；Jeremy Maitland-Bell《These Chivalrous Brethren》(2000)；Bronisław Malinowski《Myth in Primitive Society》(1926)；S. N. Dasgupta《An Introduction to Indian Philosophy》与殖民时期"Indian character"论争；Partha Chatterjee《The Nation and Its Fragments》(1993)；Tom Bottomore《Sociology》(1984)（"民族"与"民族性"条目）。
     lang: zh-CN
+    drafting_at: 2026-11-24T20:02:00.257Z
+    project: 中印欧神话对比-4-国民性-三种对人的想象-chinese-indian-eur
+    drafted_at: 2026-11-24T20:04:33.288Z
   - id: 2026-11-23-中印欧神话对比-5-时间与灾难-循环还是线性-chinese-indian-eu
     topic: "中印欧神话对比 5：时间与灾难——循环还是线性 Chinese-Indian-European myth 5: time and
       catastrophe — cyclic or linear"
-    status: idea
+    status: drafted
     source: manual
     created: 2026-11-23
     note: 循环时间不需要问历史有没有终点，线性时间必须回答——而线性阶段论在十九世纪全球同步出现，说明循环与线性是历史条件的产物，不是文明的天性
@@ -764,6 +770,9 @@ ideas:
 
       **现代研究**：Mircea Eliade《永恒的回归》(1949)；Benedict Anderson《Imagined Communities》(1983/1991)；Eric Hobsbawm & Terence Ranger《The Invention of Tradition》(1983)；Arnaldo Momigliano《The Ancient Gods and the New》(1966)；François Hartog《The Mirror of Herodotus》(1980)；J. R. R. Tolkien《On Fairy-Stories》(1939)；S. Bhattacharji《The Indian Book of Birth》(2006)。
     lang: zh-CN
+    drafting_at: 2026-11-25T05:36:02.469Z
+    project: 中印欧神话对比-5-时间与灾难-循环还是线性-chinese-indian-eu
+    drafted_at: 2026-11-25T05:52:02.450Z
   - id: 2026-11-19-玄武门之变-the-xuanwu-gate-incident
     topic: 玄武门之变 The Xuanwu Gate Incident
     status: drafted
@@ -1642,7 +1651,7 @@ ideas:
       - dimension score
   - id: 2026-11-19-shadow-mode-how-ai-earns-the-right-to-ac
     topic: "Shadow mode: how AI earns the right to act"
-    status: proposed
+    status: drafted
     source: harvest:docs/plans/v0.12/v0.12-decision-surfaces-plan.md
     created: 2026-11-19
     note: "A concrete, general-audience story about trusting AI: it can vote all it
@@ -1657,6 +1666,9 @@ ideas:
       - OpenAI Decisions API
       - shadow deployment practice
       - deterministic baseline
+    drafting_at: 2026-11-25T10:12:06.811Z
+    project: shadow-mode-how-ai-earns-the-right-to-ac
+    drafted_at: 2026-11-25T10:26:29.506Z
   - id: 2026-11-19-the-ai-that-never-crashes-the-pipeline
     topic: The AI that never crashes the pipeline
     status: proposed

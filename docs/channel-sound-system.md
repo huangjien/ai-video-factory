@@ -24,7 +24,7 @@
 |---|---|---|---|
 | 方法论 / 思维模型 | `classical-gymnopedie-no-3`、`ambient-take-your-pick` | "Quiet, reflective, philosophical or historical narration" / "wide, unobtrusive bed" | 软件架构和实现、领域建模 |
 | 军事 / 历史 | `war-endless-storm`、`chinese-lau-tzu-ehru`、`medieval-adventure-beyond` | "Open conflict — an army, a siege, a standoff" / "Chinese historical or period scenes" / "Journey and quest narratives - a caravan, a voyage, an expedition" | 从伍什到班排、任务式指挥 |
-| 技术 / 工程 / Agent | `electronic-nekozilla`、`inspiring-flowing-energy`、`corporate-synesthesia` | "Tech/futuristic explainers and build-ups" / "Forward motion — a build, a turning point" / "polished, modern bed" | 扁平化组织与任务式指挥 |
+| 技术 / 工程 / Agent | `electronic-nekozilla`、`inspiring-flowing-energy` | "Tech/futuristic explainers and build-ups" / "Forward motion — a build, a turning point" | 扁平化组织与任务式指挥 |
 | 轻松 / 科普 | `cheerful-smile-ikson`、`upbeat-your-love`、`hiphop-groomin` | "upbeat without being frantic" / "Beat-driven, casual explainers" | — |
 
 ## 选曲的四条硬约束

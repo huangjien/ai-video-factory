@@ -1113,9 +1113,15 @@ export async function generateSceneVisuals(
   // its own file, its own API calls — and the provider tolerates
   // concurrent requests (measured: two image calls in 15 s), so the
   // scenes run in a small pool. `IMAGE_POOL` sets its width.
+  //
+  // Width 4 → 8 on 2026-11-24: a 36-scene film spent 67 min in this
+  // stage with ~3 calls in flight and NO provider throttling (zero 429s
+  // in the logs); the pool, not the provider, was the constraint. The
+  // cap rises to 12 for the same reason — raising it costs nothing
+  // when the provider is the bottleneck.
   const poolSize = Math.max(
     1,
-    Math.min(8, Number(process.env["IMAGE_POOL"] ?? 4) || 4),
+    Math.min(12, Number(process.env["IMAGE_POOL"] ?? 8) || 8),
   );
 
   /** One scene's image: cache check → prompt expansion → generation.

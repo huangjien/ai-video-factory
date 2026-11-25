@@ -767,69 +767,22 @@ the command with explicit flags.
 
 Full contract: `docs/v0.7-agent-ask-protocol-plan.md`.
 
-## v0.6.0 — Laya decision layer (advisory, default off)
+## v0.6.0 — advisory decision layer (withdrawn)
 
-**Date:** 2026-10-14 · **Design:** `docs/v0.6-laya-decision-integration-plan.md`
+**Date:** 2026-10-14
 
-Wires the local Laya decision-model sidecar (`laya-serve` on
-127.0.0.1:8019, see the operator notes) into the pipeline as an
-ADVISORY decision layer. Laya returns bounded decisions
-(`choice`/`score`/`noul` + probabilities) — it is not a chat model and
-is never configured as a provider. Three rules govern every surface:
-advisory only (never a human gate, never a workflow transition),
-degrade-to-current-behavior (`decide()` never throws — null on any
-failure), shadow first (`LAYA_MODE=off|shadow|on`, default **off**).
+This release shipped an ADVISORY decision-model sidecar: a local
+service that returned bounded decisions (`choice`/`score`/`noul` +
+probabilities) to the pipeline. It was never a chat model and never a
+provider. Three rules governed every surface: advisory only (never a
+human gate, never a workflow transition), degrade-to-current-behavior
+(a decision call never threw — null on any failure), shadow first (the
+mode flag defaulted to **off**).
 
-**New — `@video/llm`:**
-
-- `packages/llm/src/laya.ts` — `LayaClient` (memoized `/health`
-  pre-flight, 503+`Retry-After` retry-once, `min_confidence` gate that
-  protects ACTING in mode=on; shadow records raw answers for the §7
-  calibration corpus), `resolveLayaConfig()` (env `LAYA_MODE` /
-  `LAYA_URL` / `LAYA_MIN_CONFIDENCE` / `LAYA_TIMEOUT_MS` /
-  `LAYA_BEARER`, overridable via a `laya:` section in `llm.config.yaml`)
-- `packages/llm/src/laya-shadow.ts` — `laya-decisions.jsonl` sidecar
-  (append/read/summarize); every consult is recorded with
-  `{surface, mode, state_sha256, answers, latency_ms, acted, expected,
-agreed}`
-
-**Surfaces (each independent, all behind the mode flag):**
-
-- **D1 motion pre-screen** (`video motion`) — per scene Laya answers
-  baseline_ok/refine; in `on` mode baseline_ok scenes skip the cloud
-  `callMotionAgent` call (skip count printed; expected yield on a
-  23-scene project: up to half the cloud calls).
-- **D2 visual-classifier assist** (`video draft`, `video make`) — only
-  the REGEX FALL-THROUGH branch may consult Laya for the scene
-  component; matched keyword rules stay deterministic; results are
-  REGISTRY-validated and applied via `articleToStoryboardYaml(article,
-{visualOverrides})` (the mapper stays pure/sync).
-- **D3 QA triage** (`video qa` / `preview` / `final` / `make`) — the
-  finished render report is triaged pass/review/block; in `on` mode the
-  verdict rides as `report.advisory.laya` + a caption on the contact
-  sheet. The export gate NEVER reads the advisory.
-- **`video laya health|ask|eval`** (new verb) — live service probe,
-  one-off raw consult (JSON via stdin/`--file`), and the §7
-  shadow-agreement table with per-surface promotion gates
-  (motion ≥90%, visual ≥85%, triage ≥95%).
-
-**Rejected in design (documented §3):** Laya-as-chat-provider, article
-judge replacement (1k-context encoder deciding regeneration is a
-quality gamble), and confidence inside workflow state transitions
-(breaks the replay-verified determinism contract).
-
-**Measured grounding (2026-10-14 probes):** warm inference ≈0.5s,
-first call >15s → 20s pre-flight budget + 3s decide timeout; single
-inference worker → 503/Retry-After handling; english-checkpoint
-confidence uncalibrated (probe: 0.0075) → `min_confidence` gate is
-mandatory and the calibration check is part of every promotion gate.
-
-**Tests:** 29 new (14 llm client+sidecar, 9 draft assist, 6 qa
-triage) — all mocked-fetch, no live service in CI. Verified
-2026-10-14: every package's `src` suite green (llm 86, draft 344,
-qa 36, cli 165, make 52, tts 50, media-generators 94, research 82,
-workflow 92, vdsl 84, and the rest), eslint clean, `laya health/ask`
-verified against the live local service.
+The whole layer was withdrawn and its code removed in `e681bda`. Its
+service, its sidecar data files and its CLI verb are gone with it, and
+the pipeline kept the current behaviour. Nothing in the tree depends on
+it any more.
 
 ## v0.4 — Visual & Publishing Quality
 
@@ -1541,7 +1494,7 @@ to their article frontmatter.
 | `v0.5.1`  | (no separate branch — T5+T6.1 landed on main)                   | `a674437` … (cumulative) — **no tag** |
 | `v0.5.2`  | (no separate branch — T6.2 + T6.3 + fix landed on main)         | `3da7ff2`, `7d97608`, `638ac88`, `2170a4c` — **no tag** |
 | `v0.5.3`  | (no separate branch — flux default + pre-flight landed on main) | TBD in commit message — **no tag** |
-| `v0.6.0`  | (no separate branch — laya advisory layer landed on main)       | `c3d6691` — **no tag** |
+| `v0.6.0`  | (no separate branch — the advisory decision layer landed on main) | `c3d6691` — **no tag** |
 | `v0.7`    | `v0.7-agent-ask`                                                | merge commit on main — tagged `v0.7` |
 | `v0.7.1`  | (no separate branch — live progress landed on main)             | `ca178c3` — tagged `v0.7.1` |
 | `v0.8`    | (no separate branch — visual guardrails landed on main)         | **no tag** |

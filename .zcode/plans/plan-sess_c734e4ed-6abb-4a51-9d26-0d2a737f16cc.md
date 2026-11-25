@@ -12,7 +12,7 @@ Policy set: version.ts → **0.9.0**; export sweep = **barrels + zero-importer s
 | `packages/media-generators/python/__pycache__/flux_worker.cpython-312.pyc` (git-tracked) | source `flux_worker.py` deleted; `__pycache__` now gitignored but never `git rm`'d |
 | `packages/media-generators/dist/lora-config.*` + `dist/flux-image.*` if present (local, gitignored) | stale build outputs of deleted sources |
 | `packages/video-renderer/.studio/studio-live{,2,3}/` (local, gitignored) | untracked generated studio workspaces, regenerable via `video studio` |
-| `packages/llm/src/laya.ts` `LAYA_DEFAULTS`… **no — keep** (tested) | — |
+| the withdrawn v0.6 decision-layer sources (`packages/llm/src/` decision sidecar) | already deleted upstream in `e681bda` | — |
 
 Also verify-then-delete: `packages/tts/src/edge-tts.ts` `mockEdgeTTSProvider` — explorer found 0 production callers (only tts.test.ts + edge-tts-provider.test.ts). I'll confirm `make --fake` doesn't route to it; if confirmed: delete + delete its two test blocks.
 
@@ -35,8 +35,8 @@ Also verify-then-delete: `packages/tts/src/edge-tts.ts` `mockEdgeTTSProvider` �
 
 ## 5. Doc fixes
 
-**WRONG → fix:** README `ARCHITECTURE.md`→`architecture.md` (case; also CONTRIBUTING ×2), README EdgeTTSProvider blurb → Python sidecar (not `edge-tts-universal`), `warm-sunset` → `sunset-pop`, `## ## Audio Mixing/Assets/YouTube` headings, duplicate `## Principles` block, stale v0.2 framing line; CONTRIBUTING ffmpeg "4.x+" → "9.x", "same five commands" → four, pnpm 12.5.1 → 12.11.2, media-generators row +OpenAI/Gemini, llm row +LayaClient; INSTALLATION en+zh `ZH_VOICE/EN_VOICE` → `packages/make/src/tts-cache.ts`, `MUSIC_PROMPTS` pointer → `packages/prompts/prompts/music.json`, zh-CN "15 components" → 24; architecture.md header "v0.6.0" → v0.9 as-built.
-**MISSING → add:** CONTRIBUTING + architecture.md package tables: `draft`, `make`, `learn`, `qa`, `motion`, `audio-plan`, `media` (+ `prompts` in architecture); README back-compat verb paragraph: `motion`, `qa`, `scene` (+ mention learn/prompts/studio/theme/laya/excalidraw); README one-paragraph pointer to the central prompt registry; `.opencode/command/video.md` verb table sync.
+**WRONG → fix:** README `ARCHITECTURE.md`→`architecture.md` (case; also CONTRIBUTING ×2), README EdgeTTSProvider blurb → Python sidecar (not `edge-tts-universal`), `warm-sunset` → `sunset-pop`, `## ## Audio Mixing/Assets/YouTube` headings, duplicate `## Principles` block, stale v0.2 framing line; CONTRIBUTING ffmpeg "4.x+" → "9.x", "same five commands" → four, pnpm 12.5.1 → 12.11.2, media-generators row +OpenAI/Gemini, llm row + the withdrawn decision-layer client; INSTALLATION en+zh `ZH_VOICE/EN_VOICE` → `packages/make/src/tts-cache.ts`, `MUSIC_PROMPTS` pointer → `packages/prompts/prompts/music.json`, zh-CN "15 components" → 24; architecture.md header "v0.6.0" → v0.9 as-built.
+**MISSING → add:** CONTRIBUTING + architecture.md package tables: `draft`, `make`, `learn`, `qa`, `motion`, `audio-plan`, `media` (+ `prompts` in architecture); README back-compat verb paragraph: `motion`, `qa`, `scene` (+ mention learn/prompts/studio/theme/excalidraw); README one-paragraph pointer to the central prompt registry; `.opencode/command/video.md` verb table sync.
 **Flux doc remnants:** `skills/INVENTORY.md` drop the 4 flux skill entries; remove the flux cross-reference lines in 5 skill SKILL.md files (explainer-video, motion-art-direction, shot-composition, motion-background, color-motion); `docs/v0.5-local-image-generation-plan.md` gets a SUPERSEDED banner like its flux sibling.
 **SKILL.md (your WIP file — additive factual fixes only):** 25→24 components, youtube model default = glm, MUSIC_PROMPTS → music.json, §7 doc paths `docs/…` + case, add missing verbs to the command table, add v0.9 to shipped_versions.
 

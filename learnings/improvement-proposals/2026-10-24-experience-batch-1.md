@@ -225,7 +225,7 @@ contact sheet is for.
   — detection works; same-palette illustration cuts just score ~0.01–0.02
   because most pixels are shared between consecutive scenes.
 - Consumer check: warn-level only; `packages/qa/src/index.ts:469` prints it,
-  and it feeds the laya-qa triage state — permanently-false input there.
+  and it feeds the QA triage state — permanently-false input there.
 
 **Proposed change (minimal) — AS APPLIED, unchanged**
 

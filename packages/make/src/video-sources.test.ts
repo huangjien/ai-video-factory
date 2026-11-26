@@ -64,7 +64,7 @@ const plan = [
 ];
 
 const candidate = {
-  source: "commons" as const,
+  source: "commons-video" as const,
   title: "Ten Kings of Hell.webm",
   pageUrl: "https://commons.wikimedia.org/wiki/File:Ten_Kings.webm",
   fileUrl: "https://upload.wikimedia.org/Ten_Kings.webm",
@@ -74,6 +74,9 @@ const candidate = {
   width: 640,
   height: 360,
   durationSec: 30,
+  // The record does not say — the same "unknown" the Commons source
+  // reports when the file size is missing.
+  sizeBytes: null,
   localPath: null,
   digestKey: "https://upload.wikimedia.org/Ten_Kings.webm|PD",
   query: "ten kings of hell",

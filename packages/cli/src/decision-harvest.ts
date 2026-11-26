@@ -16,7 +16,7 @@
  *    is marked `disputed`, because a proposal is not a label;
  *  - the candidates are written to `<project>/decision-candidates.yaml`
  *    — a REVIEW queue, not the corpus. A human moves the cases they
- *    agree with into `packages/prompts/decisions/visual-class/`.
+ *    agree with into `packages/prompts/decisions/draft-bar/`.
  */
 import type { Command } from "commander";
 import { readFile, writeFile } from "node:fs/promises";
@@ -212,7 +212,7 @@ export function registerDecisionHarvest(decision: Command): void {
         );
         if (candidates.length > 0) {
           console.log(
-            "  each label is the decision model's PROPOSAL — review them, then move the ones you agree with into packages/prompts/decisions/visual-class/",
+            "  each label is the decision model's PROPOSAL — review them, then move the ones you agree with into packages/prompts/decisions/draft-bar/",
           );
         }
       },

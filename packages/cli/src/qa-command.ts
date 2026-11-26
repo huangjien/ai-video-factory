@@ -56,8 +56,9 @@ export async function runQa(opts: QaOptions): Promise<number> {
   // v0.11 (D3): the QA triage advisory. One consult per finding, on the
   // report AS WRITTEN; the advisory fields are attached by re-writing
   // the report, and the consults land in <root>/decision-log.jsonl.
-  // Advisory never gates — `--strict` reads `level` below. The default
-  // mode is `on` (the bench gate cleared); DECISION_MODE=off skips.
+  // Advisory never gates — `--strict` reads `level` below. The layer is
+  // off by default (2026-11-26: it records and nothing acts), so the
+  // consult is skipped unless DECISION_MODE says otherwise.
   const decisionMode = resolveDecisionMode();
   const advisory = await runQaDecisionAdvisory({
     project: path.basename(root),

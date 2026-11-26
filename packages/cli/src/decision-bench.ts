@@ -685,7 +685,7 @@ export function registerDecision(program: Command): void {
     .option("--provider <id>", "openai | minimax | google | all", "all")
     .option(
       "--surface <surface>",
-      "one surface (qa-triage, draft-bar, visual-class, …)",
+      "one surface (qa-triage, draft-bar, caption-overlap, …)",
     )
     .option("--case <id>", "one case id")
     .option("--repeat <n>", "calls per case", "1")

@@ -144,6 +144,22 @@ so it wrote links from memory — the Katha Upanishad's first chapter
 linked to the Brihadaranyaka index. A link must now be the exact work,
 and a named work without a link beats a wrong one.
 
+**The decision layer stops asking by default.** An audit of the modules
+the pipeline actually reaches found the layer wired but inert: `on` and
+`shadow` behave identically today — they record the decision provider's
+answer beside the deterministic verdict and nothing acts on it — so
+every draft, every QA report and every caption check paid for a call
+that bought a log line. `DECISION_MODE` now defaults to `off`; the
+layer, its corpus, its bench and its verbs stay, and one env var turns
+it back on.
+
+The same audit removed what nothing reached: `packages/draft/src/
+visual-decision.ts` (the visual-classifier surface that never shipped),
+ten scripts with no caller — one-off per-film visual rewrites, the old
+manual Shorts upload path that `video shorts --upload` replaced — and
+the harvest's instruction to file reviewed cases in a corpus directory
+that does not exist (they belong in `decisions/draft-bar/`).
+
 ## v0.12 (2026-11-16) — the decision layer, the 2.6 image provider, and two films
 
 Three things shipped together:
@@ -372,7 +388,7 @@ decision — `choice` / `score` / `noul` with a confidence. OpenAI's
 $0.000050 per decision at the verified Standard-tier price (§7.5/§7.8
 of `docs/v0.11-decision-provider-plan.md`). Wired surfaces: the draft
 loop's draft-bar verdict consult, and a per-finding advisory in
-`video qa` reports. `DECISION_MODE=off|shadow|on` (default on);
+`video qa` reports. `DECISION_MODE=off|shadow|on` (default off since 2026-11-26 — the layer records and nothing acts, so the consult was a paid call for a log line);
 the provider is a chain — OpenAI first, MiniMax second on an
 availability failure — and every log row records the provider that
 served it; everything degrades to the deterministic path. Tooling: `video decision

@@ -83,6 +83,11 @@ automatic chain skips providers without credentials and providers that do
 not support the request's input modality. It retries on provider/service
 failure, not on a missing or invalid answer.
 
+`DECISION_MODE=off|shadow|on` decides whether the layer consults at all;
+the default is `off` (2026-11-26) — it records the answers and nothing
+acts on them, so switching it on costs a call per surface and buys a log
+line. `shadow` and `on` behave identically today.
+
 Batch questions share one input. Gemini supports text, image, audio, video,
 and PDF; OpenAI and MiniMax currently support text. Prompt-eval rubric axes
 and QA triage findings use this shared-input batch path. QA answers remain

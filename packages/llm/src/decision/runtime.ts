@@ -22,18 +22,17 @@ import type {
 
 export type DecisionMode = "off" | "shadow" | "on";
 
-/** The mode from the environment. Default **`on`** — the bench gate
- *  cleared on 2026-11-14 (0.924 ≥ 0.9, brier 0.000), so every wired
- *  surface consults the decision provider and records the answers
- *  beside the baselines. `on` and `shadow` behave identically today —
- *  both record, nothing acts — and the env var exists for the day an
- *  acting surface ships, and for turning the layer off (`off`) without
- *  a code change. The vitest global setup pins `off` so the suite
- *  stays hermetic. */
+/** The mode from the environment. Default **`off`** (2026-11-26): the
+ *  layer records the decision provider's answers beside the baselines
+ *  and nothing acts on them, so every consult was a paid call that
+ *  bought a log line. `on` and `shadow` behave identically today — both
+ *  record, nothing acts — and the env var is how the layer is switched
+ *  back on (or off) without a code change. The vitest global setup
+ *  pins `off` so the suite stays hermetic. */
 export function resolveDecisionMode(
   env: NodeJS.ProcessEnv = process.env,
 ): DecisionMode {
-  const raw = (env["DECISION_MODE"] ?? "on").trim().toLowerCase();
+  const raw = (env["DECISION_MODE"] ?? "off").trim().toLowerCase();
   if (raw === "off" || raw === "shadow" || raw === "on") return raw;
   throw new Error(
     `unknown DECISION_MODE "${raw}" — expected off | shadow | on`,

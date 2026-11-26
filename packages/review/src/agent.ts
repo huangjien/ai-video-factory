@@ -64,8 +64,10 @@ export async function callReview(
       return { messages, provider: fallback };
     },
     onFailure: (errors) =>
-      // The PRIMARY's error is what the caller sees: a fallback that also
-      // failed is a symptom, not the diagnosis.
+      // A PARSE failure is reported with the PRIMARY's error: a fallback
+      // that also failed to fit the schema is a symptom, not the
+      // diagnosis. A chat failure of both providers never reaches here —
+      // it surfaces with the last provider's own error.
       errors[0]!,
   });
   return {

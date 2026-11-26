@@ -30,21 +30,16 @@ import {
   type DraftBarAttemptFacts,
   type DraftDecisionRow,
 } from "@video/draft";
-import {
-  createDecisionProvider,
-  decisionLogPath,
-} from "@video/llm";
+import { createDecisionProvider, decisionLogPath } from "@video/llm";
 import { resolveProjectDir } from "./project-path.js";
 
 /** The candidate file as YAML — the same shape a corpus case has, so a
  *  reviewed candidate can be moved into the corpus unchanged. */
-export function renderCandidateYaml(
-  candidates: DecisionCandidate[],
-): string {
-  return yamlStringify(
-    candidates.length === 0 ? {} : { cases: candidates },
-    { indent: 2, lineWidth: 0 },
-  );
+export function renderCandidateYaml(candidates: DecisionCandidate[]): string {
+  return yamlStringify(candidates.length === 0 ? {} : { cases: candidates }, {
+    indent: 2,
+    lineWidth: 0,
+  });
 }
 
 /** Read a project's log and turn it into candidates. */
@@ -60,31 +55,7 @@ export async function harvestProject(
     rows = [];
   }
   // The review artifact — the draft-bar surface's ground truth.
-  let attempts: DraftBarAttemptFacts[] = [];
-  try {
-    const review = parseYaml(
-      await readFile(path.join(projectRoot, "article-review.yaml"), "utf8"),
-    ) as {
-      attempts?: {
-        attempt?: number;
-        overall?: number | null;
-        grade?: string | null;
-        passing?: boolean;
-        findings?: DraftBarAttemptFacts["findings"];
-        risk_flags?: DraftBarAttemptFacts["risk_flags"];
-      }[];
-    };
-    attempts = (review.attempts ?? []).map((attempt, index) => ({
-      attempt: attempt.attempt ?? index + 1,
-      overall: attempt.overall ?? undefined,
-      grade: attempt.grade ?? undefined,
-      passing: Boolean(attempt.passing),
-      findings: attempt.findings ?? undefined,
-      risk_flags: attempt.risk_flags ?? undefined,
-    }));
-  } catch {
-    attempts = [];
-  }
+  const attempts = await readReviewAttempts(projectRoot);
 
   const draftRows = rows.filter(
     (row): row is DraftDecisionRow => row.surface === "draft-bar",
@@ -148,45 +119,49 @@ export function registerDecisionBackfill(decision: Command): void {
     .option("--max <n>", "how many attempts to consult", "4")
     .option("--provider <id>", "openai | minimax")
     .option("--model <id>", "override the model id")
-    .action(async (project: string, options: Record<string, string | boolean>) => {
-      const resolved = resolveProjectDir(
-        project,
-        typeof options["cwd"] === "string" ? options["cwd"] : process.cwd(),
-      );
-      if (!resolved.ok) {
-        console.error(resolved.message);
-        process.exitCode = 1;
-        return;
-      }
-      const projectRoot = resolved.root;
-      const attempts = await readReviewAttempts(projectRoot);
-      if (attempts.length === 0) {
-        console.log(
-          "no article-review.yaml — run `video draft` first, or point at a project that has one",
+    .action(
+      async (project: string, options: Record<string, string | boolean>) => {
+        const resolved = resolveProjectDir(
+          project,
+          typeof options["cwd"] === "string" ? options["cwd"] : process.cwd(),
         );
-        return;
-      }
-      const provider =
-        typeof options["provider"] === "string"
-          ? createDecisionProvider({ provider: options["provider"] })
-          : typeof options["model"] === "string"
-            ? createDecisionProvider({ model: options["model"] })
-            : undefined;
-      const result = await runDraftDecisionShadow({
-        project: path.basename(projectRoot),
-        attempts,
-        mode: "shadow",
-        ...(provider !== undefined ? { provider } : {}),
-        logPath: decisionLogPath(projectRoot),
-        maxConsults: Number(options["max"] ?? 4),
-      });
-      console.log(
-        `${result.consulted} attempt(s) consulted, ${result.agreed} agreed with the review's verdict → ${decisionLogPath(projectRoot)}`,
-      );
-      console.log(
-        "  next: `video decision harvest " + path.basename(projectRoot) + "` turns the answers into corpus candidates",
-      );
-    });
+        if (!resolved.ok) {
+          console.error(resolved.message);
+          process.exitCode = 1;
+          return;
+        }
+        const projectRoot = resolved.root;
+        const attempts = await readReviewAttempts(projectRoot);
+        if (attempts.length === 0) {
+          console.log(
+            "no article-review.yaml — run `video draft` first, or point at a project that has one",
+          );
+          return;
+        }
+        const provider =
+          typeof options["provider"] === "string"
+            ? createDecisionProvider({ provider: options["provider"] })
+            : typeof options["model"] === "string"
+              ? createDecisionProvider({ model: options["model"] })
+              : undefined;
+        const result = await runDraftDecisionShadow({
+          project: path.basename(projectRoot),
+          attempts,
+          mode: "shadow",
+          ...(provider !== undefined ? { provider } : {}),
+          logPath: decisionLogPath(projectRoot),
+          maxConsults: Number(options["max"] ?? 4),
+        });
+        console.log(
+          `${result.consulted} attempt(s) consulted, ${result.agreed} agreed with the review's verdict → ${decisionLogPath(projectRoot)}`,
+        );
+        console.log(
+          "  next: `video decision harvest " +
+            path.basename(projectRoot) +
+            "` turns the answers into corpus candidates",
+        );
+      },
+    );
 }
 
 /** `video decision harvest` — the verb. */
@@ -200,44 +175,46 @@ export function registerDecisionHarvest(decision: Command): void {
     .option("--cwd <dir>", "resolve the project from this directory")
     .option("--out <path>", "where to write the candidates")
     .option("--print", "print the candidates instead of writing them")
-    .action(async (project: string, options: Record<string, string | boolean>) => {
-      const resolved = resolveProjectDir(
-        project,
-        typeof options["cwd"] === "string" ? options["cwd"] : process.cwd(),
-      );
-      if (!resolved.ok) {
-        console.error(resolved.message);
-        process.exitCode = 1;
-        return;
-      }
-      const projectRoot = resolved.root;
-      const { candidates, rows } = await harvestProject(
-        projectRoot,
-        path.basename(projectRoot),
-      );
-      if (rows === 0) {
-        console.log(
-          "no decision log — run the draft with DECISION_MODE=shadow first",
+    .action(
+      async (project: string, options: Record<string, string | boolean>) => {
+        const resolved = resolveProjectDir(
+          project,
+          typeof options["cwd"] === "string" ? options["cwd"] : process.cwd(),
         );
-        return;
-      }
-      const yaml = renderCandidateYaml(candidates);
-      if (options["print"]) {
-        console.log(yaml);
-        return;
-      }
-      const out =
-        typeof options["out"] === "string"
-          ? options["out"]
-          : path.join(projectRoot, "decision-candidates.yaml");
-      await writeFile(out, yaml, "utf8");
-      console.log(
-        `${candidates.length} candidate(s) from ${rows} logged consult(s) → ${out}`,
-      );
-      if (candidates.length > 0) {
-        console.log(
-          "  each label is the decision model's PROPOSAL — review them, then move the ones you agree with into packages/prompts/decisions/visual-class/",
+        if (!resolved.ok) {
+          console.error(resolved.message);
+          process.exitCode = 1;
+          return;
+        }
+        const projectRoot = resolved.root;
+        const { candidates, rows } = await harvestProject(
+          projectRoot,
+          path.basename(projectRoot),
         );
-      }
-    });
+        if (rows === 0) {
+          console.log(
+            "no decision log — run the draft with DECISION_MODE=shadow first",
+          );
+          return;
+        }
+        const yaml = renderCandidateYaml(candidates);
+        if (options["print"]) {
+          console.log(yaml);
+          return;
+        }
+        const out =
+          typeof options["out"] === "string"
+            ? options["out"]
+            : path.join(projectRoot, "decision-candidates.yaml");
+        await writeFile(out, yaml, "utf8");
+        console.log(
+          `${candidates.length} candidate(s) from ${rows} logged consult(s) → ${out}`,
+        );
+        if (candidates.length > 0) {
+          console.log(
+            "  each label is the decision model's PROPOSAL — review them, then move the ones you agree with into packages/prompts/decisions/visual-class/",
+          );
+        }
+      },
+    );
 }

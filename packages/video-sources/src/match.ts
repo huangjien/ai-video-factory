@@ -86,8 +86,8 @@ export function buildVideoMatchMessages(
  * Ask the matcher which clip belongs to which scene. Returns a map of
  * scene number → candidate index (-1 when the scene gets no clip).
  *
- * A failed call returns an empty map — the caller then falls back to the
- * token-scored pick. A missing clip is never fatal.
+ * A failed call throws `VideoSourceMatchError`; the caller catches it
+ * and falls back to the token-scored pick. A missing clip is never fatal.
  */
 export async function matchSceneVideos(
   scenes: SceneVideoCandidates[],
@@ -110,7 +110,10 @@ export async function matchSceneVideos(
     if (scene === undefined) continue;
     const count = scene.candidates.length;
     // An index outside the list is not a pick — the scene gets nothing.
-    out.set(entry.scene, entry.pick >= 0 && entry.pick < count ? entry.pick : -1);
+    out.set(
+      entry.scene,
+      entry.pick >= 0 && entry.pick < count ? entry.pick : -1,
+    );
   }
   return out;
 }

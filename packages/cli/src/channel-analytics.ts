@@ -11,9 +11,12 @@ import type { Command } from "commander";
 import { parseClientSecret, type YouTubeCredentials } from "@video/youtube";
 import {
   analyze,
+  countOpenByLane,
   localDate,
   renderReport,
   type AnalyticsSnapshot,
+  type Lane,
+  type SupplyRow,
 } from "./channel-analytics-analysis.js";
 import {
   at,
@@ -24,6 +27,7 @@ import {
   type PullDeps,
 } from "./channel-analytics-pull.js";
 import { findRepoRoot } from "./learn-command.js";
+import { backlogPath, loadBacklogStore } from "./backlog-store.js";
 import { defaultClientSecretPath } from "./youtube-command.js";
 
 /**
@@ -77,6 +81,20 @@ export async function runChannelAnalytics(
   const shown = (file: string): string => path.relative(repoRoot, file) || file;
   try {
     mkdirSync(dir, { recursive: true });
+    // The backlog's open ideas are the other half of the picture: a lane
+    // the audience rewards but the backlog cannot feed is a hole.
+    const openByLane = openIdeasByLane(repoRoot);
+    const reportSupply = (rows: SupplyRow[]): void => {
+      for (const row of rows) {
+        if (row.verdict === "thin") {
+          console.log(
+            `  供给不足：${row.lane}（${row.open} 条待选）— ${row.evidence.join("；")}`,
+          );
+        } else if (row.verdict === "glut") {
+          console.log(`  供给过剩：${row.lane}（${row.open} 条待选）`);
+        }
+      }
+    };
     if (opts.offline === true) {
       const snapshot = readSnapshot(path.join(dir, `${today}${DATA_SUFFIX}`));
       if (snapshot === null) {
@@ -84,14 +102,17 @@ export async function runChannelAnalytics(
           `no snapshot for ${today} in ${ANALYTICS_DIR}/ — run \`video analytics\` once without --offline`,
         );
       }
-      writeFileSync(
-        reportFile,
-        renderReport(analyze(snapshot, today, previousSnapshot(dir, today))),
-        "utf8",
+      const analysis = analyze(
+        snapshot,
+        today,
+        previousSnapshot(dir, today),
+        openByLane,
       );
+      writeFileSync(reportFile, renderReport(analysis), "utf8");
       console.log(
         `report → ${shown(reportFile)} (re-rendered from the ${today} snapshot)`,
       );
+      reportSupply(analysis.supply ?? []);
       return 0;
     }
     const youtube = await pullYouTube(resolveYouTubeCredentials(), deps);
@@ -104,7 +125,12 @@ export async function runChannelAnalytics(
     };
     const dataFile = path.join(dir, `${today}${DATA_SUFFIX}`);
     writeFileSync(dataFile, `${JSON.stringify(snapshot, null, 1)}\n`, "utf8");
-    const analysis = analyze(snapshot, today, previousSnapshot(dir, today));
+    const analysis = analyze(
+      snapshot,
+      today,
+      previousSnapshot(dir, today),
+      openByLane,
+    );
     writeFileSync(reportFile, renderReport(analysis), "utf8");
     console.log(
       `✓ YouTube ${analysis.counts.youtube} 部公开 · Bilibili ${analysis.counts.bilibili} 部`,
@@ -116,6 +142,7 @@ export async function runChannelAnalytics(
         ? "  对比：无更早的快照（首次）"
         : `  对比：${analysis.prevDate} 的快照`,
     );
+    reportSupply(analysis.supply ?? []);
     return 0;
   } catch (err) {
     console.error(`✗ ${(err as Error).message}`);
@@ -129,21 +156,53 @@ export function previousSnapshot(
   dir: string,
   today: string,
 ): AnalyticsSnapshot | null {
+  return (
+    newestSnapshot(dir, (name) => !name.startsWith(today))?.snapshot ?? null
+  );
+}
+
+/** The newest snapshot on disk, with the file it came from — what the
+ *  demand-led harvest reads to know which lanes the audience rewards. */
+export function latestSnapshot(
+  dir: string,
+): { file: string; snapshot: AnalyticsSnapshot } | null {
+  return newestSnapshot(dir);
+}
+
+function newestSnapshot(
+  dir: string,
+  accept: (name: string) => boolean = () => true,
+): { file: string; snapshot: AnalyticsSnapshot } | null {
   if (!existsSync(dir)) return null;
   // Newest first, and the first one that READS wins: a half-written file
   // must not cost the report its comparison.
   const files = readdirSync(dir)
     .filter(
-      (name) =>
-        /^\d{4}-\d{2}-\d{2}-data\.json$/.test(name) && !name.startsWith(today),
+      (name) => /^\d{4}-\d{2}-\d{2}-data\.json$/.test(name) && accept(name),
     )
     .sort()
     .reverse();
   for (const name of files) {
-    const snapshot = readSnapshot(path.join(dir, name));
-    if (snapshot !== null) return snapshot;
+    const file = path.join(dir, name);
+    const snapshot = readSnapshot(file);
+    if (snapshot !== null) return { file, snapshot };
   }
   return null;
+}
+
+/** The backlog's open ideas per lane — undefined when there is no backlog
+ *  yet, so the report simply skips the supply section. */
+function openIdeasByLane(repoRoot: string): Record<Lane, number> | undefined {
+  // No backlog yet is not a backlog of zero ideas: a supply table full of
+  // zeros would read as "every lane is starved".
+  if (!existsSync(backlogPath(repoRoot))) return undefined;
+  try {
+    return countOpenByLane(loadBacklogStore(repoRoot).ideas);
+  } catch {
+    // A malformed backlog is the human's problem, not the report's: the
+    // numbers still stand.
+    return undefined;
+  }
 }
 
 function readSnapshot(file: string): AnalyticsSnapshot | null {

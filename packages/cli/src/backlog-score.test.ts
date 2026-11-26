@@ -344,6 +344,27 @@ describe("parseJudgeRanking", () => {
     // A report without that heading (the views-only format) is read to
     // the cap.
     expect(evidenceExcerpt("- x".repeat(5000))).toHaveLength(6000);
+    // The supply table is section 2 when a backlog was given. It stays
+    // out of the judge's evidence like every other list after the lanes:
+    // how many ideas are waiting is not evidence about any one of them.
+    const withSupply = [
+      "# 频道分析 2026-11-25",
+      "",
+      "## 评委证据摘要",
+      "",
+      "- 平台分工：…",
+      "",
+      "## 1. 题材赛道 × 播放与参与",
+      "",
+      "| 军制与战争史 |",
+      "",
+      "## 2. 供给 vs 需求（backlog 待选选题 × 频道表现）",
+      "",
+      "| 神话比较 | 1 | 供给表的秘密行 |",
+    ].join("\n");
+    expect(evidenceExcerpt(withSupply)).toBe(
+      withSupply.slice(0, withSupply.indexOf("## 2. 供给")),
+    );
   });
 
   it("rejects out-of-range positions", () => {

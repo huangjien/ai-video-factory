@@ -68,6 +68,9 @@ export interface CohortStat {
   n: number;
   /** Over videos at least MIN_AGE_DAYS old; null when none is. */
   medianViewsPerDay: number | null;
+  /** Every video's total views — the yardstick a launch is measured
+   *  against, since a video too young for a rate has none. */
+  medianViews: number | null;
   coreRate: number | null;
 }
 
@@ -131,6 +134,9 @@ export interface Analysis {
   /** Views gained since the previous snapshot, per platform, best first. */
   gainedSincePrev: Record<Platform, { row: VideoRow; gained: number }[]>;
   notes: string[];
+  /** The backlog's open ideas against each lane's demand; null when the
+   *  caller passed no backlog. Never part of the judge's evidence. */
+  supply: SupplyRow[] | null;
 }
 
 // ---------------------------------------------------------------- lanes
@@ -255,6 +261,21 @@ const DIGEST_GEMS = 3;
  *  never named as a leader or a laggard in the digest. */
 const MIN_LANE_N = 3;
 
+// ---- supply vs demand
+/** A lane is WATCHED when its median views/day is this many times its
+ *  platform's. */
+const DEMAND_VIEWS_FACTOR = 2;
+/** …VALUED when its engagement rate is this many times its platform's, on
+ *  at least MIN_VIEWS_FOR_RATE views. */
+const DEMAND_ENGAGEMENT_FACTOR = 1.5;
+/** …or LAUNCHED BIG when its best video younger than MIN_AGE_DAYS has
+ *  this many times the platform's median views. */
+const DEMAND_LAUNCH_FACTOR = 5;
+/** Fewer open ideas than this, in a lane in demand. */
+const THIN_SUPPLY = 4;
+/** At least this many open ideas, in a lane not in demand. */
+const GLUT_SUPPLY = 10;
+
 export function ageDays(publishedAt: string, today: string): number {
   const published = Date.parse(publishedAt);
   const now = Date.parse(today);
@@ -317,6 +338,7 @@ function cohort(rows: ReadonlyArray<VideoRow>, today: string): CohortStat {
   return {
     n: rows.length,
     medianViewsPerDay: median(aged.map((row) => viewsPerDay(row, today))),
+    medianViews: median(rows.map((row) => row.views)),
     coreRate: pooledRate(rows),
   };
 }
@@ -429,6 +451,7 @@ export function analyze(
   snapshot: AnalyticsSnapshot,
   today: string,
   previous?: AnalyticsSnapshot | null,
+  openByLane?: Readonly<Record<Lane, number>>,
 ): Analysis {
   const perPlatform: Record<Platform, VideoRow[]> = {
     youtube: snapshot.rows.filter((row) => row.platform === "youtube"),
@@ -486,7 +509,7 @@ export function analyze(
   };
   const shorts = perPlatform.youtube.filter((row) => isShortTitle(row.title));
   const long = perPlatform.youtube.filter((row) => !isShortTitle(row.title));
-  return {
+  const analysis: Analysis = {
     today,
     generatedAt: snapshot.generatedAt,
     counts: {
@@ -538,7 +561,15 @@ export function analyze(
       bilibili: gained("bilibili"),
     },
     notes: [...snapshot.notes, ...derivedNotes(perPlatform.youtube)],
+    supply: null,
   };
+  // Supply is the backlog's business, not the numbers': the caller hands
+  // it in when a backlog exists, and the report then says where the two
+  // disagree.
+  if (openByLane !== undefined) {
+    analysis.supply = supplyRows(analysis, openByLane);
+  }
+  return analysis;
 }
 
 /** What the numbers say about themselves. A channel whose every YouTube
@@ -552,6 +583,207 @@ function derivedNotes(rows: ReadonlyArray<VideoRow>): string[] {
         "YouTube 全部视频的评论数为 0：评论很可能已关闭，「评论率 0」不代表观众沉默，请以点赞率为准",
       ]
     : [];
+}
+
+// ---------------------------------------------------------------- supply
+
+/** A lane's open backlog ideas set against its demand. */
+export interface SupplyRow {
+  lane: Lane;
+  /** Open backlog ideas (idea + proposed) in the lane. */
+  open: number;
+  /** The strongest signals, a platform named in each; empty when the lane
+   *  is not in demand. */
+  evidence: string[];
+  /** `thin` — in demand with fewer open ideas than THIN_SUPPLY;
+   *  `glut` — not in demand with at least GLUT_SUPPLY; `ample` — in
+   *  demand and stocked; null when there is nothing to say. */
+  verdict: "thin" | "glut" | "ample" | null;
+}
+
+/** What each lane is about, for a prompt that has to propose topics in
+ *  it. The keyword rules FILE a title; these say what the lane means. */
+export const LANE_GLOSS: Readonly<Record<Lane, string>> = {
+  神话比较:
+    "comparing Chinese, Indian and Greek mythology — creation, order, kingship, the human-divine boundary, time and disaster, national character",
+  军制与战争史:
+    "military institutions and the history of war — formations, conscription, reserves, staffs, doctrine, campaigns and armistices, told through their mechanisms",
+  经济与就业:
+    "the economy and work — pricing, jobs, unemployment, interest rates, the business behind software",
+  艺术考古与文明:
+    "art, archaeology and civilization — reconstructed ancient faces, the materials of painting, what ancient technology could and could not do",
+  心理与沟通:
+    "psychology and communication — motivation, comparison, conflict, and how people talk it through",
+  叙事思维与数学:
+    "narrative craft, thinking tools, and the mathematics behind things",
+  AI可靠性与决策:
+    "making AI and software trustworthy — calibration, hallucination, shadow deployment, judging the judge, silent failure",
+  AI与软件工程:
+    "AI systems and software engineering — agents, inference, modeling, architecture, devops",
+  组织与管理:
+    "organizations and management — teams, hierarchies, incentives, mission command",
+  其他: "none of the channel's subject lanes",
+};
+
+const emptyLanes = <T>(make: () => T): Record<Lane, T> => ({
+  神话比较: make(),
+  军制与战争史: make(),
+  经济与就业: make(),
+  艺术考古与文明: make(),
+  心理与沟通: make(),
+  叙事思维与数学: make(),
+  AI可靠性与决策: make(),
+  AI与软件工程: make(),
+  组织与管理: make(),
+  其他: make(),
+});
+
+/** `value / base` when `value` is at least `factor × base`; null when it
+ *  is not, or when either side is missing. */
+function clears(
+  value: number | null,
+  base: number | null,
+  factor: number,
+): number | null {
+  if (value === null || base === null || base <= 0 || value < factor * base) {
+    return null;
+  }
+  return value / base;
+}
+
+/** The numbers that make each lane worth feeding. A lane is in demand
+ *  when, on EITHER platform, one of three things holds — it is watched,
+ *  it is valued, or it just launched big (the three DEMAND_* factors).
+ *  Calibrated on the real catalogue (2026-11-25): it names the lanes a
+ *  reader of the report would name, and nothing whose whole evidence is
+ *  two views. */
+export function laneDemand(a: Analysis): Record<Lane, string[]> {
+  const out = emptyLanes<string[]>(() => []);
+  for (const lane of LANE_ORDER) {
+    if (lane === FALLBACK_LANE) continue;
+    const signals: {
+      kind: number;
+      ratio: number;
+      platform: Platform;
+      text: string;
+    }[] = [];
+    for (const platform of PLATFORMS) {
+      const stat = a.lanes.find(
+        (s) => s.platform === platform && s.lane === lane,
+      );
+      if (stat === undefined) continue;
+      const overall = a.overall[platform];
+      const push = (ratio: number | null, kind: number, text: string): void => {
+        if (ratio !== null) {
+          signals.push({
+            kind,
+            ratio,
+            platform,
+            text: `${PLATFORM_LABEL[platform]} ${text}`,
+          });
+        }
+      };
+      push(
+        clears(
+          stat.n >= 2 ? stat.medianViewsPerDay : null,
+          overall.medianViewsPerDay,
+          DEMAND_VIEWS_FACTOR,
+        ),
+        0,
+        `播放/天 ${perDay(stat.medianViewsPerDay)}（频道中位 ${perDay(overall.medianViewsPerDay)}）`,
+      );
+      push(
+        clears(
+          stat.views >= MIN_VIEWS_FOR_RATE ? stat.coreRate : null,
+          a.pooledCore[platform],
+          DEMAND_ENGAGEMENT_FACTOR,
+        ),
+        1,
+        `互动率 ${pct(stat.coreRate)}（频道 ${pct(a.pooledCore[platform])}）`,
+      );
+      push(
+        clears(
+          stat.youngN >= 2 ? stat.youngMaxViews : null,
+          overall.medianViews,
+          DEMAND_LAUNCH_FACTOR,
+        ),
+        2,
+        `新发布 ${stat.youngN} 部、最高 ${stat.youngMaxViews} 播放（频道中位 ${overall.medianViews}）`,
+      );
+    }
+    // The steadier signal first (watched, then valued, then a launch) and
+    // the larger margin first within a kind — one line per platform.
+    const chosen: string[] = [];
+    const taken = new Set<Platform>();
+    for (const signal of signals.sort(
+      (x, y) => x.kind - y.kind || y.ratio - x.ratio,
+    )) {
+      if (taken.has(signal.platform)) continue;
+      taken.add(signal.platform);
+      chosen.push(signal.text);
+      if (chosen.length === 2) break;
+    }
+    out[lane] = chosen;
+  }
+  return out;
+}
+
+/** Every lane's open backlog ideas set against its demand. The rows to
+ *  act on come first: lanes to feed (fewest ideas first), then lanes to
+ *  stop feeding (most ideas first), then the lanes in demand and stocked,
+ *  then the rest — each group in lane order. */
+export function supplyRows(
+  a: Analysis,
+  openByLane: Readonly<Record<Lane, number>>,
+): SupplyRow[] {
+  const demand = laneDemand(a);
+  const actFirst: Record<NonNullable<SupplyRow["verdict"]> | "none", number> = {
+    thin: 0,
+    glut: 1,
+    ample: 2,
+    none: 3,
+  };
+  const rows = LANE_ORDER.map((lane): SupplyRow => {
+    const evidence = demand[lane];
+    const open = openByLane[lane] ?? 0;
+    // The leftover lane is not a subject: never in demand, and a pile of
+    // unfiled ideas is not a glut either.
+    const inDemand = lane !== FALLBACK_LANE && evidence.length > 0;
+    const verdict: SupplyRow["verdict"] = inDemand
+      ? open < THIN_SUPPLY
+        ? "thin"
+        : "ample"
+      : lane !== FALLBACK_LANE && open >= GLUT_SUPPLY
+        ? "glut"
+        : null;
+    return { lane, open, evidence, verdict };
+  });
+  return rows.sort(
+    (x, y) =>
+      actFirst[x.verdict ?? "none"] - actFirst[y.verdict ?? "none"] ||
+      (x.verdict === "thin" ? x.open - y.open : 0) ||
+      (x.verdict === "glut" ? y.open - x.open : 0) ||
+      LANE_ORDER.indexOf(x.lane) - LANE_ORDER.indexOf(y.lane),
+  );
+}
+
+/** Open backlog ideas (idea + proposed) per lane, filed by the same rules
+ *  as the channel's videos — so the report and the backlog agree on what
+ *  a lane is. The note is read too: a bare topic is often too short to
+ *  name its subject. */
+export function countOpenByLane(
+  ideas: ReadonlyArray<{
+    topic: string;
+    note?: string | undefined;
+    status: string;
+  }>,
+): Record<Lane, number> {
+  const out = emptyLanes<number>(() => 0);
+  for (const idea of ideas) {
+    if (idea.status !== "idea" && idea.status !== "proposed") continue;
+    out[laneOf(`${idea.topic} ${idea.note ?? ""}`)] += 1;
+  }
+  return out;
 }
 
 /** `YYYY-MM-DD` of an ISO timestamp, in the machine's own zone. */
@@ -571,6 +803,14 @@ const PLATFORM_LABEL: Record<Platform, string> = {
 };
 
 const PLATFORMS: readonly Platform[] = ["bilibili", "youtube"];
+
+const SUPPLY_LABEL: Record<NonNullable<SupplyRow["verdict"]> | "none", string> =
+  {
+    thin: "**供给不足**",
+    glut: "**供给过剩**",
+    ample: "供给充足",
+    none: "—",
+  };
 
 const pct = (value: number | null): string =>
   value === null ? "—" : `${(value * 100).toFixed(1)}%`;
@@ -698,6 +938,10 @@ export function renderDigest(a: Analysis): string[] {
 }
 
 export function renderReport(a: Analysis): string {
+  // Sections after the lane table are numbered from 3 when the report has
+  // a supply section and from 2 when it has not — never a gap.
+  const section = (withSupply: number): number =>
+    a.supply === null ? withSupply - 1 : withSupply;
   const lines: string[] = [
     `# 频道分析 ${a.today}`,
     "",
@@ -718,7 +962,26 @@ export function renderReport(a: Analysis): string {
       `| ${PLATFORM_LABEL[stat.platform]} | ${stat.lane} | ${stat.n} | ${perDay(stat.medianViewsPerDay)} | ${pct(stat.coreRate)} | ${stat.medianRetentionPct === null ? "—" : `${stat.medianRetentionPct.toFixed(0)}%`} | ${stat.youngN === 0 ? "—" : `${stat.youngN}/${stat.youngMedianViews ?? 0}/${stat.youngMaxViews ?? 0}`} |`,
     );
   }
-  lines.push("", "## 2. 长度 × 播放", "");
+  // Section 2 is for PEOPLE: it names the lanes the backlog cannot feed.
+  // The judge reads up to the first "## 2." and never sees it — how many
+  // ideas are waiting is not evidence about any one of them.
+  if (a.supply !== null) {
+    lines.push(
+      "",
+      "## 2. 供给 vs 需求（backlog 待选选题 × 频道表现）",
+      "",
+      `> 这一节给人看，不进评委的证据块。需求旺 = 该赛道在任一平台满足一条：播放/天 ≥ 频道中位 ${DEMAND_VIEWS_FACTOR} 倍（至少 2 部）；互动率 ≥ 频道 ${DEMAND_ENGAGEMENT_FACTOR} 倍（至少 ${MIN_VIEWS_FOR_RATE} 播放）；新发布（不足 ${MIN_AGE_DAYS} 天）最高播放 ≥ 频道中位 ${DEMAND_LAUNCH_FACTOR} 倍（至少 2 部）。需求旺而待选不足 ${THIN_SUPPLY} 条 = 供给不足；需求不旺而待选 ≥ ${GLUT_SUPPLY} 条 = 供给过剩。\`video backlog harvest\` 会为供给不足的赛道按需采集。`,
+      "",
+      "| 赛道 | 待选选题 | 需求证据 | 判断 |",
+      "|---|---|---|---|",
+    );
+    for (const row of a.supply) {
+      lines.push(
+        `| ${row.lane} | ${row.open} | ${row.evidence.join("；") || "—"} | ${SUPPLY_LABEL[row.verdict ?? "none"]} |`,
+      );
+    }
+  }
+  lines.push("", `## ${section(3)}. 长度 × 播放`, "");
   for (const platform of ["youtube", "bilibili"] as const) {
     lines.push(
       `### ${PLATFORM_LABEL[platform]}（n=${a.counts[platform]}）`,
@@ -735,7 +998,7 @@ export function renderReport(a: Analysis): string {
     }
     lines.push("");
   }
-  lines.push("## 3. 长度 × 参与度", "", "### YouTube", "");
+  lines.push(`## ${section(4)}. 长度 × 参与度`, "", "### YouTube", "");
   lines.push(
     "| 长度段 | 部数 | 播放 | 点赞率 | 评论率 | 核心互动率 |",
     "|---|---|---|---|---|---|",
@@ -755,7 +1018,7 @@ export function renderReport(a: Analysis): string {
       `| ${stat.bucket} | ${stat.n} | ${stat.views} | ${pct(stat.likeRate)} | ${pct(stat.coinRate)} | ${pct(stat.favoriteRate)} | ${pct(stat.shareRate)} | ${pct(stat.commentRate)} | ${pct(stat.danmakuRate)} |`,
     );
   }
-  lines.push("", "## 4. 形式与语言", "");
+  lines.push("", `## ${section(5)}. 形式与语言`, "");
   if (a.shortsVsLong !== null) {
     const { shorts, long } = a.shortsVsLong;
     lines.push(
@@ -781,7 +1044,7 @@ export function renderReport(a: Analysis): string {
       : rows.map((row) => rowLine(row, lead(row), a.today));
   lines.push(
     "",
-    `## 5. 参与度领先（播放 ≥ ${MIN_VIEWS_FOR_RATE}）`,
+    `## ${section(6)}. 参与度领先（播放 ≥ ${MIN_VIEWS_FOR_RATE}）`,
     "",
     "### YouTube — 核心互动率（赞+评/播放）",
     ...bullets(a.engagementLeaders.youtube, (row) => pct(coreRate(row))),
@@ -791,7 +1054,7 @@ export function renderReport(a: Analysis): string {
       pct(totalEngagement(row) / row.views),
     ),
     "",
-    "## 6. 低播放高互动（被低估，值得续作/重拍）",
+    `## ${section(7)}. 低播放高互动（被低估，值得续作/重拍）`,
   );
   for (const platform of PLATFORMS) {
     lines.push("", `### ${PLATFORM_LABEL[platform]}`);
@@ -801,7 +1064,7 @@ export function renderReport(a: Analysis): string {
   }
   lines.push(
     "",
-    `## 7. 播放/天 TOP${TOP_VIEWS_CAP}（发布 ≥ ${MIN_AGE_DAYS} 天）`,
+    `## ${section(8)}. 播放/天 TOP${TOP_VIEWS_CAP}（发布 ≥ ${MIN_AGE_DAYS} 天）`,
   );
   for (const platform of ["youtube", "bilibili"] as const) {
     lines.push("", `### ${PLATFORM_LABEL[platform]}`);
@@ -813,7 +1076,7 @@ export function renderReport(a: Analysis): string {
     );
   }
   if (a.prevDate !== null) {
-    lines.push("", `## 8. 与上次（${a.prevDate}）对比`);
+    lines.push("", `## ${section(9)}. 与上次（${a.prevDate}）对比`);
     for (const platform of PLATFORMS) {
       lines.push(
         "",

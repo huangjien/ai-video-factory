@@ -16,17 +16,21 @@ import {
   bucketOf,
   coreEngagement,
   coreRate,
+  countOpenByLane,
   isShortTitle,
   langOf,
+  laneDemand,
   laneOf,
   localDate,
   median,
   pooledRate,
   renderDigest,
   renderReport,
+  supplyRows,
   totalEngagement,
   viewsPerDay,
   type AnalyticsSnapshot,
+  type Lane,
   type VideoRow,
 } from "./channel-analytics-analysis.js";
 import {
@@ -39,6 +43,7 @@ import {
   pullYouTube,
   wbiSign,
 } from "./channel-analytics-pull.js";
+import { initBacklogStore } from "./backlog-store.js";
 import { previousSnapshot, runChannelAnalytics } from "./channel-analytics.js";
 
 /**
@@ -463,6 +468,152 @@ describe("analyze — what the numbers are allowed to say", () => {
     expect(report).toContain(
       "+50 | 累计 100 | 军制与战争史 | 为什么军官要定期轮岗",
     );
+  });
+});
+
+describe("supply vs demand — where the backlog cannot feed the audience", () => {
+  let next = 0;
+  const video = (
+    title: string,
+    publishedAt: string,
+    views: number,
+    likes = 0,
+  ): VideoRow => ({
+    id: `supply-${next++}`,
+    platform: "bilibili",
+    title,
+    durationSec: 300,
+    publishedAt,
+    views,
+    likes,
+    comments: 0,
+  });
+  /** All on Bilibili and nothing on YouTube: one platform is enough to
+   *  read a rule by hand.
+   *
+   *    军制  two videos at 13.3 views a day — ten times the channel's 1.3
+   *    叙事  six quiet videos at 1.3 a day, which is the channel's median
+   *    经济  ONE video, liked by a fifth of its viewers — valued, though
+   *          one video is too few to be watched
+   *    神话  launched yesterday: 300 and 50 views against a median of 20 */
+  const snapshot: AnalyticsSnapshot = {
+    schema: "channel-analytics/1",
+    generatedAt: "2026-11-25T12:00:00.000Z",
+    notes: [],
+    rows: [
+      video("为什么军官要定期轮岗", AGED, 200),
+      video("府兵、募兵与义务兵", AGED, 200),
+      ...[
+        "网文写作",
+        "写好小说的本质",
+        "写故事的底层逻辑",
+        "科幻作者的三难困境",
+        "如何构建一个科幻宇宙",
+        "编剧的悬念",
+      ].map((title) => video(title, AGED, 20)),
+      video("AI 时代的软件定价", AGED, 300, 60),
+      video("盘古、原人与伊米尔", YOUNG, 300, 6),
+      video("中印欧神话对比③", YOUNG, 50, 1),
+    ],
+  };
+  const open: Record<Lane, number> = {
+    ...countOpenByLane([]),
+    神话比较: 1,
+    军制与战争史: 5,
+    AI可靠性与决策: 3,
+    经济与就业: 2,
+    叙事思维与数学: 12,
+  };
+
+  it("a lane is in demand when it is watched, valued, or launched big — and each line says which", () => {
+    const demand = laneDemand(analyze(snapshot, TODAY));
+    expect(demand["军制与战争史"]).toEqual([
+      "Bilibili 播放/天 13.3（频道中位 1.3）",
+    ]);
+    // One video, liked by a fifth of its viewers: valued — but watched
+    // takes two videos, so one hit is never a trend.
+    expect(demand["经济与就业"]).toEqual([
+      "Bilibili 互动率 20.0%（频道 5.7%）",
+    ]);
+    expect(demand["神话比较"]).toEqual([
+      "Bilibili 新发布 2 部、最高 300 播放（频道中位 20）",
+    ]);
+    // Six quiet videos are neither watched nor valued.
+    expect(demand["叙事思维与数学"]).toEqual([]);
+    expect(demand["其他"]).toEqual([]);
+  });
+
+  it("two views and a like are not demand", () => {
+    const tiny: AnalyticsSnapshot = {
+      ...snapshot,
+      rows: [
+        ...snapshot.rows,
+        video("心理：第二名的诅咒", AGED, 1, 1),
+        video("心理：为什么你总觉得累", AGED, 1, 1),
+      ],
+    };
+    // 100% engagement — on two views.
+    expect(laneDemand(analyze(tiny, TODAY))["心理与沟通"]).toEqual([]);
+  });
+
+  it("sets each lane's open ideas against that demand, the lanes to act on first", () => {
+    const rows = supplyRows(analyze(snapshot, TODAY), open);
+    expect(rows.map((row) => `${row.lane}:${row.verdict ?? "—"}`)).toEqual([
+      "神话比较:thin",
+      "经济与就业:thin",
+      "叙事思维与数学:glut",
+      "军制与战争史:ample",
+      "AI可靠性与决策:—",
+      "AI与软件工程:—",
+      "组织与管理:—",
+      "艺术考古与文明:—",
+      "心理与沟通:—",
+      "其他:—",
+    ]);
+    expect(rows[0]).toMatchObject({ open: 1, verdict: "thin" });
+    // A pile of unfiled ideas is not a glut: the leftover lane is not a
+    // subject.
+    expect(rows.at(-1)).toMatchObject({ lane: "其他", verdict: null });
+  });
+
+  it("counts the backlog's open ideas per lane, reading the note too", () => {
+    // A bare topic can be too short to name its subject.
+    const bare = "Why coups kept happening at the same palace gate";
+    expect(countOpenByLane([{ topic: bare, status: "idea" }])["其他"]).toBe(1);
+    expect(
+      countOpenByLane([
+        {
+          topic: bare,
+          note: "military coups and palace gates",
+          status: "idea",
+        },
+        { topic: "府兵与募兵", status: "proposed" },
+        { topic: "为什么停火线能冻结几十年", status: "drafted" },
+        { topic: "预备役制度", status: "dropped" },
+      ]),
+    ).toMatchObject({ 军制与战争史: 2, 其他: 0 });
+  });
+
+  it("the report sets supply out after the lane table, and only when a backlog was given", () => {
+    const withBacklog = renderReport(analyze(snapshot, TODAY, null, open));
+    expect(withBacklog.indexOf("## 1. 题材赛道")).toBeLessThan(
+      withBacklog.indexOf("## 2. 供给 vs 需求"),
+    );
+    expect(withBacklog.indexOf("## 2. 供给 vs 需求")).toBeLessThan(
+      withBacklog.indexOf("## 3. 长度 × 播放"),
+    );
+    expect(withBacklog).toContain(
+      "| 神话比较 | 1 | Bilibili 新发布 2 部、最高 300 播放（频道中位 20） | **供给不足** |",
+    );
+    expect(withBacklog).toContain("| 叙事思维与数学 | 12 | — | **供给过剩** |");
+    // The judge's evidence stops before it.
+    expect(
+      renderDigest(analyze(snapshot, TODAY, null, open)).join("\n"),
+    ).not.toContain("待选");
+    // No backlog, no section — and the numbering closes over the gap.
+    const without = renderReport(analyze(snapshot, TODAY));
+    expect(without).not.toContain("供给");
+    expect(without).toContain("## 2. 长度 × 播放");
   });
 });
 
@@ -1021,7 +1172,7 @@ describe("runChannelAnalytics", () => {
       await runChannelAnalytics({
         cwd: root,
         offline: true,
-        deps: { fetchImpl },
+        deps: { fetchImpl, now: () => NOW },
       }),
     ).toBe(0);
     expect(fetchImpl).not.toHaveBeenCalled();
@@ -1035,7 +1186,13 @@ describe("runChannelAnalytics", () => {
   });
 
   it("--offline without a snapshot for today is an exit 1 that says what to run", async () => {
-    expect(await runChannelAnalytics({ cwd: root, offline: true })).toBe(1);
+    expect(
+      await runChannelAnalytics({
+        cwd: root,
+        offline: true,
+        deps: { now: () => NOW },
+      }),
+    ).toBe(1);
     expect(errors.join("\n")).toMatch(
       /no snapshot .* run `video analytics` once without --offline/,
     );
@@ -1157,5 +1314,102 @@ describe("runChannelAnalytics", () => {
       ),
     );
     expect(existsSync(path.join(dir(), `${TODAY_RUN}-report.md`))).toBe(false);
+  });
+});
+
+describe("runChannelAnalytics — the backlog's supply", () => {
+  const NOW = Date.parse("2026-11-25T12:00:00.000Z");
+  const TODAY_RUN = localDate(new Date(NOW).toISOString());
+  let root: string;
+  const logs: string[] = [];
+  const origLog = console.log;
+
+  /** Three quiet old videos set the channel's medians; two mythology
+   *  videos launched yesterday far above them. */
+  const writeSnapshot = (): void => {
+    const dir = path.join(root, "docs", "analytics");
+    mkdirSync(dir, { recursive: true });
+    const row = (
+      title: string,
+      publishedAt: string,
+      views: number,
+    ): VideoRow => ({
+      platform: "bilibili",
+      id: title,
+      title,
+      durationSec: 300,
+      publishedAt,
+      views,
+      likes: 0,
+      comments: 0,
+    });
+    writeFileSync(
+      path.join(dir, `${TODAY_RUN}-data.json`),
+      JSON.stringify({
+        schema: "channel-analytics/1",
+        generatedAt: new Date(NOW).toISOString(),
+        notes: [],
+        rows: [
+          row("网文写作", "2026-11-10", 2),
+          row("写好小说的本质", "2026-11-10", 2),
+          row("编剧的悬念", "2026-11-10", 2),
+          row("盘古、原人与伊米尔", "2026-11-24", 300),
+          row("中印欧神话对比③", "2026-11-24", 50),
+        ],
+      }),
+      "utf8",
+    );
+  };
+  const report = (): string =>
+    readFileSync(
+      path.join(root, "docs", "analytics", `${TODAY_RUN}-report.md`),
+      "utf8",
+    );
+
+  beforeEach(() => {
+    root = mkdtempSync(path.join(tmpdir(), "video-analytics-supply-"));
+    logs.length = 0;
+    console.log = (...args: unknown[]) => {
+      logs.push(args.join(" "));
+    };
+  });
+
+  afterEach(() => {
+    console.log = origLog;
+    rmSync(root, { recursive: true, force: true });
+  });
+
+  it("sets the backlog against the channel and names the lane it cannot feed", async () => {
+    writeSnapshot();
+    initBacklogStore(root);
+    expect(
+      await runChannelAnalytics({
+        cwd: root,
+        offline: true,
+        deps: { now: () => NOW },
+      }),
+    ).toBe(0);
+    expect(report()).toContain(
+      "## 2. 供给 vs 需求（backlog 待选选题 × 频道表现）",
+    );
+    expect(report()).toContain(
+      "| 神话比较 | 0 | Bilibili 新发布 2 部、最高 300 播放（频道中位 2） | **供给不足** |",
+    );
+    expect(logs.join("\n")).toMatch(
+      /供给不足：神话比较（0 条待选）— Bilibili 新发布 2 部、最高 300 播放（频道中位 2）/,
+    );
+  });
+
+  it("with no backlog there is no supply section — zero ideas is not a starving channel", async () => {
+    writeSnapshot();
+    expect(
+      await runChannelAnalytics({
+        cwd: root,
+        offline: true,
+        deps: { now: () => NOW },
+      }),
+    ).toBe(0);
+    expect(report()).not.toContain("供给");
+    expect(logs.join("\n")).not.toContain("供给不足");
   });
 });

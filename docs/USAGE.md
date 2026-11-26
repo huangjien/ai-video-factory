@@ -893,6 +893,28 @@ is handed to the drafter as context alongside the topic.
 
 Design: [`docs/plans/2026-11-18-backlog-feature-design.md`](./plans/2026-11-18-backlog-feature-design.md).
 
+### Harvest: from documents, and from demand
+
+`video backlog harvest` runs two passes, and both land as `proposed` — a
+human still approves every idea.
+
+**The document pass** reads each candidate document and extracts the
+topics it can support. When an analytics report exists, the channel's own
+numbers ride along in the prompt: the document still decides what is
+possible, but the evidence decides the ORDER of the candidates and what
+their `why` says. The report's supply table never reaches the prompt.
+
+**The demand pass** asks the other question — which subject areas does
+the audience reward and the backlog cannot feed? `video analytics` answers
+it: a lane is in demand when, on either platform, its median views/day is
+twice the channel's (on two videos or more), its engagement rate is 1.5
+times the channel's (on at least 20 views), or its best video younger
+than three days has five times the channel's median views. A lane in
+demand with fewer than four open ideas is proposed for directly: one call
+per lane, up to three topics, marked `demand:<lane>` with the evidence
+that asked for them in the note. `--no-demand` turns that pass off; the
+pass needs an analytics snapshot (`video analytics` first).
+
 ### Default delivery: Chinese and English, landscape and Shorts
 
 Unless the user asks otherwise, deliver four editions: Chinese full-length landscape, Chinese vertical Shorts, English full-length landscape, and English vertical Shorts. Produce the Chinese landscape master first with the usual draft, review and make workflow.

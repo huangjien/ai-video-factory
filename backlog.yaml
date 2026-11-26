@@ -1314,7 +1314,7 @@ ideas:
       - 1972年西姆拉协定
   - id: 2026-11-19-为什么-冻结的冲突-对双方都有利
     topic: 为什么"冻结的冲突"对双方都有利
-    status: proposed
+    status: drafting
     source: harvest:docs/plans/2026-11-18-backlog-feature-design.md
     created: 2026-11-19
     note: "反直觉的政治经济学解释，用具体停火线案例讲博弈论，能覆盖全球多个冻结冲突案例做对比 —
@@ -1324,6 +1324,7 @@ ideas:
     anchors:
       - 克什米尔 LoC
       - 板门店停战协定
+    drafting_at: 2026-11-26T05:05:04.161Z
   - id: 2026-11-19-the-duplicate-filter-that-ate-every-new-
     topic: The duplicate filter that ate every new idea
     status: proposed
@@ -1703,7 +1704,7 @@ ideas:
       - calibration in ML
   - id: 2026-11-19-the-brier-score-judging-whether-ai-knows
     topic: "The Brier score: judging whether AI knows when it's wrong"
-    status: proposed
+    status: drafted
     source: harvest:docs/plans/v0.12/v0.12-decision-surfaces-plan.md
     created: 2026-11-19
     note: "A great mechanism video: the difference between being right and knowing
@@ -1717,6 +1718,9 @@ ideas:
     anchors:
       - Glenn Brier / 1950 weather forecasting
       - decision-bench accuracy gate
+    drafting_at: 2026-11-25T19:53:05.161Z
+    project: the-brier-score-judging-whether-ai-knows
+    drafted_at: 2026-11-25T19:56:05.456Z
   - id: 2026-11-19-why-your-test-data-might-be-lying-to-you
     topic: Why your test data might be lying to you
     status: proposed
@@ -1868,7 +1872,7 @@ ideas:
       - sceneBoundaries QA check
   - id: 2026-11-19-the-warning-that-cried-wolf
     topic: The warning that cried wolf
-    status: proposed
+    status: drafted
     source: harvest:learnings/improvement-proposals/2026-10-24-experience-batch-1.md
     created: 2026-11-19
     note: "A human-factors story that generalizes from software QA to aviation and
@@ -1883,6 +1887,9 @@ ideas:
       - render-report.json warnings
       - staleRenders QA gate
       - 16/16 projects carrying the same false warn
+    drafting_at: 2026-11-26T01:07:46.632Z
+    project: the-warning-that-cried-wolf
+    drafted_at: 2026-11-26T01:17:24.362Z
   - id: 2026-11-19-when-the-preview-lies
     topic: When the preview lies
     status: proposed
@@ -1945,9 +1952,12 @@ ideas:
   - id: 2026-11-20-ai-代理-有三种使用模式-1-管道式-做完一步移交给下一步-2-编排式-通过编
     topic: AI 代理，有三种使用模式：（1）管道式（做完一步移交给下一步），（2）编排式（通过编排器来指挥），（3）白板式（每个 AI
       自己阅读白板信息，自由行动）。
-    status: idea
+    status: drafted
     source: manual
     created: 2026-11-20
+    drafting_at: 2026-11-25T18:02:27.839Z
+    project: ai-代理-有三种使用模式-1-管道式-做完一步移交给下一步-2-编排式-通过编
+    drafted_at: 2026-11-25T18:12:17.462Z
   - id: 2026-11-20-why-coups-kept-happening-at-the-same-pal
     topic: Why coups kept happening at the same palace gate
     status: proposed
@@ -2513,4 +2523,92 @@ ideas:
     drafting_at: 2026-11-21T21:59:57.043Z
     project: 军队招募制度的历史沿革-从府兵-募兵到义务兵与志愿兵
     drafted_at: 2026-11-21T22:55:54.951Z
+  - id: 2026-11-26-火神干什么活-祝融-阿耆尼与赫淮斯托斯的三份差事
+    topic: 火神干什么活：祝融、阿耆尼与赫淮斯托斯的三份差事
+    status: proposed
+    source: demand:神话比较
+    created: 2026-11-26
+    note: 烧宫城、婆罗门的火堆、火山下的铁砧都是能实拍的具体场景，把抽象的神职分工变成看得见的权力分配，而这一区 Bilibili 日播 45.0（频道中位
+      0.6）、YouTube 互动率 2.7%（频道 1.3%）说明三传统并排讲得受欢迎。 —
+      比较三个火神被派去做的事：祝融氏因阏伯受谗而怒、焚烧斟鄩的宫室，阿耆尼以祭司身份传递供品并曾化作婆罗门吞下国王之子又送还，赫淮斯托斯则在埃特纳山下锻造甲胄并用网捉住阿瑞斯与阿佛洛狄忒。
+      [按需采集·神话比较；锚点待核实] Bilibili 播放/天 45.0（频道中位 0.6）；YouTube 互动率 2.7%（频道 1.3%）
+    anchors:
+      - 《左传》中阏伯受谗、祝融氏怒焚斟鄩宫室的记载
+      - 《梨俱吠陀》阿耆尼赞歌与 Markandeya Purana（摩揭陀往世书）中火神化作婆罗门讨食王子
+      - 《伊利亚特》第十八卷赫淮斯托斯打造阿喀琉斯甲胄、《奥德赛》第八卷阿瑞斯与阿佛洛狄忒
+  - id: 2026-11-26-谁被允许下阴间-阎罗-阎摩与赫尔墨斯的三套规则
+    topic: 谁被允许下阴间：阎罗、阎摩与赫尔墨斯的三套规则
+    status: proposed
+    source: demand:神话比较
+    created: 2026-11-26
+    note: "生死簿、阎摩的信使、冥河之门都是可逐格画出来的三套流程，还能带出中国地狱官僚源自印度阎摩、经《地藏菩萨本愿经》落地这一跨文明的发现，而这一区的日\
+      播与互动率都明显跑赢频道中位。 —
+      把三套地下世界当成三套官僚机构来查：中国的十殿阎王与生死簿、印度的阎摩及其信使、希腊的冥河与引魂官，并追问为什么只有极少数人下得去、又为什么有人回\
+      得来。 — ⚠ possible overlap: shadow-mode-how-ai-earns-the-right-to-ac
+      (允许、世界、当成); the-pigeonhole-principle-breaks-a-config (允许、成三);
+      中印欧神话对比-1-创世与秩序类型学-chinese-indian-europe (三套、世界) [按需采集·神话比较；锚点待核实]
+      Bilibili 播放/天 45.0（频道中位 0.6）；YouTube 互动率 2.7%（频道 1.3%）"
+    anchors:
+      - 《西游记》第三回孙悟空大闹地府、生死簿与十殿阎王
+      - Brihadaranyaka Upanishad 中父子在阎摩界往返的故事
+      - 《奥德赛》第十一卷冥府之行与赫尔墨斯引魂
+  - id: 2026-11-26-真王怎么验出来-禅让-走失的祭马与赫拉克勒斯归乡
+    topic: 真王怎么验出来：禅让、走失的祭马与赫拉克勒斯归乡
+    status: proposed
+    source: demand:神话比较
+    created: 2026-11-26
+    note: "尧试舜、被追回的祭马、归乡的英雄都是有人物有动作的验王故事，区别于已发布的秩序正当性一集（那集讲德、命运与法的抽象比较），而这一区
+      Bilibili 日播 45.0 与 2.7% 互动率支持这种更具体的讲法。 —
+      比较三套具体的验王程序：中国尧以多年试用与家庭考验考察舜再禅让，印度以祭马走失、能否追回并施舍来考校王权，希腊以赫拉克勒斯后裔归乡与奥林匹亚祭典确\
+      认王族血统。 — ⚠ possible overlap: llm的输入输出与首token (出来、程序);
+      when-ai-grades-its-own-homework (出来、具体);
+      中印欧神话对比-2-人神边界与行动伦理-chinese-indian-europ (赫拉、拉克、克勒) [按需采集·神话比较；锚点待核实]
+      Bilibili 播放/天 45.0（频道中位 0.6）；YouTube 互动率 2.7%（频道 1.3%）"
+    anchors:
+      - 《尚书·尧典》与《史记·五帝本纪》的禅让与试用
+      - 《摩诃婆罗多》（Shanti Parva）中祭马走失事件
+      - Pindar, Olympian 10（赫拉克勒斯后裔归乡与奥林匹亚赛会的起源）
+  - id: 2026-11-26-ai说有九成把握时-它真的对九成吗
+    topic: AI说有九成把握时，它真的对九成吗？
+    status: proposed
+    source: demand:AI可靠性与决策
+    created: 2026-11-26
+    note: "每次预测、实际对错和累计正确率都能同屏呈现，误差会非常直观；该区Bilibili互动率8.9%（频道3.8%）也显示出明确的受众兴趣。 —
+      用一组可重复的问答把模型的自信程度与实际正确率排成校准曲线，解释为什么语言模型可能说得很肯定却系统性地高估自己。 — ⚠ possible
+      overlap: AI时代的DevOps团队 (九成、它真、模型); agents-first (重复、模型);
+      ai-代理-有三种使用模式-1-管道式-做完一步移交给下一步-2-编排式-通过编 (重复、模型) [按需采集·AI可靠性与决策；锚点待核实]
+      Bilibili 互动率 8.9%（频道 3.8%）；YouTube 新发布 12 部、最高 23 播放（频道中位 3）"
+    anchors:
+      - Language Models (Mostly) Know What They Know
+      - Calibration curve
+      - Brier score
+  - id: 2026-11-26-换个顺序-ai裁判就会改判吗
+    topic: 换个顺序，AI裁判就会改判吗？
+    status: proposed
+    source: demand:AI可靠性与决策
+    created: 2026-11-26
+    note: "屏幕上的答案只需左右互换，裁判分数就可能翻转，非常适合用直观实验追问AI评价AI是否可靠；该区YouTube最新12部最高23播放（频道中位3）\
+      ，仍有扩大触达的空间。 — 把同一批回答的A/B位置对调并交给多个模型互评，展示位置偏差、冗长偏好和自我偏好如何污染AI评分。 — ⚠
+      possible overlap: AI时代的DevOps团队 (回答、模型);
+      ai-era-software-engineering-11-shifts (回答、位置、模型);
+      ai-代理-有三种使用模式-1-管道式-做完一步移交给下一步-2-编排式-通过编 (顺序、回答、位置) [按需采集·AI可靠性与决策；锚点待核实]
+      Bilibili 互动率 8.9%（频道 3.8%）；YouTube 新发布 12 部、最高 23 播放（频道中位 3）"
+    anchors:
+      - Judging LLM-as-a-Judge with MT-Bench and Chatbot Arena
+      - MT-Bench
+      - Chatbot Arena
+  - id: 2026-11-26-ai能不能先在暗处试错
+    topic: AI能不能先在暗处试错？
+    status: proposed
+    source: demand:AI可靠性与决策
+    created: 2026-11-26
+    note: "当前决策、影子决策和分歧警报可以同时呈现在屏幕上，让观众看见AI犯错却没有伤害用户；该区Bilibili互动率8.9%（频道3.8%）高于频道整\
+      体，值得优先投入。 — 追踪影子部署如何让新模型与线上模型同时处理真实请求、只记录而不实际操盘，并解释怎样发现两者之间的危险分歧。 — ⚠
+      possible overlap: 3m与pfos的秘密 (影子、线上); AI时代的DevOps团队 (不能、能先、暗处);
+      agents-first (能不、模型) [按需采集·AI可靠性与决策；锚点待核实] Bilibili 互动率 8.9%（频道
+      3.8%）；YouTube 新发布 12 部、最高 23 播放（频道中位 3）"
+    anchors:
+      - Shadow deployment
+      - Traffic mirroring
+      - Netflix Interleaving
 

@@ -103,6 +103,22 @@ through a guard, and a pull that cannot run exits non-zero with the fix
 in its message. Retention and subscribers need the YouTube Analytics API
 enabled on the project — until then the report says so.
 
+**The backlog now knows what the channel can feed.** `video analytics`
+gained a supply side: it counts the open ideas per topic lane and sets
+them against the channel's own numbers. On 2026-11-26 the gap was blunt —
+Bilibili served 45 views a day for 神话比较 against a channel median of
+0.6, and the backlog held one idea for it; 叙事思维与数学 held 43 ideas
+and served 0.1 a day. The report says so in a section the judge never
+reads: how many ideas are waiting is not evidence about any one of them.
+
+`video backlog harvest` grew a second pass for exactly those lanes: one
+call per under-supplied lane, up to three topics, marked `demand:<lane>`
+with the evidence that asked for them in the note. The document pass
+learned to order its candidates by the same evidence (the document still
+decides what is possible; the evidence decides the order and the `why`).
+Both passes land as `proposed` — a human still approves every idea, and
+`--no-demand` turns the second pass off.
+
 ## v0.12 (2026-11-16) — the decision layer, the 2.6 image provider, and two films
 
 Three things shipped together:

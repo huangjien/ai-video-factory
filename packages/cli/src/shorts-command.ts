@@ -10,6 +10,9 @@ import { formatRunId } from "@video/workflow";
 import { readSceneTimings } from "@video/media";
 import { verticalFilter } from "@video/douyin";
 import { defaultModel } from "@video/llm";
+import { uploadVideo } from "@video/youtube";
+import { resolveYouTubeCredentials } from "./youtube-command.js";
+import { shortsDescription } from "./shorts-description.js";
 import {
   MiniMaxVideoProvider,
   MockVideoProvider,
@@ -25,6 +28,67 @@ export interface ShortsOptions {
   durationSec?: number;
   startSec?: number;
   providerName?: "mock" | "minimax" | undefined;
+  /** Upload the extracted clip to YouTube as a Short (private). */
+  upload?: boolean | undefined;
+}
+
+/** The film a clip belongs to: the vertical workdir's parent, or the
+ *  project itself when the clip was cut from a landscape master. */
+function filmRootFor(projectRoot: string): string {
+  return path.basename(projectRoot) === "vertical"
+    ? path.dirname(projectRoot)
+    : projectRoot;
+}
+
+/** The film's title, for the Short's title line. */
+function shortsTopic(filmRoot: string): string {
+  const titlePath = path.join(filmRoot, "youtube", "title.txt");
+  if (existsSync(titlePath)) {
+    const title = readFileSync(titlePath, "utf8").trim();
+    if (title !== "") return title;
+  }
+  const articlePath = path.join(filmRoot, "article.md");
+  if (existsSync(articlePath)) {
+    const heading = readFileSync(articlePath, "utf8").match(/^# (.+)$/m);
+    if (heading?.[1] !== undefined) return heading[1].trim();
+  }
+  return path.basename(filmRoot);
+}
+
+/** Upload the extracted clip as a YouTube Short (private — the human
+ *  flips it public, same as every other upload in this pipeline). */
+async function uploadShortsToYouTube(
+  projectRoot: string,
+  shortsPath: string,
+): Promise<number> {
+  const filmRoot = filmRootFor(projectRoot);
+  let creds;
+  try {
+    creds = await resolveYouTubeCredentials();
+  } catch (err) {
+    console.error(`  ! shorts upload skipped: ${(err as Error).message}`);
+    return 1;
+  }
+  const topic = shortsTopic(filmRoot);
+  const description = shortsDescription(filmRoot, topic);
+  const title = `${topic} #Shorts`.slice(0, 100);
+  const videoBytes = new Uint8Array(readFileSync(shortsPath));
+  try {
+    const { videoId, watchUrl } = await uploadVideo({
+      creds,
+      videoBytes,
+      title,
+      description,
+      privacyStatus: "private",
+    });
+    console.log(
+      `  ✓ shorts uploaded: https://youtu.be/${videoId} (${watchUrl})`,
+    );
+    return 0;
+  } catch (err) {
+    console.error(`  ! shorts upload failed: ${(err as Error).message}`);
+    return 1;
+  }
 }
 
 function safeGitHead(cwd: string): string {
@@ -360,11 +424,16 @@ export async function runShorts(opts: ShortsOptions): Promise<number> {
   const { writeRun } = await import("@video/workflow");
   await writeRun(projectRoot, record);
 
-  console.log(`\u2713 extracted ${opts.project}/youtube/shorts.mp4`);
+  console.log(`✓ extracted ${opts.project}/youtube/shorts.mp4`);
   console.log(
     `  provider=${runRecord.provider}  model=${runRecord.model}  hash=${runRecord.prompt_hash.slice(7, 19)}…`,
   );
-  console.log(`  next: upload shorts.mp4 as a YouTube Short`);
+  if (opts.upload === true) {
+    const upCode = await uploadShortsToYouTube(projectRoot, shortsPath);
+    if (upCode !== 0) return upCode;
+  } else {
+    console.log(`  next: upload shorts.mp4 as a YouTube Short`);
+  }
   return 0;
 }
 
@@ -390,6 +459,10 @@ export function registerShorts(program: Command): void {
       "--provider <name>",
       "video provider: mock|minimax (default mock — minimax needs MINIMAX_API_KEY)",
     )
+    .option(
+      "--upload",
+      "after extracting, upload the clip to YouTube as a Short (private — the human flips it public)",
+    )
     .action(
       async (
         project: string,
@@ -398,6 +471,7 @@ export function registerShorts(program: Command): void {
           duration?: number;
           start?: number;
           provider?: "mock" | "minimax";
+          upload?: boolean;
         },
       ) => {
         process.exitCode = await runShorts({
@@ -410,6 +484,7 @@ export function registerShorts(program: Command): void {
           ...(opts.provider !== undefined
             ? { providerName: opts.provider }
             : {}),
+          ...(opts.upload !== undefined ? { upload: opts.upload } : {}),
         });
       },
     );

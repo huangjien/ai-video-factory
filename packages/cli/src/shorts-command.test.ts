@@ -10,6 +10,25 @@ import { Command } from "commander";
  *  command's own branch logic (thumbnail, hook, run record) offline. */
 const generate = vi.hoisted(() => vi.fn());
 const generateError = vi.hoisted(() => vi.fn());
+const uploadVideoMock = vi.hoisted(() => vi.fn());
+const credentialsError = vi.hoisted(() => vi.fn());
+
+vi.mock("@video/youtube", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@video/youtube")>();
+  return { ...actual, uploadVideo: uploadVideoMock };
+});
+
+vi.mock("./youtube-command.js", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("./youtube-command.js")>();
+  return {
+    ...actual,
+    resolveYouTubeCredentials: async () => {
+      const err = credentialsError();
+      if (err) throw err;
+      return { clientId: "id", clientSecret: "secret", refreshToken: "token" };
+    },
+  };
+});
 
 vi.mock("@video/media-generators", async (importOriginal) => {
   const actual =
@@ -28,9 +47,8 @@ vi.mock("@video/media-generators", async (importOriginal) => {
 // Dynamic import is required: the vi.mock factory above must register
 // before the module under test is loaded, or the real MiniMax provider
 // ships into the tests.
-const { registerShorts, runShorts, selectShortsWindow } = await import(
-  "./shorts-command.js"
-);
+const { registerShorts, runShorts, selectShortsWindow } =
+  await import("./shorts-command.js");
 
 describe("runShorts", () => {
   let root: string;
@@ -141,6 +159,75 @@ describe("runShorts", () => {
     expect(errors.join("\n")).toContain("missing final mp4");
   });
 
+  it("uploads the clip as a private Short when --upload is passed", async () => {
+    const outDir = path.join(project, "output");
+    await mkdir(outDir, { recursive: true });
+    execFileSync(
+      "ffmpeg",
+      [
+        "-y",
+        "-f",
+        "lavfi",
+        "-i",
+        "testsrc=duration=4:size=144x256:rate=15",
+        "-c:v",
+        "libx264",
+        "-pix_fmt",
+        "yuv420p",
+        path.join(outDir, "final-mixed.mp4"),
+      ],
+      { stdio: "ignore" },
+    );
+    await writeFile(
+      path.join(project, "youtube", "shorts-hook.txt"),
+      "口播文案：死神在门口点名。\n",
+      "utf8",
+    );
+    uploadVideoMock.mockResolvedValue({
+      videoId: "abc123",
+      watchUrl: "https://youtu.be/abc123",
+    });
+    const code = await runShorts({ project: "demo", cwd: root, upload: true });
+    expect(code).toBe(0);
+    expect(uploadVideoMock).toHaveBeenCalledTimes(1);
+    const call = uploadVideoMock.mock.calls[0]?.[0] as {
+      title: string;
+      description: string;
+      privacyStatus: string;
+    };
+    expect(call.title.endsWith("#Shorts")).toBe(true);
+    expect(call.privacyStatus).toBe("private");
+    // The spoken copy of the hook, not the image prompt above it.
+    expect(call.description).toContain("死神在门口点名。");
+    expect(logs.join("\n")).toContain("https://youtu.be/abc123");
+  });
+
+  it("keeps the clip on disk and fails when the upload has no credentials", async () => {
+    const outDir = path.join(project, "output");
+    await mkdir(outDir, { recursive: true });
+    execFileSync(
+      "ffmpeg",
+      [
+        "-y",
+        "-f",
+        "lavfi",
+        "-i",
+        "testsrc=duration=4:size=144x256:rate=15",
+        "-c:v",
+        "libx264",
+        "-pix_fmt",
+        "yuv420p",
+        path.join(outDir, "final-mixed.mp4"),
+      ],
+      { stdio: "ignore" },
+    );
+    credentialsError.mockReturnValue(new Error("no refresh token"));
+    const code = await runShorts({ project: "demo", cwd: root, upload: true });
+    expect(code).toBe(1);
+    expect(errors.join("\n")).toContain("shorts upload skipped");
+    expect(existsSync(path.join(project, "youtube", "shorts.mp4"))).toBe(true);
+  });
+
   it("keeps the whole vertical master by default (remux, no re-encode)", async () => {
     const outDir = path.join(project, "output");
     await mkdir(outDir, { recursive: true });
@@ -149,10 +236,21 @@ describe("runShorts", () => {
       "ffmpeg",
       [
         "-y",
-        "-f", "lavfi", "-i", "testsrc=duration=4:size=144x256:rate=15",
-        "-f", "lavfi", "-i", "sine=frequency=440:duration=4",
-        "-c:v", "libx264", "-pix_fmt", "yuv420p",
-        "-c:a", "aac", "-shortest",
+        "-f",
+        "lavfi",
+        "-i",
+        "testsrc=duration=4:size=144x256:rate=15",
+        "-f",
+        "lavfi",
+        "-i",
+        "sine=frequency=440:duration=4",
+        "-c:v",
+        "libx264",
+        "-pix_fmt",
+        "yuv420p",
+        "-c:a",
+        "aac",
+        "-shortest",
         path.join(outDir, "final-mixed.mp4"),
       ],
       { stdio: "ignore" },
@@ -161,9 +259,16 @@ describe("runShorts", () => {
     expect(code).toBe(0);
     const dur = parseFloat(
       execFileSync("ffprobe", [
-        "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0",
+        "-v",
+        "error",
+        "-show_entries",
+        "format=duration",
+        "-of",
+        "csv=p=0",
         path.join(project, "youtube", "shorts.mp4"),
-      ]).toString().trim(),
+      ])
+        .toString()
+        .trim(),
     );
     expect(dur).toBeGreaterThan(3.8);
     expect(logs.join("\n")).toMatch(/full@0/);
@@ -173,19 +278,41 @@ describe("runShorts", () => {
     const outDir = path.join(project, "output");
     await mkdir(outDir, { recursive: true });
     const source = path.join(outDir, "final-mixed.mp4");
-    execFileSync("ffmpeg", [
-      "-y", "-f", "lavfi", "-i", "color=c=blue:s=1920x1080:d=4:r=15",
-      "-vf", "drawbox=x=0:y=0:w=150:h=1080:color=red:t=fill,drawbox=x=1770:y=0:w=150:h=1080:color=red:t=fill",
-      "-c:v", "libx264", "-pix_fmt", "yuv420p", source,
-    ], { stdio: "ignore" });
+    execFileSync(
+      "ffmpeg",
+      [
+        "-y",
+        "-f",
+        "lavfi",
+        "-i",
+        "color=c=blue:s=1920x1080:d=4:r=15",
+        "-vf",
+        "drawbox=x=0:y=0:w=150:h=1080:color=red:t=fill,drawbox=x=1770:y=0:w=150:h=1080:color=red:t=fill",
+        "-c:v",
+        "libx264",
+        "-pix_fmt",
+        "yuv420p",
+        source,
+      ],
+      { stdio: "ignore" },
+    );
 
     const code = await runShorts({ project: "demo", cwd: root });
     expect(code).toBe(0);
     const output = path.join(project, "youtube", "shorts.mp4");
     for (const x of [20, 1060]) {
       const pixel = execFileSync("ffmpeg", [
-        "-v", "error", "-i", output, "-frames:v", "1",
-        "-vf", `format=rgb24,crop=1:1:${x}:960`, "-f", "rawvideo", "-",
+        "-v",
+        "error",
+        "-i",
+        output,
+        "-frames:v",
+        "1",
+        "-vf",
+        `format=rgb24,crop=1:1:${x}:960`,
+        "-f",
+        "rawvideo",
+        "-",
       ]);
       expect(pixel[0] ?? 0).toBeGreaterThan((pixel[2] ?? 0) * 1.5);
     }
@@ -199,10 +326,21 @@ describe("runShorts", () => {
       "ffmpeg",
       [
         "-y",
-        "-f", "lavfi", "-i", "testsrc=duration=4:size=144x256:rate=15",
-        "-f", "lavfi", "-i", "sine=frequency=440:duration=4",
-        "-c:v", "libx264", "-pix_fmt", "yuv420p",
-        "-c:a", "aac", "-shortest",
+        "-f",
+        "lavfi",
+        "-i",
+        "testsrc=duration=4:size=144x256:rate=15",
+        "-f",
+        "lavfi",
+        "-i",
+        "sine=frequency=440:duration=4",
+        "-c:v",
+        "libx264",
+        "-pix_fmt",
+        "yuv420p",
+        "-c:a",
+        "aac",
+        "-shortest",
         path.join(outDir, "final-mixed.mp4"),
       ],
       { stdio: "ignore" },
@@ -222,9 +360,16 @@ describe("runShorts", () => {
     expect(code).toBe(0);
     const dur = parseFloat(
       execFileSync("ffprobe", [
-        "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0",
+        "-v",
+        "error",
+        "-show_entries",
+        "format=duration",
+        "-of",
+        "csv=p=0",
         path.join(project, "youtube", "shorts.mp4"),
-      ]).toString().trim(),
+      ])
+        .toString()
+        .trim(),
     );
     expect(dur).toBeGreaterThan(0.75);
     expect(dur).toBeLessThan(1.3);
@@ -232,11 +377,7 @@ describe("runShorts", () => {
 });
 
 describe("selectShortsWindow", () => {
-  const timings = [
-    { duration: 10 },
-    { duration: 9 },
-    { duration: 11.5 },
-  ];
+  const timings = [{ duration: 10 }, { duration: 9 }, { duration: 11.5 }];
 
   it("defaults to the whole film", () => {
     const w = selectShortsWindow(timings, 30.5);

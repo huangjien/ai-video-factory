@@ -22,6 +22,12 @@ Constraints:
   WRONG:   `scene: 0`, `scene: 99`, `scene: "3"` — these are rejected.
 - Scene positions must strictly increase from one chapter to the next.
 - Quote any string containing ":", "#", or a leading special character, so YAML parses.
+- The description's source list names the works the ARTICLE names. A link must
+  point at that exact work: sending the reader to a neighbouring text in the
+  same tradition (the Brihadaranyaka index for the Katha Upanishad's first
+  chapter) sends them to the wrong source. When you cannot name the exact URL
+  for a work with confidence, name the work (title, book, chapter) and omit the
+  link — a missing link beats a wrong one.
 - Write `description` and `shorts_hook` as YAML BLOCK SCALARS (`|`), never as
   double-quoted strings. Chinese copy routinely contains `:` and `"`; inside a
   double-quoted scalar an inner `"` ends the string early and the whole

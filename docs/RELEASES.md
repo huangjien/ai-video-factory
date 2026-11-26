@@ -119,6 +119,31 @@ decides what is possible; the evidence decides the order and the `why`).
 Both passes land as `proposed` — a human still approves every idea, and
 `--no-demand` turns the second pass off.
 
+**A proposal reaches the drafter whole, and in the channel's register.**
+The first demand-harvested episode showed two gaps on its way to the
+screen. `video draft --from-backlog` read an entry's `content`, and a
+harvested proposal carries a `note` and `anchors` instead — so the
+drafter was handed the title alone. The context is now composed from the
+note's premise and the anchors. And one premise, phrased as "three
+bureaucracies of access control", pulled the drafter into a
+distributed-systems explainer that the judge scored 81/100; both harvest
+prompts now ask for the premise in the viewer's own words. The same
+proposal drafted for a general audience scored 97.2/100 grade A on the
+first attempt.
+
+**Shorts are a publish step, not a question.** `video shorts --upload`
+extracts the clip and uploads it to YouTube as a private Short; the
+description comes from the film's own package. Before, the upload lived
+only inside the auto-producer, so a Short by hand meant a hand-rolled
+API call. The owner ruled on 2026-11-26 that Shorts ship by default in
+both languages; the skill doc says so.
+
+**The YouTube description's source list points at the work named.** The
+packager was told to cite research URLs and given an article with none,
+so it wrote links from memory — the Katha Upanishad's first chapter
+linked to the Brihadaranyaka index. A link must now be the exact work,
+and a named work without a link beats a wrong one.
+
 ## v0.12 (2026-11-16) — the decision layer, the 2.6 image provider, and two films
 
 Three things shipped together:

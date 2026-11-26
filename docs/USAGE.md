@@ -650,7 +650,7 @@ Publishing metadata is not part of `video make`; invoke it separately.
 | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `video youtube <project>`   | The YouTube package: title, description, chapters VTT, thumbnail prompt, Shorts hook                                                                                      |
 | `video thumbnail <project>` | A 1280×720 thumbnail — mock by default, real AI with `--provider minimax` or `--provider minimax-h3 --reference <img>` (H3 edit mode: re-renders the reference's subject) |
-| `video shorts <project>`    | A vertical 9:16 clip from `final-mixed.mp4`; portrait masters stay intact, landscape masters use a blurred inset so the full frame remains visible |
+| `video shorts <project>`    | A vertical 9:16 clip from `final-mixed.mp4`; portrait masters stay intact, landscape masters use a blurred inset so the full frame remains visible; `--upload` publishes the clip to YouTube as a private Short |
 | `video bilibili <project>`  | The Bilibili package: title, 简介, tags, suggested 分区, cover brief, and a manual upload checklist                                                                       |
 | `video douyin <project>`    | The 抖音 package: title, 文案, 话题, cover brief, a vertical 9:16 cut of the film, and a manual upload checklist; `--upload` publishes through the official API |
 
@@ -935,9 +935,10 @@ renders a native 1080×1920 edition in each language's
 `vertical/output/final-mixed.mp4`.
 
 The command checks the finished MP4 with ffprobe. An unreadable duration or a
-runtime above 180 seconds fails the command. Package both editions for Shorts
-with `video shorts <project>/vertical` and
-`video shorts <project>/l10n/en-US/vertical`. Landscape compositions must not
+runtime above 180 seconds fails the command. Publish both editions as Shorts
+with `video shorts <project>/vertical --upload` and
+`video shorts <project>/l10n/en-US/vertical --upload` — a default publish
+step in both languages, not one to ask about. Landscape compositions must not
 be center-cropped to create portrait editions. The auto-producer runs the
 vertical and Shorts stages for both languages unless given `--no-shorts`. A missing Shorts export in either language fails the production run.
 

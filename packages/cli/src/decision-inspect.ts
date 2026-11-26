@@ -141,6 +141,19 @@ export async function inspectDecision(opts: {
   return { ...result, attachments: loaded.attachments };
 }
 
+/** `video decision` — the group. The layer's advisory surfaces consult
+ *  it; this verb evaluates typed questions against shared text and local
+ *  media. */
+export function registerDecision(program: Command): void {
+  const decision = program
+    .command("decision")
+    .description(
+      "Decision layer tools: `video decision inspect` evaluates shared text and media.",
+    );
+
+  registerDecisionInspect(decision);
+}
+
 export function registerDecisionInspect(decision: Command): void {
   decision
     .command("inspect")

@@ -157,8 +157,16 @@ The same audit removed what nothing reached: `packages/draft/src/
 visual-decision.ts` (the visual-classifier surface that never shipped),
 ten scripts with no caller — one-off per-film visual rewrites, the old
 manual Shorts upload path that `video shorts --upload` replaced — and
-the harvest's instruction to file reviewed cases in a corpus directory
-that does not exist (they belong in `decisions/draft-bar/`).
+the corpus machinery. The 371 labelled cases under
+`packages/prompts/decisions/`, the bench that measured the providers
+against them, the harvest that turned disagreements into reviewable
+cases and the audit script are gone: with the layer off by default
+nothing read the corpus at runtime, and the measurement that justified
+switching the layer on died with that default. The rules the answers
+are held to stay — they are the runtime's, in
+`packages/prompts/src/decision-policy.ts` — and so do the eight prompts
+one per surface. `video decision` keeps `inspect`; `bench`, `harvest`
+and `backfill` are gone.
 
 ## v0.12 (2026-11-16) — the decision layer, the 2.6 image provider, and two films
 

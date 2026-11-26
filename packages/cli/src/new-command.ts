@@ -41,7 +41,10 @@ export interface NewOptions {
   format?: "landscape" | "vertical" | undefined;
 }
 
-const DIMS: Record<"landscape" | "vertical", { width: number; height: number }> = {
+const DIMS: Record<
+  "landscape" | "vertical",
+  { width: number; height: number }
+> = {
   landscape: { width: 1920, height: 1080 },
   vertical: { width: 1080, height: 1920 },
 };
@@ -116,11 +119,16 @@ export function registerNew(program: Command): void {
         return v as "landscape" | "vertical";
       },
     )
-    .action(async (projectId: string, opts: { cwd?: string; format?: "landscape" | "vertical" }) => {
-      process.exitCode = await runNew({
-        projectId,
-        ...(opts.cwd !== undefined ? { cwd: opts.cwd } : {}),
-        ...(opts.format !== undefined ? { format: opts.format } : {}),
-      });
-    });
+    .action(
+      async (
+        projectId: string,
+        opts: { cwd?: string; format?: "landscape" | "vertical" },
+      ) => {
+        process.exitCode = await runNew({
+          projectId,
+          ...(opts.cwd !== undefined ? { cwd: opts.cwd } : {}),
+          ...(opts.format !== undefined ? { format: opts.format } : {}),
+        });
+      },
+    );
 }

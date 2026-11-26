@@ -58,7 +58,8 @@ export function resolveVideoSourcesMode(
 ): VideoSourcesMode {
   if (explicit !== undefined) return explicit;
   const raw = (frontmatter ?? "").trim().toLowerCase();
-  if (raw === "" || raw === "on" || raw === "true" || raw === "yes") return "on";
+  if (raw === "" || raw === "on" || raw === "true" || raw === "yes")
+    return "on";
   return "off";
 }
 
@@ -68,7 +69,12 @@ export function parseVideoSourcesMode(
   raw: string | undefined,
 ): VideoSourcesMode | undefined {
   const value = (raw ?? "").trim().toLowerCase();
-  if (value === "off" || value === "none" || value === "false" || value === "no") {
+  if (
+    value === "off" ||
+    value === "none" ||
+    value === "false" ||
+    value === "no"
+  ) {
     return "off";
   }
   if (value === "on" || value === "true" || value === "yes") return "on";
@@ -169,7 +175,8 @@ export async function resolveVideoSourcesForScenes(opts: {
 
   const wanted = plan.filter((p) => p.historical);
   const notes: string[] = [];
-  if (reusedPlan) notes.push("video sources: reusing the project's cached plan");
+  if (reusedPlan)
+    notes.push("video sources: reusing the project's cached plan");
   if (wanted.length === 0) {
     notes.push("video sources: no footage-worthy scene in this video");
     return { ...EMPTY, plan, notes, planned: true };

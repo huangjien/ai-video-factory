@@ -1,4 +1,4 @@
-schema_version: '0.2'
+schema_version: "0.2"
 project:
   id: mcp-explainer
   language: zh-CN
@@ -8,75 +8,75 @@ project:
 style:
   theme: dark-tech
 scenes:
-- id: scene-01
-  duration: 9
-  narration:
-    text: MCP，全称 Model Context Protocol，模型上下文协议。
-    audio: assets/audio/scene-01.wav
-  visual:
-    component: Title
-    renderer: remotion
-    props:
-      text: MCP
-      subtext: Model Context Protocol
-- id: scene-02
-  duration: 9
-  narration:
-    text: AI Agent 通过 MCP Client 连接到外部世界。
-    audio: assets/audio/scene-02.wav
-  visual:
-    component: ImageBackground
-    renderer: remotion
-    props: {}
-  animation:
-    entrance: fade
-- id: scene-03
-  duration: 9
-  narration:
-    text: MCP Client 使用标准协议与 MCP Server 通信。
-    audio: assets/audio/scene-03.wav
-  visual:
-    component: ImageBackground
-    renderer: remotion
-    props: {}
-- id: scene-04
-  duration: 9
-  narration:
-    text: MCP Server 一端连接 GitHub、Jenkins、数据库等各种工具。
-    audio: assets/audio/scene-04.wav
-  visual:
-    component: ImageBackground
-    renderer: remotion
-    props: {}
-- id: scene-05
-  duration: 9
-  narration:
-    text: 最终，Agent 收到结构化的结果，任务完成。
-    audio: assets/audio/scene-05.wav
-  visual:
-    component: DoodleScene
-    renderer: canvas
-    props:
-      background: paper
-      seed: 42
-      strokes:
-      - id: result-ring
-        shape: circle
-        x: 960
-        y: 380
-        size: 180
-        color: '#3FB68B'
-        width: 8
-      - id: check-1
-        shape: zigzag
-        x: 900
-        y: 380
-        size: 40
-        color: '#3FB68B'
-        width: 8
-      - id: spark
-        shape: star
-        x: 520
-        y: 260
-        size: 90
-        color: '#F0B429'
+  - id: scene-01
+    duration: 9
+    narration:
+      text: MCP，全称 Model Context Protocol，模型上下文协议。
+      audio: assets/audio/scene-01.wav
+    visual:
+      component: Title
+      renderer: remotion
+      props:
+        text: MCP
+        subtext: Model Context Protocol
+  - id: scene-02
+    duration: 9
+    narration:
+      text: AI Agent 通过 MCP Client 连接到外部世界。
+      audio: assets/audio/scene-02.wav
+    visual:
+      component: ImageBackground
+      renderer: remotion
+      props: {}
+    animation:
+      entrance: fade
+  - id: scene-03
+    duration: 9
+    narration:
+      text: MCP Client 使用标准协议与 MCP Server 通信。
+      audio: assets/audio/scene-03.wav
+    visual:
+      component: ImageBackground
+      renderer: remotion
+      props: {}
+  - id: scene-04
+    duration: 9
+    narration:
+      text: MCP Server 一端连接 GitHub、Jenkins、数据库等各种工具。
+      audio: assets/audio/scene-04.wav
+    visual:
+      component: ImageBackground
+      renderer: remotion
+      props: {}
+  - id: scene-05
+    duration: 9
+    narration:
+      text: 最终，Agent 收到结构化的结果，任务完成。
+      audio: assets/audio/scene-05.wav
+    visual:
+      component: DoodleScene
+      renderer: canvas
+      props:
+        background: paper
+        seed: 42
+        strokes:
+          - id: result-ring
+            shape: circle
+            x: 960
+            y: 380
+            size: 180
+            color: "#3FB68B"
+            width: 8
+          - id: check-1
+            shape: zigzag
+            x: 900
+            y: 380
+            size: 40
+            color: "#3FB68B"
+            width: 8
+          - id: spark
+            shape: star
+            x: 520
+            y: 260
+            size: 90
+            color: "#F0B429"

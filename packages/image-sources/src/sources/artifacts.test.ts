@@ -15,7 +15,14 @@ describe("ArtifactPictureSource", () => {
     const ws = await mkdtemp(path.join(tmpdir(), "artifacts-ws-"));
     const project = path.join(ws, "projects", "film");
     try {
-      const refs = path.join(ws, "assets", "characters", "li-shimin", "refs", "gongbi");
+      const refs = path.join(
+        ws,
+        "assets",
+        "characters",
+        "li-shimin",
+        "refs",
+        "gongbi",
+      );
       await mkdir(refs, { recursive: true });
       await mkdir(project, { recursive: true });
       await writeFile(path.join(refs, "v1.jpg"), JPEG);

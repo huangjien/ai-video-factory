@@ -1,5 +1,11 @@
 import { execFileSync, spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { homedir } from "node:os";
 import path from "node:path";
 import type { Command } from "commander";
@@ -202,9 +208,13 @@ function launchdEnvPath(): string {
 function pillowPythonDir(): string | null {
   for (const candidate of ["python3", "python"]) {
     try {
-      const r = spawnSync(candidate, ["-c", "import PIL, yaml"], { encoding: "utf8" });
+      const r = spawnSync(candidate, ["-c", "import PIL, yaml"], {
+        encoding: "utf8",
+      });
       if (r.status === 0) {
-        const real = execFileSync("which", [candidate], { encoding: "utf8" }).trim();
+        const real = execFileSync("which", [candidate], {
+          encoding: "utf8",
+        }).trim();
         return real.length > 0 ? path.dirname(real) : null;
       }
     } catch {
@@ -277,12 +287,7 @@ const ENV_KEYS = [
 
 /** The secrets store this repo already documents (`~/.zshrc` sources
  *  every `~/.config/secrets/*.env` into the shell). */
-const SECRETS_ENV_FILE = path.join(
-  homedir(),
-  ".config",
-  "secrets",
-  "ai.env",
-);
+const SECRETS_ENV_FILE = path.join(homedir(), ".config", "secrets", "ai.env");
 
 /**
  * Read KEY=VALUE pairs out of the secrets store. `export KEY=value` lines
@@ -302,7 +307,9 @@ export function readSecretsEnv(
   for (const line of raw.split("\n")) {
     const trimmed = line.trim();
     if (trimmed === "" || trimmed.startsWith("#")) continue;
-    const body = trimmed.startsWith("export ") ? trimmed.slice(7).trim() : trimmed;
+    const body = trimmed.startsWith("export ")
+      ? trimmed.slice(7).trim()
+      : trimmed;
     const eq = body.indexOf("=");
     if (eq <= 0) continue;
     const key = body.slice(0, eq).trim();
@@ -368,19 +375,28 @@ async function doInstall(opts: BacklogScheduleOptions): Promise<number> {
   const run = opts.runLaunchctl ?? defaultRunLaunchctl;
   const code = await run(["load", target]);
   if (code !== 0) {
-    console.error(`launchctl load failed (exit ${code}). Load manually with:\n  launchctl load "${target}"`);
+    console.error(
+      `launchctl load failed (exit ${code}). Load manually with:\n  launchctl load "${target}"`,
+    );
     return 1;
   }
-  const cadence = kind === "auto" ? "auto-producer (nightly 01:00-05:00, every 2h)" : "weekly backlog harvest";
+  const cadence =
+    kind === "auto"
+      ? "auto-producer (nightly 01:00-05:00, every 2h)"
+      : "weekly backlog harvest";
   console.log(`installed ${labelOf(kind)} — ${cadence}, plist at ${target}`);
-  console.log(`  env baked in: ${embedded.length > 0 ? embedded.join(", ") : "(none found — provider calls will fail until keys are present at install time)"}`);
+  console.log(
+    `  env baked in: ${embedded.length > 0 ? embedded.join(", ") : "(none found — provider calls will fail until keys are present at install time)"}`,
+  );
   return 0;
 }
 
 async function doRemove(opts: BacklogScheduleOptions): Promise<number> {
   const target = plistPath(opts);
   if (!existsSync(target)) {
-    console.log(`no schedule installed (missing ${target}) — nothing to remove`);
+    console.log(
+      `no schedule installed (missing ${target}) — nothing to remove`,
+    );
     return 0;
   }
   const run = opts.runLaunchctl ?? defaultRunLaunchctl;
@@ -410,7 +426,9 @@ export async function schedulerState(
 
 async function doStatus(opts: BacklogScheduleOptions): Promise<number> {
   const state = await schedulerState(opts);
-  console.log(`plist: ${state.installed ? "installed" : "not installed"} (${state.plistPath})`);
+  console.log(
+    `plist: ${state.installed ? "installed" : "not installed"} (${state.plistPath})`,
+  );
   if (state.installed) {
     console.log(`loaded: ${state.loaded ? "yes" : "no"}`);
   }
@@ -419,10 +437,18 @@ async function doStatus(opts: BacklogScheduleOptions): Promise<number> {
 
 /** Exit-code runner for `video backlog schedule`. Exactly one of
  *  --install/--remove/--status must be given, else usage error (exit 1). */
-export async function runBacklogSchedule(opts: BacklogScheduleOptions): Promise<number> {
-  const chosen = [opts.install === true, opts.remove === true, opts.status === true].filter(Boolean).length;
+export async function runBacklogSchedule(
+  opts: BacklogScheduleOptions,
+): Promise<number> {
+  const chosen = [
+    opts.install === true,
+    opts.remove === true,
+    opts.status === true,
+  ].filter(Boolean).length;
   if (chosen !== 1) {
-    console.error("usage: video backlog schedule --install | --remove | --status (exactly one)");
+    console.error(
+      "usage: video backlog schedule --install | --remove | --status (exactly one)",
+    );
     return 1;
   }
   if (opts.install === true) return doInstall(opts);
@@ -433,19 +459,32 @@ export async function runBacklogSchedule(opts: BacklogScheduleOptions): Promise<
 export function addScheduleCommand(backlog: Command): void {
   backlog
     .command("schedule")
-    .description("manage launchd LaunchAgents: weekly harvest (default) or the nightly 01:00-05:00 auto-producer (--kind auto)")
+    .description(
+      "manage launchd LaunchAgents: weekly harvest (default) or the nightly 01:00-05:00 auto-producer (--kind auto)",
+    )
     .option("--install", "write the plist and launchctl load it")
     .option("--remove", "launchctl unload and delete the plist")
     .option("--status", "report install/load state")
     .option("--kind <kind>", "which agent: harvest (default) | auto")
-    .option("--cwd <dir>", "repo root (default: walk up to pnpm-workspace.yaml)")
-    .action(async (opts: { install?: boolean; remove?: boolean; status?: boolean; kind?: string; cwd?: string }) => {
-      process.exitCode = await runBacklogSchedule({
-        ...(opts.install === true ? { install: true } : {}),
-        ...(opts.remove === true ? { remove: true } : {}),
-        ...(opts.status === true ? { status: true } : {}),
-        ...(opts.kind === "auto" ? { kind: "auto" as const } : {}),
-        ...(opts.cwd !== undefined ? { cwd: opts.cwd } : {}),
-      });
-    });
+    .option(
+      "--cwd <dir>",
+      "repo root (default: walk up to pnpm-workspace.yaml)",
+    )
+    .action(
+      async (opts: {
+        install?: boolean;
+        remove?: boolean;
+        status?: boolean;
+        kind?: string;
+        cwd?: string;
+      }) => {
+        process.exitCode = await runBacklogSchedule({
+          ...(opts.install === true ? { install: true } : {}),
+          ...(opts.remove === true ? { remove: true } : {}),
+          ...(opts.status === true ? { status: true } : {}),
+          ...(opts.kind === "auto" ? { kind: "auto" as const } : {}),
+          ...(opts.cwd !== undefined ? { cwd: opts.cwd } : {}),
+        });
+      },
+    );
 }

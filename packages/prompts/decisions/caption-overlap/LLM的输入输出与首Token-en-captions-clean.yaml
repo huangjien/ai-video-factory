@@ -1,6 +1,7 @@
 id: LLM的输入输出与首Token-en-captions-clean
 surface: caption-overlap
-state: 'Frame 1 of 20. The bottom band of the frame carries the timed caption. The caption runs 3
+state:
+  'Frame 1 of 20. The bottom band of the frame carries the timed caption. The caption runs 3
   cue(s) from 00:00 to 00:18: "When you call a large-model API, you have seen it: the request goes
   out, the int" No other text is drawn in that region.'
 expects:
@@ -12,8 +13,10 @@ expects:
 baseline: "false"
 policy:
   rule: caption-band
-  note: The shipped render's caption check passed and the scene's own text sits ABOVE the caption
+  note:
+    The shipped render's caption check passed and the scene's own text sits ABOVE the caption
     band, so the caption sits alone in the bottom band.
 provenance:
-  source: projects/LLM的输入输出与首Token-en/qa/render-report.json (captions.ok, 59 cues) +
+  source:
+    projects/LLM的输入输出与首Token-en/qa/render-report.json (captions.ok, 59 cues) +
     projects/LLM的输入输出与首Token-en/captions/en-US.srt — the caption sits alone in the bottom band.

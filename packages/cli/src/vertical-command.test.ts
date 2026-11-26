@@ -1,5 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 
@@ -23,10 +30,15 @@ vi.mock("node:child_process", async (importOriginal) => {
 
 const makeMock = vi.fn();
 vi.mock("./make-command.js", () => ({
-  runMakeCli: (...a: unknown[]) => (makeMock as (...x: unknown[]) => unknown)(...a),
+  runMakeCli: (...a: unknown[]) =>
+    (makeMock as (...x: unknown[]) => unknown)(...a),
 }));
 
-import { runVertical, verticalArticleMd, verticalRootFor } from "./vertical-command.js";
+import {
+  runVertical,
+  verticalArticleMd,
+  verticalRootFor,
+} from "./vertical-command.js";
 
 let repoRoot: string;
 const ARTICLE = `---
@@ -85,9 +97,16 @@ beforeEach(() => {
   repoRoot = mkdtempSync(path.join(tmpdir(), "video-vertical-"));
   const proj = path.join(repoRoot, "projects", "demo-film");
   mkdirSync(path.join(proj, "storyboard"), { recursive: true });
-  writeFileSync(path.join(proj, "storyboard", "storyboard.yaml"), "schema_version: \"0.2\"\n");
+  writeFileSync(
+    path.join(proj, "storyboard", "storyboard.yaml"),
+    'schema_version: "0.2"\n',
+  );
   writeFileSync(path.join(proj, "article.md"), ARTICLE, "utf8");
-  writeFileSync(path.join(proj, "audio-config.yaml"), "voice: zh-CN-XiaoxiaoNeural\nbgm: calm\n", "utf8");
+  writeFileSync(
+    path.join(proj, "audio-config.yaml"),
+    "voice: zh-CN-XiaoxiaoNeural\nbgm: calm\n",
+    "utf8",
+  );
   makeMock.mockReset().mockResolvedValue(0);
   probeMock.mockReset().mockResolvedValue(30);
   execFileMock.mockReset();
@@ -121,7 +140,9 @@ describe("verticalArticleMd", () => {
   });
 
   it("throws when the article has no frontmatter", () => {
-    expect(() => verticalArticleMd("# no frontmatter")).toThrow(/no frontmatter/);
+    expect(() => verticalArticleMd("# no frontmatter")).toThrow(
+      /no frontmatter/,
+    );
   });
 });
 
@@ -131,7 +152,9 @@ describe("runVertical", () => {
     expect(code).toBe(0);
     const vRoot = verticalRootFor(path.join(repoRoot, "projects", "demo-film"));
     expect(existsSync(path.join(vRoot, "article.md"))).toBe(true);
-    expect(readFileSync(path.join(vRoot, "article.md"), "utf8")).toMatch(/format: vertical/);
+    expect(readFileSync(path.join(vRoot, "article.md"), "utf8")).toMatch(
+      /format: vertical/,
+    );
     expect(existsSync(path.join(vRoot, "audio-config.yaml"))).toBe(true);
     expect(existsSync(path.join(vRoot, "state.yaml"))).toBe(true);
     expect(makeMock).toHaveBeenCalledTimes(1);
@@ -153,7 +176,11 @@ describe("runVertical", () => {
     const vRoot = verticalRootFor(proj);
     mkdirSync(path.join(vRoot, "output"), { recursive: true });
     writeFileSync(path.join(vRoot, "output", "final-mixed.mp4"), "mp4");
-    const code = await runVertical({ project: "demo-film", cwd: repoRoot, force: true });
+    const code = await runVertical({
+      project: "demo-film",
+      cwd: repoRoot,
+      force: true,
+    });
     expect(code).toBe(0);
     expect(makeMock).toHaveBeenCalledTimes(1);
   });
@@ -166,7 +193,11 @@ describe("runVertical", () => {
     mkdirSync(path.join(vRoot, "output"), { recursive: true });
     writeFileSync(path.join(vRoot, "output", "final-mixed.mp4"), "mp4");
 
-    const code = await runVertical({ project: "demo-film", cwd: repoRoot, force: true });
+    const code = await runVertical({
+      project: "demo-film",
+      cwd: repoRoot,
+      force: true,
+    });
 
     expect(code).toBe(0);
     expect(execFileMock).toHaveBeenCalledTimes(1);
@@ -192,13 +223,20 @@ describe("runVertical", () => {
       [
         'schema_version: "0.2"',
         "scenes:",
-        ...Array.from({ length: 6 }, (_, i) => `  - id: scene_${i + 1}\n    duration: 25`),
+        ...Array.from(
+          { length: 6 },
+          (_, i) => `  - id: scene_${i + 1}\n    duration: 25`,
+        ),
         "",
       ].join("\n"),
       "utf8",
     );
 
-    const code = await runVertical({ project: "demo-film", cwd: repoRoot, force: true });
+    const code = await runVertical({
+      project: "demo-film",
+      cwd: repoRoot,
+      force: true,
+    });
 
     expect(code).toBe(0);
     const args = execFileMock.mock.calls[0]?.[1] as string[];
@@ -208,7 +246,11 @@ describe("runVertical", () => {
 
   it("still fails when the master cannot be probed", async () => {
     probeMock.mockResolvedValue(0);
-    const code = await runVertical({ project: "demo-film", cwd: repoRoot, force: true });
+    const code = await runVertical({
+      project: "demo-film",
+      cwd: repoRoot,
+      force: true,
+    });
     expect(code).toBe(1);
     expect(execFileMock).not.toHaveBeenCalled();
   });

@@ -1,6 +1,7 @@
 id: AI时代的DevOps团队-captions-clean
 surface: caption-overlap
-state: 'Frame 1 of 20. The bottom band of the frame carries the timed caption. The caption runs 2
+state:
+  'Frame 1 of 20. The bottom band of the frame carries the timed caption. The caption runs 2
   cue(s) from 00:00 to 00:12: "我们团队曾经有一条铁律：每个人都要懂我们负责的所 有平台。" No other text is drawn in that
   region.'
 expects:
@@ -12,8 +13,10 @@ expects:
 baseline: "false"
 policy:
   rule: caption-band
-  note: The shipped render's caption check passed and the scene's own text sits ABOVE the caption
+  note:
+    The shipped render's caption check passed and the scene's own text sits ABOVE the caption
     band, so the caption sits alone in the bottom band.
 provenance:
-  source: projects/AI时代的DevOps团队/qa/render-report.json (captions.ok, 45 cues) +
+  source:
+    projects/AI时代的DevOps团队/qa/render-report.json (captions.ok, 45 cues) +
     projects/AI时代的DevOps团队/captions/zh-CN.srt — the caption sits alone in the bottom band.

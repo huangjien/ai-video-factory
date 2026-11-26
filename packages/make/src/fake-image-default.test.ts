@@ -88,9 +88,9 @@ describe("resolveImageProvider", () => {
   it("honors image_provider: minimax-h3 from the article.md frontmatter", () => {
     // `video draft --image-provider minimax-h3` stamps the frontmatter;
     // `video make` must honor it without the flag.
-    expect(
-      resolveImageProvider(undefined, undefined, "minimax-h3"),
-    ).toBe("minimax-h3");
+    expect(resolveImageProvider(undefined, undefined, "minimax-h3")).toBe(
+      "minimax-h3",
+    );
     expect(resolveImageProvider(false, undefined, "minimax-h3")).toBe(
       "minimax-h3",
     );

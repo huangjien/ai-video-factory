@@ -46,9 +46,7 @@ export async function searchAllVideoSources(
 }
 
 /** The same clip surfaced twice — keep the first. */
-export function dedupeVideos(
-  candidates: VideoCandidate[],
-): VideoCandidate[] {
+export function dedupeVideos(candidates: VideoCandidate[]): VideoCandidate[] {
   const seen = new Set<string>();
   const out: VideoCandidate[] = [];
   for (const c of candidates) {
@@ -136,7 +134,8 @@ export function resolveSceneVideo(
     return { candidate: null, note: why };
   }
   const best = pickBestVideo(usable, query);
-  if (best === null) return { candidate: null, note: "no clip matches the query" };
+  if (best === null)
+    return { candidate: null, note: "no clip matches the query" };
   return {
     candidate: best,
     note: `clip — ${best.title} (${best.source}, ${best.license}, ${Math.round(best.durationSec ?? 0)} s)`,

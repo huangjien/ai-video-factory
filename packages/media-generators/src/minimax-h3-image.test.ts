@@ -33,7 +33,12 @@ const B64_RESPONSE = {
       revised_prompt: "a better prompt",
     },
   ],
-  usage: { generated_images: 1, total_tokens: 100, input_tokens: 20, output_tokens: 80 },
+  usage: {
+    generated_images: 1,
+    total_tokens: 100,
+    input_tokens: 20,
+    output_tokens: 80,
+  },
   output_format: "jpeg",
 };
 
@@ -195,24 +200,24 @@ describe("MiniMaxH3ImageProvider — /v1/images/generations + /v1/images/edits",
 
   describe("constraintGuard — enhancement ON, constraints guaranteed", () => {
     /** Swap the shared server for one scripted per-call responses. */
-    async function useScriptedServer(
-      responses: unknown[],
-    ): Promise<string[]> {
+    async function useScriptedServer(responses: unknown[]): Promise<string[]> {
       server.close();
       const bodies: string[] = [];
       let call = 0;
-      const scripted = createServer((req: IncomingMessage, res: ServerResponse) => {
-        const chunks: Buffer[] = [];
-        req.on("data", (c) => chunks.push(c));
-        req.on("end", () => {
-          bodies.push(Buffer.concat(chunks).toString("utf8"));
-          const index = Math.min(call, responses.length - 1);
-          call += 1;
-          res.statusCode = 200;
-          res.setHeader("Content-Type", "application/json");
-          res.end(JSON.stringify(responses[index]));
-        });
-      });
+      const scripted = createServer(
+        (req: IncomingMessage, res: ServerResponse) => {
+          const chunks: Buffer[] = [];
+          req.on("data", (c) => chunks.push(c));
+          req.on("end", () => {
+            bodies.push(Buffer.concat(chunks).toString("utf8"));
+            const index = Math.min(call, responses.length - 1);
+            call += 1;
+            res.statusCode = 200;
+            res.setHeader("Content-Type", "application/json");
+            res.end(JSON.stringify(responses[index]));
+          });
+        },
+      );
       await new Promise<void>((resolve) => {
         scripted.listen(0, "127.0.0.1", () => {
           baseUrl = `http://127.0.0.1:${(scripted.address() as AddressInfo).port}`;
@@ -239,10 +244,20 @@ describe("MiniMaxH3ImageProvider — /v1/images/generations + /v1/images/edits",
       // Call 1: enhancement ON — the rewrite dropped the palette hex.
       // Call 2: enhancement OFF — our verbatim brief, constraints intact.
       const bodies = await useScriptedServer([
-        { created: 1, data: [{ b64_json: TINY_JPEG_B64, revised_prompt: "a prettier apple" }] },
+        {
+          created: 1,
+          data: [
+            { b64_json: TINY_JPEG_B64, revised_prompt: "a prettier apple" },
+          ],
+        },
         {
           created: 2,
-          data: [{ b64_json: TINY_JPEG_B64, revised_prompt: "a red apple #FF0000, no text" }],
+          data: [
+            {
+              b64_json: TINY_JPEG_B64,
+              revised_prompt: "a red apple #FF0000, no text",
+            },
+          ],
         },
       ]);
       const p = new MiniMaxH3ImageProvider({ apiHost: baseUrl });
@@ -293,7 +308,12 @@ describe("MiniMaxH3ImageProvider — /v1/images/generations + /v1/images/edits",
 
     it("passes constraintGuard: [] to disable the guard", async () => {
       const bodies = await useScriptedServer([
-        { created: 1, data: [{ b64_json: TINY_JPEG_B64, revised_prompt: "a prettier apple" }] },
+        {
+          created: 1,
+          data: [
+            { b64_json: TINY_JPEG_B64, revised_prompt: "a prettier apple" },
+          ],
+        },
       ]);
       const p = new MiniMaxH3ImageProvider({
         apiHost: baseUrl,

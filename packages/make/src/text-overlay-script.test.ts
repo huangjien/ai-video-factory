@@ -36,7 +36,7 @@ const FRAGMENT = [
   "    visual:",
   "      props:",
   "        items:",
-  '          - text: "type: \'fault_injection\' # string"',
+  "          - text: \"type: 'fault_injection' # string\"",
   "          - text: 'plain # comment inside quotes'",
   "          - text: plain value # a real comment",
 ].join("\n");

@@ -36,7 +36,8 @@ source_verdict:
   section_verdict: warn
 policy:
   rule: section-verdict
-  note: The label is DERIVED from the review artifact's own `overall` verdict by the section-verdict
+  note:
+    The label is DERIVED from the review artifact's own `overall` verdict by the section-verdict
     rule. The loader re-checks that derivation when the case is loaded.
 provenance:
   source: projects/努力/review/visual-review.yaml — the review agent's own verdict for the visual section.

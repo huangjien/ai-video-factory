@@ -12,8 +12,10 @@ expects:
 baseline: keep
 policy:
   rule: motion-specificity
-  note: The shipped plan animates the scene as a whole — the same shape the deterministic baseline
+  note:
+    The shipped plan animates the scene as a whole — the same shape the deterministic baseline
     produces, so a second pass was not needed.
 provenance:
-  source: "projects/任务式指挥与agent设计/storyboard/storyboard.yaml — scene scene-05 (ImageBackground, 19s).
+  source:
+    "projects/任务式指挥与agent设计/storyboard/storyboard.yaml — scene scene-05 (ImageBackground, 19s).
     The shipped motion plan targets: scene-05, scene-05."

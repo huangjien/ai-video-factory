@@ -110,7 +110,13 @@ export async function callDraft(
     },
   });
   const markdown = renderArticleMd(input, r.data);
-  return { markdown, raw: r.data, usage: r.usage, providerName: r.providerName, telemetry: r.telemetry };
+  return {
+    markdown,
+    raw: r.data,
+    usage: r.usage,
+    providerName: r.providerName,
+    telemetry: r.telemetry,
+  };
 }
 
 /** Compose article.md from a structured RawArticle — guaranteed shape; the
@@ -144,9 +150,7 @@ export function renderArticleMd(input: DraftInput, r: RawArticle): string {
       `    duration: ${s.duration ?? 0}`,
       `    caption: ${yamlScalar(s.caption ?? "")}`,
       `    visual: ${yamlScalar(s.visual ?? "")}`,
-      ...(s.component
-        ? [`    component: ${yamlScalar(s.component)}`]
-        : []),
+      ...(s.component ? [`    component: ${yamlScalar(s.component)}`] : []),
       `    narration: |`,
       ...(s.narration ?? "").split("\n").map((line) => `      ${line}`),
     ]),

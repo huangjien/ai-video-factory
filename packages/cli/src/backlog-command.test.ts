@@ -107,12 +107,16 @@ describe("runBacklogAdd", () => {
 
   it("rejects a missing or empty --content-file", async () => {
     expect(
-      (await runBacklogAdd({ topic: "t", contentFile: "no-such.md", cwd: repoRoot })),
+      await runBacklogAdd({
+        topic: "t",
+        contentFile: "no-such.md",
+        cwd: repoRoot,
+      }),
     ).toBe(1);
     const empty = path.join(repoRoot, "empty.md");
     writeFileSync(empty, "   \n", "utf8");
     expect(
-      (await runBacklogAdd({ topic: "t", contentFile: empty, cwd: repoRoot })),
+      await runBacklogAdd({ topic: "t", contentFile: empty, cwd: repoRoot }),
     ).toBe(1);
     expect(existsSync(path.join(repoRoot, "backlog.yaml"))).toBe(false);
   });
@@ -127,7 +131,9 @@ describe("runBacklogAdd", () => {
       cwd: repoRoot,
     });
     expect(blocked).toBe(1);
-    expect(consoleErrors.join("\n")).toMatch(/overlap with the existing catalog/);
+    expect(consoleErrors.join("\n")).toMatch(
+      /overlap with the existing catalog/,
+    );
     expect(consoleErrors.join("\n")).toMatch(/任务式指挥/);
     expect(loadBacklogStore(repoRoot).ideas).toHaveLength(0);
 
@@ -151,7 +157,11 @@ describe("runBacklogAdd", () => {
 
 describe("list / approve / drop / reset lifecycle", () => {
   it("list hides dropped by default and filters by status", async () => {
-    const dropped = seedEntry({ id: "2026-01-01-dropped", status: "dropped", drop_reason: "写过了" });
+    const dropped = seedEntry({
+      id: "2026-01-01-dropped",
+      status: "dropped",
+      drop_reason: "写过了",
+    });
     const kept = seedEntry({ id: "2026-01-02-kept" });
 
     await runBacklogList({ cwd: repoRoot });
@@ -164,20 +174,31 @@ describe("list / approve / drop / reset lifecycle", () => {
   });
 
   it("approve moves proposed → idea and rejects illegal moves", async () => {
-    seedEntry({ id: "2026-01-01-harvested", status: "proposed", source: "harvest:docs/plans/x.md" });
+    seedEntry({
+      id: "2026-01-01-harvested",
+      status: "proposed",
+      source: "harvest:docs/plans/x.md",
+    });
 
-    expect(await runBacklogApprove({ id: "2026-01-01-harvested", cwd: repoRoot })).toBe(0);
-    expect(loadBacklogEntry(repoRoot, "2026-01-01-harvested")?.status).toBe("idea");
+    expect(
+      await runBacklogApprove({ id: "2026-01-01-harvested", cwd: repoRoot }),
+    ).toBe(0);
+    expect(loadBacklogEntry(repoRoot, "2026-01-01-harvested")?.status).toBe(
+      "idea",
+    );
 
     consoleErrors = [];
     expect(
-      (await runBacklogApprove({ id: "2026-01-01-harvested", cwd: repoRoot })),
+      await runBacklogApprove({ id: "2026-01-01-harvested", cwd: repoRoot }),
     ).toBe(1);
     expect(consoleErrors.join("\n")).toMatch(/cannot move/);
   });
 
   it("reset recovers a stuck drafting entry", async () => {
-    const seeded = seedEntry({ status: "drafting", drafting_at: new Date().toISOString() });
+    const seeded = seedEntry({
+      status: "drafting",
+      drafting_at: new Date().toISOString(),
+    });
 
     expect(await runBacklogReset({ id: seeded.id, cwd: repoRoot })).toBe(0);
     const entry = loadBacklogEntry(repoRoot, seeded.id)!;
@@ -189,6 +210,8 @@ describe("list / approve / drop / reset lifecycle", () => {
     seedEntry({});
     consoleErrors = [];
     expect(await runBacklogDrop({ id: "no-such-id", cwd: repoRoot })).toBe(1);
-    expect(consoleErrors.join("\n")).toMatch(/no backlog entry "no-such-id" — ids:/);
+    expect(consoleErrors.join("\n")).toMatch(
+      /no backlog entry "no-such-id" — ids:/,
+    );
   });
 });

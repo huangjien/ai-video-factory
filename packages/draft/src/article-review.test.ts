@@ -111,7 +111,7 @@ function buildRawWithIndicator(indicatorId: string, score: number): string {
 
 /** Same shape but a finding is attached so the loop has something to
  *  pass into the next draft. The quote must appear in GOOD_ARTICLE
- *  to survive the evidence pass. */function buildRawWithFinding(
+ *  to survive the evidence pass. */ function buildRawWithFinding(
   severity: "Critical" | "Major" | "Moderate" | "Minor" = "Major",
 ): string {
   const dimensions = PROFILE.map((d) => ({
@@ -1160,7 +1160,8 @@ describe("mergeScores — averaging the judge's noise", () => {
 
   it("averages the per-indicator scores", () => {
     const merged = mergeScores(samples());
-    const a1 = merged.raw.dimension_scores.find((d) => d.id === "A")!
+    const a1 = merged.raw.dimension_scores
+      .find((d) => d.id === "A")!
       .indicators.find((i) => i.id === "A1")!;
     expect(a1.score).toBe(3);
   });

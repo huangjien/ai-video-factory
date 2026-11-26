@@ -1,14 +1,16 @@
 id: clean-render-en
 surface: qa-triage
-state: 'info · every check passed: 45 caption cues written and validated against the bottom safe area,
+state:
+  "info · every check passed: 45 caption cues written and validated against the bottom safe area,
   20 expected scene boundaries all detected, 30 fps, 1920x1080, no missing assets, no black frames, no
-  stale renders.'
+  stale renders."
 expects:
   kind: choice
   value: pass
 provenance:
-  source: 'projects/AI近期转折-en/qa/render-report.json — a render with ok: true and an empty findings list.'
+  source: "projects/AI近期转折-en/qa/render-report.json — a render with ok: true and an empty findings list."
 policy:
   rule: qa-finding-level
-  note: 'The level the QA check raised decides: an error finding blocks, a warn finding asks for a human,
-    a clean render ships.'
+  note:
+    "The level the QA check raised decides: an error finding blocks, a warn finding asks for a human,
+    a clean render ships."

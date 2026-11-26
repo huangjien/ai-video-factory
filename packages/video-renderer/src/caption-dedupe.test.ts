@@ -43,9 +43,9 @@ describe("sceneCaptionOwner — the narration track beats the component's label"
     expect(sceneCaptionOwner(IMAGE, { caption: "短标签" }, null)).toBe(
       "component",
     );
-    expect(
-      sceneCaptionOwner(IMAGE, { caption: "短标签" }, { cues: [] }),
-    ).toBe("component");
+    expect(sceneCaptionOwner(IMAGE, { caption: "短标签" }, { cues: [] })).toBe(
+      "component",
+    );
   });
 
   it("falls back to the track when the image scene has no caption", () => {
@@ -77,9 +77,7 @@ describe("sceneCaptionOwner — the narration track beats the component's label"
     const many = {
       cues: [{ lines: ["第一行", "第二行", "第三行"], startSec: 0, endSec: 1 }],
     } as RenderPlanScene["captions"];
-    expect(sceneCaptionOwner(IMAGE, { caption: "短标签" }, many)).toBe(
-      "track",
-    );
+    expect(sceneCaptionOwner(IMAGE, { caption: "短标签" }, many)).toBe("track");
   });
 });
 describe("captionWiring — both halves of the decision together", () => {

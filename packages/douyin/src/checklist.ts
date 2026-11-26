@@ -35,12 +35,8 @@ export function renderChecklist(input: ChecklistInput): string {
 
   lines.push("# 抖音投稿清单（人工上传）");
   lines.push("");
-  lines.push(
-    "抖音开放平台提供了「内容发布」接口，但需要审核通过的应用凭据。",
-  );
-  lines.push(
-    "在凭据就位之前（或上传失败时），这条命令只负责把元数据准备好，",
-  );
+  lines.push("抖音开放平台提供了「内容发布」接口，但需要审核通过的应用凭据。");
+  lines.push("在凭据就位之前（或上传失败时），这条命令只负责把元数据准备好，");
   lines.push("最后一步需要在创作者中心手动上传。");
   lines.push("");
 
@@ -129,9 +125,7 @@ export function renderChecklist(input: ChecklistInput): string {
     "- **允许下载 / 允许合拍**：默认关；开了更容易被二次创作，但也会被搬运。",
   );
   lines.push("- **位置**：抖音可以挂 POI，创作者中心里能选。");
-  lines.push(
-    "- **作品可见性**：建议先「仅自己可见」确认无误再改公开。",
-  );
+  lines.push("- **作品可见性**：建议先「仅自己可见」确认无误再改公开。");
   lines.push(
     "- **字幕**：如需 CC 字幕，本流水线只生成 `captions/*.srt`，未做样式化。",
   );

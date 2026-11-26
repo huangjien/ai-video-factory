@@ -1,7 +1,11 @@
 import { isFreeLicense, normalizeLicense } from "@video/image-sources";
 import { fetchJson, qs, stripHtml } from "@video/image-sources";
 import { z } from "zod/v3";
-import type { VideoCandidate, VideoSearchOptions, VideoSource } from "../types.js";
+import type {
+  VideoCandidate,
+  VideoSearchOptions,
+  VideoSource,
+} from "../types.js";
 
 /**
  * Wikimedia Commons video files — the primary (v1: only) source for
@@ -52,12 +56,14 @@ const imageInfoSchema = z.object({
 const responseSchema = z.object({
   query: z
     .object({
-      pages: z.array(
-        z.object({
-          title: z.string().optional(),
-          imageinfo: z.array(imageInfoSchema).optional(),
-        }),
-      ).optional(),
+      pages: z
+        .array(
+          z.object({
+            title: z.string().optional(),
+            imageinfo: z.array(imageInfoSchema).optional(),
+          }),
+        )
+        .optional(),
     })
     .optional(),
 });

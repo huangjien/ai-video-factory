@@ -53,7 +53,9 @@ export async function searchAllSources(
 }
 
 /** Same picture surfaced by two sources — keep the first. */
-export function dedupe(candidates: HistoricalCandidate[]): HistoricalCandidate[] {
+export function dedupe(
+  candidates: HistoricalCandidate[],
+): HistoricalCandidate[] {
   const seen = new Set<string>();
   const out: HistoricalCandidate[] = [];
   for (const c of candidates) {
@@ -71,9 +73,7 @@ export function filterFree(
   candidates: HistoricalCandidate[],
   allow: readonly string[] = FREE_LICENSES,
 ): HistoricalCandidate[] {
-  return candidates.filter(
-    (c) => c.owned || isFreeLicense(c.license, allow),
-  );
+  return candidates.filter((c) => c.owned || isFreeLicense(c.license, allow));
 }
 
 /** Search tokens. Latin words, plus CJK bigrams so a Chinese subject still
@@ -233,7 +233,13 @@ export function resolveSceneSource(
 ): SceneSourceResolution {
   const best = pickBest(candidates, query);
   if (plannedMode === "none") {
-    return { scene, mode: "none", candidate: null, digest: "", note: "not a historical scene" };
+    return {
+      scene,
+      mode: "none",
+      candidate: null,
+      digest: "",
+      note: "not a historical scene",
+    };
   }
   if (best === null) {
     return {

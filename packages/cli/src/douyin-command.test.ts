@@ -48,9 +48,7 @@ beforeEach(() => {
   consoleErrors = [];
   callDouyin.mockReset();
   renderChecklist.mockReset();
-  renderChecklist.mockImplementation(
-    () => "## 手动上传\n1. 打开创作者中心\n",
-  );
+  renderChecklist.mockImplementation(() => "## 手动上传\n1. 打开创作者中心\n");
   cutVertical.mockClear();
   verticalCutIsFresh.mockReset();
   verticalCutIsFresh.mockReturnValue(false);
@@ -126,7 +124,9 @@ describe("runDouyin — argument validation", () => {
     captureConsole();
     const code = await runDouyin({ project: "demo", cwd: root });
     expect(code).toBe(1);
-    expect(consoleErrors.join("\n")).toMatch(/missing rendered video|video make/);
+    expect(consoleErrors.join("\n")).toMatch(
+      /missing rendered video|video make/,
+    );
   });
 });
 
@@ -152,9 +152,9 @@ describe("runDouyin — packaging", () => {
     expect(existsSync(path.join(douyinDir, "package.yaml"))).toBe(true);
     expect(existsSync(path.join(douyinDir, "cover-prompt.txt"))).toBe(true);
     expect(existsSync(path.join(douyinDir, "CHECKLIST.md"))).toBe(true);
-    expect(
-      readFileSync(path.join(douyinDir, "cover-prompt.txt"), "utf8"),
-    ).toBe(FAKE_RESULT.douyin.cover_prompt + "\n");
+    expect(readFileSync(path.join(douyinDir, "cover-prompt.txt"), "utf8")).toBe(
+      FAKE_RESULT.douyin.cover_prompt + "\n",
+    );
   });
 
   it("surfaces the title and topics in the stdout summary", async () => {

@@ -1,11 +1,21 @@
-import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  renameSync,
+  writeFileSync,
+} from "node:fs";
 import { statSync } from "node:fs";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import path from "node:path";
 import type { Command } from "commander";
 import { parse as parseYaml, stringify as yamlStringify } from "yaml";
-import { initState, writeProjectState, approveCheckpoint } from "@video/workflow";
+import {
+  initState,
+  writeProjectState,
+  approveCheckpoint,
+} from "@video/workflow";
 import {
   callDraft,
   articleToStoryboardYaml,
@@ -89,7 +99,9 @@ export function verticalRootFor(projectRoot: string): string {
 export function verticalArticleMd(sourceMd: string): string {
   const parts = splitFrontmatterParts(sourceMd);
   if (parts === null) {
-    throw new Error("article.md has no frontmatter block — cannot derive a vertical master");
+    throw new Error(
+      "article.md has no frontmatter block — cannot derive a vertical master",
+    );
   }
   const fm = (parseYaml(parts.frontmatterRaw) ?? {}) as Record<string, unknown>;
   fm["format"] = "vertical";
@@ -106,7 +118,9 @@ export async function runVertical(opts: VerticalOptions): Promise<number> {
   const projectRoot = resolved.root;
   const articlePath = path.join(projectRoot, "article.md");
   if (!existsSync(articlePath)) {
-    console.error(`missing article.md in ${projectRoot} — draft the film first`);
+    console.error(
+      `missing article.md in ${projectRoot} — draft the film first`,
+    );
     return 1;
   }
   const verticalRoot = verticalRootFor(projectRoot);
@@ -141,16 +155,26 @@ export async function runVertical(opts: VerticalOptions): Promise<number> {
   const sourceMd = readFileSync(articlePath, "utf8");
   const source = parseArticleWithRecovery(sourceMd).article;
   let derived = verticalArticleMd(sourceMd);
-  if (Math.max(source.frontmatter.duration_target_sec, source.scenes.reduce((sum, scene) => sum + (scene.duration ?? 0), 0)) > 180) {
+  if (
+    Math.max(
+      source.frontmatter.duration_target_sec,
+      source.scenes.reduce((sum, scene) => sum + (scene.duration ?? 0), 0),
+    ) > 180
+  ) {
     const { primary, fallback } = loadProviderConfig().script;
-    const summary = await callDraft({
-      topic: source.title ?? source.frontmatter.project,
-      audience: "Viewers of the short vertical edition",
-      language: source.frontmatter.language,
-      duration: 150,
-      fromContent: sourceMd,
-      feedback: "Adapt the supplied landscape edition into a self-contained short. Keep the thesis, strongest evidence, essential caveats and conclusion. Drop secondary arguments. Rewrite transitions and narration for the shorter runtime. Use only facts from the source.",
-    }, providerInstance(primary), fallback ? providerInstance(fallback) : null);
+    const summary = await callDraft(
+      {
+        topic: source.title ?? source.frontmatter.project,
+        audience: "Viewers of the short vertical edition",
+        language: source.frontmatter.language,
+        duration: 150,
+        fromContent: sourceMd,
+        feedback:
+          "Adapt the supplied landscape edition into a self-contained short. Keep the thesis, strongest evidence, essential caveats and conclusion. Drop secondary arguments. Rewrite transitions and narration for the shorter runtime. Use only facts from the source.",
+      },
+      providerInstance(primary),
+      fallback ? providerInstance(fallback) : null,
+    );
     const body = splitFrontmatterParts(summary.markdown)!.body;
     const metadata = parseYaml(splitFrontmatterParts(derived)!.frontmatterRaw);
     metadata.duration_target_sec = 150;
@@ -173,14 +197,19 @@ export async function runVertical(opts: VerticalOptions): Promise<number> {
     splitFrontmatterParts(sourceMd)?.frontmatterRaw ?? "",
   ) as Record<string, unknown> | null;
   const projectId =
-    typeof fm?.["project"] === "string" ? fm["project"] : path.basename(projectRoot);
+    typeof fm?.["project"] === "string"
+      ? fm["project"]
+      : path.basename(projectRoot);
   await writeProjectState(verticalRoot, initState(projectId));
 
   // Derive the vertical storyboard up front and approve it, so make's
   // render-preview passes its gate on the FIRST pass (the landscape flow
   // gets this for free because the draft step leaves an approved
   // storyboard behind; the vertical workdir is derived, not drafted).
-  const verticalMd = readFileSync(path.join(verticalRoot, "article.md"), "utf8");
+  const verticalMd = readFileSync(
+    path.join(verticalRoot, "article.md"),
+    "utf8",
+  );
   const verticalStoryboard = articleToStoryboardYaml(
     parseArticleWithRecovery(verticalMd).article,
   );
@@ -189,9 +218,13 @@ export async function runVertical(opts: VerticalOptions): Promise<number> {
     verticalStoryboard,
     "utf8",
   );
-  const approved = await approveCheckpoint(verticalRoot, { stage: "storyboard" });
+  const approved = await approveCheckpoint(verticalRoot, {
+    stage: "storyboard",
+  });
   if (!approved.ok) {
-    console.error(`✗ could not approve the vertical storyboard: ${approved.error}`);
+    console.error(
+      `✗ could not approve the vertical storyboard: ${approved.error}`,
+    );
     return 1;
   }
 
@@ -199,16 +232,23 @@ export async function runVertical(opts: VerticalOptions): Promise<number> {
     project: verticalRoot,
     cwd: repoRoot,
     ...(opts.imageProvider !== undefined
-      ? { imageProvider: opts.imageProvider as "minimax" | "openai" | "gemini" | "mock" | "none" }
+      ? {
+          imageProvider: opts.imageProvider as
+            "minimax" | "openai" | "gemini" | "mock" | "none",
+        }
       : {}),
   });
   if (code !== 0) {
-    console.error(`✗ vertical make failed (exit ${code}) — rerun \`video vertical ${opts.project}\``);
+    console.error(
+      `✗ vertical make failed (exit ${code}) — rerun \`video vertical ${opts.project}\``,
+    );
     return code;
   }
   const duration = await probeDurationSec(masterPath);
   if (duration <= 0) {
-    console.error(`Vertical master failed duration check (${duration}s, maximum ${SHORTS_CAP_SEC}s).`);
+    console.error(
+      `Vertical master failed duration check (${duration}s, maximum ${SHORTS_CAP_SEC}s).`,
+    );
     return 1;
   }
   if (duration > SHORTS_CAP_SEC) {
@@ -229,13 +269,17 @@ export async function runVertical(opts: VerticalOptions): Promise<number> {
         ? Math.min(boundary, SHORTS_CAP_SEC - 1)
         : SHORTS_CAP_SEC - 1;
     if (cut <= 0) {
-      console.error(`Vertical master failed duration check (${duration}s, maximum ${SHORTS_CAP_SEC}s).`);
+      console.error(
+        `Vertical master failed duration check (${duration}s, maximum ${SHORTS_CAP_SEC}s).`,
+      );
       return 1;
     }
     try {
       await trimMaster(masterPath, cut);
     } catch (err) {
-      console.error(`✗ could not trim the vertical master: ${(err as Error).message}`);
+      console.error(
+        `✗ could not trim the vertical master: ${(err as Error).message}`,
+      );
       return 1;
     }
     const trimmed = await probeDurationSec(masterPath);
@@ -245,7 +289,9 @@ export async function runVertical(opts: VerticalOptions): Promise<number> {
       );
       return 1;
     }
-    console.log(`  ! vertical master trimmed ${duration}s → ${trimmed}s (${SHORTS_CAP_SEC}s Shorts cap)`);
+    console.log(
+      `  ! vertical master trimmed ${duration}s → ${trimmed}s (${SHORTS_CAP_SEC}s Shorts cap)`,
+    );
   }
   console.log(`✓ vertical master: ${masterPath}`);
   return 0;

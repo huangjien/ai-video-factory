@@ -120,7 +120,9 @@ export function buildFallbackPackage(input: FallbackInput): DouyinPackage {
     DOUYIN_DESCRIPTION_MAX,
   );
 
-  const topics = deriveTopics(`${topic}\n${hook}\n${prose.slice(0, 3).join(" ")}`);
+  const topics = deriveTopics(
+    `${topic}\n${hook}\n${prose.slice(0, 3).join(" ")}`,
+  );
 
   const cover_prompt =
     input.youtubeCoverPrompt?.trim() ||

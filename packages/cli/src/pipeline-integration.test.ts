@@ -146,7 +146,6 @@ function readState(root: string): {
   };
 }
 
-
 describe("CLI pipeline integration — runPreview / runFinal / runStatus / workflow verbs", () => {
   let cwd: string;
   let projectDir: string;

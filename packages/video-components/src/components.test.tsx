@@ -201,10 +201,7 @@ describe("Title — the artistic title card", () => {
 describe("VideoBackground — archival clip behind the caption band", () => {
   it("mounts a muted OffthreadVideo fitted over the frame", () => {
     const html = renderToStaticMarkup(
-      <VideoBackground
-        videoSrc="scene_3.mp4"
-        {...baseScene(15)}
-      />,
+      <VideoBackground videoSrc="scene_3.mp4" {...baseScene(15)} />,
     );
     expect(html).toContain("scene_3.mp4");
     // Audio must never leak from archival clips — narration/BGM own it.

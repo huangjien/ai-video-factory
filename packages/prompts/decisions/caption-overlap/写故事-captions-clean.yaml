@@ -1,6 +1,7 @@
 id: 写故事-captions-clean
 surface: caption-overlap
-state: 'Frame 1 of 13. The bottom band of the frame carries the timed caption. The caption runs 1
+state:
+  'Frame 1 of 13. The bottom band of the frame carries the timed caption. The caption runs 1
   cue(s) from 00:00 to 00:14: "打开文档,光标在空白页上闪烁。你心里有个模糊的画面,却不知从何落笔。" No other text is drawn in that
   region.'
 expects:
@@ -12,8 +13,10 @@ expects:
 baseline: "false"
 policy:
   rule: caption-band
-  note: The shipped render's caption check passed and the scene's own text sits ABOVE the caption
+  note:
+    The shipped render's caption check passed and the scene's own text sits ABOVE the caption
     band, so the caption sits alone in the bottom band.
 provenance:
-  source: projects/写故事/qa/render-report.json (captions.ok, 13 cues) + projects/写故事/captions/zh-CN.srt
+  source:
+    projects/写故事/qa/render-report.json (captions.ok, 13 cues) + projects/写故事/captions/zh-CN.srt
     — the caption sits alone in the bottom band.

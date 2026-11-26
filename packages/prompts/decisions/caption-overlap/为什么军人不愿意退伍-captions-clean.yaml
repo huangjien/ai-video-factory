@@ -1,6 +1,7 @@
 id: 为什么军人不愿意退伍-captions-clean
 surface: caption-overlap
-state: 'Frame 1 of 15. The bottom band of the frame carries the timed caption. The caption runs 2
+state:
+  'Frame 1 of 15. The bottom band of the frame carries the timed caption. The caption runs 2
   cue(s) from 00:00 to 00:16: "退伍名单公布前后，总有士官连夜递交留队申请。" No other text is drawn in that region.'
 expects:
   kind: noul
@@ -11,8 +12,10 @@ expects:
 baseline: "false"
 policy:
   rule: caption-band
-  note: The shipped render's caption check passed and the scene's own text sits ABOVE the caption
+  note:
+    The shipped render's caption check passed and the scene's own text sits ABOVE the caption
     band, so the caption sits alone in the bottom band.
 provenance:
-  source: projects/为什么军人不愿意退伍/qa/render-report.json (captions.ok, 25 cues) +
+  source:
+    projects/为什么军人不愿意退伍/qa/render-report.json (captions.ok, 25 cues) +
     projects/为什么军人不愿意退伍/captions/zh-CN.srt — the caption sits alone in the bottom band.

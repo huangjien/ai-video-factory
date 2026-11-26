@@ -1,6 +1,7 @@
 id: 软件背后的生意-captions-clean
 surface: caption-overlap
-state: 'Frame 1 of 25. The bottom band of the frame carries the timed caption. The caption runs 1
+state:
+  'Frame 1 of 25. The bottom band of the frame carries the timed caption. The caption runs 1
   cue(s) from 00:00 to 00:07: "会员系统上线了撤销功能。三个月后，客服收到投诉： 用户拿着余额截图说，我的钱少了。" The scene also draws its
   own text above the caption band: "看懂软件背后的生意"'
 expects:
@@ -12,7 +13,8 @@ expects:
 baseline: "false"
 policy:
   rule: caption-band
-  note: The shipped render's caption check passed and the scene's own text sits ABOVE the caption
+  note:
+    The shipped render's caption check passed and the scene's own text sits ABOVE the caption
     band, so the caption sits alone in the bottom band.
 provenance:
   source: projects/软件背后的生意/qa/render-report.json (captions.ok, 44 cues) +

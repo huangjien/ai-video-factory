@@ -1,6 +1,7 @@
 id: critical-finding-blocks
 surface: draft-bar
-state: A draft about AI tools at work. The intro claims AI tools have not changed real work. Section 3
+state:
+  A draft about AI tools at work. The intro claims AI tools have not changed real work. Section 3
   and section 5 then assert the opposite — that they have. The video's central claim rests on the intro's
   misstatement.
 expects:
@@ -12,8 +13,10 @@ source_verdict:
   passing: false
 policy:
   rule: review-verdict
-  note: 'The draft''s own review is the authority: a Critical finding or CRITICAL_BLOCKER rejects, passing
-    false revises, passing true passes.'
+  note:
+    "The draft's own review is the authority: a Critical finding or CRITICAL_BLOCKER rejects, passing
+    false revises, passing true passes."
 provenance:
-  source: packages/prompts/evals/article-review/critical-finding-blocks-passing.yaml — the self-contradicting
+  source:
+    packages/prompts/evals/article-review/critical-finding-blocks-passing.yaml — the self-contradicting
     article whose Critical finding must block the draft.

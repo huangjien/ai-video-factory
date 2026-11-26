@@ -58,7 +58,10 @@ function entryLine(e: BacklogEntry): string {
   return `${e.id}  ${e.topic}  [${bits.join(", ")}]`;
 }
 
-function findEntryOrReport(store: BacklogStore, id: string): BacklogEntry | null {
+function findEntryOrReport(
+  store: BacklogStore,
+  id: string,
+): BacklogEntry | null {
   const entry = store.ideas.find((e) => e.id === id);
   if (entry !== undefined) return entry;
   const available = store.ideas.map((e) => e.id).join(", ") || "(none)";
@@ -121,7 +124,10 @@ export async function runBacklogAdd(opts: BacklogAddOptions): Promise<number> {
     );
     for (const hit of hits) {
       console.error(
-        `  ${hit.project}: matched ${hit.keywords.slice(0, 5).map((k) => `"${k}"`).join(", ")}`,
+        `  ${hit.project}: matched ${hit.keywords
+          .slice(0, 5)
+          .map((k) => `"${k}"`)
+          .join(", ")}`,
       );
     }
     return 1;
@@ -147,7 +153,9 @@ export async function runBacklogAdd(opts: BacklogAddOptions): Promise<number> {
     return 1;
   }
   if (twinTopic !== null) {
-    console.log(`  ! near-duplicate warning overridden by --force (twin of "${twinTopic}")`);
+    console.log(
+      `  ! near-duplicate warning overridden by --force (twin of "${twinTopic}")`,
+    );
   }
 
   const entry: BacklogEntry = {
@@ -177,7 +185,9 @@ export interface BacklogListOptions {
   cwd?: string;
 }
 
-export async function runBacklogList(opts: BacklogListOptions): Promise<number> {
+export async function runBacklogList(
+  opts: BacklogListOptions,
+): Promise<number> {
   const repoRoot = findRepoRoot(opts.cwd ?? process.cwd());
   const store = loadBacklogStore(repoRoot);
   const visible = store.ideas.filter((e) => {
@@ -201,7 +211,7 @@ export async function runBacklogList(opts: BacklogListOptions): Promise<number> 
   if (sorted.length === 0) {
     console.log(
       store.ideas.length === 0
-        ? "backlog is empty — add ideas with `video backlog add \"<topic>\"`"
+        ? 'backlog is empty — add ideas with `video backlog add "<topic>"`'
         : "no entries in this view — `--all` shows dropped ones too",
     );
     return 0;
@@ -255,7 +265,7 @@ export function registerBacklog(program: Command): void {
 
   backlog
     .command("add")
-    .argument("<topic>", "the video topic, e.g. \"为什么停火线能冻结几十年\"")
+    .argument("<topic>", 'the video topic, e.g. "为什么停火线能冻结几十年"')
     .option("--note <text>", "one-line mechanism summary")
     .option(
       "--anchor <kw>",
@@ -271,7 +281,10 @@ export function registerBacklog(program: Command): void {
       "--force",
       "add despite overlap warnings from the existing-catalog scan",
     )
-    .option("--cwd <dir>", "repo root (default: walk up to pnpm-workspace.yaml)")
+    .option(
+      "--cwd <dir>",
+      "repo root (default: walk up to pnpm-workspace.yaml)",
+    )
     .action(async (topic: string, opts) => {
       process.exitCode = await runBacklogAdd({
         topic,
@@ -288,13 +301,18 @@ export function registerBacklog(program: Command): void {
 
   backlog
     .command("list")
-    .option("--status <status>", "filter: proposed|idea|drafting|drafted|dropped")
+    .option(
+      "--status <status>",
+      "filter: proposed|idea|drafting|drafted|dropped",
+    )
     .option("--json", "machine-readable output")
     .option("--all", "include dropped entries")
     .option("--cwd <dir>")
     .action(async (opts) => {
       process.exitCode = await runBacklogList({
-        ...(opts.status !== undefined ? { status: opts.status as BacklogStatus } : {}),
+        ...(opts.status !== undefined
+          ? { status: opts.status as BacklogStatus }
+          : {}),
         ...(opts.json === true ? { json: true } : {}),
         ...(opts.all === true ? { all: true } : {}),
         ...(opts.cwd !== undefined ? { cwd: opts.cwd } : {}),

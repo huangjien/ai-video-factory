@@ -170,7 +170,10 @@ export function addStatsCommand(backlog: Command): void {
     .command("stats")
     .description("derived join counts: drafted/rendered/published per entry")
     .option("--json", "dump the full derived stats object as JSON")
-    .option("--cwd <dir>", "repo root (default: walk up to pnpm-workspace.yaml)")
+    .option(
+      "--cwd <dir>",
+      "repo root (default: walk up to pnpm-workspace.yaml)",
+    )
     .action(async (opts: { json?: boolean; cwd?: string }) => {
       process.exitCode = await runBacklogStats({
         ...(opts.json === true ? { json: true } : {}),

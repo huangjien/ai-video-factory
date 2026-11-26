@@ -17,9 +17,17 @@ export default [
     ignores: [
       "**/node_modules/**",
       "**/dist/**",
+      // The packed CLI bundle (scripts/build-bundle.mjs) — build output
+      // like dist/, and git-ignored. Linting a 1.3 MB bundle only reports
+      // the compiled form of source issues.
+      "**/dist-bundle/**",
       "**/*.tsbuildinfo",
       ".omo/**",
       "projects/**",
+      // Local run records and scratch scripts (git-ignored): the judge
+      // snapshots, auto-producer logs and one-off .mjs analysis helpers
+      // that live next to them.
+      "runs/**",
       // Third-party agent skills ship their own code style (T0.2).
       ".agents/**",
       ".claude/**",

@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { loadPrompt } from "@video/prompts";
-import { existsSync, lstatSync, readFileSync, statSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  lstatSync,
+  readFileSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
 import { mkdtemp, rm, writeFile, mkdir } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -232,7 +238,11 @@ describe("translateArticle", () => {
       ).toContain("sentinel");
       // The copy is independent: writing into it leaves the canonical
       // store untouched.
-      writeFileSync(path.join(imagesDir, "scene_1.cache.json"), '{"cacheKey":"changed"}', "utf8");
+      writeFileSync(
+        path.join(imagesDir, "scene_1.cache.json"),
+        '{"cacheKey":"changed"}',
+        "utf8",
+      );
       expect(
         readFileSync(
           path.join(root, "assets", "images", "scene_1.cache.json"),
@@ -346,8 +356,9 @@ scenes:
     // failed and every scene read as "missing from translation" — a
     // provider wrapper, not a bad translation, threw the whole thing away.
     const root = await makeProject();
-    const thinking = fakeProvider(() =>
-      `<think>\n\nLet me translate each scene.\n</think>\n\n${TRANSLATED()}`,
+    const thinking = fakeProvider(
+      () =>
+        `<think>\n\nLet me translate each scene.\n</think>\n\n${TRANSLATED()}`,
     );
     try {
       const res = await translateArticle({

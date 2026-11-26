@@ -14,11 +14,7 @@ export const BACKLOG_SCHEMA = "backlog/1";
 export const BACKLOG_FILE = "backlog.yaml";
 
 export type BacklogStatus =
-  | "proposed"
-  | "idea"
-  | "drafting"
-  | "drafted"
-  | "dropped";
+  "proposed" | "idea" | "drafting" | "drafted" | "dropped";
 
 export const BACKLOG_STATUSES: BacklogStatus[] = [
   "proposed",
@@ -78,7 +74,9 @@ export function loadBacklogStore(repoRoot: string): BacklogStore {
     throw new Error(`${file} is malformed: ${(err as Error).message}`);
   }
   if (parsed === null || typeof parsed !== "object") {
-    throw new Error(`${file} is malformed: expected a YAML mapping at top level`);
+    throw new Error(
+      `${file} is malformed: expected a YAML mapping at top level`,
+    );
   }
   const store = parsed as Partial<BacklogStore>;
   if (store.schema !== BACKLOG_SCHEMA) {
@@ -95,7 +93,9 @@ export function loadBacklogStore(repoRoot: string): BacklogStore {
       throw new Error(`${file} is malformed: ideas[${index}] has no id`);
     }
     if (typeof e.topic !== "string" || e.topic.trim() === "") {
-      throw new Error(`${file} is malformed: ideas[${index}] (${e.id}) has no topic`);
+      throw new Error(
+        `${file} is malformed: ideas[${index}] (${e.id}) has no topic`,
+      );
     }
     if (!BACKLOG_STATUSES.includes(e.status as BacklogStatus)) {
       throw new Error(
@@ -170,7 +170,9 @@ export function assertTransition(
   if (!canTransition(entry.status, to, viaReset)) {
     throw new Error(
       `cannot move "${entry.id}" ${entry.status} → ${to}` +
-        (viaReset ? "" : ` — legal from ${entry.status}: ${TRANSITIONS[entry.status].join("|") || "(none)"}`),
+        (viaReset
+          ? ""
+          : ` — legal from ${entry.status}: ${TRANSITIONS[entry.status].join("|") || "(none)"}`),
     );
   }
 }
@@ -180,8 +182,12 @@ const STALE_DRAFTING_MS = 24 * 60 * 60 * 1000;
 /** A crash mid `draft --from-backlog` leaves `drafting` behind. Older
  *  than a day = almost certainly stale; verbs warn and `reset` is the
  *  manual escape. */
-export function isStaleDrafting(entry: BacklogEntry, now = Date.now()): boolean {
-  if (entry.status !== "drafting" || entry.drafting_at === undefined) return false;
+export function isStaleDrafting(
+  entry: BacklogEntry,
+  now = Date.now(),
+): boolean {
+  if (entry.status !== "drafting" || entry.drafting_at === undefined)
+    return false;
   const started = Date.parse(entry.drafting_at);
   return Number.isFinite(started) && now - started > STALE_DRAFTING_MS;
 }

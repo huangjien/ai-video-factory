@@ -196,7 +196,10 @@ export function buildScenePromptMessages(
   }
   if (scene.caption) parts.push(`Caption (on-screen text): ${scene.caption}`);
   parts.push(`Visual direction: ${scene.visual}`);
-  if (context.referenceNote !== undefined && context.referenceNote.trim() !== "") {
+  if (
+    context.referenceNote !== undefined &&
+    context.referenceNote.trim() !== ""
+  ) {
     // The reference picture is attached to the request. The brief has to
     // say what it is FOR, or the model treats it as one more object in
     // the scene instead of as the likeness and period anchor it is.

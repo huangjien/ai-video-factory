@@ -99,7 +99,10 @@ export function registerTranslate(program: Command): void {
     .description(
       "translate a project's article into a language workdir (l10n/<lang>/) that shares the canonical image set — same pictures, new narration language",
     )
-    .argument("<project>", "project: topic, folder name, path, or unique prefix")
+    .argument(
+      "<project>",
+      "project: topic, folder name, path, or unique prefix",
+    )
     .argument("<lang>", "target language: zh-CN | en-US")
     .option("--cwd <dir>", "base directory for the project")
     .option(

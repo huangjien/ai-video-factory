@@ -170,10 +170,7 @@ export {
   type TimelineAnimation,
 } from "./animation-emitter.js";
 export type { DecisionCandidate } from "./decision-candidate.js";
-export {
-  parseDecisionLog,
-  type DecisionLogRow,
-} from "./decision-log.js";
+export { parseDecisionLog, type DecisionLogRow } from "./decision-log.js";
 
 export {
   buildDraftBarState,

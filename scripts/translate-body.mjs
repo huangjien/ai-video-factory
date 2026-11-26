@@ -62,7 +62,9 @@ const provider = new llm.MiniMaxProvider();
 const systemPrompt = readFileSync(
   new URL("./translate-body.prompt.md", import.meta.url),
   "utf8",
-).replace(/\r?\n$/, "").replace("{{lang}}", () => lang);
+)
+  .replace(/\r?\n$/, "")
+  .replace("{{lang}}", () => lang);
 
 async function translateSection(sec) {
   const src = [sec.heading, ...sec.lines].join("\n").trim();
@@ -77,7 +79,10 @@ async function translateSection(sec) {
     });
     let text = llm.stripReasoning(out.content).trim();
     if (text.startsWith("```")) {
-      text = text.replace(/^```[a-z]*\n?/i, "").replace(/```\s*$/, "").trim();
+      text = text
+        .replace(/^```[a-z]*\n?/i, "")
+        .replace(/```\s*$/, "")
+        .trim();
     }
     // A translation is not a summary: reject a reply much SHORTER than the
     // source (content was dropped) or wildly longer (padding / repetition
@@ -106,7 +111,9 @@ for (const sec of sections) {
   // here would end up in the article body.
   const clean = llm.stripReasoning(out).trim();
   if (clean.includes("<think>")) {
-    throw new Error(`reasoning leaked into section: ${sec.heading.slice(0, 30)}`);
+    throw new Error(
+      `reasoning leaked into section: ${sec.heading.slice(0, 30)}`,
+    );
   }
   console.log(
     `  ${sec.heading.slice(0, 28).padEnd(30)} ${src.length} → ${clean.length}`,

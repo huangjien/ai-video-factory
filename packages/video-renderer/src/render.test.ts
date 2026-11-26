@@ -12,7 +12,11 @@ import path from "node:path";
 import { execFileSync } from "node:child_process";
 import { describe, expect, it, vi } from "vitest";
 import { brandSchema, compileStoryboard, type RenderPlan } from "@video/vdsl";
-import { renderPlanToVideo, resolveImageSources, resolveVideoSources } from "./render.js";
+import {
+  renderPlanToVideo,
+  resolveImageSources,
+  resolveVideoSources,
+} from "./render.js";
 
 const samplePlan: RenderPlan = {
   project: {
@@ -253,7 +257,9 @@ describe("resolveImageSources — every component gets a scene background", () =
     const resolved = await resolveImageSources(plan);
     const src = resolved.scenes[0]?.props["artSrc"];
     expect(src).toMatch(/^data:image\/jpeg;base64,/);
-    expect(Buffer.from(String(src).split(",")[1]!, "base64").length).toBe(bytes);
+    expect(Buffer.from(String(src).split(",")[1]!, "base64").length).toBe(
+      bytes,
+    );
     expect(resolved.scenes[0]?.backgroundSrc).toBeUndefined();
   });
 
@@ -478,80 +484,107 @@ describe("resolveImageSources — a placed clip promotes the scene to VideoBackg
 });
 
 describe("M1 — a placed PD clip renders as the scene background", () => {
-  it(
-    "binds assets/video/scene_1.mp4 through OffthreadVideo and paints it",
-    async () => {
-      const root = mkdtempSync(path.join(tmpdir(), "vf-m1-"));
-      mkdirSync(path.join(root, "assets", "video"), { recursive: true });
-      // Loud flat-blue 3 s clip — if the video layer is not actually
-      // composited, the frame stays theme-coloured (dark, low blue).
-      const clip = path.join(root, "assets", "video", "scene_1.mp4");
+  it("binds assets/video/scene_1.mp4 through OffthreadVideo and paints it", async () => {
+    const root = mkdtempSync(path.join(tmpdir(), "vf-m1-"));
+    mkdirSync(path.join(root, "assets", "video"), { recursive: true });
+    // Loud flat-blue 3 s clip — if the video layer is not actually
+    // composited, the frame stays theme-coloured (dark, low blue).
+    const clip = path.join(root, "assets", "video", "scene_1.mp4");
+    execFileSync(
+      "ffmpeg",
+      [
+        "-y",
+        "-f",
+        "lavfi",
+        "-i",
+        "color=c=blue:s=540x960:r=30",
+        "-t",
+        "3",
+        clip,
+      ],
+      { stdio: "ignore" },
+    );
+    const imageScene = {
+      ...samplePlan.scenes[0]!,
+      id: "scene-01",
+      component: "ImageBackground" as const,
+      props: { src: path.join(root, "nowhere.jpg") },
+    };
+    const plan: RenderPlan = {
+      ...samplePlan,
+      projectRoot: root,
+      totalFrames: 60,
+      scenes: [{ ...imageScene, durationInFrames: 60 }],
+    };
+
+    const meanChannels = async (
+      out: string,
+    ): Promise<[number, number, number]> => {
+      await renderPlanToVideo(plan, out);
+      const png = out.replace(/\.mp4$/, "-probe.png");
       execFileSync(
         "ffmpeg",
-        ["-y", "-f", "lavfi", "-i", "color=c=blue:s=540x960:r=30", "-t", "3", clip],
-        { stdio: "ignore" },
-      );
-      const imageScene = {
-        ...samplePlan.scenes[0]!,
-        id: "scene-01",
-        component: "ImageBackground" as const,
-        props: { src: path.join(root, "nowhere.jpg") },
-      };
-      const plan: RenderPlan = {
-        ...samplePlan,
-        projectRoot: root,
-        totalFrames: 60,
-        scenes: [{ ...imageScene, durationInFrames: 60 }],
-      };
-
-      const meanChannels = async (out: string): Promise<[number, number, number]> => {
-        await renderPlanToVideo(plan, out);
-        const png = out.replace(/\.mp4$/, "-probe.png");
-        execFileSync("ffmpeg", ["-y", "-ss", "0.5", "-i", out, "-frames:v", "1", png], {
+        ["-y", "-ss", "0.5", "-i", out, "-frames:v", "1", png],
+        {
           stdio: "ignore",
-        });
-        const rgb = execFileSync(
-          "ffmpeg",
-          ["-i", png, "-vf", "format=rgb24", "-f", "rawvideo", "-"],
-          { encoding: "buffer", maxBuffer: 1e8 },
-        );
-        let r = 0;
-        let g = 0;
-        let b = 0;
-        const n = rgb.length / 3;
-        for (let i = 0; i < rgb.length; i += 3) {
-          r += rgb[i]!;
-          g += rgb[i + 1]!;
-          b += rgb[i + 2]!;
-        }
-        return [r / n, g / n, b / n];
-      };
+        },
+      );
+      const rgb = execFileSync(
+        "ffmpeg",
+        ["-i", png, "-vf", "format=rgb24", "-f", "rawvideo", "-"],
+        { encoding: "buffer", maxBuffer: 1e8 },
+      );
+      let r = 0;
+      let g = 0;
+      let b = 0;
+      const n = rgb.length / 3;
+      for (let i = 0; i < rgb.length; i += 3) {
+        r += rgb[i]!;
+        g += rgb[i + 1]!;
+        b += rgb[i + 2]!;
+      }
+      return [r / n, g / n, b / n];
+    };
 
-      const outDir = mkdtempSync(path.join(tmpdir(), "vf-m1-out-"));
-      const [r, g, b] = await meanChannels(path.join(outDir, "clip.mp4"));
-      // Blue-dominant frame: the clip's pixels, not the theme's.
-      expect(b).toBeGreaterThan(120);
-      expect(b).toBeGreaterThan(r + 40);
-      expect(b).toBeGreaterThan(g + 40);
-      // And the scrim still keeps the lower third darker than the top.
-      const png = path.join(outDir, "clip-probe.png");
-      const top = execFileSync(
-        "ffmpeg",
-        ["-i", png, "-vf", "format=rgb24,crop=1080:300:0:0", "-f", "rawvideo", "-"],
-        { encoding: "buffer", maxBuffer: 1e8 },
-      );
-      const bottom = execFileSync(
-        "ffmpeg",
-        ["-i", png, "-vf", "format=rgb24,crop=1080:300:0:1620", "-f", "rawvideo", "-"],
-        { encoding: "buffer", maxBuffer: 1e8 },
-      );
-      const mean = (buf: Buffer): number => {
-        let s = 0;
-        for (let i = 0; i < buf.length; i++) s += buf[i]!;
-        return s / buf.length;
-      };
-      expect(mean(bottom)).toBeLessThan(mean(top));
-    },
-    180_000,
-  );
+    const outDir = mkdtempSync(path.join(tmpdir(), "vf-m1-out-"));
+    const [r, g, b] = await meanChannels(path.join(outDir, "clip.mp4"));
+    // Blue-dominant frame: the clip's pixels, not the theme's.
+    expect(b).toBeGreaterThan(120);
+    expect(b).toBeGreaterThan(r + 40);
+    expect(b).toBeGreaterThan(g + 40);
+    // And the scrim still keeps the lower third darker than the top.
+    const png = path.join(outDir, "clip-probe.png");
+    const top = execFileSync(
+      "ffmpeg",
+      [
+        "-i",
+        png,
+        "-vf",
+        "format=rgb24,crop=1080:300:0:0",
+        "-f",
+        "rawvideo",
+        "-",
+      ],
+      { encoding: "buffer", maxBuffer: 1e8 },
+    );
+    const bottom = execFileSync(
+      "ffmpeg",
+      [
+        "-i",
+        png,
+        "-vf",
+        "format=rgb24,crop=1080:300:0:1620",
+        "-f",
+        "rawvideo",
+        "-",
+      ],
+      { encoding: "buffer", maxBuffer: 1e8 },
+    );
+    const mean = (buf: Buffer): number => {
+      let s = 0;
+      for (let i = 0; i < buf.length; i++) s += buf[i]!;
+      return s / buf.length;
+    };
+    expect(mean(bottom)).toBeLessThan(mean(top));
+  }, 180_000);
 });

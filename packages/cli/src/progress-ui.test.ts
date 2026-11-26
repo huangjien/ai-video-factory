@@ -80,8 +80,6 @@ describe("withProgress", () => {
       }),
     ).rejects.toThrow("qa down");
     const lines = errSpy.mock.calls.map((c) => c[0] as string);
-    expect(lines[lines.length - 1]).toMatch(
-      /^  ✗ qa triage  \d+s: qa down$/,
-    );
+    expect(lines[lines.length - 1]).toMatch(/^  ✗ qa triage  \d+s: qa down$/);
   });
 });

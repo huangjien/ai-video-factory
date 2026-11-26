@@ -2,7 +2,11 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { extractOverlapKeywords, nearDuplicateOf, scanOverlap } from "./backlog-overlap.js";
+import {
+  extractOverlapKeywords,
+  nearDuplicateOf,
+  scanOverlap,
+} from "./backlog-overlap.js";
 
 let repoRoot: string;
 beforeEach(() => {
@@ -50,7 +54,10 @@ describe("extractOverlapKeywords — noise filtering", () => {
 
 describe("scanOverlap — per-article verdict", () => {
   it("reports an article on ≥2 matched keywords in it", () => {
-    addArticle("任务式指挥", "# 任务式指挥\n\n条令、放权、委托、任务式指挥的现代形态。");
+    addArticle(
+      "任务式指挥",
+      "# 任务式指挥\n\n条令、放权、委托、任务式指挥的现代形态。",
+    );
     const hits = scanOverlap(repoRoot, {
       topic: "任务式指挥与条令",
     });
@@ -92,10 +99,10 @@ describe("scanOverlap — per-article verdict", () => {
 
 describe("nearDuplicateOf — reworded twins", () => {
   it("catches a 玄武门之变 retelling across different wordings", () => {
-    const twin = nearDuplicateOf(
-      "玄武门之变：一场改变唐朝走向的宫门伏杀",
-      ["玄武门之变：宫门伏杀如何改变唐朝走向", "停火线机制"],
-    );
+    const twin = nearDuplicateOf("玄武门之变：一场改变唐朝走向的宫门伏杀", [
+      "玄武门之变：宫门伏杀如何改变唐朝走向",
+      "停火线机制",
+    ]);
     expect(twin).toBe("玄武门之变：宫门伏杀如何改变唐朝走向");
   });
 
@@ -106,10 +113,10 @@ describe("nearDuplicateOf — reworded twins", () => {
   });
 
   it("returns the BEST match when several are close", () => {
-    const twin = nearDuplicateOf(
-      "Shadow-mode AI decision surfaces",
-      ["Shadow mode: how AI earns the right to act", "中国画颜色的来源"],
-    );
+    const twin = nearDuplicateOf("Shadow-mode AI decision surfaces", [
+      "Shadow mode: how AI earns the right to act",
+      "中国画颜色的来源",
+    ]);
     expect(twin).toBe("Shadow mode: how AI earns the right to act");
   });
 });

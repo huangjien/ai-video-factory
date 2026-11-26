@@ -48,12 +48,19 @@ describe("loadBacklogStore — missing and corrupt files", () => {
 
   it("throws with the file path when the YAML is corrupt", () => {
     writeFileSync(path.join(repoRoot, "backlog.yaml"), "schema: [unclosed");
-    expect(() => loadBacklogStore(repoRoot)).toThrow(/backlog\.yaml is malformed/);
+    expect(() => loadBacklogStore(repoRoot)).toThrow(
+      /backlog\.yaml is malformed/,
+    );
   });
 
   it("rejects an unknown schema instead of guessing", () => {
-    writeFileSync(path.join(repoRoot, "backlog.yaml"), "schema: backlog/9\nideas: []\n");
-    expect(() => loadBacklogStore(repoRoot)).toThrow(/unsupported schema backlog\/9/);
+    writeFileSync(
+      path.join(repoRoot, "backlog.yaml"),
+      "schema: backlog/9\nideas: []\n",
+    );
+    expect(() => loadBacklogStore(repoRoot)).toThrow(
+      /unsupported schema backlog\/9/,
+    );
   });
 
   it("names the offending entry when a status is misspelled", () => {
@@ -61,7 +68,9 @@ describe("loadBacklogStore — missing and corrupt files", () => {
       path.join(repoRoot, "backlog.yaml"),
       "schema: backlog/1\nideas:\n  - id: x\n    topic: t\n    status: drafter\n",
     );
-    expect(() => loadBacklogStore(repoRoot)).toThrow(/ideas\[0\] \(x\) has unknown status drafter/);
+    expect(() => loadBacklogStore(repoRoot)).toThrow(
+      /ideas\[0\] \(x\) has unknown status drafter/,
+    );
   });
 });
 
@@ -101,7 +110,9 @@ describe("nextBacklogId — stable, never reused", () => {
       entry({ id: "2026-11-18-停火线" }),
       entry({ id: "2026-11-18-停火线-2" }),
     ];
-    expect(nextBacklogId("停火线", ideas, "2026-11-18")).toBe("2026-11-18-停火线-3");
+    expect(nextBacklogId("停火线", ideas, "2026-11-18")).toBe(
+      "2026-11-18-停火线-3",
+    );
   });
 });
 
@@ -143,7 +154,10 @@ describe("isStaleDrafting", () => {
   });
 
   it("does not flag fresh drafting or other statuses", () => {
-    const fresh = entry({ status: "drafting", drafting_at: new Date().toISOString() });
+    const fresh = entry({
+      status: "drafting",
+      drafting_at: new Date().toISOString(),
+    });
     expect(isStaleDrafting(fresh)).toBe(false);
     expect(isStaleDrafting(entry({ status: "idea" }))).toBe(false);
   });

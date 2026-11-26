@@ -34,7 +34,12 @@ export interface NormalizeOptions {
 /** The file extension the bytes claim to be, by magic number. Returns ""
  *  when the bytes are not a picture Pillow is likely to read. */
 export function detectImageExtension(bytes: Uint8Array): string {
-  if (bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) {
+  if (
+    bytes.length >= 3 &&
+    bytes[0] === 0xff &&
+    bytes[1] === 0xd8 &&
+    bytes[2] === 0xff
+  ) {
     return ".jpg";
   }
   if (
@@ -53,10 +58,14 @@ export function detectImageExtension(bytes: Uint8Array): string {
   ) {
     return ".webp";
   }
-  if (bytes.length >= 4 && String.fromCharCode(...bytes.slice(0, 4)) === "GIF8") {
+  if (
+    bytes.length >= 4 &&
+    String.fromCharCode(...bytes.slice(0, 4)) === "GIF8"
+  ) {
     return ".gif";
   }
-  if (bytes.length >= 2 && bytes[0] === 0x42 && bytes[1] === 0x4d) return ".bmp";
+  if (bytes.length >= 2 && bytes[0] === 0x42 && bytes[1] === 0x4d)
+    return ".bmp";
   if (
     bytes.length >= 4 &&
     ((bytes[0] === 0x49 && bytes[1] === 0x49) ||

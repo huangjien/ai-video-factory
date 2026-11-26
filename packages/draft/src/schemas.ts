@@ -275,7 +275,9 @@ export function articleToStoryboardYaml(article: ParsedArticle): string {
   // project block carries the final numbers and everything downstream
   // (render plan, image raster, brand scale) reads them from here.
   const dims =
-    f.format === "vertical" ? { width: 1080, height: 1920 } : { width: 1920, height: 1080 };
+    f.format === "vertical"
+      ? { width: 1080, height: 1920 }
+      : { width: 1920, height: 1080 };
   const lines: string[] = [
     `schema_version: "0.2"`,
     ``,

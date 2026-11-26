@@ -67,8 +67,9 @@ describe("config/llm.yaml — the single source of model ids", () => {
   it("uses the configured draft pool before filtering for API keys", () => {
     const roles = loadProviderConfig();
     override("draft: { generator_pool: [glm, openai] }");
-    expect(availableGenerators({ GEMINI_API_KEY: "key", OPENAI_API_KEY: "key" }))
-      .toEqual(["openai"]);
+    expect(
+      availableGenerators({ GEMINI_API_KEY: "key", OPENAI_API_KEY: "key" }),
+    ).toEqual(["openai"]);
     expect(loadProviderConfig()).toEqual(roles);
   });
 

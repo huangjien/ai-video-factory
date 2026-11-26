@@ -1,6 +1,7 @@
 id: 空军组织单位-captions-clean
 surface: caption-overlap
-state: 'Frame 1 of 19. The bottom band of the frame carries the timed caption. The caption runs 2
+state:
+  'Frame 1 of 19. The bottom band of the frame carries the timed caption. The caption runs 2
   cue(s) from 00:00 to 00:12: "同样是几十架战斗机，有的部队天天升空训练，有的却 连一次完整任务都组织不起来。" No other text is drawn in
   that region.'
 expects:
@@ -12,7 +13,8 @@ expects:
 baseline: "false"
 policy:
   rule: caption-band
-  note: The shipped render's caption check passed and the scene's own text sits ABOVE the caption
+  note:
+    The shipped render's caption check passed and the scene's own text sits ABOVE the caption
     band, so the caption sits alone in the bottom band.
 provenance:
   source: projects/空军组织单位/qa/render-report.json (captions.ok, 37 cues) +

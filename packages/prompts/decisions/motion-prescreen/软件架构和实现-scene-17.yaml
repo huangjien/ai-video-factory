@@ -12,8 +12,10 @@ expects:
 baseline: keep
 policy:
   rule: motion-specificity
-  note: The shipped plan animates a NAMED element of the scene — the baseline plan cannot know those
+  note:
+    The shipped plan animates a NAMED element of the scene — the baseline plan cannot know those
     names, so the scene needed a second pass.
 provenance:
-  source: "projects/软件架构和实现/storyboard/storyboard.yaml — scene scene-17 (ImageBackground, 12s). The
+  source:
+    "projects/软件架构和实现/storyboard/storyboard.yaml — scene scene-17 (ImageBackground, 12s). The
     shipped motion plan targets: line-0, line-1."

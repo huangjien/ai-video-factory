@@ -1,8 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  deriveValueFromDistribution,
-  winnerKey,
-} from "./derive.js";
+import { deriveValueFromDistribution, winnerKey } from "./derive.js";
 import type { DecisionQuestion } from "./contract.js";
 
 const choiceQuestion: DecisionQuestion = {
@@ -73,7 +70,10 @@ describe("deriveValueFromDistribution", () => {
       true: 0.8,
       false: 0.2,
     });
-    expect(value?.kind === "noul" ? value.probability : null).toBeCloseTo(0.8, 5);
+    expect(value?.kind === "noul" ? value.probability : null).toBeCloseTo(
+      0.8,
+      5,
+    );
   });
 
   it("returns null when the distribution is empty", () => {

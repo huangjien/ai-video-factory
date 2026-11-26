@@ -30,8 +30,10 @@ source_verdict:
   passing: false
 policy:
   rule: review-verdict
-  note: "The draft's own review is the authority: a Critical finding or CRITICAL_BLOCKER rejects,
+  note:
+    "The draft's own review is the authority: a Critical finding or CRITICAL_BLOCKER rejects,
     passing false revises, passing true passes."
 provenance:
-  source: projects/from-prompt-engineering-to-agentic-engin/article-review.yaml — attempt 1 (overall
+  source:
+    projects/from-prompt-engineering-to-agentic-engin/article-review.yaml — attempt 1 (overall
     55.8, grade F, CRITICAL_BLOCKER).

@@ -15,12 +15,7 @@ export type SourceMode = "direct" | "reference" | "none";
 
 /** Where a picture came from. */
 export type PictureSourceName =
-  | "commons"
-  | "wikipedia"
-  | "artifact"
-  | "met"
-  | "smithsonian"
-  | "openverse";
+  "commons" | "wikipedia" | "artifact" | "met" | "smithsonian" | "openverse";
 
 /** One retrieved picture, with everything needed to credit it. */
 export interface HistoricalCandidate {

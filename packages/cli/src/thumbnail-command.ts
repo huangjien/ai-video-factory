@@ -30,12 +30,7 @@ export interface ThumbnailOptions {
    *  youtube/thumbnail.jpg. */
   format?: "landscape" | "vertical";
   providerName?:
-    | "mock"
-    | "minimax"
-    | "minimax-h3"
-    | "openai"
-    | "gemini"
-    | undefined;
+    "mock" | "minimax" | "minimax-h3" | "openai" | "gemini" | undefined;
   /** Reference image for edit-capable providers (minimax-h3). Read from
    *  disk, Base64-encoded, and sent as the edit's reference. */
   referencePath?: string | undefined;
@@ -98,12 +93,7 @@ function safeGitHead(cwd: string): string {
 export async function generateThumbnailImage(opts: {
   projectRoot: string;
   providerName?:
-    | "mock"
-    | "minimax"
-    | "minimax-h3"
-    | "openai"
-    | "gemini"
-    | undefined;
+    "mock" | "minimax" | "minimax-h3" | "openai" | "gemini" | undefined;
   width?: number | undefined;
   height?: number | undefined;
   /** Output base name (default "thumbnail" → thumbnail.jpg|png). The
@@ -213,9 +203,7 @@ export async function generateThumbnailImage(opts: {
   const thumbPath = path.join(
     projectRoot,
     "youtube",
-    result.contentType === "image/jpeg"
-      ? `${baseName}.jpg`
-      : `${baseName}.png`,
+    result.contentType === "image/jpeg" ? `${baseName}.jpg` : `${baseName}.png`,
   );
   await writeFile(thumbPath, result.bytes);
 
@@ -312,7 +300,13 @@ export function brandProjectThumbnail(
 ): void {
   const ytDir = path.join(projectRoot, "youtube");
   if (!existsSync(ytDir)) return;
-  let script = path.join(projectRoot, "..", "..", "scripts", "thumbnail-brand.py");
+  let script = path.join(
+    projectRoot,
+    "..",
+    "..",
+    "scripts",
+    "thumbnail-brand.py",
+  );
   if (!existsSync(script)) {
     // l10n workdirs sit deeper — walk up until the repo scripts dir turns up
     let dir = projectRoot;

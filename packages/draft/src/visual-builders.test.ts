@@ -182,4 +182,3 @@ describe("buildDoodleScene — seeded hand-drawn strokes", () => {
     }
   });
 });
-

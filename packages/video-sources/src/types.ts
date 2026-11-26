@@ -50,10 +50,7 @@ export interface VideoSearchOptions {
  *  exist for these terms?" */
 export interface VideoSource {
   readonly name: VideoSourceName;
-  search(
-    query: string,
-    opts: VideoSearchOptions,
-  ): Promise<VideoCandidate[]>;
+  search(query: string, opts: VideoSearchOptions): Promise<VideoCandidate[]>;
 }
 
 /** The plan for ONE scene: is it footage-suitable, and what to look for.

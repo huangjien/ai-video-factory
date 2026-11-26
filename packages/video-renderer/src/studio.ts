@@ -18,9 +18,7 @@ export interface StudioWorkspace {
   workspaceDir: string;
 }
 
-const studioEntryTemplate = (
-  renderPlan: RenderPlan,
-): string => {
+const studioEntryTemplate = (renderPlan: RenderPlan): string => {
   if (rootSrcPath === null) {
     throw new Error(
       "Remotion Root source not found — the published package vendors it under vendor/Root.js; reinstall @video/cli, or run `pnpm run build` in the workspace",

@@ -3,9 +3,19 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { CLIP_FPS, CLIP_HEIGHT, CLIP_WIDTH, preprocessClip } from "./preprocess.js";
+import {
+  CLIP_FPS,
+  CLIP_HEIGHT,
+  CLIP_WIDTH,
+  preprocessClip,
+} from "./preprocess.js";
 
-function probe(file: string): { width: number; height: number; duration: number; hasAudio: boolean } {
+function probe(file: string): {
+  width: number;
+  height: number;
+  duration: number;
+  hasAudio: boolean;
+} {
   const out = execFileSync("ffprobe", [
     "-v",
     "error",
@@ -46,25 +56,29 @@ function probe(file: string): { width: number; height: number; duration: number;
  *  archival footage arrives in (newsreel scans are exactly this). */
 function makeFixture(dir: string, name: string): string {
   const file = path.join(dir, name);
-  execFileSync("ffmpeg", [
-    "-y",
-    "-f",
-    "lavfi",
-    "-i",
-    "testsrc=duration=6:size=640x480:rate=24",
-    "-f",
-    "lavfi",
-    "-i",
-    "sine=frequency=440:duration=6",
-    "-c:v",
-    "libx264",
-    "-pix_fmt",
-    "yuv420p",
-    "-c:a",
-    "aac",
-    "-shortest",
-    file,
-  ], { stdio: "ignore" });
+  execFileSync(
+    "ffmpeg",
+    [
+      "-y",
+      "-f",
+      "lavfi",
+      "-i",
+      "testsrc=duration=6:size=640x480:rate=24",
+      "-f",
+      "lavfi",
+      "-i",
+      "sine=frequency=440:duration=6",
+      "-c:v",
+      "libx264",
+      "-pix_fmt",
+      "yuv420p",
+      "-c:a",
+      "aac",
+      "-shortest",
+      file,
+    ],
+    { stdio: "ignore" },
+  );
   return file;
 }
 

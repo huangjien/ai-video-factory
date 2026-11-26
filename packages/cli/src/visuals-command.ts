@@ -28,12 +28,7 @@ export interface VisualsOptions {
   project: string;
   cwd?: string;
   imageProvider?:
-    | "minimax"
-    | "minimax-h3"
-    | "openai"
-    | "gemini"
-    | "mock"
-    | "none";
+    "minimax" | "minimax-h3" | "openai" | "gemini" | "mock" | "none";
   fake?: boolean;
   /** Historical-picture retrieval: auto (default) | off. */
   sources?: ImageSourcesMode;
@@ -210,12 +205,7 @@ export function registerVisuals(program: Command): void {
         opts: {
           cwd?: string;
           imageProvider?:
-            | "minimax"
-            | "minimax-h3"
-            | "openai"
-            | "gemini"
-            | "mock"
-            | "none";
+            "minimax" | "minimax-h3" | "openai" | "gemini" | "mock" | "none";
           fake?: boolean;
           imageSources?: string;
           reject?: number;

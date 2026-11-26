@@ -46,7 +46,8 @@ source_verdict:
   passing: false
 policy:
   rule: review-verdict
-  note: "The draft's own review is the authority: a Critical finding or CRITICAL_BLOCKER rejects,
+  note:
+    "The draft's own review is the authority: a Critical finding or CRITICAL_BLOCKER rejects,
     passing false revises, passing true passes."
 provenance:
   source: projects/软件架构和实现/article-review.yaml — attempt 6 (overall 69, grade D, 11 Moderate + 1 Major).

@@ -31,9 +31,7 @@ const repoRoot = path.resolve(
   "..",
 );
 const { listDecisionCases, loadDecisionQuestion, DECISION_QUESTIONS } =
-  await import(
-    path.join(repoRoot, "packages/prompts/dist/index.js")
-  );
+  await import(path.join(repoRoot, "packages/prompts/dist/index.js"));
 const { OpenAIDecisionProvider, MiniMaxDecisionProvider } = await import(
   path.join(repoRoot, "packages/llm/dist/index.js")
 );
@@ -119,7 +117,10 @@ for (const variant of VARIANTS) {
       name,
       fn,
       train: accuracy(
-        trainAnswers.map((a) => ({ ...a, answer: a.answer ? fn(a.answer) : null })),
+        trainAnswers.map((a) => ({
+          ...a,
+          answer: a.answer ? fn(a.answer) : null,
+        })),
       ),
     }))
     .sort((a, b) => b.train - a.train)[0];
@@ -131,7 +132,10 @@ for (const variant of VARIANTS) {
     rawTest: accuracy(testAnswers),
     shift: fitted.name,
     calibratedTest: accuracy(
-      testAnswers.map((a) => ({ ...a, answer: a.answer ? fitted.fn(a.answer) : null })),
+      testAnswers.map((a) => ({
+        ...a,
+        answer: a.answer ? fitted.fn(a.answer) : null,
+      })),
     ),
     matrix: countMatrix(answers),
     answered: answers.filter((a) => a.answer !== null).length,
@@ -174,7 +178,9 @@ writeFileSync(
   ),
 );
 
-console.log(`\ncases: ${selected.length} (train ${train.length} / test ${test.length}) · provider: ${providerName}`);
+console.log(
+  `\ncases: ${selected.length} (train ${train.length} / test ${test.length}) · provider: ${providerName}`,
+);
 for (const r of results) {
   console.log(`\n${r.variant} — answered ${r.answered}/${selected.length}`);
   console.log(`  ${r.matrix.map(([k, n]) => `${k}:${n}`).join("  ")}`);

@@ -170,7 +170,9 @@ export async function runDouyin(opts: DouyinOptions): Promise<number> {
       return 1;
     }
     if (!verticalCutIsFresh(cutPath, masterPath)) {
-      console.log(`${MARK_RUN} cutting 16:9 → 9:16 (${opts.cutMode ?? "inset"})…`);
+      console.log(
+        `${MARK_RUN} cutting 16:9 → 9:16 (${opts.cutMode ?? "inset"})…`,
+      );
       try {
         await cutVertical({
           source: masterPath,
@@ -315,7 +317,9 @@ export async function runDouyin(opts: DouyinOptions): Promise<number> {
   });
 
   console.log("");
-  console.log(`${MARK_OK} packaged ${path.relative(process.cwd(), douyinDir)}/`);
+  console.log(
+    `${MARK_OK} packaged ${path.relative(process.cwd(), douyinDir)}/`,
+  );
   console.log(`  title : ${result.douyin.title}`);
   console.log(
     `  topics: ${result.douyin.topics.length > 0 ? result.douyin.topics.map((t) => `#${t}`).join(" ") : "(none — pick manually)"}`,
@@ -324,7 +328,9 @@ export async function runDouyin(opts: DouyinOptions): Promise<number> {
   if (cutNote !== "") console.log(`  note  : ${cutNote}`);
   if (result.source === "fallback") {
     console.log("");
-    console.log(`  ⚠ degraded to the deterministic fallback: ${result.warning}`);
+    console.log(
+      `  ⚠ degraded to the deterministic fallback: ${result.warning}`,
+    );
   }
   if (publishedId !== undefined) {
     console.log("");
@@ -362,7 +368,10 @@ export function registerDouyin(program: Command): void {
       "--cut-mode <mode>",
       "how the 16:9 master becomes 9:16: inset (blurred backdrop, nothing cropped) | crop (fills the screen, loses the sides)",
     )
-    .option("--video <path>", "use this file as the video instead of cutting one")
+    .option(
+      "--video <path>",
+      "use this file as the video instead of cutting one",
+    )
     .option("--cover <path>", "use this file as the cover")
     .option("--no-cut", "package only — do not cut the master")
     .action(async (project: string | undefined, opts) => {

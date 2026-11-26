@@ -66,7 +66,10 @@ describe("resolveProjectDir", () => {
     expect(r.ok).toBe(true);
     if (r.ok)
       expect(r.root).toBe(
-        path.join(projectsDir, "古人长什么样-reconstructing-what-historical-fi"),
+        path.join(
+          projectsDir,
+          "古人长什么样-reconstructing-what-historical-fi",
+        ),
       );
   });
 

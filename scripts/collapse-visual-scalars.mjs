@@ -40,9 +40,7 @@ items.forEach((item) => {
   // Prefer a plain scalar, but only when it parses back identically.
   const probe = YAML.parseDocument(`visual: ${value}\n`);
   const text =
-    probe.get("visual", true)?.value === value
-      ? value
-      : JSON.stringify(value);
+    probe.get("visual", true)?.value === value ? value : JSON.stringify(value);
   edits.push({ start, end: valueEnd, text, id: item.get("id", true)?.value });
 });
 
@@ -55,13 +53,21 @@ let out = block;
 for (const edit of [...edits].sort((a, b) => b.start - a.start)) {
   out = out.slice(0, edit.start) + edit.text + out.slice(edit.end);
 }
-writeFileSync(file, md.slice(0, blockStart) + out + md.slice(blockStart + block.length), "utf8");
+writeFileSync(
+  file,
+  md.slice(0, blockStart) + out + md.slice(blockStart + block.length),
+  "utf8",
+);
 
 // Prove the values did not move.
 const after = YAML.parseDocument(out).get("scenes").items;
 const beforeValues = items.map((it) => it.get("visual", true)?.value);
 const afterValues = after.map((it) => it.get("visual", true)?.value);
 const same = beforeValues.every((v, i) => v === afterValues[i]);
-console.log(`collapsed ${edits.length} visual scalar(s): ${edits.map((e) => e.id).join(", ")}`);
-console.log(`parsed values unchanged: ${same ? "YES" : "NO — cache keys would shift"}`);
+console.log(
+  `collapsed ${edits.length} visual scalar(s): ${edits.map((e) => e.id).join(", ")}`,
+);
+console.log(
+  `parsed values unchanged: ${same ? "YES" : "NO — cache keys would shift"}`,
+);
 process.exit(same ? 0 : 1);

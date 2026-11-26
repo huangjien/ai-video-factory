@@ -18,9 +18,11 @@ expects:
 baseline: keep
 policy:
   rule: motion-specificity
-  note: The shipped plan animates a NAMED element of the scene — the baseline plan cannot know those
+  note:
+    The shipped plan animates a NAMED element of the scene — the baseline plan cannot know those
     names, so the scene needed a second pass.
 provenance:
-  source: "projects/从-prompt-engineering-到-agent-engineering/storyboard/storyboard.yaml — scene
+  source:
+    "projects/从-prompt-engineering-到-agent-engineering/storyboard/storyboard.yaml — scene
     scene-13 (Timeline, 10.63s). The shipped motion plan targets: event-开始, event-发展, event-转折,
     event-现在."

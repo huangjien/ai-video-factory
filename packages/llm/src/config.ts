@@ -65,12 +65,17 @@ const configFileSchema = z.object({
   models: z
     .record(z.enum(MODEL_KINDS), z.record(z.string().trim().min(1)))
     .optional(),
-  draft: z.object({
-    generator_pool: z.array(z.enum(GENERATOR_POOL)).nonempty().refine(
-      (providers) => new Set(providers).size === providers.length,
-      "Provider names must be unique",
-    ),
-  }).optional(),
+  draft: z
+    .object({
+      generator_pool: z
+        .array(z.enum(GENERATOR_POOL))
+        .nonempty()
+        .refine(
+          (providers) => new Set(providers).size === providers.length,
+          "Provider names must be unique",
+        ),
+    })
+    .optional(),
 });
 
 /** The original shape put the role names at the top level; such a file

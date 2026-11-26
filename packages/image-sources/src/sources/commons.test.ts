@@ -24,8 +24,12 @@ function response(
               extmetadata: {
                 License: { value: "pd-old-100" },
                 LicenseShortName: { value: "Public domain" },
-                Artist: { value: '<a href="//commons.wikimedia.org/wiki/User:X">X</a>' },
-                LicenseUrl: { value: "https://en.wikipedia.org/wiki/Public_domain" },
+                Artist: {
+                  value: '<a href="//commons.wikimedia.org/wiki/User:X">X</a>',
+                },
+                LicenseUrl: {
+                  value: "https://en.wikipedia.org/wiki/Public_domain",
+                },
                 ...meta,
               },
             },

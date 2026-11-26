@@ -74,7 +74,10 @@ export const SceneBackground: FC<SceneBackgroundProps> = ({
           width: "100%",
           height: "100%",
           objectFit: fit,
-          transform: fit === "contain" ? undefined : `scale(${scale}) translate(${tx}px, ${ty}px)`,
+          transform:
+            fit === "contain"
+              ? undefined
+              : `scale(${scale}) translate(${tx}px, ${ty}px)`,
         }}
       />
       {scrim ? (

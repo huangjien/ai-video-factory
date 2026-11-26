@@ -154,7 +154,13 @@ export class ArtifactPictureSource implements PictureSource {
   private characterName(id: string): string {
     try {
       const raw = readFileSync(
-        path.join(this.workspaceRoot as string, "assets", "characters", id, "character.yaml"),
+        path.join(
+          this.workspaceRoot as string,
+          "assets",
+          "characters",
+          id,
+          "character.yaml",
+        ),
         "utf8",
       );
       const parsed = parseYaml(raw) as { name?: string } | null;

@@ -46,7 +46,8 @@ function setupDir(dir: string, opts: { refText?: boolean } = {}) {
   mkdirSync(dir, { recursive: true });
   const ref = join(dir, "ref.wav");
   writeFileSync(ref, "stub");
-  if (opts.refText !== false) writeFileSync(`${ref.replace(/\.wav$/, "")}.txt`, "参考转写。");
+  if (opts.refText !== false)
+    writeFileSync(`${ref.replace(/\.wav$/, "")}.txt`, "参考转写。");
   const other = join(dir, "other.wav");
   writeFileSync(other, "stub");
   writeFileSync(`${other.replace(/\.wav$/, "")}.txt`, "另一个参考。");
@@ -64,14 +65,20 @@ describe("F5TTSProvider", () => {
       run: stubRun(configs),
       resample: RESAMPLE_OK,
     });
-    const r = await p.synthesize({ text: "你好世界。", voice: "narrator-zh", language: "zh-CN" });
+    const r = await p.synthesize({
+      text: "你好世界。",
+      voice: "narrator-zh",
+      language: "zh-CN",
+    });
     expect(configs).toHaveLength(1);
     // Quality baseline (user A/B 2026-10-25): 6-step rk4 ACCEPTED (w6,
     // RTF 2.16); 4-step midpoint rejected; 8-step rk4 accepted but slower.
     expect(configs[0]!.steps).toBe(6);
     expect(configs[0]!.method).toBe("rk4");
     expect(configs[0]!.text).toBe("你好世界。");
-    expect(configs[0]!.ref_audio).toBe(join(workDirOf(configs[0]!), "ref24k.wav"));
+    expect(configs[0]!.ref_audio).toBe(
+      join(workDirOf(configs[0]!), "ref24k.wav"),
+    );
     expect(r.durationMs).toBe(1000);
     expect(r.words).toEqual([]);
     expect(r.audio.byteLength).toBeGreaterThan(0);
@@ -141,7 +148,9 @@ describe("f5ttsStatus", () => {
     const { ref } = setupDir(join(import.meta.dirname, ".tmp-f5-status"));
     const s = await f5ttsStatus({
       // must exist — the static checks run before the import probe
-      pythonPath: process.env.F5TTS_PYTHON ?? join(process.env.HOME ?? "", ".venvs/f5tts/bin/python"),
+      pythonPath:
+        process.env.F5TTS_PYTHON ??
+        join(process.env.HOME ?? "", ".venvs/f5tts/bin/python"),
       refAudioPath: ref,
       run: async () => {
         throw new Error("import probe exit 1: ModuleNotFoundError");

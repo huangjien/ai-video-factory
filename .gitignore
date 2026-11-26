@@ -6,6 +6,8 @@ dist-bundle/
 .omo/evidence/
 .omo/tmp/
 .remotion/
+# Generated image prompt cache
+.prompt-cache/
 # Generated Remotion Studio workspaces (video studio)
 .studio/
 *.log

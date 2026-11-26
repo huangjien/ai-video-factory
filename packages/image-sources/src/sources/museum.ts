@@ -53,7 +53,8 @@ export function parseMetObject(
     localPath: null,
     author: obj.artistDisplayName ?? "",
     license: "PD",
-    licenseUrl: "https://www.metmuseum.org/about-the-met/policies-and-documents/open-access",
+    licenseUrl:
+      "https://www.metmuseum.org/about-the-met/policies-and-documents/open-access",
     width: null,
     height: null,
     digestKey: `${fileUrl}|PD`,
@@ -177,7 +178,9 @@ export class SmithsonianPictureSource implements PictureSource {
       ...(opts.signal !== undefined ? { signal: opts.signal } : {}),
     });
     const rows = (
-      json as { response?: { rows?: { id?: string; content?: { url?: string } }[] } }
+      json as {
+        response?: { rows?: { id?: string; content?: { url?: string } }[] };
+      }
     ).response?.rows;
     if (!Array.isArray(rows)) return [];
     const out: HistoricalCandidate[] = [];

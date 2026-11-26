@@ -444,7 +444,9 @@ describe("articleToStoryboardYaml (VDSL sync)", () => {
       }[];
     };
     expect(parsed.scenes[1]?.visual.component).toBe("ImageBackground");
-    expect(parsed.scenes[1]?.visual.props.src).toBe("assets/images/scene_2.jpg");
+    expect(parsed.scenes[1]?.visual.props.src).toBe(
+      "assets/images/scene_2.jpg",
+    );
     expect(parsed.scenes[1]?.visual.props.fit).toBe("cover");
   });
 

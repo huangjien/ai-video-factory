@@ -52,12 +52,7 @@ import { resolveImageProvider, workspaceRootFor } from "./index.js";
 
 export interface ImpactOptions {
   imageProvider?:
-    | "minimax"
-    | "minimax-h3"
-    | "openai"
-    | "gemini"
-    | "mock"
-    | "none";
+    "minimax" | "minimax-h3" | "openai" | "gemini" | "mock" | "none";
   fake?: boolean;
 }
 
@@ -146,8 +141,8 @@ export function computeMakeImpact(
       // read the digest the LAST run recorded — offline, from the source
       // sidecar, without re-running the retrieval.
       const sourceDigest =
-        readSceneSource(path.join(projectRoot, "assets", "images"), n)?.digest ??
-        "";
+        readSceneSource(path.join(projectRoot, "assets", "images"), n)
+          ?.digest ?? "";
       const key = imageCacheKey({
         sceneNumber: n,
         visual,
@@ -334,7 +329,12 @@ export function computeMakeImpact(
       // honesty rule as the image bytes (2026-11-21).
       const clipNum = sbId.match(/scene[-_]?(\d+)/)?.[1];
       const clipFile = clipNum
-        ? path.join(projectRoot, "assets", "video", `scene_${parseInt(clipNum, 10)}.mp4`)
+        ? path.join(
+            projectRoot,
+            "assets",
+            "video",
+            `scene_${parseInt(clipNum, 10)}.mp4`,
+          )
         : null;
       const clipDigest =
         clipFile !== null && existsSync(clipFile)

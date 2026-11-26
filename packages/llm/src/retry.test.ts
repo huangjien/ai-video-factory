@@ -109,9 +109,14 @@ describe("chatWithFallback — the primary's burnt requests", () => {
   it("adds the primary's discarded cost to the fallback's response", async () => {
     const primary = new BurningProvider(99);
     const fallback = new BurningProvider(0);
-    const out = await chatWithFallback(primary, fallback, { messages: [] }, {
-      sleeps: [1, 1, 1],
-    });
+    const out = await chatWithFallback(
+      primary,
+      fallback,
+      { messages: [] },
+      {
+        sleeps: [1, 1, 1],
+      },
+    );
     expect(out.failover).toBe(true);
     // The primary's four discarded attempts + the fallback's own request.
     expect(out.response.telemetry?.requests).toBe(5);
@@ -120,9 +125,14 @@ describe("chatWithFallback — the primary's burnt requests", () => {
   it("reports a failover so a long call has an explanation", async () => {
     const primary = new BurningProvider(99);
     const fallback = new BurningProvider(0);
-    const out = await chatWithFallback(primary, fallback, { messages: [] }, {
-      sleeps: [1, 1, 1],
-    });
+    const out = await chatWithFallback(
+      primary,
+      fallback,
+      { messages: [] },
+      {
+        sleeps: [1, 1, 1],
+      },
+    );
     expect(out.provider).toBe("burning");
     expect(out.failover).toBe(true);
   });

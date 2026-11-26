@@ -1,4 +1,10 @@
-import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
@@ -18,7 +24,8 @@ describe("resolveBgmTrack — bgm_tracks window resolution", () => {
   const roots: string[] = [];
 
   afterEach(() => {
-    for (const r of roots.splice(0)) rmSync(r, { recursive: true, force: true });
+    for (const r of roots.splice(0))
+      rmSync(r, { recursive: true, force: true });
   });
 
   /** A workspace with projects/<id>/ and a curated library at assets/bgm/. */
@@ -65,7 +72,9 @@ describe("resolveBgmTrack — bgm_tracks window resolution", () => {
     const brand = path.join(ws, "assets", "brand", "intro.wav");
     writeFileSync(brand, "audio");
 
-    expect(await resolveBgmTrack(project, "assets/brand/intro.wav")).toBe(brand);
+    expect(await resolveBgmTrack(project, "assets/brand/intro.wav")).toBe(
+      brand,
+    );
   });
 
   it("resolves a PATH-shaped track project-relative first", async () => {
@@ -74,7 +83,9 @@ describe("resolveBgmTrack — bgm_tracks window resolution", () => {
     mkdirSync(path.dirname(local), { recursive: true });
     writeFileSync(local, "audio");
 
-    expect(await resolveBgmTrack(project, "assets/brand/intro.wav")).toBe(local);
+    expect(await resolveBgmTrack(project, "assets/brand/intro.wav")).toBe(
+      local,
+    );
   });
 
   it("finds the workspace root from a derived l10n workdir", async () => {

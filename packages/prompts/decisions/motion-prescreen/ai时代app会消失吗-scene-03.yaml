@@ -16,8 +16,10 @@ expects:
 baseline: keep
 policy:
   rule: motion-specificity
-  note: The shipped plan animates a NAMED element of the scene — the baseline plan cannot know those
+  note:
+    The shipped plan animates a NAMED element of the scene — the baseline plan cannot know those
     names, so the scene needed a second pass.
 provenance:
-  source: "projects/ai时代app会消失吗/storyboard/storyboard.yaml — scene scene-03 (BigIdea, 11.37s). The
+  source:
+    "projects/ai时代app会消失吗/storyboard/storyboard.yaml — scene scene-03 (BigIdea, 11.37s). The
     shipped motion plan targets: __reveal__."

@@ -33,15 +33,17 @@ export interface RunRecord {
    *  counts requests the CLIENT threw away (the server took longer than
    *  undici's default 300 s to send headers) and had to re-issue. A
    *  run with that number above zero paid twice for one answer. */
-  telemetry?: {
-    requests: number;
-    streams: number;
-    headers_timeout_retries: number;
-    /** Output tokens the model spent THINKING rather than answering.
-     *  On a reasoning model this is usually the majority of the output —
-     *  the article judge's 91%. */
-    reasoning_tokens: number;
-  } | undefined;
+  telemetry?:
+    | {
+        requests: number;
+        streams: number;
+        headers_timeout_retries: number;
+        /** Output tokens the model spent THINKING rather than answering.
+         *  On a reasoning model this is usually the majority of the output —
+         *  the article judge's 91%. */
+        reasoning_tokens: number;
+      }
+    | undefined;
 }
 
 /** Monotonic suffix for run ids written in the same second.

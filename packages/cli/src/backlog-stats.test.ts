@@ -29,7 +29,9 @@ afterEach(() => {
   rmSync(repoRoot, { recursive: true, force: true });
 });
 
-function entry(overrides: Partial<BacklogEntry> & { id: string }): BacklogEntry {
+function entry(
+  overrides: Partial<BacklogEntry> & { id: string },
+): BacklogEntry {
   return {
     topic: overrides.id,
     status: "idea",
@@ -152,7 +154,9 @@ describe("runBacklogStats", () => {
     expect(parsed.total).toBe(1);
     expect(parsed.counts.rendered).toBe(1);
     expect(parsed.bySource).toEqual({ manual: 0, harvest: 1 });
-    expect(parsed.drafted).toEqual([{ id: "1", tier: "rendered", project: "a" }]);
+    expect(parsed.drafted).toEqual([
+      { id: "1", tier: "rendered", project: "a" },
+    ]);
     expect(parsed.anomalies).toEqual([]);
   });
 

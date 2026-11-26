@@ -22,9 +22,7 @@ describe("availableGenerators — only pool members with a key", () => {
 
   it("never includes minimax — that is the judge", () => {
     expect(GENERATOR_POOL).not.toContain("minimax" as never);
-    expect(
-      availableGenerators({ MINIMAX_API_KEY: "k" }),
-    ).toEqual([]);
+    expect(availableGenerators({ MINIMAX_API_KEY: "k" })).toEqual([]);
   });
 });
 

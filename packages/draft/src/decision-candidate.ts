@@ -22,11 +22,13 @@ export interface DecisionCandidate {
   dispute?: string | undefined;
   policy: { rule: string; note: string };
   /** The verdict facts, when the label is derived from them. */
-  source_verdict?: {
-    passing: boolean;
-    critical?: boolean | undefined;
-    major_revision_needed?: boolean | undefined;
-  } | undefined;
+  source_verdict?:
+    | {
+        passing: boolean;
+        critical?: boolean | undefined;
+        major_revision_needed?: boolean | undefined;
+      }
+    | undefined;
   provenance: { source: string };
 }
 

@@ -78,7 +78,9 @@ attempts:
         severity: Major
 `;
 
-  async function projectWithLog(logRow: Record<string, unknown>): Promise<string> {
+  async function projectWithLog(
+    logRow: Record<string, unknown>,
+  ): Promise<string> {
     const dir = await mkdtemp(path.join(tmpdir(), "harvest-"));
     await writeFile(path.join(dir, "article-review.yaml"), REVIEW_YAML, "utf8");
     await writeFile(
@@ -184,4 +186,3 @@ attempts:
     expect(yaml).toContain("review-verdict");
   });
 });
-

@@ -85,10 +85,7 @@ function l10nRootFor(projectRoot: string, lang: string): string {
   return path.join(projectRoot, "l10n", lang);
 }
 
-export function l10nArticlePath(
-  projectRoot: string,
-  lang: string,
-): string {
+export function l10nArticlePath(projectRoot: string, lang: string): string {
   return path.join(l10nRootFor(projectRoot, lang), "article.md");
 }
 
@@ -183,7 +180,10 @@ function pinVisualLines(
   if (!block) {
     return {
       text: translatedMd,
-      violations: [...violations, "translated article has no scenes YAML block"],
+      violations: [
+        ...violations,
+        "translated article has no scenes YAML block",
+      ],
     };
   }
   const pinned = pinVisualsInYaml(block.yaml, canonical);
@@ -230,8 +230,7 @@ function pinVisualsInYaml(
       return;
     }
     const node = item.get("visual", true) as
-      | { range?: [number, number, number] }
-      | undefined;
+      { range?: [number, number, number] } | undefined;
     if (node?.range) {
       const [start, valueEnd] = node.range;
       edits.push({ start, end: valueEnd, text: pinYamlValue(scene.visual) });
@@ -239,8 +238,7 @@ function pinVisualsInYaml(
     }
     // The model dropped the key — re-insert it after the scene's `id:` line.
     const idNode = item.get("id", true) as
-      | { range?: [number, number, number] }
-      | undefined;
+      { range?: [number, number, number] } | undefined;
     if (!idNode?.range) {
       violations.push(`scene ${scene.id}: no id line found in translation`);
       return;
@@ -289,7 +287,8 @@ function overflowOnly(violations: string[]): boolean {
  *  caller reports every trimmed scene — a content loss that is never
  *  silent. */
 function trimToCaptionBudget(text: string): string {
-  const fits = (s: string) => captionBlockLineCount(s) <= CAPTION_BLOCK_MAX_LINES;
+  const fits = (s: string) =>
+    captionBlockLineCount(s) <= CAPTION_BLOCK_MAX_LINES;
   const sentences = text.match(/[^.!?]*[.!?]+/g) ?? [text];
   for (let i = sentences.length - 1; i > 0; i--) {
     const candidate = sentences.slice(0, i).join("").trim();
@@ -297,12 +296,20 @@ function trimToCaptionBudget(text: string): string {
   }
   const clauses = text.split(/(?<=[,;:])\s+/);
   for (let i = clauses.length - 1; i > 0; i--) {
-    const candidate = clauses.slice(0, i).join(" ").trim().replace(/[,;:]$/, "");
+    const candidate = clauses
+      .slice(0, i)
+      .join(" ")
+      .trim()
+      .replace(/[,;:]$/, "");
     if (candidate.length > 0 && fits(candidate)) return candidate;
   }
   const words = text.split(/\s+/);
   for (let i = words.length - 1; i > 0; i--) {
-    const candidate = words.slice(0, i).join(" ").trim().replace(/[,;:]$/, "");
+    const candidate = words
+      .slice(0, i)
+      .join(" ")
+      .trim()
+      .replace(/[,;:]$/, "");
     if (candidate.length > 0 && fits(candidate)) return candidate;
   }
   return text;
@@ -315,7 +322,7 @@ interface OverflowScene {
 
 /** Split the over-budget scenes into fixed-size batches. One model call
  *  per batch: the condensation ask is small enough that the model
- *  answers it instead of reasoning until the response is truncated. */function chunkScenes(
+ *  answers it instead of reasoning until the response is truncated. */ function chunkScenes(
   scenes: OverflowScene[],
   size: number,
 ): OverflowScene[][] {
@@ -331,9 +338,7 @@ function buildCondenseMessages(
   lang: string,
   note?: string,
 ) {
-  const payload = over
-    .map((o) => `${o.id}: ${o.narration}`)
-    .join("\n");
+  const payload = over.map((o) => `${o.id}: ${o.narration}`).join("\n");
   const system = (
     CONDENSE_NARRATION_PROMPT.split("## Input")[0] ?? ""
   ).replaceAll("{{TARGET_LANG}}", lang);
@@ -369,9 +374,7 @@ function yamlNarrationScalar(text: string): string {
  *  2026-11-15), so bare JSON.parse alone is not enough, but a clean
  *  JSON object is still accepted. Ids normalize to alphanumerics so
  *  `scene-1` matches `scene_1`. */
-function parseCondensations(
-  raw: string,
-): Record<string, string> | null {
+function parseCondensations(raw: string): Record<string, string> | null {
   const out: Record<string, string> = {};
   const lineRe =
     /^[\s`"'\]]*(?:\d+[.)]\s*)?[`"'\]]*(scene[_-]?\w+)[`"'\]]*\s*[:：=]\s*(.+)$/gim;
@@ -435,11 +438,10 @@ async function condenseOverflowNarrations(
   }
   const parsed = parseArticleLenient(translatedMd);
   const over: OverflowScene[] = parsed.scenes
-    .filter(
-      (s) => captionBlockLineCount(s.narration) > CAPTION_BLOCK_MAX_LINES,
-    )
+    .filter((s) => captionBlockLineCount(s.narration) > CAPTION_BLOCK_MAX_LINES)
     .map((s) => ({ id: s.id, narration: s.narration }));
-  if (over.length === 0) return { text: translatedMd, violations: [], trimmed: [] };
+  if (over.length === 0)
+    return { text: translatedMd, violations: [], trimmed: [] };
 
   const condensations: Record<string, string> = {};
   /** Scenes the model refused to shorten and the trimmer cut instead —
@@ -462,7 +464,7 @@ async function condenseOverflowNarrations(
     const retryNote =
       round === 0
         ? undefined
-        : `The narrations below are your PREVIOUS answers. Each one is still too long for the caption block: cut every one down to at most ${CAPTION_BLOCK_MAX_LINES * CAPTION_LINE_UNITS * 2} characters (aim for ${Math.floor((CAPTION_BLOCK_MAX_LINES * CAPTION_LINE_UNITS * 2) * 0.85)}). Count the characters of your new answer before you send it. The length limit WINS: if a narration cannot fit without keeping every detail, drop the least load-bearing detail — a restated example, a repeated attribution, a minor qualifier — rather than stay over the limit.`;
+        : `The narrations below are your PREVIOUS answers. Each one is still too long for the caption block: cut every one down to at most ${CAPTION_BLOCK_MAX_LINES * CAPTION_LINE_UNITS * 2} characters (aim for ${Math.floor(CAPTION_BLOCK_MAX_LINES * CAPTION_LINE_UNITS * 2 * 0.85)}). Count the characters of your new answer before you send it. The length limit WINS: if a narration cannot fit without keeping every detail, drop the least load-bearing detail — a restated example, a repeated attribution, a minor qualifier — rather than stay over the limit.`;
     for (const batch of chunkScenes(pending, size)) {
       const ask = batch.map((o) => {
         const attempt = attempts.get(o.id);
@@ -528,10 +530,10 @@ async function condenseOverflowNarrations(
     const node =
       item && isMap(item)
         ? (item.get("narration", true) as
-            | { range?: [number, number, number] }
-            | undefined)
+            { range?: [number, number, number] } | undefined)
         : undefined;
-    const nextRaw = condensations[o.id.replace(/[^a-zA-Z0-9]/g, "").toLowerCase()];
+    const nextRaw =
+      condensations[o.id.replace(/[^a-zA-Z0-9]/g, "").toLowerCase()];
     const next = typeof nextRaw === "string" ? nextRaw.trim() : "";
     if (!node?.range) {
       violations.push(`scene ${o.id}: no narration line found in translation`);
@@ -565,7 +567,8 @@ async function condenseOverflowNarrations(
   }
   let yamlOut = block.yaml;
   for (const edit of [...edits].sort((a, b) => b.start - a.start)) {
-    yamlOut = yamlOut.slice(0, edit.start) + edit.text + yamlOut.slice(edit.end);
+    yamlOut =
+      yamlOut.slice(0, edit.start) + edit.text + yamlOut.slice(edit.end);
   }
   const text =
     translatedMd.slice(0, block.start) +
@@ -600,9 +603,7 @@ function validateStructure(
     const want = canonical.scenes[i];
     if (!want) return;
     if (scene.id !== want.id) {
-      violations.push(
-        `scene ${i + 1}: id ${scene.id} != canonical ${want.id}`,
-      );
+      violations.push(`scene ${i + 1}: id ${scene.id} != canonical ${want.id}`);
     }
     if (scene.visual.trim() !== want.visual.trim()) {
       violations.push(`scene ${scene.id}: visual line changed`);
@@ -634,9 +635,10 @@ function buildMessages(articleMd: string, lang: string, extra: string) {
   const template = TRANSLATE_ARTICLE_PROMPT;
   // system = the rules only (everything before the payload section);
   // user = the full filled template (rules + article + task).
-  const system = (
-    template.split("## Input article")[0] ?? ""
-  ).replaceAll("{{TARGET_LANG}}", lang);
+  const system = (template.split("## Input article")[0] ?? "").replaceAll(
+    "{{TARGET_LANG}}",
+    lang,
+  );
   const user = fillPrompt(template, {
     TARGET_LANG: lang,
     ARTICLE: articleMd,
@@ -666,9 +668,7 @@ export async function translateArticle(
   const { projectRoot, targetLang, provider, voice } = opts;
   const canonicalPath = path.join(projectRoot, "article.md");
   if (!existsSync(canonicalPath)) {
-    throw new TranslateArticleError(
-      `article.md not found at ${canonicalPath}`,
-    );
+    throw new TranslateArticleError(`article.md not found at ${canonicalPath}`);
   }
   const canonicalMd = await readFile(canonicalPath, "utf8");
   const canonical = parseArticleLenient(canonicalMd);
@@ -714,7 +714,10 @@ export async function translateArticle(
     }
     const pin = pinVisualLines(translatedMd, canonical);
     translatedMd = pin.text;
-    violations = [...pin.violations, ...validateStructure(translatedMd, canonical, targetLang)];
+    violations = [
+      ...pin.violations,
+      ...validateStructure(translatedMd, canonical, targetLang),
+    ];
     if (violations.length === 0) break;
     // When overflows are the ONLY problem, another full-article retry
     // cannot help — the model faithfully translates at ~1.6× the source
@@ -781,13 +784,11 @@ export async function translateArticle(
     const swapped = /^voice:.*$/m.test(cfg)
       ? cfg.replace(/^voice:.*$/m, `voice: ${voice}`)
       : `${cfg.replace(/\s*$/, "\n")}voice: ${voice}\n`;
-    await writeFile(
-      path.join(l10nRoot, "audio-config.yaml"),
-      swapped,
-      "utf8",
-    );
+    await writeFile(path.join(l10nRoot, "audio-config.yaml"), swapped, "utf8");
   } else {
-    warnings.push("canonical audio-config.yaml missing — write one before make");
+    warnings.push(
+      "canonical audio-config.yaml missing — write one before make",
+    );
   }
 
   // Per-language image store: a COPY of the canonical one, not a symlink.

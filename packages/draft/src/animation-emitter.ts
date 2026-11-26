@@ -49,8 +49,6 @@ export function emitSceneAnimations(
   }
 }
 
-
-
 function emitTitleAnimations(
   _props: Record<string, unknown>,
   ctx: EmitContext,
@@ -70,14 +68,6 @@ function emitTitleAnimations(
 // ---------------------------------------------------------------------------
 // QuoteBlock — card highlight, then the attribution fades in.
 // ---------------------------------------------------------------------------
-
-
-
-
-
-
-
-
 
 function budget(
   sceneDurationSec: number,

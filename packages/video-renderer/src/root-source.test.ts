@@ -16,7 +16,10 @@ describe("resolveRootSourcePath — the Remotion Root lives in two layouts", () 
   it("finds the vendored Root beside the bundle (published layout)", () => {
     const dir = mkdtempSync(path.join(tmpdir(), "vf-root-vendor-"));
     mkdirSync(path.join(dir, "vendor"), { recursive: true });
-    writeFileSync(path.join(dir, "vendor", "Root.js"), "export const Root = () => null;");
+    writeFileSync(
+      path.join(dir, "vendor", "Root.js"),
+      "export const Root = () => null;",
+    );
     expect(resolveRootSourcePath(path.join(dir, "cli.js"))).toBe(
       path.join(dir, "vendor", "Root.js"),
     );
@@ -39,7 +42,10 @@ describe("resolveRootSourcePath — the Remotion Root lives in two layouts", () 
 
   it("looks for Root.tsx when the module is TypeScript source", () => {
     const dir = mkdtempSync(path.join(tmpdir(), "vf-root-tsx-"));
-    writeFileSync(path.join(dir, "Root.tsx"), "export const Root = () => null;");
+    writeFileSync(
+      path.join(dir, "Root.tsx"),
+      "export const Root = () => null;",
+    );
     expect(resolveRootSourcePath(path.join(dir, "render.ts"))).toBe(
       path.join(dir, "Root.tsx"),
     );

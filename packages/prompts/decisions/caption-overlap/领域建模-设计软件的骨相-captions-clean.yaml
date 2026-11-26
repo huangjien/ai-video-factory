@@ -1,6 +1,7 @@
 id: 领域建模-设计软件的骨相-captions-clean
 surface: caption-overlap
-state: 'Frame 1 of 28. The bottom band of the frame carries the timed caption. The caption runs 1
+state:
+  'Frame 1 of 28. The bottom band of the frame carries the timed caption. The caption runs 1
   cue(s) from 00:01 to 00:12: "几年前，我在一家餐厅吃饭时碰上停电，收银系统全部 瘫痪。但这顿饭，照样点了、上了、也结了账。" No other text is
   drawn in that region.'
 expects:
@@ -12,8 +13,10 @@ expects:
 baseline: "false"
 policy:
   rule: caption-band
-  note: The shipped render's caption check passed and the scene's own text sits ABOVE the caption
+  note:
+    The shipped render's caption check passed and the scene's own text sits ABOVE the caption
     band, so the caption sits alone in the bottom band.
 provenance:
-  source: projects/领域建模-设计软件的骨相/qa/render-report.json (captions.ok, 54 cues) +
+  source:
+    projects/领域建模-设计软件的骨相/qa/render-report.json (captions.ok, 54 cues) +
     projects/领域建模-设计软件的骨相/captions/zh-CN.srt — the caption sits alone in the bottom band.

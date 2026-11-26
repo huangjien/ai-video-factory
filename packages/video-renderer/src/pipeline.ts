@@ -277,10 +277,7 @@ async function renderScenesIncrementally(
   // machines). Cap 4: returns flatten past 3 on this 10-core machine.
   const concurrency = Math.max(
     1,
-    Math.min(
-      4,
-      opts.concurrency ?? Number(process.env.RENDER_POOL ?? 2),
-    ),
+    Math.min(4, opts.concurrency ?? Number(process.env.RENDER_POOL ?? 2)),
   );
   interface StaleJob {
     index: number;

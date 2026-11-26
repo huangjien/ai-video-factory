@@ -1,4 +1,4 @@
-schema_version: '0.2'
+schema_version: "0.2"
 project:
   id: devops-architecture
   language: zh-CN
@@ -8,91 +8,91 @@ project:
 style:
   theme: dark-tech
 scenes:
-- id: scene-01
-  duration: 15
-  narration:
-    text: 一次提交，开启整条流水线。
-    audio: assets/audio/scene-01.wav
-  visual:
-    component: Title
-    renderer: remotion
-    props:
-      text: DevOps 流水线
-      subtext: 从 commit 到生产
-  transition:
-    in: fade
-    out: cut
-- id: scene-02
-  duration: 15
-  narration:
-    text: 提交触发构建服务器编译与打包。
-    audio: assets/audio/scene-02.wav
-  visual:
-    component: ImageBackground
-    renderer: remotion
-    props: {}
-  transition:
-    in: cut
-    out: cut
-- id: scene-03
-  duration: 15
-  narration:
-    text: 构建产物进入测试环境，自动跑完整测试。
-    audio: assets/audio/scene-03.wav
-  visual:
-    component: ImageBackground
-    renderer: remotion
-    props: {}
-  transition:
-    in: cut
-    out: cut
-- id: scene-04
-  duration: 15
-  narration:
-    text: 测试通过后，发布到三台生产实例。
-    audio: assets/audio/scene-04.wav
-  visual:
-    component: ImageBackground
-    renderer: remotion
-    props: {}
-  transition:
-    in: cut
-    out: cut
-- id: scene-05
-  duration: 15
-  narration:
-    text: 监控盯着每一台实例的指标。
-    audio: assets/audio/scene-05.wav
-  visual:
-    component: ImageBackground
-    renderer: remotion
-    props: {}
-  transition:
-    in: cut
-    out: fade
-- id: scene-06
-  duration: 15
-  narration:
-    text: 绿色通过，部署完成。
-    audio: assets/audio/scene-06.wav
-  visual:
-    component: DoodleScene
-    renderer: canvas
-    props:
-      background: paper
-      seed: 77
-      strokes:
-      - id: pipeline
-        shape: zigzag
-        x: 640
-        y: 320
-        size: 90
-        color: '#1971c2'
-        width: 8
-      - id: success
-        shape: star
-        x: 640
-        y: 430
-        size: 130
-        color: '#3FB68B'
-        width: 9
+  - id: scene-01
+    duration: 15
+    narration:
+      text: 一次提交，开启整条流水线。
+      audio: assets/audio/scene-01.wav
+    visual:
+      component: Title
+      renderer: remotion
+      props:
+        text: DevOps 流水线
+        subtext: 从 commit 到生产
+    transition:
+      in: fade
+      out: cut
+  - id: scene-02
+    duration: 15
+    narration:
+      text: 提交触发构建服务器编译与打包。
+      audio: assets/audio/scene-02.wav
+    visual:
+      component: ImageBackground
+      renderer: remotion
+      props: {}
+    transition:
+      in: cut
+      out: cut
+  - id: scene-03
+    duration: 15
+    narration:
+      text: 构建产物进入测试环境，自动跑完整测试。
+      audio: assets/audio/scene-03.wav
+    visual:
+      component: ImageBackground
+      renderer: remotion
+      props: {}
+    transition:
+      in: cut
+      out: cut
+  - id: scene-04
+    duration: 15
+    narration:
+      text: 测试通过后，发布到三台生产实例。
+      audio: assets/audio/scene-04.wav
+    visual:
+      component: ImageBackground
+      renderer: remotion
+      props: {}
+    transition:
+      in: cut
+      out: cut
+  - id: scene-05
+    duration: 15
+    narration:
+      text: 监控盯着每一台实例的指标。
+      audio: assets/audio/scene-05.wav
+    visual:
+      component: ImageBackground
+      renderer: remotion
+      props: {}
+    transition:
+      in: cut
+      out: fade
+  - id: scene-06
+    duration: 15
+    narration:
+      text: 绿色通过，部署完成。
+      audio: assets/audio/scene-06.wav
+    visual:
+      component: DoodleScene
+      renderer: canvas
+      props:
+        background: paper
+        seed: 77
+        strokes:
+          - id: pipeline
+            shape: zigzag
+            x: 640
+            y: 320
+            size: 90
+            color: "#1971c2"
+            width: 8
+          - id: success
+            shape: star
+            x: 640
+            y: 430
+            size: 130
+            color: "#3FB68B"
+            width: 9

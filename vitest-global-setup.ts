@@ -31,7 +31,12 @@ export default function setup(): void {
   }
   // Provider tests supply their own fixture keys. Never route tests through
   // a real account inherited from the developer shell.
-  for (const key of ["OPENAI_API_KEY", "GEMINI_API_KEY", "GLM_API_KEY", "MINIMAX_API_KEY"]) {
+  for (const key of [
+    "OPENAI_API_KEY",
+    "GEMINI_API_KEY",
+    "GLM_API_KEY",
+    "MINIMAX_API_KEY",
+  ]) {
     delete process.env[key];
   }
   // The decision layer (v0.11) defaults to `on` in production, which

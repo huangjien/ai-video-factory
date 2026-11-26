@@ -1,6 +1,7 @@
 id: comparison-card-wrong-scene
 surface: qa-triage
-state: error · comparison cards · each card pulled its item from a prose section matched by index, so
+state:
+  error · comparison cards · each card pulled its item from a prose section matched by index, so
   with 7 sections across 25 scenes one scene's content landed on another scene's card. The video shows
   the wrong sentence under the right title.
 expects:
@@ -10,5 +11,6 @@ provenance:
   source: docs/RELEASES.md v0.9.1 — the comparison-card mis-mapping across scenes.
 policy:
   rule: qa-finding-level
-  note: 'The level the QA check raised decides: an error finding blocks, a warn finding asks for a human,
-    a clean render ships.'
+  note:
+    "The level the QA check raised decides: an error finding blocks, a warn finding asks for a human,
+    a clean render ships."

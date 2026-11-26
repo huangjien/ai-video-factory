@@ -15,7 +15,9 @@ import type {
   SceneSourcePlan,
 } from "./types.js";
 
-function candidate(over: Partial<HistoricalCandidate> = {}): HistoricalCandidate {
+function candidate(
+  over: Partial<HistoricalCandidate> = {},
+): HistoricalCandidate {
   return {
     source: "commons",
     title: "Portrait of Li Shimin",
@@ -171,7 +173,12 @@ describe("resolveSceneSource", () => {
     const other = resolveSceneSource(
       1,
       "direct",
-      [candidate({ fileUrl: "https://x/other.jpg", digestKey: "https://x/other.jpg|PD" })],
+      [
+        candidate({
+          fileUrl: "https://x/other.jpg",
+          digestKey: "https://x/other.jpg|PD",
+        }),
+      ],
       "q",
     );
     expect(other.digest).not.toBe(a.digest);

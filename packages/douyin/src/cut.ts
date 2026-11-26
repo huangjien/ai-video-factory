@@ -132,10 +132,7 @@ export async function cutVertical(opts: VerticalCutOptions): Promise<string> {
 }
 
 /** The vertical cut already exists and is newer than the master? */
-export function verticalCutIsFresh(
-  out: string,
-  source: string,
-): boolean {
+export function verticalCutIsFresh(out: string, source: string): boolean {
   if (!existsSync(out) || !existsSync(source)) return false;
   return statSync(out).mtimeMs >= statSync(source).mtimeMs;
 }

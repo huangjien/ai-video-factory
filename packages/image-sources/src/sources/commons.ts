@@ -78,7 +78,9 @@ export function parseCommonsResponse(
     out.push({
       source: "commons",
       title,
-      pageUrl: info.descriptionurl ?? `https://commons.wikimedia.org/wiki/${p.title ?? ""}`,
+      pageUrl:
+        info.descriptionurl ??
+        `https://commons.wikimedia.org/wiki/${p.title ?? ""}`,
       fileUrl,
       localPath: null,
       author: metaValue(meta, "Artist"),

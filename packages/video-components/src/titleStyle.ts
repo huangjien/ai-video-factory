@@ -24,9 +24,7 @@ export function luma(hex: string): number {
   if (!m?.[1]) return 0;
   const n = parseInt(m[1], 16);
   return (
-    0.299 * ((n >> 16) & 0xff) +
-    0.587 * ((n >> 8) & 0xff) +
-    0.114 * (n & 0xff)
+    0.299 * ((n >> 16) & 0xff) + 0.587 * ((n >> 8) & 0xff) + 0.114 * (n & 0xff)
   );
 }
 
@@ -85,8 +83,5 @@ export function titleFontSize(
   const units = Math.max(1, titleWidthUnits(chars));
   return vertical
     ? Math.max(48, Math.min(132, Math.floor(((height - 220) / units) * 0.94)))
-    : Math.max(
-        40,
-        Math.min(96, Math.floor(((width * 0.72) / units) * 0.95)),
-      );
+    : Math.max(40, Math.min(96, Math.floor(((width * 0.72) / units) * 0.95)));
 }

@@ -25,10 +25,7 @@ const llm = await import(
   pathToFileURL(path.join(repo, "packages/llm/dist/index.js")).href
 );
 
-const articleMd = readFileSync(
-  path.join(projectDir, "article.md"),
-  "utf8",
-);
+const articleMd = readFileSync(path.join(projectDir, "article.md"), "utf8");
 
 // The task spec the draft loop passes (packages/cli/src/draft-command.ts).
 const task = {
@@ -58,7 +55,9 @@ for (let attempt = 1; ; attempt++) {
   }
 }
 
-console.log(`overall   ${score.computed.overall_score}/100  grade ${score.computed.grade}`);
+console.log(
+  `overall   ${score.computed.overall_score}/100  grade ${score.computed.grade}`,
+);
 console.log(`coverage  ${score.computed.coverage}%`);
 console.log(`passing   ${score.passing}`);
 console.log("");
@@ -82,7 +81,9 @@ if (score.raw.risk_flags?.length) {
   console.log("");
   console.log("risk flags:");
   for (const r of score.raw.risk_flags) {
-    console.log(`  ${r.code} (${r.severity}) findings=${r.finding_ids.join(",")}`);
+    console.log(
+      `  ${r.code} (${r.severity}) findings=${r.finding_ids.join(",")}`,
+    );
   }
 }
 if (score.raw.limitations?.length) {

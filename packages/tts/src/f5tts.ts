@@ -3,7 +3,12 @@ import { existsSync } from "node:fs";
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { TTSError, type TTSProvider, type TTSRequest, type TTSResult } from "./provider.js";
+import {
+  TTSError,
+  type TTSProvider,
+  type TTSRequest,
+  type TTSResult,
+} from "./provider.js";
 
 /** Default interpreter: a uv venv at ~/.venvs/f5tts with the pinned
  *  dependency set (f5-tts-mlx 0.2.6 + mlx 0.29.x — mlx 0.32 breaks
@@ -79,21 +84,30 @@ export interface F5TTSProviderOptions {
 /** Probe the F5-TTS (MLX) install: interpreter + package + reference clip.
  *  Cheap static checks plus one import — ~1-2s, run once per make. */
 const PYTHON_PROBE = "import f5_tts_mlx.generate";
-export async function f5ttsStatus(opts: {
-  pythonPath?: string;
-  refAudioPath?: string;
-  run?: F5Runner;
-} = {}): Promise<{
+export async function f5ttsStatus(
+  opts: {
+    pythonPath?: string;
+    refAudioPath?: string;
+    run?: F5Runner;
+  } = {},
+): Promise<{
   available: boolean;
   refAudio: string;
   refText: string;
   reason?: string;
 }> {
-  const pythonPath = opts.pythonPath ?? process.env.F5TTS_PYTHON ?? DEFAULT_PYTHON;
-  const refAudio = opts.refAudioPath ?? process.env.F5TTS_REF_WAV ?? DEFAULT_REF_AUDIO;
+  const pythonPath =
+    opts.pythonPath ?? process.env.F5TTS_PYTHON ?? DEFAULT_PYTHON;
+  const refAudio =
+    opts.refAudioPath ?? process.env.F5TTS_REF_WAV ?? DEFAULT_REF_AUDIO;
   const refText = refTextPath(refAudio);
   if (!existsSync(pythonPath)) {
-    return { available: false, refAudio, refText, reason: `interpreter missing: ${pythonPath}` };
+    return {
+      available: false,
+      refAudio,
+      refText,
+      reason: `interpreter missing: ${pythonPath}`,
+    };
   }
   if (!existsSync(refAudio) || !existsSync(refText)) {
     return {
@@ -107,7 +121,9 @@ export async function f5ttsStatus(opts: {
     opts.run ??
     ((py, driver, _cfg, timeoutMs) =>
       new Promise<void>((resolve, reject) => {
-        const child = spawn(py, ["-c", driver], { stdio: ["ignore", "ignore", "pipe"] });
+        const child = spawn(py, ["-c", driver], {
+          stdio: ["ignore", "ignore", "pipe"],
+        });
         let stderr = "";
         child.stderr?.on("data", (d) => (stderr += String(d)));
         const timer = setTimeout(() => child.kill("SIGKILL"), timeoutMs);
@@ -119,20 +135,27 @@ export async function f5ttsStatus(opts: {
           clearTimeout(timer);
           code === 0
             ? resolve()
-            : reject(new Error(`import probe exit ${code}: ${stderr.slice(0, 200)}`));
+            : reject(
+                new Error(`import probe exit ${code}: ${stderr.slice(0, 200)}`),
+              );
         });
       }));
   try {
-    await run(pythonPath, PYTHON_PROBE, {
-      text: "",
-      ref_audio: "",
-      ref_text: "",
-      model: "",
-      steps: 0,
-      method: "",
-      out_wav: "",
-      out_json: "",
-    }, 15000);
+    await run(
+      pythonPath,
+      PYTHON_PROBE,
+      {
+        text: "",
+        ref_audio: "",
+        ref_text: "",
+        model: "",
+        steps: 0,
+        method: "",
+        out_wav: "",
+        out_json: "",
+      },
+      15000,
+    );
     return { available: true, refAudio, refText };
   } catch (err) {
     return {
@@ -156,8 +179,10 @@ export class F5TTSProvider implements TTSProvider {
   private readonly resample: (src: string, dst: string) => Promise<void>;
 
   constructor(opts: F5TTSProviderOptions = {}) {
-    this.pythonPath = opts.pythonPath ?? process.env.F5TTS_PYTHON ?? DEFAULT_PYTHON;
-    this.refAudioPath = opts.refAudioPath ?? process.env.F5TTS_REF_WAV ?? DEFAULT_REF_AUDIO;
+    this.pythonPath =
+      opts.pythonPath ?? process.env.F5TTS_PYTHON ?? DEFAULT_PYTHON;
+    this.refAudioPath =
+      opts.refAudioPath ?? process.env.F5TTS_REF_WAV ?? DEFAULT_REF_AUDIO;
     this.model = opts.model ?? "lucasnewman/f5-tts-mlx";
     // Quality baseline (2026-10-25 user A/B): steps=6 + rk4 ACCEPTED
     // (RTF 2.16, w6-s6-rk4.wav); steps=4 midpoint rejected for quality;
@@ -172,7 +197,9 @@ export class F5TTSProvider implements TTSProvider {
       opts.run ??
       ((py, driver, config, timeoutMs) =>
         new Promise<void>((resolve, reject) => {
-          const child = spawn(py, ["-c", driver], { stdio: ["pipe", "ignore", "pipe"] });
+          const child = spawn(py, ["-c", driver], {
+            stdio: ["pipe", "ignore", "pipe"],
+          });
           let stderr = "";
           child.stdin.write(JSON.stringify(config));
           child.stdin.end();
@@ -187,7 +214,9 @@ export class F5TTSProvider implements TTSProvider {
             code === 0
               ? resolve()
               : reject(
-                  new Error(`exit ${code}: ${stderr.slice(-400).trim() || "(no stderr)"}`),
+                  new Error(
+                    `exit ${code}: ${stderr.slice(-400).trim() || "(no stderr)"}`,
+                  ),
                 );
           });
         }));
@@ -239,7 +268,10 @@ export class F5TTSProvider implements TTSProvider {
       try {
         await this.run(this.pythonPath, PYTHON_DRIVER, config, this.timeoutMs);
       } catch (err) {
-        throw new TTSError(`F5-TTS synthesis failed: ${(err as Error).message}`, this.name);
+        throw new TTSError(
+          `F5-TTS synthesis failed: ${(err as Error).message}`,
+          this.name,
+        );
       }
       const audio = await readFile(outWav);
       const meta = JSON.parse(await readFile(outJson, "utf8")) as {
@@ -279,7 +311,12 @@ export class F5TTSProvider implements TTSProvider {
       child.on("close", (code) =>
         code === 0
           ? resolve()
-          : reject(new TTSError(`reference resample failed: ${stderr.slice(-200)}`, this.name)),
+          : reject(
+              new TTSError(
+                `reference resample failed: ${stderr.slice(-200)}`,
+                this.name,
+              ),
+            ),
       );
     });
   }

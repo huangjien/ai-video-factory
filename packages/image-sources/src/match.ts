@@ -110,7 +110,10 @@ export async function matchSceneSources(
     if (scene === undefined) continue;
     const count = scene.candidates.length;
     // An index outside the list is not a pick — the scene gets nothing.
-    out.set(entry.scene, entry.pick >= 0 && entry.pick < count ? entry.pick : -1);
+    out.set(
+      entry.scene,
+      entry.pick >= 0 && entry.pick < count ? entry.pick : -1,
+    );
   }
   return out;
 }

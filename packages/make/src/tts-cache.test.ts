@@ -4,10 +4,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 
 import { runMake, ttsCacheKey } from "./index.js";
-import {
-  effectiveTtsVoice,
-  ttsCacheModelFor,
-} from "./tts-cache.js";
+import { effectiveTtsVoice, ttsCacheModelFor } from "./tts-cache.js";
 import type { TtsCacheKeyInput } from "./tts-cache.js";
 
 /** The cache key for a scene, with only the inputs a test cares about
@@ -229,9 +226,9 @@ describe("ttsCacheKey — the model tier", () => {
 
 describe("effectiveTtsVoice — the fallback follows the backend", () => {
   it("uses the frontmatter voice when there is one", () => {
-    expect(
-      effectiveTtsVoice("narrator-zh", "zh-CN", "voicebox"),
-    ).toBe("narrator-zh");
+    expect(effectiveTtsVoice("narrator-zh", "zh-CN", "voicebox")).toBe(
+      "narrator-zh",
+    );
   });
 
   it("falls back to the voice the backend can speak", () => {

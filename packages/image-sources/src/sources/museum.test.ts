@@ -13,7 +13,8 @@ describe("parseMetObject", () => {
         title: "Portrait of a Man",
         artistDisplayName: "Anonymous",
         isPublicDomain: true,
-        primaryImage: "https://images.metmuseum.org/CRDImages/ep/original/DP-1.jpg",
+        primaryImage:
+          "https://images.metmuseum.org/CRDImages/ep/original/DP-1.jpg",
         objectURL: "https://www.metmuseum.org/art/collection/search/1",
       },
       "portrait",

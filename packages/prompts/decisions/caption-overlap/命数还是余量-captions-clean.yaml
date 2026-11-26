@@ -1,6 +1,7 @@
 id: 命数还是余量-captions-clean
 surface: caption-overlap
-state: 'Frame 1 of 22. The bottom band of the frame carries the timed caption. The caption runs 2
+state:
+  'Frame 1 of 22. The bottom band of the frame carries the timed caption. The caption runs 2
   cue(s) from 00:00 to 00:16: "清朝有位算命先生，不说对方还能活几年，只丢下一句 话：你还能吃二十石米、四十石面。" No other text is drawn in
   that region.'
 expects:
@@ -12,7 +13,8 @@ expects:
 baseline: "false"
 policy:
   rule: caption-band
-  note: The shipped render's caption check passed and the scene's own text sits ABOVE the caption
+  note:
+    The shipped render's caption check passed and the scene's own text sits ABOVE the caption
     band, so the caption sits alone in the bottom band.
 provenance:
   source: projects/命数还是余量/qa/render-report.json (captions.ok, 36 cues) +

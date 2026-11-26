@@ -39,7 +39,8 @@ describe("parseCommonsTitleResponse", () => {
               imageinfo: [
                 {
                   url: "https://upload.wikimedia.org/wikipedia/commons/a/ab/Portrait.jpg",
-                  descriptionurl: "https://commons.wikimedia.org/wiki/File:Portrait.jpg",
+                  descriptionurl:
+                    "https://commons.wikimedia.org/wiki/File:Portrait.jpg",
                   width: 800,
                   height: 1000,
                   extmetadata: {
@@ -60,7 +61,9 @@ describe("parseCommonsTitleResponse", () => {
   });
 
   it("returns null when the file is not on Commons", () => {
-    expect(parseCommonsTitleResponse({ query: { pages: [] } }, "File:X")).toBeNull();
+    expect(
+      parseCommonsTitleResponse({ query: { pages: [] } }, "File:X"),
+    ).toBeNull();
     expect(parseCommonsTitleResponse({}, "File:X")).toBeNull();
   });
 

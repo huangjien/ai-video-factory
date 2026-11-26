@@ -59,10 +59,20 @@ export function parseImageSourcesMode(
   raw: string | undefined,
 ): ImageSourcesMode | undefined {
   const value = (raw ?? "").trim().toLowerCase();
-  if (value === "off" || value === "none" || value === "false" || value === "no") {
+  if (
+    value === "off" ||
+    value === "none" ||
+    value === "false" ||
+    value === "no"
+  ) {
     return "off";
   }
-  if (value === "on" || value === "auto" || value === "true" || value === "yes") {
+  if (
+    value === "on" ||
+    value === "auto" ||
+    value === "true" ||
+    value === "yes"
+  ) {
     return "on";
   }
   return undefined;
@@ -226,7 +236,9 @@ export async function resolveHistoricalSources(opts: {
         : index === undefined
           ? // The matcher did not answer for this scene — fall back to the
             // search order.
-            (list.length > 0 ? pickBest(list, planned?.query ?? "") : null)
+            list.length > 0
+            ? pickBest(list, planned?.query ?? "")
+            : null
           : // The matcher answered "none": this scene gets no picture.
             null;
     const resolution = resolveSceneSource(

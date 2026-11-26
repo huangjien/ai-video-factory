@@ -68,7 +68,9 @@ export class VideoSourcePlanError extends Error {
  *  testable without a provider. */
 export function buildVideoPlanMessages(input: PlanVideoInput): ChatMessage[] {
   const lines: string[] = [];
-  lines.push(`Select up to ${MAX_VIDEO_SCENES} eligible footage scenes. Prefer footage wherever it directly illustrates the narration.`);
+  lines.push(
+    `Select up to ${MAX_VIDEO_SCENES} eligible footage scenes. Prefer footage wherever it directly illustrates the narration.`,
+  );
   lines.push(`Video title: ${input.title}`);
   if (input.setting !== undefined && input.setting.trim() !== "") {
     lines.push(`Setting: ${input.setting.trim()}`);

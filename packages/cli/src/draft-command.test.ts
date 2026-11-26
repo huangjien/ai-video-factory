@@ -2,7 +2,14 @@ import { defaultModel } from "@video/llm";
 import { describe, expect, it, beforeAll, afterAll, vi } from "vitest";
 import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
-import { mkdtemp, mkdir, rm, writeFile, readFile, readdir } from "node:fs/promises";
+import {
+  mkdtemp,
+  mkdir,
+  rm,
+  writeFile,
+  readFile,
+  readdir,
+} from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { parse as parseYaml } from "yaml";
@@ -523,9 +530,7 @@ describe("preserveFrontmatterKeys", () => {
  */
 describe("resolveNarrationConfig", () => {
   it("defaults to MiniMax with the language's system narrator", () => {
-    expect(
-      resolveNarrationConfig({ language: "zh-CN" }),
-    ).toEqual({
+    expect(resolveNarrationConfig({ language: "zh-CN" })).toEqual({
       provider: "minimax",
       voice: "Chinese (Mandarin)_Male_Announcer",
     });
@@ -696,10 +701,7 @@ describe("runDraft — the channel profile stamp", () => {
       noAudioPlan: true,
     });
     expect(code).toBe(0);
-    const article = await readFile(
-      path.join(proj, "article.md"),
-      "utf8",
-    );
+    const article = await readFile(path.join(proj, "article.md"), "utf8");
     expect(article).toContain("channel_profile: chinese-storybook");
   }, 20_000);
 });
@@ -719,10 +721,7 @@ describe("runDraft — the title card style stamp", () => {
       noAudioPlan: true,
     });
     expect(code).toBe(0);
-    const article = await readFile(
-      path.join(proj, "article.md"),
-      "utf8",
-    );
+    const article = await readFile(path.join(proj, "article.md"), "utf8");
     expect(article).toContain("title_style: brush");
   }, 20_000);
 });
@@ -746,8 +745,9 @@ describe("runDraft — run records", () => {
     const files = (await readdir(runsDir)).filter((f) => f.endsWith(".yaml"));
     expect(files.length).toBeGreaterThan(0);
     const records = await Promise.all(
-      files.map(async (f) =>
-        parseYaml(await readFile(path.join(runsDir, f), "utf8")) as RunRecord,
+      files.map(
+        async (f) =>
+          parseYaml(await readFile(path.join(runsDir, f), "utf8")) as RunRecord,
       ),
     );
     const draft = records.find((r) => r.stage === "draft");

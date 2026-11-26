@@ -20,8 +20,7 @@ describe("Todo 7 — theme tokens", () => {
   });
 
   it("registry omits AnimatedIllustration", () => {
-    expect(COMPONENT_NAMES.sort()).toEqual(
-      [
+    expect(COMPONENT_NAMES.sort()).toEqual([
       "Character",
       "CodeBlock",
       "DoodleScene",
@@ -30,9 +29,8 @@ describe("Todo 7 — theme tokens", () => {
       "ImageBackground",
       "Paragraph",
       "Title",
-      "VideoBackground"
-      ],
-    );
+      "VideoBackground",
+    ]);
     expect(REGISTRY).not.toHaveProperty("AnimatedIllustration");
   });
 

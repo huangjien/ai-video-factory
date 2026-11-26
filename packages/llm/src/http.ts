@@ -55,8 +55,7 @@ export function llmHttpTimeouts(): {
 } {
   const raw = process.env["LLM_HTTP_TIMEOUT_MS"];
   const parsed = raw === undefined ? Number.NaN : Number(raw);
-  const ms =
-    Number.isFinite(parsed) && parsed > 0 ? parsed : LLM_TIMEOUT_MS;
+  const ms = Number.isFinite(parsed) && parsed > 0 ? parsed : LLM_TIMEOUT_MS;
   return { headersTimeout: ms, bodyTimeout: ms };
 }
 

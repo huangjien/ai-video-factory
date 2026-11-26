@@ -68,11 +68,15 @@ function decodeEntities(s: string): string {
 }
 
 /** Build a query string, dropping empty values. */
-export function qs(params: Record<string, string | number | undefined>): string {
+export function qs(
+  params: Record<string, string | number | undefined>,
+): string {
   const parts: string[] = [];
   for (const [key, value] of Object.entries(params)) {
     if (value === undefined || value === "") continue;
-    parts.push(`${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`);
+    parts.push(
+      `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`,
+    );
   }
   return parts.join("&");
 }

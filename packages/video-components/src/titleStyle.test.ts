@@ -25,7 +25,9 @@ describe("the title card's ink", () => {
   });
 
   it("falls back to the theme's own ink without art", () => {
-    expect(titleInk(paperLightTheme, null)).toBe(paperLightTheme.colors.primary);
+    expect(titleInk(paperLightTheme, null)).toBe(
+      paperLightTheme.colors.primary,
+    );
   });
 
   it("flips with the theme, not with a hardcoded colour", () => {
@@ -50,7 +52,12 @@ describe("the title card's type size", () => {
   });
 
   it("sets a long headline smaller instead of wrapping it", () => {
-    const long = titleFontSize([..."弃书不是题材太小而是节奏不对"], 1920, 1080, false);
+    const long = titleFontSize(
+      [..."弃书不是题材太小而是节奏不对"],
+      1920,
+      1080,
+      false,
+    );
     expect(long).toBeLessThan(96);
     expect(long).toBeGreaterThanOrEqual(40);
   });

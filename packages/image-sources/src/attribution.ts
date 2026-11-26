@@ -56,7 +56,10 @@ export const ATTRIBUTION_FILENAME = "ATTRIBUTION.md";
 export const HISTORICAL_FILENAME = "HISTORICAL.md";
 
 /** `assets/images/scene_7.source.json` */
-export function sceneSourcePath(imagesDir: string, sceneNumber: number): string {
+export function sceneSourcePath(
+  imagesDir: string,
+  sceneNumber: number,
+): string {
   return path.join(imagesDir, `scene_${sceneNumber}.source.json`);
 }
 
@@ -103,10 +106,7 @@ export function writeSceneSource(
 }
 
 /** Remove the sidecar for a scene that no longer uses a picture. */
-export function clearSceneSource(
-  imagesDir: string,
-  sceneNumber: number,
-): void {
+export function clearSceneSource(imagesDir: string, sceneNumber: number): void {
   try {
     const file = sceneSourcePath(imagesDir, sceneNumber);
     if (existsSync(file)) writeFileSync(file, "", "utf8");
@@ -179,9 +179,7 @@ export function writeAttributionFile(
   if (rows.length === 0) {
     lines.push("_No external pictures were used._", "");
   } else {
-    lines.push(
-      "| Scene | Use | Picture | Source | Author | License | Where |",
-    );
+    lines.push("| Scene | Use | Picture | Source | Author | License | Where |");
     lines.push("| --- | --- | --- | --- | --- | --- | --- |");
     for (const { scene, record } of rows) {
       const where =
@@ -233,9 +231,7 @@ export function writeHistoricalSummaryFile(
   },
 ): string {
   const planned = opts.plan.filter((p) => p.historical && p.mode !== "none");
-  const landed = new Map(
-    (opts.sidecars ?? []).map((s) => [s.scene, s.record]),
-  );
+  const landed = new Map((opts.sidecars ?? []).map((s) => [s.scene, s.record]));
   const rows = planned.map((p) => {
     const resolution = opts.resolutions.get(p.scene);
     const record = landed.get(p.scene);
@@ -283,7 +279,9 @@ export function writeHistoricalSummaryFile(
     if (rows.length === 0) {
       lines.push("_No scene was planned as historical._", "");
     } else {
-      lines.push("| Scene | Planned | Subject | Query | Outcome | Picture | License |");
+      lines.push(
+        "| Scene | Planned | Subject | Query | Outcome | Picture | License |",
+      );
       lines.push("| --- | --- | --- | --- | --- | --- | --- |");
       for (const r of rows) {
         const picture =

@@ -119,9 +119,9 @@ describe("buildDraftBarState", () => {
   });
 
   it("says so when there are no findings", () => {
-    expect(
-      buildDraftBarState("demo", { attempt: 1, passing: true }),
-    ).toContain("No findings.");
+    expect(buildDraftBarState("demo", { attempt: 1, passing: true })).toContain(
+      "No findings.",
+    );
   });
 });
 
@@ -281,7 +281,6 @@ describe("harvestDraftBarCandidates", () => {
     expect(candidates).toHaveLength(0);
   });
 });
-
 
 describe("runDraftDecisionShadow", () => {
   it("skips cleanly when the provider has no key", async () => {

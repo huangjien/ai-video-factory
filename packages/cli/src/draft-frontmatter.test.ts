@@ -36,7 +36,10 @@ describe("frontmatterHasKey", () => {
 
   it("false when the key is absent (only in the body)", () => {
     expect(
-      frontmatterHasKey("---\nproject: t\n---\ntts_provider: body-text", "tts_provider"),
+      frontmatterHasKey(
+        "---\nproject: t\n---\ntts_provider: body-text",
+        "tts_provider",
+      ),
     ).toBe(false);
   });
 

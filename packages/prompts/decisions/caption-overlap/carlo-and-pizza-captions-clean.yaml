@@ -1,6 +1,7 @@
 id: carlo-and-pizza-captions-clean
 surface: caption-overlap
-state: 'Frame 1 of 24. The bottom band of the frame carries the timed caption. The caption runs 3
+state:
+  'Frame 1 of 24. The bottom band of the frame carries the timed caption. The caption runs 3
   cue(s) from 00:00 to 00:26: "Carlo 是意大利人。你猜他最喜欢什么 Pizza？ Margherita 听起来合理，因为它是经典的意大利" No other
   text is drawn in that region.'
 expects:
@@ -12,8 +13,10 @@ expects:
 baseline: "false"
 policy:
   rule: caption-band
-  note: The shipped render's caption check passed and the scene's own text sits ABOVE the caption
+  note:
+    The shipped render's caption check passed and the scene's own text sits ABOVE the caption
     band, so the caption sits alone in the bottom band.
 provenance:
-  source: projects/carlo-and-pizza/qa/render-report.json (captions.ok, 96 cues) +
+  source:
+    projects/carlo-and-pizza/qa/render-report.json (captions.ok, 96 cues) +
     projects/carlo-and-pizza/captions/zh-CN.srt — the caption sits alone in the bottom band.

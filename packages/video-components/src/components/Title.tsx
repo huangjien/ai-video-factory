@@ -161,12 +161,11 @@ export const Title: FC<TitleProps> = ({
   useEffect(() => {
     let cancelled = false;
     if (artSrc !== undefined && artSrc.length > 0) {
-      void measureArtLuma(
-        artSrc,
-        vertical ? RIGHT_STRIP : CENTER_BAND,
-      ).then((value) => {
-        if (!cancelled) setArtLuma(value);
-      });
+      void measureArtLuma(artSrc, vertical ? RIGHT_STRIP : CENTER_BAND).then(
+        (value) => {
+          if (!cancelled) setArtLuma(value);
+        },
+      );
     }
     const fontJob =
       fontSrc !== undefined && fontSrc.length > 0
@@ -320,16 +319,17 @@ export const Title: FC<TitleProps> = ({
       </div>
     ) : null;
 
-  const art = artSrc !== undefined && artSrc.length > 0 ? (
-    <SceneBackground
-      src={artSrc}
-      scrim={false}
-      theme={theme}
-      startFrame={startFrame}
-      durationInFrames={durationInFrames}
-      frame={frame}
-    />
-  ) : null;
+  const art =
+    artSrc !== undefined && artSrc.length > 0 ? (
+      <SceneBackground
+        src={artSrc}
+        scrim={false}
+        theme={theme}
+        startFrame={startFrame}
+        durationInFrames={durationInFrames}
+        frame={frame}
+      />
+    ) : null;
 
   if (vertical) {
     // Poster layout: the title runs down the right edge, the small

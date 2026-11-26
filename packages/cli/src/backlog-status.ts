@@ -4,8 +4,15 @@ import { parse as parseYaml } from "yaml";
 import type { Command } from "commander";
 import { findRepoRoot } from "./learn-command.js";
 import { slugifyProjectName } from "./project-path.js";
-import { isStaleDrafting, loadBacklogStore, type BacklogEntry } from "./backlog-store.js";
-import { schedulerState, type BacklogScheduleOptions } from "./backlog-schedule.js";
+import {
+  isStaleDrafting,
+  loadBacklogStore,
+  type BacklogEntry,
+} from "./backlog-store.js";
+import {
+  schedulerState,
+  type BacklogScheduleOptions,
+} from "./backlog-schedule.js";
 import { readJudgeCache } from "./backlog-judge-cache.js";
 
 /**
@@ -41,7 +48,8 @@ function entryProgress(repoRoot: string, entry: BacklogEntry): EntryProgress {
   const enArticle = path.join(enRoot, "article.md");
   const bvid = path.join(zhRoot, "bilibili", "bvid.txt");
 
-  const draftZh = entry.status === "drafted" || existsSync(path.join(zhRoot, "article.md"));
+  const draftZh =
+    entry.status === "drafted" || existsSync(path.join(zhRoot, "article.md"));
   const makeZh = existsSync(zhMp4);
   const translate = existsSync(enArticle);
   const makeEn = existsSync(enMp4);
@@ -108,7 +116,9 @@ function recentAutoRecords(repoRoot: string, cap: number): AutoRecord[] {
   return out;
 }
 
-export async function runBacklogStatus(opts: BacklogStatusOptions): Promise<number> {
+export async function runBacklogStatus(
+  opts: BacklogStatusOptions,
+): Promise<number> {
   const repoRoot = findRepoRoot(opts.cwd ?? process.cwd());
   console.log("backlog status");
 
@@ -117,10 +127,14 @@ export async function runBacklogStatus(opts: BacklogStatusOptions): Promise<numb
     kind: "auto",
     cwd: repoRoot,
     ...(opts.plistDir !== undefined ? { plistDir: opts.plistDir } : {}),
-    ...(opts.runLaunchctl !== undefined ? { runLaunchctl: opts.runLaunchctl } : {}),
+    ...(opts.runLaunchctl !== undefined
+      ? { runLaunchctl: opts.runLaunchctl }
+      : {}),
   });
   const schedLabel =
-    sched.kind === "auto" ? "nightly 01:00/03:00/05:00 auto-producer" : "weekly harvest";
+    sched.kind === "auto"
+      ? "nightly 01:00/03:00/05:00 auto-producer"
+      : "weekly harvest";
   console.log(
     `scheduler: ${sched.installed ? `installed (${sched.loaded ? "loaded" : "NOT loaded"})` : "not installed"} — ${schedLabel}`,
   );
@@ -132,7 +146,9 @@ export async function runBacklogStatus(opts: BacklogStatusOptions): Promise<numb
   if (existsSync(lockPath)) {
     let lockLine = "auto run: unreadable lock — see runs/backlog-auto.lock";
     try {
-      const raw = parseYaml(readFileSync(lockPath, "utf8")) as { pid?: number } | null;
+      const raw = parseYaml(readFileSync(lockPath, "utf8")) as {
+        pid?: number;
+      } | null;
       const pid = raw?.pid;
       if (typeof pid !== "number") {
         lockLine = "auto run: lock present (no pid recorded)";
@@ -170,7 +186,9 @@ export async function runBacklogStatus(opts: BacklogStatusOptions): Promise<numb
       const stale = isStaleDrafting(entry);
       console.log(
         `⏳ in progress: ${entry.id} [drafting${stale ? ", STALE >24h" : ""}]` +
-          (stale ? ` → resume the failed stage or \`video backlog reset ${entry.id}\`` : ""),
+          (stale
+            ? ` → resume the failed stage or \`video backlog reset ${entry.id}\``
+            : ""),
       );
       inProgressCount++;
       continue;
@@ -178,7 +196,9 @@ export async function runBacklogStatus(opts: BacklogStatusOptions): Promise<numb
     if (entry.status !== "drafted") continue;
     const progress = entryProgress(repoRoot, entry);
     if (progress.stages.every((s) => s.done)) continue;
-    const marks = progress.stages.map((s) => `${s.label} ${s.done ? "✓" : "✗"}`).join("  ");
+    const marks = progress.stages
+      .map((s) => `${s.label} ${s.done ? "✓" : "✗"}`)
+      .join("  ");
     console.log(`⏳ in progress: ${progress.entry.id}  ${marks}`);
     console.log(`   → continue: ${progress.next}`);
     inProgressCount++;
@@ -200,11 +220,15 @@ export async function runBacklogStatus(opts: BacklogStatusOptions): Promise<numb
   }
   const judgeFailure = readJudgeCache(repoRoot)?.failure;
   if (judgeFailure !== undefined) {
-    console.log(`  ! latest judge failure: ${judgeFailure.message} — see runs/backlog-judge.yaml`);
+    console.log(
+      `  ! latest judge failure: ${judgeFailure.message} — see runs/backlog-judge.yaml`,
+    );
   }
   if (records.length > 0 && failures.length === 0) {
     const newest = records[0]!;
-    console.log(`recent run: ${newest.status ?? "?"} — ${newest.error ?? "(clean)"}`);
+    console.log(
+      `recent run: ${newest.status ?? "?"} — ${newest.error ?? "(clean)"}`,
+    );
   }
 
   return 0;
@@ -216,7 +240,10 @@ export function addStatusCommand(backlog: Command): void {
     .description(
       "is anything running / failed / in progress — with the exact continue command (scheduler, live lock, per-entry stage checklist, failed runs)",
     )
-    .option("--cwd <dir>", "repo root (default: walk up to pnpm-workspace.yaml)")
+    .option(
+      "--cwd <dir>",
+      "repo root (default: walk up to pnpm-workspace.yaml)",
+    )
     .option("--plist-dir <dir>", "TEST SEAM: LaunchAgents dir override")
     .action(async (opts: { cwd?: string; plistDir?: string }) => {
       process.exitCode = await runBacklogStatus({

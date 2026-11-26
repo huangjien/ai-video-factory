@@ -105,4 +105,3 @@ export function loadedPromptNames(): string[] {
 export function readPromptFile(file: string): string {
   return readFileSync(path.join(promptsDir(), file), "utf8");
 }
-

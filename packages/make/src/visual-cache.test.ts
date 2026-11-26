@@ -214,9 +214,9 @@ describe("image cache keys the expander revision", () => {
     const key = imageCacheKey({ ...base, sourceDigest: "direct:aaa" });
     // A historical picture is an image INPUT: swapping it changes the
     // image, so the cached one is stale.
-    expect(
-      imageCacheKey({ ...base, sourceDigest: "direct:bbb" }),
-    ).not.toBe(key);
+    expect(imageCacheKey({ ...base, sourceDigest: "direct:bbb" })).not.toBe(
+      key,
+    );
     expect(imageCacheKey({ ...base, sourceDigest: "direct:aaa" })).toBe(key);
     // A scene with no borrowed picture keeps its own key.
     expect(imageCacheKey({ ...base, sourceDigest: "" })).not.toBe(key);

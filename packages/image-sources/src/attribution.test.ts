@@ -174,7 +174,8 @@ describe("writeHistoricalSummaryFile", () => {
               author: "Anonymous",
               license: "PD",
               licenseUrl: "",
-              pageUrl: "https://commons.wikimedia.org/wiki/File:TangTaizongP.jpg",
+              pageUrl:
+                "https://commons.wikimedia.org/wiki/File:TangTaizongP.jpg",
               fileUrl: "https://upload.wikimedia.org/x.jpg",
               localPath: null,
               digest: "direct:abc",
@@ -217,7 +218,8 @@ describe("writeHistoricalSummaryFile", () => {
               candidate: {
                 source: "commons",
                 title: "TangTaizongP.jpg",
-                pageUrl: "https://commons.wikimedia.org/wiki/File:TangTaizongP.jpg",
+                pageUrl:
+                  "https://commons.wikimedia.org/wiki/File:TangTaizongP.jpg",
                 fileUrl: "https://upload.wikimedia.org/x.jpg",
                 localPath: null,
                 author: "Anonymous",

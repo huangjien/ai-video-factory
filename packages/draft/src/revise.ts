@@ -1,16 +1,8 @@
-import type {
-  ChatMessage,
-  Provider,
-  ProviderTelemetry,
-} from "@video/llm";
+import type { ChatMessage, Provider, ProviderTelemetry } from "@video/llm";
 import { callStructured, extractJsonObject } from "@video/llm";
 import { loadPrompt } from "@video/prompts";
 import { withChannelBlock } from "./channel-profile.js";
-import {
-  DraftError,
-  renderArticleMd,
-  type RawArticle,
-} from "./agent.js";
+import { DraftError, renderArticleMd, type RawArticle } from "./agent.js";
 import type { DraftInput } from "./prompt.js";
 
 /**

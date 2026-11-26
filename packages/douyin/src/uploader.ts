@@ -148,9 +148,7 @@ function pickUploadUrl(json: unknown): string | undefined {
     upload_url?: string;
   };
   return (
-    root?.data?.video?.upload_url ??
-    root?.data?.upload_url ??
-    root?.upload_url
+    root?.data?.video?.upload_url ?? root?.data?.upload_url ?? root?.upload_url
   );
 }
 
@@ -214,7 +212,11 @@ export async function uploadDouyin(
   );
   if (opts.coverPath !== undefined && existsSync(opts.coverPath)) {
     const cover = await readFile(opts.coverPath);
-    form.append("cover", new Blob([cover], { type: "image/jpeg" }), basename(opts.coverPath));
+    form.append(
+      "cover",
+      new Blob([cover], { type: "image/jpeg" }),
+      basename(opts.coverPath),
+    );
   }
   const upRes = await fetchImpl(uploadUrl, { method: "POST", body: form });
   if (!upRes.ok) {

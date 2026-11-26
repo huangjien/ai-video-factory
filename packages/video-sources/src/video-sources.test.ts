@@ -37,7 +37,8 @@ const candidate = (over: Partial<VideoCandidate> = {}): VideoCandidate => ({
   height: 480,
   durationSec: 120,
   sizeBytes: 10_000_000,
-  digestKey: "https://upload.wikimedia.org/wikipedia/commons/x/xx/landing.ogv|PD",
+  digestKey:
+    "https://upload.wikimedia.org/wikipedia/commons/x/xx/landing.ogv|PD",
   query: "carrier landing",
   ...over,
 });
@@ -145,7 +146,10 @@ describe("resolveSceneVideo — a clip must cover the scene", () => {
     const { candidate: got } = resolveSceneVideo(
       [
         candidate({ title: "Unrelated parade 1951", fileUrl: "https://p" }),
-        candidate({ title: "Carrier landing aboard USS Yorktown 1944", fileUrl: "https://y" }),
+        candidate({
+          title: "Carrier landing aboard USS Yorktown 1944",
+          fileUrl: "https://y",
+        }),
       ],
       "carrier landing",
       10,
@@ -247,7 +251,8 @@ describe("attribution — sidecar and ATTRIBUTION.md", () => {
       author: "US Navy",
       license: "PD",
       licenseUrl: "",
-      pageUrl: "https://commons.wikimedia.org/wiki/File:Carrier_landing_1944.ogv",
+      pageUrl:
+        "https://commons.wikimedia.org/wiki/File:Carrier_landing_1944.ogv",
       fileUrl: "https://upload.wikimedia.org/x/landing.ogv",
       localPath: "/tmp/scene_1.mp4",
       durationSec: 120,
@@ -282,7 +287,9 @@ describe("attribution — sidecar and ATTRIBUTION.md", () => {
     const text = await readFile(out, "utf8");
     expect(text).toContain("Video attribution");
     expect(text).toContain("Landing \\| takeoff reel");
-    expect(text).toContain("[link](https://commons.wikimedia.org/wiki/File:x.ogv)");
+    expect(text).toContain(
+      "[link](https://commons.wikimedia.org/wiki/File:x.ogv)",
+    );
   });
 });
 

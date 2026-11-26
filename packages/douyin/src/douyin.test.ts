@@ -181,10 +181,9 @@ describe("uploadDouyin", () => {
         expect(init?.body).toBeInstanceOf(FormData);
         return new Response("", { status: 200 });
       }
-      return new Response(
-        JSON.stringify({ data: { item_id: "item-1" } }),
-        { status: 200 },
-      );
+      return new Response(JSON.stringify({ data: { item_id: "item-1" } }), {
+        status: 200,
+      });
     }) as unknown as typeof fetch;
 
     const result = await uploadDouyin({
@@ -201,7 +200,10 @@ describe("uploadDouyin", () => {
   it("reports the API's own reason when the create call fails", async () => {
     const fetchImpl = (async () =>
       new Response(
-        JSON.stringify({ error_code: 4001, description: "capability not approved" }),
+        JSON.stringify({
+          error_code: 4001,
+          description: "capability not approved",
+        }),
         { status: 400 },
       )) as unknown as typeof fetch;
 

@@ -16,11 +16,23 @@
 //
 // Usage: node scripts/build-bundle.mjs
 import { build } from "esbuild";
-import { cpSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync, readdirSync, statSync } from "node:fs";
+import {
+  cpSync,
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+  readdirSync,
+  statSync,
+} from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const repoRoot = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  "..",
+);
 const cliDir = path.join(repoRoot, "packages", "cli");
 const outDir = path.join(cliDir, "dist-bundle");
 const workspacePkgsDir = path.join(repoRoot, "packages");
@@ -42,7 +54,10 @@ for (const entry of readdirSync(workspacePkgsDir)) {
   const manifestPath = path.join(workspacePkgsDir, entry, "package.json");
   if (!existsSync(manifestPath)) continue;
   const manifest = readManifest(path.join(workspacePkgsDir, entry));
-  workspaceManifests.set(manifest.name, { dir: path.join(workspacePkgsDir, entry), manifest });
+  workspaceManifests.set(manifest.name, {
+    dir: path.join(workspacePkgsDir, entry),
+    manifest,
+  });
 }
 
 /** The third-party dependency union of the whole closure — what the
@@ -58,7 +73,9 @@ function thirdPartyClosure(startName) {
     seen.add(name);
     const entry = workspaceManifests.get(name);
     if (entry === undefined) continue;
-    for (const [dep, range] of Object.entries(entry.manifest.dependencies ?? {})) {
+    for (const [dep, range] of Object.entries(
+      entry.manifest.dependencies ?? {},
+    )) {
       if (dep.startsWith("@video/")) stack.push(dep);
       else if (!third.has(dep)) third.set(dep, range);
     }
@@ -72,12 +89,14 @@ const { third, workspaceCount } = thirdPartyClosure("@video/cli");
  *  files (the published tarball must not carry compiled tests). */
 function vendorPackage(name) {
   const entry = workspaceManifests.get(name);
-  if (entry === undefined) throw new Error(`unknown workspace package: ${name}`);
+  if (entry === undefined)
+    throw new Error(`unknown workspace package: ${name}`);
   const dest = path.join(outDir, "vendor", "node_modules", ...name.split("/"));
   rmSync(dest, { recursive: true, force: true });
   mkdirSync(dest, { recursive: true });
   const srcDist = path.join(entry.dir, "dist");
-  if (!existsSync(srcDist)) throw new Error(`${name} has no dist — run pnpm run build first`);
+  if (!existsSync(srcDist))
+    throw new Error(`${name} has no dist — run pnpm run build first`);
   cpSync(srcDist, path.join(dest, "dist"), {
     recursive: true,
     filter: (src) => !/\.test\.(js|js\.map|d\.ts|d\.ts\.map)$/.test(src),
@@ -91,7 +110,9 @@ function vendorPackage(name) {
         type: "module",
         main: "dist/index.js",
         types: "dist/index.d.ts",
-        exports: entry.manifest.exports ?? { ".": { default: "./dist/index.js" } },
+        exports: entry.manifest.exports ?? {
+          ".": { default: "./dist/index.js" },
+        },
         license: entry.manifest.license ?? "Apache-2.0",
       },
       null,
@@ -134,8 +155,14 @@ if (result.errors.length > 0) {
 }
 
 // ── the vendored render-path files ────────────────────────────────────────
-const rootSrc = path.join(workspacePkgsDir, "video-renderer", "dist", "Root.js");
-if (!existsSync(rootSrc)) throw new Error("video-renderer/dist/Root.js missing — run pnpm run build");
+const rootSrc = path.join(
+  workspacePkgsDir,
+  "video-renderer",
+  "dist",
+  "Root.js",
+);
+if (!existsSync(rootSrc))
+  throw new Error("video-renderer/dist/Root.js missing — run pnpm run build");
 mkdirSync(path.join(outDir, "vendor"), { recursive: true });
 cpSync(rootSrc, path.join(outDir, "vendor", "Root.js"));
 for (const name of VENDOR_PACKAGES) vendorPackage(name);
@@ -214,7 +241,10 @@ const published = {
   dependencies: Object.fromEntries([...third.entries()].sort()),
   files: ["cli.js", "cli.js.map", "vendor", "prompts", "assets", "evals"],
   keywords: ["video", "ai", "llm", "pipeline", "youtube", "shorts", "chinese"],
-  repository: { type: "git", url: "git+https://github.com/huangjien/ai-video-factory.git" },
+  repository: {
+    type: "git",
+    url: "git+https://github.com/huangjien/ai-video-factory.git",
+  },
   homepage: "https://github.com/huangjien/ai-video-factory#readme",
   publishConfig: { access: "public" },
 };
@@ -228,5 +258,9 @@ const bundleBytes = statSync(path.join(outDir, "cli.js")).size;
 console.log(`bundled ${workspaceCount} workspace packages → ${outDir}`);
 console.log(`  cli.js            ${(bundleBytes / 1024).toFixed(0)} kB`);
 console.log(`  externals         ${[...third.keys()].join(", ")}`);
-console.log(`  vendored on disk  ${["vendor/Root.js", ...VENDOR_PACKAGES].join(", ")}`);
-console.log(`publish with: cd packages/cli/dist-bundle && npm publish --access public`);
+console.log(
+  `  vendored on disk  ${["vendor/Root.js", ...VENDOR_PACKAGES].join(", ")}`,
+);
+console.log(
+  `publish with: cd packages/cli/dist-bundle && npm publish --access public`,
+);

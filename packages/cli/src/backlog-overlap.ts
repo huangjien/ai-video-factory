@@ -31,30 +31,112 @@ const MAX_KEYWORDS = 40;
  *  before scanning (2026-11-19 dry-run: "the"/"why"/"为什" flagged 20+
  *  unrelated projects per idea). */
 const LATIN_STOPWORDS: Record<string, true> = {
-  the: true, and: true, for: true, not: true, but: true, why: true,
-  how: true, what: true, when: true, where: true, which: true, who: true,
-  whose: true, with: true, without: true, into: true, from: true, that: true,
-  this: true, these: true, those: true, there: true, their: true, them: true,
-  they: true, than: true, then: true, are: true, was: true, were: true,
-  been: true, being: true, have: true, has: true, had: true, its: true,
-  it: true, is: true, one: true, two: true, same: true, other: true,
-  another: true, such: true, only: true, also: true, just: true, like: true,
-  over: true, under: true, about: true, after: true, before: true,
-  between: true, during: true, each: true, some: true, any: true, all: true,
-  more: true, most: true, less: true, least: true, very: true, much: true,
-  many: true, can: true, could: true, should: true, would: true, may: true,
-  might: true, must: true, will: true, shall: true, does: true, did: true,
-  done: true, doing: true, get: true, gets: true, got: true, make: true,
-  makes: true, made: true, use: true, uses: true, used: true, using: true,
-  new: true, old: true, own: true, still: true, yet: true, way: true,
-  ways: true, thing: true, things: true,
+  the: true,
+  and: true,
+  for: true,
+  not: true,
+  but: true,
+  why: true,
+  how: true,
+  what: true,
+  when: true,
+  where: true,
+  which: true,
+  who: true,
+  whose: true,
+  with: true,
+  without: true,
+  into: true,
+  from: true,
+  that: true,
+  this: true,
+  these: true,
+  those: true,
+  there: true,
+  their: true,
+  them: true,
+  they: true,
+  than: true,
+  then: true,
+  are: true,
+  was: true,
+  were: true,
+  been: true,
+  being: true,
+  have: true,
+  has: true,
+  had: true,
+  its: true,
+  it: true,
+  is: true,
+  one: true,
+  two: true,
+  same: true,
+  other: true,
+  another: true,
+  such: true,
+  only: true,
+  also: true,
+  just: true,
+  like: true,
+  over: true,
+  under: true,
+  about: true,
+  after: true,
+  before: true,
+  between: true,
+  during: true,
+  each: true,
+  some: true,
+  any: true,
+  all: true,
+  more: true,
+  most: true,
+  less: true,
+  least: true,
+  very: true,
+  much: true,
+  many: true,
+  can: true,
+  could: true,
+  should: true,
+  would: true,
+  may: true,
+  might: true,
+  must: true,
+  will: true,
+  shall: true,
+  does: true,
+  did: true,
+  done: true,
+  doing: true,
+  get: true,
+  gets: true,
+  got: true,
+  make: true,
+  makes: true,
+  made: true,
+  use: true,
+  uses: true,
+  used: true,
+  using: true,
+  new: true,
+  old: true,
+  own: true,
+  still: true,
+  yet: true,
+  way: true,
+  ways: true,
+  thing: true,
+  things: true,
 };
 
 /** CJK function characters; a shingle touching one is dropped. Kept
  *  conservative — 中/上/下/大/小 stay eligible (中国, 上海, 大肠 …).
  *  2026-11-19 harvest: 一次/一个/下一 flags were pure noise, so 一,
  *  次 and 个 joined. */
-const CJK_FUNCTION_CHARS = "一的了是在有和与就都也这那为什怎如何么呢吗吧哪被把让向往从到对给跟比很太更只才或因所但于过还又及其等之次个";
+const CJK_FUNCTION_CHARS =
+  "一的了是在有和与就都也这那为什怎如何么呢吗吧哪被把让向往从到对给跟比很太更只才或因所但于过还又及其等之次个";
 
 /** Contiguous CJK shingles (2-4 chars) that never touch a function
  *  character, plus latin words/phrases ≥3 chars minus stopwords. */
@@ -81,9 +163,9 @@ function keywordsFromText(text: string, cap: number): string[] {
   if (out.length < cap) {
     // Hyphens split before matching: "Shadow-mode" must yield shadow+mode
     // or it never meets its non-hyphened twin (2026-11-19 near-dup miss).
-    const latin = (text
-      .replace(/-/g, " ")
-      .match(/[a-zA-Z][a-zA-Z0-9]{2,}/g) ?? []).map((w) => w.toLowerCase());
+    const latin = (
+      text.replace(/-/g, " ").match(/[a-zA-Z][a-zA-Z0-9]{2,}/g) ?? []
+    ).map((w) => w.toLowerCase());
     for (const w of latin) {
       if (out.length >= cap) break;
       if (LATIN_STOPWORDS[w] !== true) out.push(w);

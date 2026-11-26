@@ -35,7 +35,8 @@ describe("OpenAIProvider — chat/completions", () => {
       let raw = "";
       req.on("data", (c) => (raw += c));
       req.on("end", () => {
-        lastBody = raw === "" ? {} : (JSON.parse(raw) as Record<string, unknown>);
+        lastBody =
+          raw === "" ? {} : (JSON.parse(raw) as Record<string, unknown>);
         res.statusCode = 200;
         res.setHeader("Content-Type", "application/json");
         res.end(
@@ -117,7 +118,8 @@ describe("GeminiProvider — generateContent", () => {
       let raw = "";
       req.on("data", (c) => (raw += c));
       req.on("end", () => {
-        lastBody = raw === "" ? {} : (JSON.parse(raw) as Record<string, unknown>);
+        lastBody =
+          raw === "" ? {} : (JSON.parse(raw) as Record<string, unknown>);
         res.statusCode = 200;
         res.setHeader("Content-Type", "application/json");
         res.end(
@@ -155,7 +157,10 @@ describe("GeminiProvider — generateContent", () => {
     expect(r.telemetry?.reasoningTokens).toBe(2);
     expect(lastKey).toBe("gemini-test-key");
     expect(lastPath).toContain(":generateContent");
-    const contents = lastBody["contents"] as { role: string; parts: { text: string }[] }[];
+    const contents = lastBody["contents"] as {
+      role: string;
+      parts: { text: string }[];
+    }[];
     expect(contents.map((c) => c.role)).toEqual(["user", "model"]);
     expect(lastBody["systemInstruction"]).toEqual({
       parts: [{ text: "be terse" }],

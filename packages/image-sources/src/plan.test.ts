@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { buildPlanMessages, normalizePlan } from "./plan.js";
+import type { ChatRequest, ChatResponse, Provider } from "@video/llm";
+import {
+  ImageSourcePlanError,
+  buildPlanMessages,
+  normalizePlan,
+  planSceneSources,
+} from "./plan.js";
 import type { PlanInput } from "./plan.js";
 
 const input: PlanInput = {
@@ -111,5 +117,48 @@ describe("normalizePlan", () => {
       input,
     );
     expect(out.map((p) => p.scene)).toEqual([1, 2]);
+  });
+});
+
+describe("planSceneSources", () => {
+  const provider = (respond: () => string): Provider => ({
+    name: "fake",
+    async chat(_req: ChatRequest): Promise<ChatResponse> {
+      return { content: respond(), usage: { input: 1, output: 1 } };
+    },
+  });
+
+  it("returns the plan the model wrote", async () => {
+    const plan = await planSceneSources(
+      input,
+      provider(
+        () => `scenes:
+  - scene: 1
+    historical: true
+    subject: "唐太宗 李世民"
+    query: "Li Shimin"
+    mode: direct
+    reason: "a historical figure"`,
+      ),
+    );
+    expect(plan[0]).toEqual({
+      scene: 1,
+      historical: true,
+      subject: "唐太宗 李世民",
+      query: "Li Shimin",
+      mode: "direct",
+      reason: "a historical figure",
+    });
+  });
+
+  it("reports an unreadable answer as its own error", async () => {
+    const error = await planSceneSources(
+      input,
+      provider(() => "not yaml"),
+    ).catch((err: unknown) => err);
+    expect(error).toBeInstanceOf(ImageSourcePlanError);
+    const planError = error as ImageSourcePlanError;
+    expect(planError.providerName).toBe("fake");
+    expect(planError.cause).toBeDefined();
   });
 });

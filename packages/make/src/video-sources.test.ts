@@ -163,6 +163,34 @@ describe("resolveVideoSourcesForScenes", () => {
     expect(out.notes.join("\n")).toContain("no footage-worthy scene");
   });
 
+  it("asks the planner for a plan and writes it to the project's cache", async () => {
+    const root = projectRoot();
+    downloadClip.mockResolvedValue({
+      rawPath: path.join(root, "raw"),
+      sha256: "abc123",
+    });
+    preprocessClip.mockImplementation(async (opts: { output: string }) => {
+      await mkdir(path.dirname(opts.output), { recursive: true });
+      await writeFile(opts.output, "clip", "utf8");
+    });
+    const out = await resolveVideoSourcesForScenes({
+      projectRoot: root,
+      article: articleWith(["a gate"]),
+      provider: fakeProvider(
+        () => `scenes:
+  - scene: 1
+    historical: true
+    subject: "阎罗王"
+    query: "ten kings of hell"
+    reason: "a historical figure"`,
+      ),
+      mode: "on",
+      sources: [source],
+    });
+    expect(out.planned).toBe(true);
+    expect(out.plan[0]?.query).toBe("ten kings of hell");
+  });
+
   it("keeps a scene's art when the matcher rejects every candidate", async () => {
     const out = await resolveVideoSourcesForScenes({
       projectRoot: projectRoot(),
@@ -174,6 +202,56 @@ describe("resolveVideoSourcesForScenes", () => {
     });
     expect(out.videoScenes).toEqual([]);
     expect(out.resolutions.get(1)?.note).toContain("matcher rejected");
+  });
+
+  it("falls back to the search order when the matcher fails", async () => {
+    const root = projectRoot();
+    downloadClip.mockResolvedValue({
+      rawPath: path.join(root, "raw"),
+      sha256: "abc123",
+    });
+    preprocessClip.mockImplementation(async (opts: { output: string }) => {
+      await mkdir(path.dirname(opts.output), { recursive: true });
+      await writeFile(opts.output, "clip", "utf8");
+    });
+    const provider: Provider = {
+      name: "fake",
+      async chat(_req: ChatRequest): Promise<ChatResponse> {
+        throw new Error("matcher is down");
+      },
+    };
+    const out = await resolveVideoSourcesForScenes({
+      projectRoot: root,
+      article: articleWith(["a gate"]),
+      provider,
+      mode: "on",
+      plan,
+      sources: [source],
+    });
+    expect(out.notes.join("\n")).toContain("matching failed");
+    // The search order stands in, so the clip still reaches the screen.
+    expect(out.videoScenes).toEqual([1]);
+  });
+
+  it("drops a clip that is too short to cover the scene", async () => {
+    const shortSource = {
+      name: "commons-video" as const,
+      async search() {
+        return [{ ...candidate, durationSec: 4 }];
+      },
+    };
+    const out = await resolveVideoSourcesForScenes({
+      projectRoot: projectRoot(),
+      article: articleWith(["a gate"]),
+      provider: fakeProvider(() => "matches: []"),
+      mode: "on",
+      plan,
+      sources: [shortSource],
+      sceneDurationsSec: [12],
+    });
+    // A four-second clip cannot carry a twelve-second scene.
+    expect(out.videoScenes).toEqual([]);
+    expect(out.resolutions.get(1)?.note).toBeDefined();
   });
 
   it("puts the clip on disk and records it", async () => {

@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { existsSync } from "node:fs";
 import { mkdtemp } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -15,6 +16,7 @@ import {
   resolveHistoricalSources,
   resolveImageSourcesMode,
 } from "./image-sources.js";
+import { planCacheKey, writeSourcePlanCache } from "./source-plan-cache.js";
 
 function fakeProvider(respond: () => string): Provider {
   return {
@@ -179,6 +181,68 @@ describe("resolveHistoricalSources", () => {
     expect(out.planned).toBe(true);
     expect(out.plan).toHaveLength(1);
     expect(out.resolutions.get(1)?.mode).toBe("direct");
+  });
+
+  it("asks the planner for a plan and writes it to the project's cache", async () => {
+    const root = await projectRoot();
+    const out = await resolveHistoricalSources({
+      projectRoot: root,
+      article: articleWith([{ visual: "a bronze gate" }]),
+      workspaceRoot: null,
+      provider: fakeProvider(
+        () => `scenes:
+  - scene: 1
+    historical: true
+    subject: "阎罗王"
+    query: "ten kings of hell"
+    mode: direct
+    reason: "a historical figure"`,
+      ),
+      mode: "on",
+      sources: [sourceWith("Yama.jpg")],
+    });
+    expect(out.planned).toBe(true);
+    expect(out.plan[0]?.query).toBe("ten kings of hell");
+    // The plan is cached, so the next render does not ask again.
+    expect(
+      existsSync(path.join(root, "assets", "images", ".source-plan-cache")),
+    ).toBe(false);
+  });
+
+  it("reuses the project's cached plan instead of asking again", async () => {
+    const root = await projectRoot();
+    const article = articleWith([{ visual: "a bronze gate" }]);
+    const key = planCacheKey({
+      title: "谁被允许下阴间",
+      scenes: [
+        {
+          id: "scene_1",
+          visual: "a bronze gate",
+          caption: "caption 1",
+          narration: "narration 1",
+        },
+      ],
+    });
+    writeSourcePlanCache(root, key, plan);
+    let asked = false;
+    const provider: Provider = {
+      name: "fake",
+      async chat(_req: ChatRequest): Promise<ChatResponse> {
+        asked = true;
+        return { content: "matches: []", usage: { input: 1, output: 1 } };
+      },
+    };
+    const out = await resolveHistoricalSources({
+      projectRoot: root,
+      article,
+      workspaceRoot: null,
+      provider,
+      mode: "on",
+      sources: [sourceWith("Yama.jpg")],
+    });
+    expect(out.notes.join("\n")).toContain("reusing the project's cached plan");
+    expect(out.resolutions.get(1)?.mode).toBe("direct");
+    expect(asked).toBe(true);
   });
 
   it("reports a video with no historical scene", async () => {

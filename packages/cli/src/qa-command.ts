@@ -57,8 +57,7 @@ export async function runQa(opts: QaOptions): Promise<number> {
   // report AS WRITTEN; the advisory fields are attached by re-writing
   // the report, and the consults land in <root>/decision-log.jsonl.
   // Advisory never gates — `--strict` reads `level` below. The layer is
-  // off by default (2026-11-26: it records and nothing acts), so the
-  // consult is skipped unless DECISION_MODE says otherwise.
+  // on by default; DECISION_MODE=off skips the consult.
   const decisionMode = resolveDecisionMode();
   const advisory = await runQaDecisionAdvisory({
     project: path.basename(root),

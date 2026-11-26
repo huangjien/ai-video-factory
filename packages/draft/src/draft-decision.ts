@@ -2,13 +2,10 @@
  * The draft-bar decision seam — the surface where a decision model can
  * actually disagree with today's system.
  *
- * The visual surface turned out to be a confirmation surface: the
- * decision model read the fall-through scenes the same way the keyword
- * classifier did. The draft surface is different — the corpus already
- * holds five cases where the decision model answers `reject` or
- * `revise` where the shipped review's own verdict says `revise` or
- * `pass`. Those are real disagreements, and they are the ones worth
- * measuring.
+ * The draft surface is the one where the decision model can disagree
+ * with today's system: it answers `reject` or `revise` where the
+ * shipped review's own verdict says `revise` or `pass`. Those are real
+ * disagreements, and they are the ones worth looking at.
  *
  * The state is the same compact shape the corpus uses: the review's
  * findings and verdict, which is what a decision model would have to
@@ -31,7 +28,6 @@ import {
   type DecisionSourceVerdict,
 } from "@video/prompts";
 import type { DecisionProvider, DecisionQuestion } from "@video/llm";
-import { candidateId, type DecisionCandidate } from "./decision-candidate.js";
 import {
   createDecisionProvider,
   warnIfQuotaExhausted,
@@ -227,74 +223,6 @@ export function sha256Text(text: string): string {
   return createHash("sha256").update(text).digest("hex");
 }
 
-/**
- * Turn the shadow log's draft-bar rows into corpus candidates.
- *
- * Unlike the visual surface, the label here is **derived**, not
- * proposed: the `review-verdict` rule reads the review artifact's own
- * verdict and computes the label, and the corpus loader re-checks that
- * derivation when the case is loaded. So a harvested candidate can be
- * moved into the corpus unchanged — and it is not "disputed", because
- * nobody has to rule on it.
- *
- * The state is rebuilt from the review artifact with the SAME builder
- * the corpus uses, so a harvested case has exactly the shape the bench
- * already measures.
- */
-export function harvestDraftBarCandidates(opts: {
-  rows: DraftDecisionRow[];
-  attempts: DraftBarAttemptFacts[];
-  project: string;
-}): DecisionCandidate[] {
-  const byAttempt = new Map(
-    opts.attempts.map((attempt) => [attempt.attempt, attempt]),
-  );
-  // A project can be consulted twice (a re-run, a backfill over an
-  // existing log). The LAST row for an attempt wins — the newest answer
-  // is the current one.
-  const latest = new Map<number, DraftDecisionRow>();
-  for (const row of opts.rows) latest.set(row.attempt, row);
-  // The slug keeps letters and digits of ANY script — a CJK project name
-  // must not collapse to an empty string, or every Chinese project would
-  // claim the same case id.
-  const slug = opts.project
-    .replace(/[^\p{L}\p{N}]+/gu, "-")
-    .replace(/^-+|-+$/g, "")
-    .toLowerCase();
-  const candidates: DecisionCandidate[] = [];
-  for (const row of latest.values()) {
-    const attempt = byAttempt.get(row.attempt);
-    if (!attempt) continue;
-    const agreed = row.agreed === true;
-    candidates.push({
-      id: candidateId(slug, "attempt", row.attempt),
-      surface: "draft-bar",
-      state: buildDraftBarState(opts.project, attempt),
-      expects: { kind: "choice", value: row.label },
-      source_verdict: row.verdict,
-      disputed: false,
-      policy: {
-        rule: "review-verdict",
-        note: `The label is DERIVED from the review's own verdict by the review-verdict rule. The ${row.provider} decision model (${row.model}) answered "${row.answer}" at confidence ${row.confidence ?? "?"} (${agreed ? "agreed" : "DISAGREED"}).`,
-      },
-      provenance: {
-        source: `projects/${opts.project}/article-review.yaml attempt ${row.attempt} — a shadow-run consult (${row.ts}); the decision model answered "${row.answer}", the review's verdict says "${row.label}".`,
-      },
-    });
-  }
-  return candidates;
-}
-
-/**
- * The draft-bar shadow pass, as the pipeline calls it: consult the
- * decision model about every reviewed attempt and append the answers to
- * the project's decision log.
- *
- * The loop can run up to eight attempts (times two candidates), and each
- * consult is a real API call, so the pass is capped. The cap keeps the
- * EARLIEST attempts — the ones that were rejected and drove a
- * regeneration, which is where the disagreements are.
- */
 export async function runDraftDecisionShadow(opts: {
   project: string;
   attempts: DraftBarAttemptFacts[];

@@ -169,14 +169,12 @@ export {
   type EmitContext,
   type TimelineAnimation,
 } from "./animation-emitter.js";
-export type { DecisionCandidate } from "./decision-candidate.js";
 export { parseDecisionLog, type DecisionLogRow } from "./decision-log.js";
 
 export {
   buildDraftBarState,
   consultDraftDecision,
   draftBarDecisionQuestion,
-  harvestDraftBarCandidates,
   runDraftDecisionShadow,
   verdictFactsFromAttempt,
   type DraftBarAttemptFacts,

@@ -1,7 +1,7 @@
 /**
  * The QA triage decision seam — D3, the first ACTING surface.
  *
- * The other wired surfaces (visual-class, draft-bar) only RECORD: the
+ * The other wired surface (draft-bar) only RECORDS: the
  * decision's answer lands in the log beside the baseline, and nothing
  * in the pipeline reads it. This surface is different — its action is
  * writing an advisory verdict onto each QA finding, which a human reads

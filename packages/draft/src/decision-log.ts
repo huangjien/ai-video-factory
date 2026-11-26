@@ -2,9 +2,7 @@
  * The decision log — one JSONL row per consult, appended per project.
  *
  * The rows tell each other apart by the `surface` field — `draft-bar`
- * rows come from the draft loop's reviewed attempts. (The visual-class
- * surface was retired with structured routing in v0.12; its rows may
- * still exist in older logs and are simply ignored.)
+ * rows come from the draft loop's reviewed attempts.
  *
  * The rows are a union, so the reader narrows by `surface` — the two
  * row types are imported as TYPES only, which keeps this module free of

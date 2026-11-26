@@ -2,7 +2,7 @@
  * The decision layer's runtime — mode, provider choice, quota visibility,
  * log location. It lives in @video/llm (not in @video/draft) because more
  * than one domain package wires a decision surface: the draft loop owns
- * visual-class and draft-bar, the QA command owns qa-triage — and a
+ * draft-bar, the QA command owns qa-triage — and a
  * lower-level package must not depend on a higher one for its own
  * runtime.
  */
@@ -22,17 +22,16 @@ import type {
 
 export type DecisionMode = "off" | "shadow" | "on";
 
-/** The mode from the environment. Default **`off`** (2026-11-26): the
- *  layer records the decision provider's answers beside the baselines
- *  and nothing acts on them, so every consult was a paid call that
- *  bought a log line. `on` and `shadow` behave identically today — both
- *  record, nothing acts — and the env var is how the layer is switched
- *  back on (or off) without a code change. The vitest global setup
- *  pins `off` so the suite stays hermetic. */
+/** The mode from the environment. Default **`on`**: every wired
+ *  surface consults the decision provider and records its answer
+ *  beside the deterministic baseline. `on` and `shadow` behave
+ *  identically today — both record, nothing acts — and the env var
+ *  turns the layer off (`off`) without a code change. The vitest global
+ *  setup pins `off` so the suite stays hermetic. */
 export function resolveDecisionMode(
   env: NodeJS.ProcessEnv = process.env,
 ): DecisionMode {
-  const raw = (env["DECISION_MODE"] ?? "off").trim().toLowerCase();
+  const raw = (env["DECISION_MODE"] ?? "on").trim().toLowerCase();
   if (raw === "off" || raw === "shadow" || raw === "on") return raw;
   throw new Error(
     `unknown DECISION_MODE "${raw}" — expected off | shadow | on`,

@@ -3,7 +3,6 @@ import {
   buildDraftBarState,
   consultDraftDecision,
   draftBarDecisionQuestion,
-  harvestDraftBarCandidates,
   runDraftDecisionShadow,
   verdictFactsFromAttempt,
   type DraftBarAttemptFacts,
@@ -194,91 +193,6 @@ describe("consultDraftDecision", () => {
       mode: "shadow",
     });
     expect(row.answer).toBeNull();
-  });
-});
-
-describe("harvestDraftBarCandidates", () => {
-  const row: DraftDecisionRow = {
-    ts: "2026-11-14T00:00:00.000Z",
-    surface: "draft-bar",
-    project: "努力",
-    attempt: 4,
-    mode: "shadow",
-    provider: "openai",
-    model: "gpt-6-luna",
-    state_sha256: "abc",
-    answer: "reject",
-    confidence: 0.66,
-    confidence_source: "native",
-    verdict: { passing: false, major_revision_needed: true },
-    label: "revise",
-    agreed: false,
-    latency_ms: 300,
-    usage: { input: 900, output: 0 },
-    error: null,
-  };
-
-  it("produces a candidate per attempt", () => {
-    const candidates = harvestDraftBarCandidates({
-      rows: [row],
-      attempts: [attempt],
-      project: "努力",
-    });
-    expect(candidates).toHaveLength(1);
-  });
-
-  it("derives the label from the verdict, not from the model", () => {
-    const candidates = harvestDraftBarCandidates({
-      rows: [row],
-      attempts: [attempt],
-      project: "努力",
-    });
-    expect(candidates[0]?.expects.value).toBe("revise");
-  });
-
-  it("does not mark a derived label disputed", () => {
-    const candidates = harvestDraftBarCandidates({
-      rows: [row],
-      attempts: [attempt],
-      project: "努力",
-    });
-    expect(candidates[0]?.disputed).toBe(false);
-  });
-
-  it("carries the verdict facts the label was derived from", () => {
-    const candidates = harvestDraftBarCandidates({
-      rows: [row],
-      attempts: [attempt],
-      project: "努力",
-    });
-    expect(candidates[0]?.source_verdict?.major_revision_needed).toBe(true);
-  });
-
-  it("rebuilds the state from the artifact", () => {
-    const candidates = harvestDraftBarCandidates({
-      rows: [row],
-      attempts: [attempt],
-      project: "努力",
-    });
-    expect(candidates[0]?.state).toBe(buildDraftBarState("努力", attempt));
-  });
-
-  it("records the model's disagreement in the policy note", () => {
-    const candidates = harvestDraftBarCandidates({
-      rows: [row],
-      attempts: [attempt],
-      project: "努力",
-    });
-    expect(candidates[0]?.policy.note).toContain("DISAGREED");
-  });
-
-  it("skips a row whose attempt is gone", () => {
-    const candidates = harvestDraftBarCandidates({
-      rows: [row],
-      attempts: [],
-      project: "努力",
-    });
-    expect(candidates).toHaveLength(0);
   });
 });
 

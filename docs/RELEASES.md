@@ -144,29 +144,26 @@ so it wrote links from memory — the Katha Upanishad's first chapter
 linked to the Brihadaranyaka index. A link must now be the exact work,
 and a named work without a link beats a wrong one.
 
-**The decision layer stops asking by default.** An audit of the modules
-the pipeline actually reaches found the layer wired but inert: `on` and
-`shadow` behave identically today — they record the decision provider's
-answer beside the deterministic verdict and nothing acts on it — so
-every draft, every QA report and every caption check paid for a call
-that bought a log line. `DECISION_MODE` now defaults to `off`; the
-layer, its corpus, its bench and its verbs stay, and one env var turns
-it back on.
+**The decision layer's measurement machinery is gone; the layer stays.**
+An audit of the modules the pipeline actually reaches found the layer's
+corpus side doing nothing for the pipeline: 371 labelled cases that
+nothing read at runtime, a bench that measured the providers against
+them, a harvest that turned disagreements into cases, and an audit
+script. The bench's number was what justified switching the layer on,
+so with the corpus gone that justification went with it — and the
+decision layer keeps asking (default `on`), recording its answers
+beside the deterministic baseline on every draft, QA report and caption
+check. The rules the answers are held to stay (they are the runtime's,
+in `packages/prompts/src/decision-policy.ts`), and so do the eight
+prompts, one per surface. `video decision` keeps `inspect`; `bench`,
+`harvest` and `backfill` are gone, and so is the retired `visual-class`
+surface with them.
 
 The same audit removed what nothing reached: `packages/draft/src/
 visual-decision.ts` (the visual-classifier surface that never shipped),
 ten scripts with no caller — one-off per-film visual rewrites, the old
 manual Shorts upload path that `video shorts --upload` replaced — and
-the corpus machinery. The 371 labelled cases under
-`packages/prompts/decisions/`, the bench that measured the providers
-against them, the harvest that turned disagreements into reviewable
-cases and the audit script are gone: with the layer off by default
-nothing read the corpus at runtime, and the measurement that justified
-switching the layer on died with that default. The rules the answers
-are held to stay — they are the runtime's, in
-`packages/prompts/src/decision-policy.ts` — and so do the eight prompts
-one per surface. `video decision` keeps `inspect`; `bench`, `harvest`
-and `backfill` are gone.
+the candidate machinery that fed the corpus.
 
 ## v0.12 (2026-11-16) — the decision layer, the 2.6 image provider, and two films
 

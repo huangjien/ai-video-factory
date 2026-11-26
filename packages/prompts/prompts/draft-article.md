@@ -37,6 +37,45 @@ Do not mix languages unless the subject itself requires a proper noun, technical
 
 Use natural native-level writing rather than literal translation.
 
+## 1a. HUMAN VOICE (no machine prose)
+
+One person wrote this, for one audience, with a point of view. Machine
+prose is the failure mode to avoid, and it is made of sentences that are
+individually correct and collectively flat.
+
+Banned boilerplate — never open, close, or pivot on it:
+
+- zh-CN: 在当今……的时代, 随着……的发展, 综上所述, 总而言之, 值得注意的是, 不难看出, 让我们一起, 这不仅……更……
+- en-US: "In today's fast-paced world", "In an era of", "As we look ahead", "In conclusion", "To sum up", "It's worth noting", "It's not just X, it's Y", "delve into", "unlock the potential"
+
+Banned register — marketing and consulting filler, not narration:
+
+- zh-CN: 赋能, 抓手, 闭环, 痛点, 深度解析, 重塑, 矩阵, 不言而喻, 毋庸置疑, 助力, 打造, 底层逻辑
+- en-US: leverage, empower, unlock, harness, streamline, robust, seamless, holistic, game-changing, revolutionary
+
+Rhythm — vary the length on purpose:
+
+- Land the point on a short sentence. Three to five characters is not a fragment, it is a beat.
+- Put one detail-carrying long sentence beside it, then let the short one carry the weight.
+- No parallel triplets ("首先/其次/最后", "not X, not Y, but Z", three clauses of equal length). Two is rhythm; three is a slogan.
+- Do not let a paragraph come apart into equal pieces. If every sentence in it is the same length, it is machine prose.
+
+Show, do not tell — put the thing itself where the adjective was:
+
+- Not 「他工作很拼」 but 「凌晨两点他还在改第三版方案，咖啡凉了都没顾上喝」.
+- Not "a remarkably efficient workflow" but "the build finished before the coffee went cold".
+- Keep the abstract claim only when the abstraction is the subject.
+
+Stance, not alibi:
+
+- You may hedge honestly (「我倾向于另一种看法」, 「说实话，这一步的证据并不够」, "I'm not sure yet", "to be honest"). Once a section at most.
+- Never invent a first-hand experience (「我当时踩过一个坑」, "in my experience") or a private scene the sources do not support. A hedge is honest; an anecdote that never happened is a fabrication, and section 21 forbids fabrication.
+
+Endings:
+
+- Close on the last concrete thing, not on a summary of the journey. No 「这就是……的意义」, no "the future is…", no call to action.
+- The last line must be one the writer could have written, not one the format asked for.
+
 2. CONTENT QUALITY
 
 The article must feel like a professionally produced video essay, explainer, documentary segment, or educational YouTube video — NOT a generic AI-generated article.
@@ -524,16 +563,18 @@ Do not reveal every conclusion immediately when delaying the explanation improve
 
 Each scene should connect naturally to the next.
 
-Use transitions such as:
+Connect by cause, not by announcement. A transition is a fact that makes
+the next scene inevitable — what the new arrangement now is — not a
+signpost announcing that a part is starting.
 
-- "But that was only the beginning."
-- "The real turning point came later."
-- "There is another part of the story."
-- "That change created an unexpected consequence."
+Do not use canned transitions. "But that was only the beginning", "the
+real turning point came later", "there is another part of the story" and
+"that change created an unexpected consequence" are filler: each one
+announces a structure the narration should simply have had.
 
-However, do not repeatedly use formulaic transition phrases.
-
-Prefer logical transitions embedded naturally in the narration.
+Prefer a transition the facts carry: what the decision enabled, what it
+cost, what the viewer now knows that they did not know before. When the
+next scene follows from the last one, no transition is needed at all.
 
 16. PACING
 

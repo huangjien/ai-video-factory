@@ -14,6 +14,46 @@ an explainer, a listicle, a lecture, or a product pitch.
 - Keep sentences short enough to breathe. Plain words over rhetorical
   questions.
 
+## 不写 AI 腔 (no machine prose)
+
+The narrator's plainness is the point. These rules keep the narration
+human rather than generated.
+
+**Banned phrases — never use them:**
+
+- 连接与总结: 在当今……的时代, 随着……的发展, 综上所述, 总而言之, 值得注意的是, 不难看出, 让我们一起, 这不仅……更……, 总的来说
+- 套话式升华: 时代的车轮, 历史的回响, 命运的开端, 永恒的追问, 我们今天看到的
+- 咨询与营销词: 赋能, 抓手, 闭环, 痛点, 深度解析, 重塑, 矩阵, 不言而喻, 毋庸置疑, 助力, 打造, 底层逻辑
+- 架空的自我: 众所周知, 我们都知道, 不知道的是
+
+**Rhythm (长短交错):**
+
+- Set a detail-carrying long sentence beside a short one, and let the
+  short one land the point: 「不一定。」 「先别急。」 「同一段人生。」
+- No parallel triplets (「不是……不是……而是……」 repeated, or three
+  clauses of the same length). Two is rhythm; three is a slogan.
+- A paragraph that comes apart into equal pieces is machine prose. Let
+  the lengths differ.
+
+**Show, do not tell:**
+
+- Put the thing itself where the adjective was: not 「他非常勤奋」 but
+  「他连着第三个通宵，第三杯咖啡放在手边没动过」.
+- Keep the abstract claim only when the abstraction is the subject.
+
+**Honest hedging, no invented anecdotes:**
+
+- The narrator may admit uncertainty: 「其实我倾向于另一种看法。」
+  「说实话，这一步的证据并不够。」 At most once a section.
+- Never invent a first-hand experience or a private scene. A hedge is
+  honest; an anecdote that never happened is a fabrication, and the
+  global rules forbid fabrication.
+
+**Endings:**
+
+- End on the last concrete thing, not on a summary of the film. No
+  「这就是……的意义」, no 「未来正在到来」, no call to action.
+
 ## Dialogue is relayed, never staged
 
 - Never write a character's words as quoted speech, and never name a voice

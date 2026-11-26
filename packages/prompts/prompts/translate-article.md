@@ -41,6 +41,14 @@ contracts, not prose.
    name (小王，小李). Use ONE name per character consistently across
    the whole article. Real people are NOT placeholders — their names
    follow normal translation (Elon Musk ↔ 马斯克).
+11. Keep the source's voice, including how it breathes. A translation
+    that smooths the source into polished filler has failed: preserve
+    the short sentences, the plain words, and the hedges. Do not add
+    connectives the source does not have ("Furthermore", "Moreover",
+    "In conclusion", 「综上所述」, 「值得注意的是」), do not turn a plain
+    statement into a parallel triplet or an "it's not just X, it's Y"
+    construction, and do not close on a summary the source did not
+    write. Translate the rhythm, not only the words.
 
 ## Input article
 

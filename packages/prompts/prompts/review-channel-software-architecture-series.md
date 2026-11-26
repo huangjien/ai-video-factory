@@ -54,3 +54,25 @@ style opinion.
   term exists (and vice versa: English in the middle of Chinese narration
   for a term that has a Chinese name) is a finding — state the pair and
   which one the film should keep.
+
+## AI 腔 (machine prose)
+
+Judge the prose itself. Report counts and measurements, not impressions.
+
+- **Banned phrases.** Count every occurrence of the drafter prompt's
+  banned list (在当今……的时代, 随着……的发展, 综上所述, 总而言之, 值得注意的
+  是, 让我们一起, 这不仅……更……, 赋能, 抓手, 闭环, 痛点, 深度解析, 重塑,
+  矩阵, 不言而喻, 毋庸置疑, 众所周知). Any occurrence is a finding.
+  State the count and quote the first one.
+- **Canned transitions.** Count transitions that announce a structure
+  instead of carrying a cause (「但那只是开始」, 「真正的转折点在后面」,
+  「故事还有另一部分」). More than one is a finding.
+- **Scaffolding.** A 首先/其次/最后 run, or a paragraph that opens by
+  restating the previous paragraph, is a finding.
+- **Even rhythm.** Measure the sentence lengths of the narration. If
+  every sentence falls within three characters of the mean, that is a
+  finding — state the mean, the spread, and the longest sentence. A
+  spread wider than half the mean is normal and is not a finding.
+- **Forced elevation.** An ending that sums up the film's meaning
+  instead of its last concrete beat (「这就是……的意义」, 「未来正在到来」)
+  is a finding.

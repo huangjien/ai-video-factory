@@ -87,6 +87,34 @@ describe("profile blocks", () => {
     expect(draft).toContain("Where is the dip");
   });
 
+  it("forbid the machine-prose markers in the drafter block", () => {
+    const draft = channelDraftBlock("chinese-storybook") ?? "";
+    expect(draft).toContain("不写 AI 腔");
+    for (const phrase of [
+      "综上所述",
+      "值得注意的是",
+      "让我们一起",
+      "赋能",
+      "闭环",
+      "痛点",
+      "众所周知",
+    ]) {
+      expect(draft).toContain(phrase);
+    }
+    expect(draft).toMatch(/长短交错/);
+    expect(draft).toMatch(/never invent a first-hand experience/i);
+    expect(draft).toMatch(/End on the last concrete thing/i);
+  });
+
+  it("give the judge the machine-prose counts", () => {
+    const review = channelReviewBlock("chinese-storybook") ?? "";
+    expect(review).toContain("AI 腔");
+    expect(review).toMatch(/banned phrases/i);
+    expect(review).toMatch(/canned transitions/i);
+    expect(review).toMatch(/even rhythm/i);
+    expect(review).toMatch(/fabricated experience/i);
+  });
+
   it("give the judge the pacing and dialogue checks", () => {
     const review = channelReviewBlock("chinese-storybook") ?? "";
     expect(review).toMatch(/delivery rate/i);
@@ -139,6 +167,14 @@ describe("software-architecture-series profile", () => {
     expect(review).toMatch(/cross-episode dependency/i);
     expect(review).toMatch(/premise discharge/i);
     expect(review).toContain("96");
+  });
+
+  it("gives the judge the machine-prose counts", () => {
+    const review = channelReviewBlock("software-architecture-series") ?? "";
+    expect(review).toContain("AI 腔");
+    expect(review).toMatch(/banned phrases/i);
+    expect(review).toMatch(/canned transitions/i);
+    expect(review).toMatch(/even rhythm/i);
   });
 });
 

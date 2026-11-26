@@ -1,11 +1,13 @@
 case: feedback-revision-addresses-web-context
 agent: draft
-prompt_hash: sha256:b5f2dc2840ae470f9ef538660bb97880f84f5d27da06e0b7fa10df3580c17d1e
+prompt_hash: sha256:f629c22fd8e729b09af6689dec19153908f900e889b16adf6de662495efe0552
 messages:
   - role: system
-    bytes: 25838
-    content_sha256: sha256:09595382674acd9f68a777a5699b4b41f904ea53801fe6740837d82ee6da1b2e
+    bytes: 28657
+    content_sha256: sha256:1a8e99b289c0667b234c1956e60d93f50fbb6b04d508be67c481c90bfb7a78be
     blocks:
+      - § 1a. HUMAN VOICE (no machine prose)
+      - "Endings:"
       - "Prioritize:"
       - "Avoid:"
       - "Normally use this progression:"
@@ -23,7 +25,7 @@ messages:
       - § 10a. COMPONENT FIELD (rare, omit by default)
       - "Normally use:"
       - "Good captions communicate:"
-      - "Use transitions such as:"
+      - "Prefer a transition the facts carry:"
       - "The opening should normally contain:"
       - "The ending should:"
       - "Maintain consistency in:"

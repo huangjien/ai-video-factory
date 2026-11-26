@@ -168,7 +168,7 @@ ${evidenceSection}## Selection and ranking
 Return exactly one fenced YAML block with \`topics\` as its only top-level key. Each item must have exactly the four keys shown below.
 
 - \`topic\`: A short, specific, audience-facing title. Use a question when it makes the premise clearer. Avoid clickbait and unexplained internal terms.
-- \`note\`: One sentence stating what the episode would explain or follow. For a why-question, state the proposed explanation only if the document supports it. Preserve any uncertainty in the source.
+- \`note\`: One sentence stating what the episode would explain or follow. For a why-question, state the proposed explanation only if the document supports it. Preserve any uncertainty in the source. Write it the way a viewer would say it: no software, system or architecture metaphor as the frame — a premise phrased that way pulls the drafter into a technical register this channel does not publish in.
 - \`anchors\`: A YAML list of up to 4 concrete research starting points, such as a named person, place, event, organization, system, or distinctive searchable concept. Use only anchors that appear in the source. Use \`[]\` if the source provides none.
 - \`why\`: One sentence describing what makes the topic compelling on screen. Name the case, contrast, tension, consequence, or reveal that could carry the episode. Add something beyond what \`note\` already says.
 
@@ -232,7 +232,7 @@ ${evidence.map((line) => `- ${line}`).join("\n")}
 Return exactly one fenced YAML block with \`topics\` as its only top-level key, each item with exactly the four keys below.
 
 - \`topic\`: A short, specific, audience-facing title. Use a question when it makes the premise clearer. Avoid clickbait and unexplained internal terms.
-- \`note\`: One sentence stating what the episode would explain or follow.
+- \`note\`: One sentence stating what the episode would explain or follow. Write it the way a viewer would say it: no software, system or architecture metaphor as the frame — a premise phrased as "a distributed system with access control" pulls the drafter into a technical register this channel does not publish in.
 - \`anchors\`: A YAML list of up to 3 concrete research starting points — a named person, place, event, organization, system, work or distinctive searchable concept. Use \`[]\` if you have none.
 - \`why\`: One sentence describing what makes the topic compelling on screen, and — when the evidence above applies to it — naming that evidence.
 

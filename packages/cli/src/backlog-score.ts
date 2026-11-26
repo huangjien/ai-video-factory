@@ -204,10 +204,15 @@ function retryTurns(
  *  table, whole. Everything after is per-video lists the digest already
  *  summarized, and cutting the report at a character count landed
  *  mid-table — with the full report in the prompt the model listed one
- *  entry twice on both attempts (2026-11-25). A report without that
- *  second heading is read up to the cap. */
+ *  entry twice on both attempts (2026-11-25).
+ *
+ *  The cut is at the FIRST numbered section after the lane table — "## 2."
+ *  in a report with the supply section, "## 3." in one without. Both the
+ *  supply table and the per-video lists stay out of the judge's prompt:
+ *  how many ideas are waiting is not evidence about any one of them. A
+ *  report with no numbered section at all is read up to the cap. */
 export function evidenceExcerpt(content: string): string {
-  const cut = content.search(/^## 2\. /m);
+  const cut = content.search(/^## [2-9]\. /m);
   return (cut === -1 ? content : content.slice(0, cut)).slice(
     0,
     REPORT_PROMPT_CAP,

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { existsSync, mkdtempSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 
@@ -7,10 +7,11 @@ import path from "node:path";
 // keeps the lifecycle tests offline (the real draft costs LLM calls).
 const runDraft = vi.fn();
 vi.mock("./draft-command.js", () => ({
-  runDraft: (...a: unknown[]) => (runDraft as (...x: unknown[]) => unknown)(...a),
+  runDraft: (...a: unknown[]) =>
+    (runDraft as (...x: unknown[]) => unknown)(...a),
 }));
 
-import { runDraftFromBacklog } from "./backlog-draft.js";
+import { runDraftFromBacklog, draftingContext } from "./backlog-draft.js";
 import {
   loadBacklogEntry,
   loadBacklogStore,
@@ -70,26 +71,87 @@ function seed(partial: Partial<BacklogEntry>): BacklogEntry {
 
 const DRAFT = () => ({ cwd: repoRoot });
 
+describe("draftingContext — the drafter's context", () => {
+  it("uses an entry's own content when it has one", () => {
+    const context = draftingContext({
+      id: "a",
+      topic: "t",
+      status: "idea",
+      source: "manual",
+      created: "2026-11-18",
+      content: "长笔记：监督机制、利益冻结……",
+    });
+    expect(context).toBe("长笔记：监督机制、利益冻结……");
+  });
+
+  it("composes the premise and the anchors when the entry has no content", () => {
+    const context = draftingContext({
+      id: "a",
+      topic: "谁被允许下阴间",
+      status: "proposed",
+      source: "demand:神话比较",
+      created: "2026-11-26",
+      note: "日播 45.0 明显跑赢频道中位。 — 把三套地下世界当成三套官僚机构来查。 — ⚠ possible overlap: foo (a、b); bar (c) [按需采集·神话比较；锚点待核实] 日播与互动率都跑赢频道中位。",
+      anchors: ["《西游记》第三回生死簿", "Brihadaranyaka Upanishad"],
+    });
+    expect(context).toContain("把三套地下世界当成三套官僚机构来查。");
+    expect(context).toContain("《西游记》第三回生死簿");
+    expect(context).toContain("Brihadaranyaka Upanishad");
+    // The harvest's bookkeeping is not the episode.
+    expect(context).not.toContain("跑赢频道中位");
+    expect(context).not.toContain("possible overlap");
+  });
+
+  it("hands the composed context to the drafter as the idea file", async () => {
+    seed({
+      note: "证据 — 前提：三个人怎么分工。",
+      anchors: ["《左传》阏伯受谗"],
+    });
+    let seen = "";
+    runDraft.mockImplementation(async (opts: { ideaFile?: string }) => {
+      if (opts.ideaFile !== undefined) {
+        seen = readFileSync(opts.ideaFile, "utf8");
+      }
+      return 0;
+    });
+    const code = await runDraftFromBacklog({
+      id: "2026-11-18-停火线",
+      draft: DRAFT(),
+    });
+    expect(code).toBe(0);
+    expect(seen).toContain("前提：三个人怎么分工。");
+    expect(seen).toContain("《左传》阏伯受谗");
+  });
+});
+
 describe("runDraftFromBacklog — guards", () => {
   it("rejects unknown ids", async () => {
-    expect(await runDraftFromBacklog({ id: "no-such", draft: DRAFT() })).toBe(1);
+    expect(await runDraftFromBacklog({ id: "no-such", draft: DRAFT() })).toBe(
+      1,
+    );
     expect(runDraft).not.toHaveBeenCalled();
   });
 
   it("rejects already-drafted and dropped entries", async () => {
     seed({ status: "drafted", project: "为什么停火线能冻结几十年" });
-    expect(await runDraftFromBacklog({ id: "2026-11-18-停火线", draft: DRAFT() })).toBe(1);
+    expect(
+      await runDraftFromBacklog({ id: "2026-11-18-停火线", draft: DRAFT() }),
+    ).toBe(1);
 
     rmSync(repoRoot, { recursive: true, force: true });
     repoRoot = mkdtempSync(path.join(tmpdir(), "video-backlog-draft-"));
     seed({ status: "dropped" });
-    expect(await runDraftFromBacklog({ id: "2026-11-18-停火线", draft: DRAFT() })).toBe(1);
+    expect(
+      await runDraftFromBacklog({ id: "2026-11-18-停火线", draft: DRAFT() }),
+    ).toBe(1);
     expect(runDraft).not.toHaveBeenCalled();
   });
 
   it("refuses a proposed entry without --force, drafts it with --force", async () => {
     seed({ status: "proposed", source: "harvest:docs/plans/x.md" });
-    expect(await runDraftFromBacklog({ id: "2026-11-18-停火线", draft: DRAFT() })).toBe(1);
+    expect(
+      await runDraftFromBacklog({ id: "2026-11-18-停火线", draft: DRAFT() }),
+    ).toBe(1);
     expect(runDraft).not.toHaveBeenCalled();
 
     const code = await runDraftFromBacklog({
@@ -99,7 +161,9 @@ describe("runDraftFromBacklog — guards", () => {
     });
     expect(code).toBe(0);
     expect(runDraft).toHaveBeenCalledTimes(1);
-    expect(loadBacklogEntry(repoRoot, "2026-11-18-停火线")?.status).toBe("drafted");
+    expect(loadBacklogEntry(repoRoot, "2026-11-18-停火线")?.status).toBe(
+      "drafted",
+    );
   });
 });
 
@@ -143,7 +207,10 @@ describe("runDraftFromBacklog — the loop", () => {
   it("a failed draft reverts the stamp", async () => {
     seed({});
     runDraft.mockResolvedValue(1);
-    const code = await runDraftFromBacklog({ id: "2026-11-18-停火线", draft: DRAFT() });
+    const code = await runDraftFromBacklog({
+      id: "2026-11-18-停火线",
+      draft: DRAFT(),
+    });
     expect(code).toBe(1);
     const entry = loadBacklogEntry(repoRoot, "2026-11-18-停火线")!;
     expect(entry.status).toBe("idea");
@@ -154,7 +221,10 @@ describe("runDraftFromBacklog — the loop", () => {
   it("the ask gate's exit 2 reverts cleanly as not-started", async () => {
     seed({});
     runDraft.mockResolvedValue(2);
-    const code = await runDraftFromBacklog({ id: "2026-11-18-停火线", draft: DRAFT() });
+    const code = await runDraftFromBacklog({
+      id: "2026-11-18-停火线",
+      draft: DRAFT(),
+    });
     expect(code).toBe(2);
     const entry = loadBacklogEntry(repoRoot, "2026-11-18-停火线")!;
     expect(entry.status).toBe("idea");

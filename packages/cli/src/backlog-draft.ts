@@ -11,6 +11,7 @@ import {
   loadBacklogEntry,
   loadBacklogStore,
   saveBacklogStore,
+  type BacklogEntry,
 } from "./backlog-store.js";
 
 /**
@@ -33,6 +34,48 @@ export interface BacklogDraftOptions {
   draft: Omit<DraftOptions, "topic">;
 }
 
+/**
+ * The drafter reads a backlog entry's `content`. Harvested proposals
+ * carry a `note` and `anchors` instead, so the context is composed
+ * from them: the premise (the note without its evidence and overlap
+ * garnish) and the research anchors the drafter can check.
+ */
+export function draftingContext(entry: BacklogEntry): string | undefined {
+  if (entry.content !== undefined && entry.content.trim() !== "") {
+    return entry.content;
+  }
+  const parts: string[] = [];
+  const premise = premiseFromNote(entry.note);
+  if (premise !== undefined) parts.push(premise);
+  if (entry.anchors !== undefined && entry.anchors.length > 0) {
+    parts.push("");
+    parts.push("可核查来源（写作前按需核实）:");
+    for (const anchor of entry.anchors) parts.push(`- ${anchor}`);
+  }
+  return parts.length > 0 ? parts.join("\n") : undefined;
+}
+
+/**
+ * The premise is the note's last " — " segment: the note reads
+ * "<evidence> — <premise> — ⚠ possible overlap: … <origin>", and the
+ * evidence and the overlap advisory are the harvest's bookkeeping, not
+ * the episode.
+ */
+function premiseFromNote(note: string | undefined): string | undefined {
+  if (note === undefined) return undefined;
+  let text = note;
+  const overlap = text.indexOf("⚠ possible overlap:");
+  if (overlap >= 0) text = text.slice(0, overlap);
+  text = text.replace(/\s*\[按需采集[^\]]*\]/g, " ");
+  text = text.replace(/\s*\(from [^)]*\)\s*$/, "");
+  const parts = text
+    .split(" — ")
+    .map((part) => part.trim())
+    .filter((part) => part !== "");
+  const last = parts[parts.length - 1];
+  return last !== undefined && last !== "" ? last : undefined;
+}
+
 export async function runDraftFromBacklog(
   opts: BacklogDraftOptions,
 ): Promise<number> {
@@ -53,7 +96,9 @@ export async function runDraftFromBacklog(
     return 1;
   }
   if (entry.status === "dropped") {
-    console.error(`✗ "${entry.id}" is dropped — reset it first if you meant to revive it`);
+    console.error(
+      `✗ "${entry.id}" is dropped — reset it first if you meant to revive it`,
+    );
     return 1;
   }
   if (entry.status === "proposed" && opts.force !== true) {
@@ -85,15 +130,19 @@ export async function runDraftFromBacklog(
   saveBacklogStore(repoRoot, store);
   console.log(`▷ backlog ${entry.id} → drafting (project: ${slug})`);
 
-  // The entry's long-form content reaches the drafter through the
-  // existing ideaSeed path (`--file <path>` → polished, opinions kept).
-  const contentDir = entry.content !== undefined ? mkdtempSync(path.join(tmpdir(), "video-backlog-idea-")) : undefined;
-  if (contentDir !== undefined) {
+  // The entry's context reaches the drafter through the existing
+  // ideaSeed path (`--file <path>` → polished, opinions kept).
+  const context = draftingContext(entry);
+  const contentDir =
+    context !== undefined
+      ? mkdtempSync(path.join(tmpdir(), "video-backlog-idea-"))
+      : undefined;
+  if (contentDir !== undefined && context !== undefined) {
     const ideaFile = path.join(contentDir, "idea.md");
-    writeFileSync(ideaFile, entry.content!, "utf8");
+    writeFileSync(ideaFile, context, "utf8");
     opts.draft = { ...opts.draft, ideaFile };
     console.log(
-      `  entry content (${entry.content!.length} chars) injected as drafting context`,
+      `  entry context (${context.length} chars) injected as drafting context`,
     );
   }
 
@@ -117,7 +166,8 @@ export async function runDraftFromBacklog(
       });
     }
   } finally {
-    if (contentDir !== undefined) rmSync(contentDir, { recursive: true, force: true });
+    if (contentDir !== undefined)
+      rmSync(contentDir, { recursive: true, force: true });
   }
 
   const finalize = loadBacklogStore(repoRoot);
@@ -132,7 +182,11 @@ export async function runDraftFromBacklog(
   } else {
     // Exit 2 = the ask gate has questions; nothing was spent and the
     // stamp is reverted the same way as a failure.
-    assertTransition(done, previousStatus === "proposed" ? "proposed" : "idea", true);
+    assertTransition(
+      done,
+      previousStatus === "proposed" ? "proposed" : "idea",
+      true,
+    );
     done.status = previousStatus === "proposed" ? "proposed" : "idea";
     delete done.drafting_at;
     saveBacklogStore(repoRoot, finalize);

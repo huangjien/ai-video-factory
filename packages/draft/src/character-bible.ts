@@ -49,10 +49,16 @@ export function workspaceCharacterRoot(workspaceRoot: string): string {
  * bible rather than guessing at a path.
  */
 export function characterRootFor(projectRoot: string): string | null {
-  const parent = path.dirname(projectRoot);
-  if (path.basename(parent) !== "projects") return null;
-  const root = workspaceCharacterRoot(path.dirname(parent));
-  return existsSync(root) ? root : null;
+  for (
+    let parent = path.dirname(path.resolve(projectRoot));
+    parent !== path.dirname(parent);
+    parent = path.dirname(parent)
+  ) {
+    if (path.basename(parent) !== "projects") continue;
+    const root = workspaceCharacterRoot(path.dirname(parent));
+    if (existsSync(root)) return root;
+  }
+  return null;
 }
 
 /** Where one character's profile lives. */

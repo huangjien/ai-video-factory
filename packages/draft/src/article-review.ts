@@ -957,6 +957,8 @@ export interface ScoredDraftOptions {
    *  (measured: 300 s missed the bar 1/2 times, 90 s passed 2/2), and
    *  a missed bar used to cost a full serial regen (~20 min). */
   candidates?: number;
+  /** Optional generator and failover for the first fresh round. */
+  firstRound?: { provider: Provider; fallback: Provider | null };
   /** Judge provider — SHOULD differ from `provider` so scoring is
    *  cross-model (2026-10-26 design). Default: the generator provider
    *  itself, preserving the historical self-judge behavior for library
@@ -1178,11 +1180,18 @@ export async function runScoredDraft(
   /** One generate+judge pipeline. The attempt number is assigned
    *  synchronously on entry, so parallel candidates number 1..N in
    *  launch order while their awaits interleave. */
-  const produce = async (): Promise<ScoredAttempt> => {
+  const produce = async (
+    generator: Provider,
+    generatorFallback: Provider | null,
+  ): Promise<ScoredAttempt> => {
     const n = ++attemptNo;
     const draftInput: DraftInput =
       feedback !== undefined ? { ...input, feedback } : input;
-    const draft = await callDraft(draftInput, provider, fallback ?? undefined);
+    const draft = await callDraft(
+      draftInput,
+      generator,
+      generatorFallback ?? undefined,
+    );
     usage.input += draft.usage.input;
     usage.output += draft.usage.output;
     providerName = draft.providerName;
@@ -1426,8 +1435,11 @@ export async function runScoredDraft(
 
     // Fresh (round 1) or regeneration fan-out — parallel best-of-N.
     const size = Math.min(candidates, maxAttempts - attempts.length);
+    const { provider: generator, fallback: generatorFallback } = (round === 1
+      ? opts.firstRound
+      : undefined) ?? { provider, fallback };
     const settled = await Promise.allSettled(
-      Array.from({ length: size }, () => produce()),
+      Array.from({ length: size }, () => produce(generator, generatorFallback)),
     );
     const fulfilled = settled
       .filter(

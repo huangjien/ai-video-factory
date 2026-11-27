@@ -19,6 +19,40 @@ assets/characters/
 
 `character_id` 是稳定 id（如 `li_shimin`），场景与提示词引用它，不引用目录位置。
 
+可复用的虚构人物形象用 `young_woman_01` 之类的素材 ID。库内名称用于
+查找，故事人物的名字和服装可以在各自的 `article.md` 里定义。
+
+先查[素材索引](wiki/index.md)筛选形象，再读[选角笔记](wiki/casting-notes.md)
+了解试镜结果。角色档案和参考图仍保存在各自的目录。新增或修改档案后，
+从仓库根目录更新 Markdown 索引。
+
+```sh
+video character catalog > assets/characters/wiki/index.md
+```
+
+有新试镜结果时，选角笔记记下故事角色、素材 ID、参考图版本和实际可见的结果。
+笔记里的参考图链接应指向该次试镜用的版本。
+
+### 故事选角
+
+在文章 frontmatter 里声明故事角色和版本，并在需要出图的镜头里用
+`characters: [{ id: johnsy }]` 引用：
+
+```yaml
+cast:
+  johnsy:
+    name: 琼西
+    asset: young_woman_01
+    reference: manga/v1
+    wardrobe: 米白色睡裙，灰蓝色披肩
+```
+
+另一个故事可以把 `emma` 绑定到同一素材、同一版本，再给她换装。
+自动出图会把角色名、文字特征和对应的图片一起发给支持参考图的
+OpenAI 图像模型。人物由插画呈现时，可以设 `visual_mode: image`、
+`video_sources: "off"`，并用 `video visuals <project> --image-provider openai` 出图。
+没有 `cast` 的文章仍可在镜头中直接引用素材库 ID，使用文字外貌特征。
+
 ## character.yaml
 
 ```yaml
@@ -77,7 +111,8 @@ references:
    其余留在盘上备查。
 3. **只有 `approved` 算正式资产。** `approved` 必须有 `reviewedBy` + `reviewedAt`；
    一种画风最多一个 `approved`，多了必须把旧的标 `superseded`。
-   下游只能用 `approvedReferenceFor()` 取参考图——candidate 永远不会被误当成正式图。
+   自动挑选正式参考图时用 `approvedReferenceFor()`。故事的 `cast.reference`
+   是选角人显式锁定的版本，可用于试画候选图，也能在新版批准后重用旧版。
 
 ## 审核流程
 

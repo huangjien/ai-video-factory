@@ -10,6 +10,7 @@ import {
   quoteColonScalars,
 } from "@video/llm";
 import type { ChatMessage, Provider } from "@video/llm";
+import { runBacklogJudgeExperiment } from "./backlog-judge-experiment.js";
 import { findRepoRoot } from "./learn-command.js";
 import {
   loadBacklogStore,
@@ -617,24 +618,36 @@ export function addJudgeCommand(backlog: Command): void {
   backlog
     .command("judge")
     .description(
-      "one batched LLM ranking of open ideas, stored in runs/backlog-judge.yaml",
+      "compare Gemini and OpenAI scores for open ideas in a weighted experiment",
     )
     .option("--json", "machine-readable output (full ranked object)")
+    .option("--legacy", "use the previous analytics-based judge")
     .option(
       "--model <provider>",
-      "model provider: minimax|glm (default from config)",
+      "legacy model provider: minimax|glm (implies --legacy)",
     )
     .option(
       "--cwd <dir>",
       "repo root (default: walk up to pnpm-workspace.yaml)",
     )
-    .action(async (opts: { json?: boolean; model?: string; cwd?: string }) => {
-      process.exitCode = await runBacklogJudge({
-        ...(opts.json === true ? { json: true } : {}),
-        ...(opts.model !== undefined
-          ? { model: opts.model as "minimax" | "glm" }
-          : {}),
-        ...(opts.cwd !== undefined ? { cwd: opts.cwd } : {}),
-      });
-    });
+    .action(
+      async (opts: {
+        json?: boolean;
+        legacy?: boolean;
+        model?: string;
+        cwd?: string;
+      }) => {
+        if (!opts.legacy && opts.model === undefined) {
+          process.exitCode = await runBacklogJudgeExperiment(opts);
+          return;
+        }
+        process.exitCode = await runBacklogJudge({
+          ...(opts.json === true ? { json: true } : {}),
+          ...(opts.model !== undefined
+            ? { model: opts.model as "minimax" | "glm" }
+            : {}),
+          ...(opts.cwd !== undefined ? { cwd: opts.cwd } : {}),
+        });
+      },
+    );
 }

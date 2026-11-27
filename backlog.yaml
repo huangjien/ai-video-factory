@@ -1,8 +1,7 @@
 schema: backlog/1
 ideas:
   - id: 2026-11-23-中印欧神话对比-1-创世与秩序类型学-chinese-indian-europe
-    topic:
-      "中印欧神话对比 1：创世与秩序类型学 Chinese-Indian-European myth 1: creation and order
+    topic: "中印欧神话对比 1：创世与秩序类型学 Chinese-Indian-European myth 1: creation and order
       typology"
     status: drafted
     source: manual
@@ -127,8 +126,7 @@ ideas:
     project: 中印欧神话对比-1-创世与秩序类型学-chinese-indian-europe
     drafted_at: 2026-11-23T20:40:22.804Z
   - id: 2026-11-23-中印欧神话对比-2-人神边界与行动伦理-chinese-indian-europ
-    topic:
-      "中印欧神话对比 2：人神边界与行动伦理 Chinese-Indian-European myth 2: the human-divine
+    topic: "中印欧神话对比 2：人神边界与行动伦理 Chinese-Indian-European myth 2: the human-divine
       boundary and action ethics"
     status: drafted
     source: manual
@@ -265,8 +263,7 @@ ideas:
     project: 中印欧神话对比-2-人神边界与行动伦理-chinese-indian-europ
     drafted_at: 2026-11-24T07:16:07.455Z
   - id: 2026-11-23-中印欧神话对比-3-秩序的正当性-德-命运-法-chinese-indian-e
-    topic:
-      "中印欧神话对比 3：秩序的正当性——德、命运、法 Chinese-Indian-European myth 3: legitimacy of
+    topic: "中印欧神话对比 3：秩序的正当性——德、命运、法 Chinese-Indian-European myth 3: legitimacy of
       order — virtue, fate, dharma"
     status: drafted
     source: manual
@@ -430,8 +427,7 @@ ideas:
     project: 中印欧神话对比-3-秩序的正当性-德-命运-法-chinese-indian-e
     drafted_at: 2026-11-24T14:47:23.099Z
   - id: 2026-11-23-中印欧神话对比-4-国民性-三种对人的想象-chinese-indian-eur
-    topic:
-      "中印欧神话对比 4：国民性——三种对人的想象 Chinese-Indian-European myth 4: national
+    topic: "中印欧神话对比 4：国民性——三种对人的想象 Chinese-Indian-European myth 4: national
       character and three images of the human"
     status: drafted
     source: manual
@@ -611,8 +607,7 @@ ideas:
     project: 中印欧神话对比-4-国民性-三种对人的想象-chinese-indian-eur
     drafted_at: 2026-11-24T20:04:33.288Z
   - id: 2026-11-23-中印欧神话对比-5-时间与灾难-循环还是线性-chinese-indian-eu
-    topic:
-      "中印欧神话对比 5：时间与灾难——循环还是线性 Chinese-Indian-European myth 5: time and
+    topic: "中印欧神话对比 5：时间与灾难——循环还是线性 Chinese-Indian-European myth 5: time and
       catastrophe — cyclic or linear"
     status: drafted
     source: manual
@@ -783,8 +778,7 @@ ideas:
     status: drafted
     source: harvest:docs/plans/2026-10-19-chinese-storybook-visual-dna-design.md
     created: 2026-11-19
-    note:
-      "One dawn coup decided who ruled the Tang; built-in suspense, character
+    note: "One dawn coup decided who ruled the Tang; built-in suspense, character
       choices, and world-changing consequences make it a natural story — In 626
       AD Li Shimin ambushed his brothers at the northern palace gate of
       Chang'an, deciding the Tang succession in a single morning — ⚠ possible
@@ -838,8 +832,7 @@ ideas:
     status: proposed
     source: harvest:docs/plans/2026-10-19-chinese-storybook-visual-dna-design.md
     created: 2026-11-19
-    note:
-      "A thousand-year-old visual technology that is easy to show on camera and
+    note: "A thousand-year-old visual technology that is easy to show on camera and
       explains why restraint reads as elegance — Precise line drawing fixes
       form, thin layered washes build color, and detail density is concentrated
       only at focal points — ⚠ possible overlap: 7-basic-plots-en
@@ -855,8 +848,7 @@ ideas:
     status: proposed
     source: harvest:docs/plans/2026-10-19-chinese-storybook-visual-dna-design.md
     created: 2026-11-19
-    note:
-      "Counterintuitive in the fast-cut short-video era; a compelling contrast
+    note: "Counterintuitive in the fast-cut short-video era; a compelling contrast
       that explains the narrative power of pauses and blank time — Holding one
       complete image for 8 to 15 seconds, with most shots fully static, lets
       viewers discover details themselves while motion is rationed for emphasis
@@ -888,8 +880,7 @@ ideas:
     status: proposed
     source: harvest:docs/plans/2026-10-19-chinese-storybook-visual-dna-design.md
     created: 2026-11-19
-    note:
-      "Pigments are minerals, trade routes, and chemistry; a material-history
+    note: "Pigments are minerals, trade routes, and chemistry; a material-history
       story with vivid visuals and hidden meaning inside old paintings —
       Cinnabar, azurite, and ochre are ground minerals and earths whose
       chemistry sets a low-saturation base with rare strong accents — ⚠ possible
@@ -937,8 +928,7 @@ ideas:
     status: proposed
     source: harvest:docs/plans/2026-10-19-chinese-storybook-visual-dna-design.md
     created: 2026-11-19
-    note:
-      "Map-plus-war narrative suits single-diagram storytelling; single battles
+    note: "Map-plus-war narrative suits single-diagram storytelling; single battles
       deciding an empire's fate are inherently dramatic — March routes from
       Qianshuiyuan to Hulao Pass string the Tang founding wars onto one
       schematic map of rivers, cities, and turning points — ⚠ possible overlap:
@@ -954,8 +944,7 @@ ideas:
     status: dropped
     source: harvest:docs/plans/2026-10-19-chinese-storybook-visual-dna-implementation-plan.md
     created: 2026-11-19
-    note:
-      "高悬念、强转折的真实历史事件，天然适配悬念开场与道德追问的叙事弧线 — 公元626年李世民在宫门设伏杀兄逼父，事后却开创贞观之治的完整因果链 —
+    note: "高悬念、强转折的真实历史事件，天然适配悬念开场与道德追问的叙事弧线 — 公元626年李世民在宫门设伏杀兄逼父，事后却开创贞观之治的完整因果链 —
       ⚠ possible overlap: 从雇佣军到现代军队-奖励机制的演变-以及-ai-agent-组织设计的启示 (一场、改变、公元); 写好小说
       (一场、改变); 玄武门 (李世民、李渊、玄武) (from
       docs/plans/2026-10-19-chinese-storybook-visual-dna-implementation-plan.md\
@@ -970,8 +959,7 @@ ideas:
     status: dropped
     source: harvest:docs/plans/2026-10-19-chinese-storybook-visual-dna-implementation-plan.md
     created: 2026-11-19
-    note:
-      "把地理、行军方向和权力博弈画在一张图上，直观回答他凭什么敢动手 — 用一张战役地图讲解政变前李世民如何积累压倒性军功与威望 — ⚠
+    note: "把地理、行军方向和权力博弈画在一张图上，直观回答他凭什么敢动手 — 用一张战役地图讲解政变前李世民如何积累压倒性军功与威望 — ⚠
       possible overlap: AI时代的DevOps团队 (用一、一张); ai时代app会消失吗 (用一、一张); ai浪潮与结构性失业
       (用一、一张) (from
       docs/plans/2026-10-19-chinese-storybook-visual-dna-implementation-plan.md\
@@ -986,8 +974,7 @@ ideas:
     status: dropped
     source: harvest:docs/plans/2026-10-19-chinese-storybook-visual-dna-implementation-plan.md
     created: 2026-11-19
-    note:
-      "拆解一种画种如何仅靠线条、留白和有限色相传达历史感与克制的情绪 — 细线勾勒加低饱和分层罩染，在旧纸底色上形成安静统一的画面秩序 — ⚠
+    note: "拆解一种画种如何仅靠线条、留白和有限色相传达历史感与克制的情绪 — 细线勾勒加低饱和分层罩染，在旧纸底色上形成安静统一的画面秩序 — ⚠
       possible overlap: ai-era-software-engineering-11-shifts (分层、细线);
       ai时代app会消失吗 (淡彩、细线); carlo-and-pizza (分层、细线) (from
       docs/plans/2026-10-19-chinese-storybook-visual-dna-implementation-plan.md\
@@ -1002,8 +989,7 @@ ideas:
     status: dropped
     source: harvest:docs/plans/2026-10-19-chinese-storybook-visual-dna-implementation-plan.md
     created: 2026-11-19
-    note:
-      "反直觉的美学机制：不画之处如何制造平静、深度与叙事停顿 — 画面空白引导视线与呼吸感，同时为片名和字幕提供安放位置 — ⚠ possible
+    note: "反直觉的美学机制：不画之处如何制造平静、深度与叙事停顿 — 画面空白引导视线与呼吸感，同时为片名和字幕提供安放位置 — ⚠ possible
       overlap: 3m与pfos的秘密 (画面、视线); AI时代的DevOps团队 (画面、空白); ai时代app会消失吗 (画面、空白、视线)
       (from
       docs/plans/2026-10-19-chinese-storybook-visual-dna-implementation-plan.md\
@@ -1018,8 +1004,7 @@ ideas:
     status: proposed
     source: harvest:docs/plans/2026-10-19-chinese-storybook-visual-dna-implementation-plan.md
     created: 2026-11-19
-    note:
-      "可拆解的通用结构，观众能立刻在自己看过的片子里找到例证 — 悬念—背景—局势—选择—回扣开场的结构先抛出结果再倒叙铺垫 — ⚠ possible
+    note: "可拆解的通用结构，观众能立刻在自己看过的片子里找到例证 — 悬念—背景—局势—选择—回扣开场的结构先抛出结果再倒叙铺垫 — ⚠ possible
       overlap: 3m与pfos的秘密 (背景、选择); AI时代的DevOps团队 (背景、开场、结构);
       ai-era-software-engineering-11-shifts (背景、结构) (from
       docs/plans/2026-10-19-chinese-storybook-visual-dna-implementation-plan.md\
@@ -1033,8 +1018,7 @@ ideas:
     status: proposed
     source: harvest:docs/plans/2026-10-19-chinese-storybook-visual-dna-implementation-plan.md
     created: 2026-11-19
-    note:
-      "解释纪录片最古老技巧之一的感知机制，并回答何时应该完全不动 — 1–2%的缓慢放大给静帧注入呼吸感，同时不制造注意力扰动 — ⚠ possible
+    note: "解释纪录片最古老技巧之一的感知机制，并回答何时应该完全不动 — 1–2%的缓慢放大给静帧注入呼吸感，同时不制造注意力扰动 — ⚠ possible
       overlap: AI时代的DevOps团队 (镜头、放大); ai-era-software-engineering-11-shifts
       (近乎、镜头、放大); ai时代app会消失吗 (近乎、镜头、缓慢) (from
       docs/plans/2026-10-19-chinese-storybook-visual-dna-implementation-plan.md\
@@ -1063,8 +1047,7 @@ ideas:
     status: proposed
     source: harvest:docs/plans/2026-10-19-chinese-storybook-visual-dna-implementation-plan.md
     created: 2026-11-19
-    note:
-      "拆解观众熟悉的'角色漂移'问题的机制，叠加同一人两个时期的真实变化 — 用脸型、发式、体态、服饰、道具等锚点锁定'青年秦王'与'后期皇帝'两个变体
+    note: "拆解观众熟悉的'角色漂移'问题的机制，叠加同一人两个时期的真实变化 — 用脸型、发式、体态、服饰、道具等锚点锁定'青年秦王'与'后期皇帝'两个变体
       — ⚠ possible overlap: AI时代的DevOps团队 (场景、保持、一张);
       ai-era-software-engineering-11-shifts (保持、一张); ai时代app会消失吗 (保持、同一、一张)
       (from
@@ -1079,8 +1062,7 @@ ideas:
     status: proposed
     source: harvest:docs/plans/2026-10-19-chinese-storybook-visual-dna-implementation-plan.md
     created: 2026-11-19
-    note:
-      "教会观众做来源批判：我们看到的'李世民'里多少是史料，多少是画家的发明 — 区分文献可考的身份锚点与美术推断，并为每处艺术加工标注来源 — ⚠
+    note: "教会观众做来源批判：我们看到的'李世民'里多少是史料，多少是画家的发明 — 区分文献可考的身份锚点与美术推断，并为每处艺术加工标注来源 — ⚠
       possible overlap: carlo-and-pizza (历史、区分、身份); llm的输入输出与首token (历史、区分);
       从-prompt-engineering-到-agentic-engineeri (想象、人物、区分) (from
       docs/plans/2026-10-19-chinese-storybook-visual-dna-implementation-plan.md\
@@ -1094,8 +1076,7 @@ ideas:
     status: drafted
     source: harvest:docs/plans/2026-10-19-chinese-storybook-visual-dna-implementation-plan.md
     created: 2026-11-19
-    note:
-      "人人见过的'AI乱码'现象，背后是清晰的生成机制与聪明的工程替代方案 — 扩散模型生成可读文字极不可靠，因此地名交给旁白、山河路线改用矢量数据绘制
+    note: "人人见过的'AI乱码'现象，背后是清晰的生成机制与聪明的工程替代方案 — 扩散模型生成可读文字极不可靠，因此地名交给旁白、山河路线改用矢量数据绘制
       — ⚠ possible overlap: AI时代的DevOps团队 (不能、模型、生成); agents-first (模型、成可、可读);
       ai-era-software-engineering-11-shifts (不能、模型、生成) (from
       docs/plans/2026-10-19-chinese-storybook-visual-dna-implementation-plan.md\
@@ -1112,8 +1093,7 @@ ideas:
     status: drafted
     source: harvest:docs/plans/2026-10-26-cross-model-judging-design.md
     created: 2026-11-19
-    note:
-      "Everyone intuitively grasains the conflict of interest in self-grading;
+    note: "Everyone intuitively grasains the conflict of interest in self-grading;
       documented bias findings make it a concrete, surprising story. — A model
       that scores an artifact it generated itself exhibits self-preference bias;
       the fix is requiring the judge to be a different model than the generator.
@@ -1133,8 +1113,7 @@ ideas:
     status: proposed
     source: harvest:docs/plans/2026-10-26-cross-model-judging-design.md
     created: 2026-11-19
-    note:
-      "An elegant, minimal mechanism that turns a fragile coincidence into an
+    note: "An elegant, minimal mechanism that turns a fragile coincidence into an
       enforceable guarantee — a satisfying 'small fix, big invariant' story. —
       Instead of hoping config defaults never collide, a deterministic rule
       flips the judge to a fallback provider whenever judge == generator. — ⚠
@@ -1150,8 +1129,7 @@ ideas:
     status: drafted
     source: harvest:docs/plans/2026-10-26-cross-model-judging-design.md
     created: 2026-11-19
-    note:
-      "A classic piece of math silently dictating software architecture; viewers
+    note: "A classic piece of math silently dictating software architecture; viewers
       love seeing abstract principles force real engineering decisions. — With
       only two model providers and three generator roles, some pairing must
       repeat a model, so no static role assignment can ensure judge !=
@@ -1187,8 +1165,7 @@ ideas:
     status: proposed
     source: harvest:docs/plans/2026-10-26-cross-model-judging-design.md
     created: 2026-11-19
-    note:
-      "A transferable design lesson with a clear case study: explicit pinning in
+    note: "A transferable design lesson with a clear case study: explicit pinning in
       config silently fails, while a rule in code cannot be misconfigured away.
       — Engineering philosophy: guarantees like 'judge differs from generator'
       belong in code-level rules, not in configuration defaults that can drift.
@@ -1221,8 +1198,7 @@ ideas:
     status: proposed
     source: harvest:docs/plans/2026-10-26-cross-model-judging-design.md
     created: 2026-11-19
-    note:
-      "A crisp taxonomy of verification: cheap deterministic checks vs. fuzzy
+    note: "A crisp taxonomy of verification: cheap deterministic checks vs. fuzzy
       model judgment, and knowing which tool fits which question. —
       Rendered-video QA deliberately uses deterministic checks with no LLM at
       all — statistical models are reserved for judgments code can't make. — ⚠
@@ -1239,8 +1215,7 @@ ideas:
     status: proposed
     source: harvest:docs/plans/2026-10-26-cross-model-judging-design.md
     created: 2026-11-19
-    note:
-      "Failure-mode design is underappreciated drama: the choice between silent
+    note: "Failure-mode design is underappreciated drama: the choice between silent
       degradation, loud degradation, and hard failure shapes user trust. — When
       both configured models equal the generator (single-provider setups), the
       system warns loudly and proceeds same-model rather than failing silently
@@ -1257,8 +1232,7 @@ ideas:
     status: proposed
     source: harvest:docs/plans/2026-10-26-cross-model-judging-design.md
     created: 2026-11-19
-    note:
-      "Audit trails for AI pipelines mirror food labeling or peer review records
+    note: "Audit trails for AI pipelines mirror food labeling or peer review records
       — provenance is what makes automated judgments contestable. — Every scored
       artifact now records judge_model metadata so downstream consumers can
       audit which model evaluated which output — and judge token usage is
@@ -1270,8 +1244,7 @@ ideas:
       - dropped judge usage accounting
       - run records
   - id: 2026-11-19-a-stable-of-models-why-pipelines-assign-
-    topic:
-      "A Stable of Models: Why Pipelines Assign Different Brains to Different
+    topic: "A Stable of Models: Why Pipelines Assign Different Brains to Different
       Jobs"
     status: proposed
     source: harvest:docs/plans/2026-10-26-cross-model-judging-design.md
@@ -1293,8 +1266,7 @@ ideas:
     status: proposed
     source: harvest:docs/plans/2026-11-18-backlog-feature-design.md
     created: 2026-11-19
-    note:
-      '文档中的原生选题；反直觉机制（临时安排的极端耐久性）+ 两个著名现实案例，天然适合纪录片式讲解 —
+    note: '文档中的原生选题；反直觉机制（临时安排的极端耐久性）+ 两个著名现实案例，天然适合纪录片式讲解 —
       停火≠和平——监督机制与利益冻结让一条"临时"停火线变成几十年不变的分界线 — ⚠ possible overlap: 3m与pfos的秘密
       (几十、十年、一条); AI时代的DevOps团队 (机制、一条); agents-first (十年、机制) (from
       docs/plans/2026-11-18-backlog-feature-design.md)'
@@ -1306,8 +1278,7 @@ ideas:
     status: proposed
     source: harvest:docs/plans/2026-11-18-backlog-feature-design.md
     created: 2026-11-19
-    note:
-      "抽象但可具体落地的机制揭秘，观众熟悉的新闻场景（板门店）背后有一整套运转了几十年的制度 —
+    note: "抽象但可具体落地的机制揭秘，观众熟悉的新闻场景（板门店）背后有一整套运转了几十年的制度 —
       停战监督机制如何在缺乏正式和平的情况下维持停火——谁巡逻、如何核查违规、违规后会发生什么 — ⚠ possible overlap:
       AI时代的DevOps团队 (机制、正式、情况); agents-first (机制、情况); ai近期转折 (机制、正式) (from
       docs/plans/2026-11-18-backlog-feature-design.md)"
@@ -1319,8 +1290,7 @@ ideas:
     status: drafted
     source: harvest:docs/plans/2026-11-18-backlog-feature-design.md
     created: 2026-11-19
-    note:
-      "强钩子史实——法律状态与现实和平的巨大落差本身就是故事，配历史影像素材充足 — 1953年签署的是停战协定而非和平条约，技术上战争状态延续至今 —
+    note: "强钩子史实——法律状态与现实和平的巨大落差本身就是故事，配历史影像素材充足 — 1953年签署的是停战协定而非和平条约，技术上战争状态延续至今 —
       ⚠ possible overlap: ai近期转折 (正式、结束、而非);
       从-prompt-engineering-到-agent-engineering (正式、而非); 从伍什到班排的历史演变 (战协、而非)
       (from docs/plans/2026-11-18-backlog-feature-design.md)"
@@ -1335,8 +1305,7 @@ ideas:
     status: proposed
     source: harvest:docs/plans/2026-11-18-backlog-feature-design.md
     created: 2026-11-19
-    note:
-      '现实热点地区的"非正式边界"演化史，地图上一条虚线背后的机制、战争与谈判叙事完整 — LoC
+    note: '现实热点地区的"非正式边界"演化史，地图上一条虚线背后的机制、战争与谈判叙事完整 — LoC
       起初只是停火线，经多次战争与协定演化为事实上的边界，被地图和治理双重固化 — ⚠ possible overlap: ai时代app会消失吗
       (实际、控制); ai浪潮与结构性失业 (实际、控制); carlo-and-pizza (实际、控制) (from
       docs/plans/2026-11-18-backlog-feature-design.md)'
@@ -1345,25 +1314,22 @@ ideas:
       - 1972年西姆拉协定
   - id: 2026-11-19-为什么-冻结的冲突-对双方都有利
     topic: 为什么"冻结的冲突"对双方都有利
-    status: drafting
+    status: idea
     source: harvest:docs/plans/2026-11-18-backlog-feature-design.md
     created: 2026-11-19
-    note:
-      "反直觉的政治经济学解释，用具体停火线案例讲博弈论，能覆盖全球多个冻结冲突案例做对比 —
+    note: "反直觉的政治经济学解释，用具体停火线案例讲博弈论，能覆盖全球多个冻结冲突案例做对比 —
       利益冻结的博弈逻辑——改变现状的代价高于维持现状时，各方宁愿管理冲突而非解决冲突 — ⚠ possible overlap: ai时代app会消失吗
       (利益、逻辑); 写故事 (冲突、逻辑); 孙子兵法的数学原理 (冲突、双方) (from
       docs/plans/2026-11-18-backlog-feature-design.md)"
     anchors:
       - 克什米尔 LoC
       - 板门店停战协定
-    drafting_at: 2026-11-26T05:05:04.161Z
   - id: 2026-11-19-the-duplicate-filter-that-ate-every-new-
     topic: The duplicate filter that ate every new idea
     status: proposed
     source: harvest:docs/plans/2026-11-18-backlog-feature-implementation-plan.md
     created: 2026-11-19
-    note:
-      "A concrete automation-gone-wrong story with hard numbers that teaches why
+    note: "A concrete automation-gone-wrong story with hard numbers that teaches why
       text filters need noise control before they make decisions. — Naive
       keyword-overlap matching hits common stopwords everywhere, so an auto-skip
       rule fired 77 false positives and discarded 100% of new candidates;
@@ -1395,8 +1361,7 @@ ideas:
     status: proposed
     source: harvest:docs/plans/2026-11-18-backlog-feature-implementation-plan.md
     created: 2026-11-19
-    note:
-      "A timely design answer to where AI belongs in a pipeline, argued through
+    note: "A timely design answer to where AI belongs in a pipeline, argued through
       reproducibility and testability rather than hype. — Keep state machines,
       scoring, and joins in plain code; reserve the LLM for the only two jobs
       needing real language judgment - extraction and ranking. — ⚠ possible
@@ -1411,8 +1376,7 @@ ideas:
     status: proposed
     source: harvest:docs/plans/2026-11-18-backlog-feature-implementation-plan.md
     created: 2026-11-19
-    note:
-      "Reframes creator procrastination as a state-tracking problem - why ideas
+    note: "Reframes creator procrastination as a state-tracking problem - why ideas
       die in limbo and how explicit statuses with escape hatches rescue them. —
       A guarded lifecycle from proposed to idea to drafting to
       drafted-or-dropped, plus a reset escape hatch, keeps unfinished work
@@ -1428,8 +1392,7 @@ ideas:
     status: proposed
     source: harvest:docs/plans/2026-11-18-backlog-feature-implementation-plan.md
     created: 2026-11-19
-    note:
-      "Takes a familiar database concept and shows it governing real creative
+    note: "Takes a familiar database concept and shows it governing real creative
       output, with the stuck-in-drafting failure mode as the hook. — Mark the
       item in progress, commit the backlink only on success, and roll the status
       back on failure - the commit and rollback pattern applied outside
@@ -1474,8 +1437,7 @@ ideas:
     status: proposed
     source: harvest:docs/plans/2026-11-18-backlog-feature-implementation-plan.md
     created: 2026-11-19
-    note:
-      "A data-driven self-audit story - measuring the conversion rate from raw
+    note: "A data-driven self-audit story - measuring the conversion rate from raw
       idea to published video reveals which inputs actually produce finished
       work. — Join every idea to its output folder and platform IDs, then
       compute a three-stage hit rate (drafted, rendered, published) grouped by
@@ -1491,8 +1453,7 @@ ideas:
     status: drafted
     source: harvest:docs/plans/2026-11-18-military-ai-topic-backlog-design.md
     created: 2026-11-19
-    note:
-      "一支专职「打赢自己人」的精锐部队违反直觉，本质是评价指标被博弈的经典案例，普适性强 —
+    note: "一支专职「打赢自己人」的精锐部队违反直觉，本质是评价指标被博弈的经典案例，普适性强 —
       对抗式评估用于校准训练的评价函数，防止「演习必胜、实战必败」的作弊式训练 — ⚠ possible overlap: AI时代的DevOps团队
       (一支、评价); ai-era-software-engineering-11-shifts (要专、函数); ai时代app会消失吗
       (专门、一支、评价) (from
@@ -1509,8 +1470,7 @@ ideas:
     status: drafted
     source: harvest:docs/plans/2026-11-18-military-ai-topic-backlog-design.md
     created: 2026-11-19
-    note:
-      "频繁调动看似低效，实则是大组织对抗派系与地方主义的深层设计，对企业和官僚体系同样适用 —
+    note: "频繁调动看似低效，实则是大组织对抗派系与地方主义的深层设计，对企业和官僚体系同样适用 —
       制度在防止山头化与经验连续性之间权衡，轮岗是代价高昂的防腐与控制机制 — ⚠ possible overlap: AI时代的DevOps团队
       (定期、经验、连续); 从-prompt-engineering-到-agentic-engineeri (要定、连续);
       从雇佣军到现代军队-奖励机制的演变-以及-ai-agent-组织设计的启示 (军官、定期、制度) (from
@@ -1527,8 +1487,7 @@ ideas:
     status: drafted
     source: harvest:docs/plans/2026-11-18-military-ai-topic-backlog-design.md
     created: 2026-11-19
-    note:
-      "「天天做的最危险的事」自带戏剧张力，可结合驾驶舱视角与事故影像做高视觉化呈现 —
+    note: "「天天做的最危险的事」自带戏剧张力，可结合驾驶舱视角与事故影像做高视觉化呈现 —
       每次着舰相当于一次可控的小事故，靠失误链管理与助降体系压缩尾部风险 — ⚠ possible overlap: agents-first
       (一次、事故); ai时代app会消失吗 (每次、一次、可控); carlo-and-pizza (每次、一次、可控) (from
       docs/plans/2026-11-18-military-ai-topic-backlog-design.md)"
@@ -1544,8 +1503,7 @@ ideas:
     status: drafted
     source: harvest:docs/plans/2026-11-18-military-ai-topic-backlog-design.md
     created: 2026-11-19
-    note:
-      "大众每天都在用AI却不理解它为何自信地犯错，「无法根除」的结论反直觉且与切身利益相关 —
+    note: "大众每天都在用AI却不理解它为何自信地犯错，「无法根除」的结论反直觉且与切身利益相关 —
       下一词预测、RLHF奖励「听起来自信」与校准缺失，使幻觉成为结构性产物而非偶发bug — ⚠ possible overlap:
       3m与pfos的秘密 (一本、下一); AI时代的DevOps团队 (本正、下一); ai近期转折 (下一、预测) (from
       docs/plans/2026-11-18-military-ai-topic-backlog-design.md)"
@@ -1561,8 +1519,7 @@ ideas:
     status: drafted
     source: harvest:docs/plans/2026-11-18-military-ai-topic-backlog-design.md
     created: 2026-11-19
-    note:
-      "少数常备军如何变出百万大军，动员机制是大众陌生的国家底层能力，故事性强 — 平战转换机制——以极低的平时成本维持一支可快速扩编的兵力骨架 — ⚠
+    note: "少数常备军如何变出百万大军，动员机制是大众陌生的国家底层能力，故事性强 — 平战转换机制——以极低的平时成本维持一支可快速扩编的兵力骨架 — ⚠
       possible overlap: ai-era-software-engineering-11-shifts (转换、机制); 编程中的模型思维
       (转换、换机、机制); 软件工程师的认知之旅-从争论到判断 (转换、机制) (from
       docs/plans/2026-11-18-military-ai-topic-backlog-design.md)"
@@ -1577,8 +1534,7 @@ ideas:
     status: drafted
     source: harvest:docs/plans/2026-11-18-military-ai-topic-backlog-design.md
     created: 2026-11-19
-    note:
-      "一群不上战场的军官如何主宰战争，制度起源故事完整，适合讲组织设计的演化 — 计划与执行分离，让一个不直接指挥部队的专职机构负责作战设计 — ⚠
+    note: "一群不上战场的军官如何主宰战争，制度起源故事完整，适合讲组织设计的演化 — 计划与执行分离，让一个不直接指挥部队的专职机构负责作战设计 — ⚠
       possible overlap: AI时代的DevOps团队 (执行、一个); agents-first (执行、一个);
       ai-era-software-engineering-11-shifts (执行、一个、个不) (from
       docs/plans/2026-11-18-military-ai-topic-backlog-design.md)"
@@ -1593,8 +1549,7 @@ ideas:
     status: dropped
     source: harvest:docs/plans/v0.12/milestone-v0.12-decision-surfaces.md
     created: 2026-11-19
-    note:
-      'A concrete, visual mechanism for how teams safely roll out AI into real
+    note: 'A concrete, visual mechanism for how teams safely roll out AI into real
       pipelines without trusting it blindly — New AI decision points run in
       "shadow mode" — consulted and recorded — until a measured accuracy corpus
       clears a gate before the AI is allowed to act — ⚠ possible overlap:
@@ -1625,12 +1580,12 @@ ideas:
     status: proposed
     source: harvest:docs/plans/v0.12/milestone-v0.12-decision-surfaces.md
     created: 2026-11-19
-    note: 'A tidy case study in why "we can''t even measure this" is itself a
+    note: "A tidy case study in why \"we can't even measure this\" is itself a
       decisive engineering answer — An image-brief expansion skip was cancelled
       because no evaluation corpus existed to measure it against — ⚠ possible
       overlap: 7-basic-plots-en (because、against); AI近期转折-en
       (corpus、measure、against); LLM的输入输出与首Token-en (built、skip、measure) (from
-      docs/plans/v0.12/milestone-v0.12-decision-surfaces.md)'
+      docs/plans/v0.12/milestone-v0.12-decision-surfaces.md)"
     anchors:
       - image-brief expansion skip
       - evaluation corpus
@@ -1639,8 +1594,7 @@ ideas:
     status: proposed
     source: harvest:docs/plans/v0.12/milestone-v0.12-decision-surfaces.md
     created: 2026-11-19
-    note:
-      'A relatable look at how release semantics and single-line status markers
+    note: 'A relatable look at how release semantics and single-line status markers
       drive automated versioning — Implementation can be complete and verified
       while a release stays "Planned" until the git tag and GitHub Release
       exist, with tooling reading that status line — ⚠ possible overlap:
@@ -1670,8 +1624,7 @@ ideas:
     status: dropped
     source: harvest:docs/plans/v0.12/milestone-v0.12-decision-surfaces.md
     created: 2026-11-19
-    note:
-      "Meta-verification of AI judges is an accessible entry into AI evaluation
+    note: "Meta-verification of AI judges is an accessible entry into AI evaluation
       and trust — A prompt-evaluation rubric judge was itself turned into a
       score decision with a separate measurement placed beside it — ⚠ possible
       overlap: AI近期转折-en (itself、turned); LLM的输入输出与首Token-en
@@ -1701,8 +1654,7 @@ ideas:
     status: drafted
     source: harvest:docs/plans/v0.12/v0.12-decision-surfaces-plan.md
     created: 2026-11-19
-    note:
-      "A concrete, general-audience story about trusting AI: it can vote all it
+    note: "A concrete, general-audience story about trusting AI: it can vote all it
       wants, but it only gets power after a measured track record. — New AI
       decision points run silently alongside the system — consulted, logged, and
       scored against a deterministic baseline — and are only allowed to
@@ -1722,8 +1674,7 @@ ideas:
     status: proposed
     source: harvest:docs/plans/v0.12/v0.12-decision-surfaces-plan.md
     created: 2026-11-19
-    note:
-      "Explains a counterintuitive design philosophy: a failed AI call should be
+    note: "Explains a counterintuitive design philosophy: a failed AI call should be
       invisible, because failure is an error to log, never an answer to obey. —
       Every decision call is designed to never throw — outages, timeouts, and
       low-confidence answers all collapse to a single 'null' that triggers
@@ -1739,8 +1690,7 @@ ideas:
     status: proposed
     source: harvest:docs/plans/v0.12/v0.12-decision-surfaces-plan.md
     created: 2026-11-19
-    note:
-      "Reframes AI output from confident answers to quantified belief, which is
+    note: "Reframes AI output from confident answers to quantified belief, which is
       the core idea audiences need to understand modern AI reliability. —
       Decisions come back as probability distributions over options — including
       a 'probability this statement is true' where 0.5 explicitly means 'does
@@ -1756,8 +1706,7 @@ ideas:
     status: drafted
     source: harvest:docs/plans/v0.12/v0.12-decision-surfaces-plan.md
     created: 2026-11-19
-    note:
-      "A great mechanism video: the difference between being right and knowing
+    note: "A great mechanism video: the difference between being right and knowing
       when you're right, told through a 75-year-old forecasting metric. — Before
       any decision surface can act it must hit 90% accuracy AND a Brier score
       under 0.25 — a metric that punishes confident wrong answers, borrowed from
@@ -1793,8 +1742,7 @@ ideas:
     status: dropped
     source: harvest:docs/plans/v0.12/v0.12-decision-surfaces-plan.md
     created: 2026-11-19
-    note:
-      "A rare, honest engineering story: the discipline of pulling the plug on
+    note: "A rare, honest engineering story: the discipline of pulling the plug on
       AI that doesn't beat randomness, told through the surface that failed. —
       One decision surface was wired up, measured, found to be no better than a
       coin flip — and deliberately retired rather than kept out of sunk cost. —
@@ -1810,8 +1758,7 @@ ideas:
     status: dropped
     source: harvest:docs/plans/v0.12/v0.12-decision-surfaces-plan.md
     created: 2026-11-19
-    note:
-      "A compelling why-question for any builder: the cheapest feature is the
+    note: "A compelling why-question for any builder: the cheapest feature is the
       one you never build, and measurement is the weapon. — Two candidate AI
       integrations were measured on paper and refused before any code was
       written; a prior screen was cancelled over a measly 2.3% saving. — ⚠
@@ -1843,8 +1790,7 @@ ideas:
     status: proposed
     source: harvest:docs/plans/v0.12/v0.12-decision-surfaces-plan.md
     created: 2026-11-19
-    note:
-      "A practical, general-audience framework for choosing between AI models —
+    note: "A practical, general-audience framework for choosing between AI models —
       plus the small data gap that silently froze the whole comparison. — The
       ranking rule gates on accuracy first, then cost per decision, then p95
       latency — but an empty price column meant the tiebreaker could never even
@@ -1860,8 +1806,7 @@ ideas:
     status: proposed
     source: harvest:docs/plans/v0.12/v0.12-decision-surfaces-plan.md
     created: 2026-11-19
-    note:
-      "A strong accountability story: if an AI-influenced product misbehaves,
+    note: "A strong accountability story: if an AI-influenced product misbehaves,
       you can reconstruct exactly what the model was asked, answered, and how
       confident it claimed to be. — Every single AI consult writes one immutable
       log row — provider, answer, confidence, latency, and a hash of the input
@@ -1877,8 +1822,7 @@ ideas:
     status: proposed
     source: harvest:learnings/improvement-proposals/2026-10-24-experience-batch-1.md
     created: 2026-11-19
-    note:
-      "A silent, invisible failure that produced visibly wrong art on screen —
+    note: "A silent, invisible failure that produced visibly wrong art on screen —
       the classic 'cache invalidation is hard' problem made concrete and
       watchable. — A video render cache judged freshness by the prompt text, not
       the image bytes, so regenerating a scene's artwork reused the old cached
@@ -1895,8 +1839,7 @@ ideas:
     status: proposed
     source: harvest:learnings/improvement-proposals/2026-10-24-experience-batch-1.md
     created: 2026-11-19
-    note:
-      "Explains the trust mechanism behind every cache, CDN, and package manager
+    note: "Explains the trust mechanism behind every cache, CDN, and package manager
       through one concrete story about a single jpg. — Taking a sha256 digest of
       a file's actual bytes — computed identically whether the tool sees a file
       path or an embedded base64 data URI — is what lets independent tools agree
@@ -1913,8 +1856,7 @@ ideas:
     status: dropped
     source: harvest:learnings/improvement-proposals/2026-10-24-experience-batch-1.md
     created: 2026-11-19
-    note:
-      "A visual, demoable mystery — sweeping the threshold from 0.4 down to 0.02
+    note: "A visual, demoable mystery — sweeping the threshold from 0.4 down to 0.02
       shows how one number decides whether a machine 'sees' a cut, and why
       calibrations don't transfer between domains. — Frame-difference scoring
       with a 0.4 threshold calibrated for camera footage detected 0 of 45 cuts
@@ -1932,8 +1874,7 @@ ideas:
     status: drafted
     source: harvest:learnings/improvement-proposals/2026-10-24-experience-batch-1.md
     created: 2026-11-19
-    note:
-      "A human-factors story that generalizes from software QA to aviation and
+    note: "A human-factors story that generalizes from software QA to aviation and
       hospital alarms: an always-red alert is worse than no alert at all. — A
       false cut-detection warning appeared on 100% of quality reports, training
       operators to ignore warn-level checks — exactly when two real stale-render
@@ -1953,8 +1894,7 @@ ideas:
     status: proposed
     source: harvest:learnings/improvement-proposals/2026-10-24-experience-batch-1.md
     created: 2026-11-19
-    note:
-      "A concrete case of a dashboard diverging from reality, plus the design
+    note: "A concrete case of a dashboard diverging from reality, plus the design
       move that makes the lie structurally impossible rather than merely tested
       against. — The dry-run and the real build each implemented their own
       cache-freshness check, so the impact table reported scenes as cached that
@@ -1971,8 +1911,7 @@ ideas:
     status: proposed
     source: harvest:learnings/improvement-proposals/2026-10-24-experience-batch-1.md
     created: 2026-11-19
-    note:
-      "Explores the scariest class of automation failure: silence, where doing
+    note: "Explores the scariest class of automation failure: silence, where doing
       nothing is indistinguishable from being done. — In an automated
       draft-review loop, a single judge failure ended the loop with no retry and
       no visible error — the pipeline didn't crash, it just quietly stopped. — ⚠
@@ -1987,8 +1926,7 @@ ideas:
     status: proposed
     source: harvest:learnings/improvement-proposals/2026-10-24-experience-batch-1.md
     created: 2026-11-19
-    note:
-      "A tidy systems-design puzzle anyone who has ever cleared a browser cache
+    note: "A tidy systems-design puzzle anyone who has ever cleared a browser cache
       can feel: adding a new rule to data that already exists. — Treat cache
       entries that predate a new metadata field as an automatic mismatch, so
       every legacy entry invalidates exactly once — never forever, never
@@ -2011,8 +1949,7 @@ ideas:
     project: 军队的实弹对抗演习怎么打-实弹打向哪里-如何判定胜负
     drafted_at: 2026-11-23T01:23:34.017Z
   - id: 2026-11-20-ai-代理-有三种使用模式-1-管道式-做完一步移交给下一步-2-编排式-通过编
-    topic:
-      AI 代理，有三种使用模式：（1）管道式（做完一步移交给下一步），（2）编排式（通过编排器来指挥），（3）白板式（每个 AI
+    topic: AI 代理，有三种使用模式：（1）管道式（做完一步移交给下一步），（2）编排式（通过编排器来指挥），（3）白板式（每个 AI
       自己阅读白板信息，自由行动）。
     status: drafted
     source: manual
@@ -2025,8 +1962,7 @@ ideas:
     status: proposed
     source: harvest:docs/plans/2026-10-19-chinese-storybook-visual-dna-design.md
     created: 2026-11-20
-    note:
-      "Geography explaining politics: one gate, multiple successful coups — a
+    note: "Geography explaining politics: one gate, multiple successful coups — a
       repeatable mechanism viewers can literally map. — Whoever controlled the
       north gate of the palace controlled the guards and the emperor's escape
       route, so Tang power seizures repeatedly turned on this one chokepoint. —
@@ -2042,8 +1978,7 @@ ideas:
     status: proposed
     source: harvest:docs/plans/2026-10-19-chinese-storybook-visual-dna-design.md
     created: 2026-11-20
-    note:
-      "The road to the coup: battlefield genius created a political problem that
+    note: "The road to the coup: battlefield genius created a political problem that
       no succession rule could solve. — Li Shimin's campaigns, ending in the
       double victory over Wang Shichong and Dou Jiande, destroyed the rival
       warlords and made his military credit impossible to ignore. — ⚠ possible
@@ -2059,8 +1994,7 @@ ideas:
     status: proposed
     source: harvest:docs/plans/2026-10-19-chinese-storybook-visual-dna-design.md
     created: 2026-11-20
-    note:
-      "A classic why-question with stakes: what happens when inheritance rules
+    note: "A classic why-question with stakes: what happens when inheritance rules
       meet the reality of who actually won the wars. — Tang succession defaulted
       to the eldest son Li Jiancheng, but the empire had been conquered by the
       second son — a structural collision that ended at Xuanwu Gate. — ⚠
@@ -2076,8 +2010,7 @@ ideas:
     status: proposed
     source: harvest:docs/plans/2026-10-19-chinese-storybook-visual-dna-design.md
     created: 2026-11-20
-    note:
-      "A visible mechanism of restraint that teaches a general audience how to
+    note: "A visible mechanism of restraint that teaches a general audience how to
       read a classical Chinese painting in one sitting. — Gongbi builds pictures
       from disciplined outline and layered low-saturation washes, spending
       detail only at the focal point and keeping distance simple. — ⚠ possible
@@ -2093,8 +2026,7 @@ ideas:
     status: proposed
     source: harvest:docs/plans/2026-10-19-chinese-storybook-visual-dna-design.md
     created: 2026-11-20
-    note:
-      "Materials science meets art history: why these specific colors, and why
+    note: "Materials science meets art history: why these specific colors, and why
       they age the way they do, is a satisfying everyday mystery. — Cinnabar
       red, azurite blue and ochre come from ground minerals and earths, which is
       why antique paintings share a stable paper-and-ink low-saturation color
@@ -2126,8 +2058,7 @@ ideas:
     status: proposed
     source: harvest:docs/plans/2026-10-19-chinese-storybook-visual-dna-design.md
     created: 2026-11-20
-    note:
-      "Pulls back the curtain on how documentary images of historical faces are
+    note: "Pulls back the curtain on how documentary images of historical faces are
       built — and how much is honest, labeled guesswork. — Reconstructing a
       historical figure means splitting every visual choice into documented
       evidence versus artistic inference, and surviving portraits cover only
@@ -2176,8 +2107,7 @@ ideas:
     status: proposed
     source: harvest:docs/plans/2026-10-19-chinese-storybook-visual-dna-implementation-plan.md
     created: 2026-11-20
-    note:
-      "清晰的人物弧线，可讨论历史形象如何随身份与年龄转变 — 同一人物在统一战争时期与贞观治世的外观、角色与史料形象差异 — ⚠ possible
+    note: "清晰的人物弧线，可讨论历史形象如何随身份与年龄转变 — 同一人物在统一战争时期与贞观治世的外观、角色与史料形象差异 — ⚠ possible
       overlap: 为什么会有总参谋部 (后期、人物); 从雇佣军到现代军队-奖励机制的演变-以及-ai-agent-组织设计的启示
       (身份、人物、战争); 军种与兵种的组织文化 (身份、战争) (from
       docs/plans/2026-10-19-chinese-storybook-visual-dna-implementation-plan.md\
@@ -2191,8 +2121,7 @@ ideas:
     status: proposed
     source: harvest:docs/plans/2026-10-19-chinese-storybook-visual-dna-implementation-plan.md
     created: 2026-11-20
-    note:
-      "可拆解几乎任何故事的通用结构，观众能直接套用到自己爱看的作品 — 传统说书人以固定讲述者、停顿和回扣开场来组织单集故事结构 — ⚠
+    note: "可拆解几乎任何故事的通用结构，观众能直接套用到自己爱看的作品 — 传统说书人以固定讲述者、停顿和回扣开场来组织单集故事结构 — ⚠
       possible overlap: AI时代的DevOps团队 (背景、开场); ai时代app会消失吗 (弧线、背景、传统);
       ai浪潮与结构性失业 (弧线、背景、转折) (from
       docs/plans/2026-10-19-chinese-storybook-visual-dna-implementation-plan.md\
@@ -2206,8 +2135,7 @@ ideas:
     status: proposed
     source: harvest:docs/plans/2026-10-19-chinese-storybook-visual-dna-implementation-plan.md
     created: 2026-11-20
-    note:
-      "观众都见过AI角色不一致的穿帮，讲清成因与解法有广泛共鸣 — 图像模型不接收参考图时，靠身份文字锚点、年龄变体档案、联系表与人工审核维持一致性 —
+    note: "观众都见过AI角色不一致的穿帮，讲清成因与解法有广泛共鸣 — 图像模型不接收参考图时，靠身份文字锚点、年龄变体档案、联系表与人工审核维持一致性 —
       ⚠ possible overlap: AI时代的DevOps团队 (生成、画面、模型); agents-first (前后、模型、参考);
       ai-era-software-engineering-11-shifts (生成、画面、角色) (from
       docs/plans/2026-10-19-chinese-storybook-visual-dna-implementation-plan.md\
@@ -2221,8 +2149,7 @@ ideas:
     status: proposed
     source: harvest:docs/plans/2026-10-19-chinese-storybook-visual-dna-implementation-plan.md
     created: 2026-11-20
-    note:
-      "反直觉的剪辑美学，用动静对比片段即可直观演示其对注意力的影响 — 默认静止、每镜至多一种1–2%慢推，拒绝节拍驱动的运动堆叠与自动高亮 — ⚠
+    note: "反直觉的剪辑美学，用动静对比片段即可直观演示其对注意力的影响 — 默认静止、每镜至多一种1–2%慢推，拒绝节拍驱动的运动堆叠与自动高亮 — ⚠
       possible overlap: 3m与pfos的秘密 (镜头、越少); ai时代app会消失吗 (镜头、越少); 人的需要 (运动、镜头)
       (from
       docs/plans/2026-10-19-chinese-storybook-visual-dna-implementation-plan.md\
@@ -2235,8 +2162,7 @@ ideas:
     status: proposed
     source: harvest:docs/plans/2026-10-19-chinese-storybook-visual-dna-implementation-plan.md
     created: 2026-11-20
-    note:
-      "关乎观众被误导的机制解释，历史与地理爱好者都会点开 — 生成式地图的山河与路线关系不可靠，须用可核验的矢量路径与标记数据重绘 — ⚠
+    note: "关乎观众被误导的机制解释，历史与地理爱好者都会点开 — 生成式地图的山河与路线关系不可靠，须用可核验的矢量路径与标记数据重绘 — ⚠
       possible overlap: 3m与pfos的秘密 (关系、不可); AI时代的DevOps团队 (不能、生成、关系);
       ai-era-software-engineering-11-shifts (不能、生成) (from
       docs/plans/2026-10-19-chinese-storybook-visual-dna-implementation-plan.md\
@@ -2249,8 +2175,7 @@ ideas:
     status: proposed
     source: harvest:docs/plans/2026-10-19-chinese-storybook-visual-dna-implementation-plan.md
     created: 2026-11-20
-    note:
-      '用"让一幅画下雨"这个具体案例讲透合成与图层的基础原理 — 单张合成图没有独立图层，局部动画必须靠遮罩把动态层与静态底分离 — ⚠
+    note: '用"让一幅画下雨"这个具体案例讲透合成与图层的基础原理 — 单张合成图没有独立图层，局部动画必须靠遮罩把动态层与静态底分离 — ⚠
       possible overlap: ai-era-software-engineering-11-shifts (会变、独立);
       ai时代app会消失吗 (起来、合成); carlo-and-pizza (起来、合成、独立) (from
       docs/plans/2026-10-19-chinese-storybook-visual-dna-implementation-plan.md)'
@@ -2262,8 +2187,7 @@ ideas:
     status: proposed
     source: harvest:docs/plans/2026-10-19-chinese-storybook-visual-dna-implementation-plan.md
     created: 2026-11-20
-    note:
-      "人人都见过对不上的字幕，讲清时间轴背后如何被计算有揭秘感 — 按标点切分字幕、按文字长度比例对着实测音频时长分配显示区间，凑出近似同步 — ⚠
+    note: "人人都见过对不上的字幕，讲清时间轴背后如何被计算有揭秘感 — 按标点切分字幕、按文字长度比例对着实测音频时长分配显示区间，凑出近似同步 — ⚠
       possible overlap: ai时代app会消失吗 (时间、语音、标点); 为什么会有总参谋部 (时间、间戳、时间戳);
       从app入口到可调用能力 (时间、语音、切分) (from
       docs/plans/2026-10-19-chinese-storybook-visual-dna-implementation-plan.md\
@@ -2277,8 +2201,7 @@ ideas:
     status: proposed
     source: harvest:docs/plans/2026-10-26-cross-model-judging-design.md
     created: 2026-11-20
-    note:
-      "Explains how the AI leaderboards everyone quotes are actually built — and
+    note: "Explains how the AI leaderboards everyone quotes are actually built — and
       why their referees matter. — Benchmarks increasingly use language models
       to grade outputs, raising the question of who judges the judge. — ⚠
       possible overlap: 3m与pfos的秘密 (language); 7-basic-plots-en
@@ -2293,8 +2216,7 @@ ideas:
     status: proposed
     source: harvest:docs/plans/2026-10-26-cross-model-judging-design.md
     created: 2026-11-20
-    note:
-      "A detective story about coincidence-masked bugs that resonates far beyond
+    note: "A detective story about coincidence-masked bugs that resonates far beyond
       programming. — Reading the wrong config key stays invisible as long as
       defaults coincide; any divergence exposes years of silent misrouting. — ⚠
       possible overlap: 7-basic-plots-en (bug、because、reading); AI近期转折-en
@@ -2308,8 +2230,7 @@ ideas:
     status: proposed
     source: harvest:docs/plans/2026-10-26-cross-model-judging-design.md
     created: 2026-11-20
-    note:
-      "Explains the familiar puzzle of rankings jumping overnight — in tests,
+    note: "Explains the familiar puzzle of rankings jumping overnight — in tests,
       sports, or AI — whenever the grader changes. — Swapping the judge model
       invalidates recorded baselines, so evals pin the judge's identity to keep
       numbers comparable. — ⚠ possible overlap: 7-basic-plots-en
@@ -2325,8 +2246,7 @@ ideas:
     status: proposed
     source: harvest:docs/plans/2026-10-26-cross-model-judging-design.md
     created: 2026-11-20
-    note:
-      "A hidden-metadata story: files that quietly testify about who made them
+    note: "A hidden-metadata story: files that quietly testify about who made them
       and who checked them. — Recording which model judged each artifact gives
       outputs provenance, making later audits and disputes resolvable. — ⚠
       possible overlap: 7-basic-plots-en (paper、trail、inside); AI近期转折-en
@@ -2341,8 +2261,7 @@ ideas:
     status: proposed
     source: harvest:docs/plans/2026-10-26-cross-model-judging-design.md
     created: 2026-11-20
-    note:
-      "A relatable tension between rigid rules and discretionary judgment, and
+    note: "A relatable tension between rigid rules and discretionary judgment, and
       why good systems use both. — Quality gates split into deterministic code
       checks and LLM judgment because the two failure modes are complementary. —
       ⚠ possible overlap: 7-basic-plots-en (code、because); AI近期转折-en
@@ -2356,8 +2275,7 @@ ideas:
     status: proposed
     source: harvest:docs/plans/2026-10-26-cross-model-judging-design.md
     created: 2026-11-20
-    note:
-      "Counterintuitive math about collective judgment: diversity of checkers
+    note: "Counterintuitive math about collective judgment: diversity of checkers
       matters more than raw skill of one. — Independent, diverse judges disagree
       in ways that surface real defects — cross-model checks exploit this
       ensemble effect. — ⚠ possible overlap: 7-basic-plots-en (beat、real、cross);
@@ -2372,8 +2290,7 @@ ideas:
     status: proposed
     source: harvest:docs/plans/2026-11-18-backlog-feature-design.md
     created: 2026-11-20
-    note:
-      "A counterintuitive stability story — armed truces outlasting actual wars
+    note: "A counterintuitive stability story — armed truces outlasting actual wars
       — anchored in famous cases (Korea, Kashmir) that general audiences
       recognize. — Ceasefire ≠ peace: monitoring regimes and frozen interests
       let armistice lines persist for generations without a peace treaty. — ⚠
@@ -2388,8 +2305,7 @@ ideas:
     status: proposed
     source: harvest:docs/plans/v0.12/v0.12-decision-surfaces-plan.md
     created: 2026-11-20
-    note:
-      "It reframes LLMs from text generators into measurable judgment machines
+    note: "It reframes LLMs from text generators into measurable judgment machines
       whose answers can be graded, priced, and logged — a clean mental model for
       how AI enters real systems. — A decision layer where the model returns
       typed answers — a choice, a score, or a probability of truth — with
@@ -2423,8 +2339,7 @@ ideas:
     status: proposed
     source: harvest:docs/plans/v0.12/v0.12-decision-surfaces-plan.md
     created: 2026-11-20
-    note:
-      "A crisp story of how easy benchmarks lie, and how anchoring every test to
+    note: "A crisp story of how easy benchmarks lie, and how anchoring every test to
       a real-world artifact stops both overfitting and silent label drift. —
       Corpus rules require every labeled case to cite a real shipped artifact,
       with the label re-derived from that source and coverage in both Chinese
@@ -2441,8 +2356,7 @@ ideas:
     status: proposed
     source: harvest:docs/plans/v0.12/v0.12-decision-surfaces-plan.md
     created: 2026-11-20
-    note:
-      "A clear architecture principle for the AI era — keep the judgment layer
+    note: "A clear architecture principle for the AI era — keep the judgment layer
       separate from the control layer — with concrete failure modes when they're
       mixed. — Branching is owned by if-statements: models supply judgments, but
       workflow transitions, severity grading, and human gates stay deterministic
@@ -2492,8 +2406,7 @@ ideas:
     status: dropped
     source: harvest:learnings/improvement-proposals/2026-10-24-experience-batch-1.md
     created: 2026-11-20
-    note:
-      "One hidden constant decides what a machine perceives; the measured sweep
+    note: "One hidden constant decides what a machine perceives; the measured sweep
       (0.4 → 0 hits, 0.02 → 24) is a compelling on-screen experiment. — ffmpeg
       scores each frame boundary by pixel change; illustration-to-illustration
       cuts share most pixels and score ~0.01–0.02, far below the 0.4 threshold
@@ -2528,8 +2441,7 @@ ideas:
     status: proposed
     source: harvest:learnings/improvement-proposals/2026-10-24-experience-batch-1.md
     created: 2026-11-20
-    note:
-      "Cache schema migration is a puzzle anyone with a build cache faces, and
+    note: "Cache schema migration is a puzzle anyone with a build cache faces, and
       'invalidate exactly once' is a crisp, teachable rule with a clear cost
       trade-off. — Treating a missing hash field on legacy cache records as a
       mismatch forces a single one-time re-render, instead of re-rendering
@@ -2546,8 +2458,7 @@ ideas:
     status: proposed
     source: harvest:learnings/improvement-proposals/2026-10-24-experience-batch-1.md
     created: 2026-11-20
-    note:
-      "Non-determinism of generative models is broadly relatable and explains
+    note: "Non-determinism of generative models is broadly relatable and explains
       the eerie fact that 'I changed the picture' can be invisible to a machine
       tracking only words. — Re-rolling an AI image with identical prompt text
       changes the bytes but not the prompt, so anything keyed on the prompt
@@ -2580,8 +2491,7 @@ ideas:
     status: proposed
     source: harvest:learnings/improvement-proposals/2026-10-24-experience-batch-1.md
     created: 2026-11-20
-    note:
-      "Hashing feels absolute but silently breaks on representation differences
+    note: "Hashing feels absolute but silently breaks on representation differences
       — a small gotcha that generalizes to encodings, URLs, and dates. — The
       same image arrives as a file path in one system and a base64 data URI in
       another; digests only match if you decode both to a single canonical form
@@ -2614,11 +2524,10 @@ ideas:
     drafted_at: 2026-11-21T22:55:54.951Z
   - id: 2026-11-26-火神干什么活-祝融-阿耆尼与赫淮斯托斯的三份差事
     topic: 火神干什么活：祝融、阿耆尼与赫淮斯托斯的三份差事
-    status: proposed
+    status: drafted
     source: demand:神话比较
     created: 2026-11-26
-    note:
-      烧宫城、婆罗门的火堆、火山下的铁砧都是能实拍的具体场景，把抽象的神职分工变成看得见的权力分配，而这一区 Bilibili 日播 45.0（频道中位
+    note: 烧宫城、婆罗门的火堆、火山下的铁砧都是能实拍的具体场景，把抽象的神职分工变成看得见的权力分配，而这一区 Bilibili 日播 45.0（频道中位
       0.6）、YouTube 互动率 2.7%（频道 1.3%）说明三传统并排讲得受欢迎。 —
       比较三个火神被派去做的事：祝融氏因阏伯受谗而怒、焚烧斟鄩的宫室，阿耆尼以祭司身份传递供品并曾化作婆罗门吞下国王之子又送还，赫淮斯托斯则在埃特纳山下锻造甲胄并用网捉住阿瑞斯与阿佛洛狄忒。
       [按需采集·神话比较；锚点待核实] Bilibili 播放/天 45.0（频道中位 0.6）；YouTube 互动率 2.7%（频道 1.3%）
@@ -2626,13 +2535,15 @@ ideas:
       - 《左传》中阏伯受谗、祝融氏怒焚斟鄩宫室的记载
       - 《梨俱吠陀》阿耆尼赞歌与 Markandeya Purana（摩揭陀往世书）中火神化作婆罗门讨食王子
       - 《伊利亚特》第十八卷赫淮斯托斯打造阿喀琉斯甲胄、《奥德赛》第八卷阿瑞斯与阿佛洛狄忒
+    drafting_at: 2026-11-27T00:00:41.323Z
+    project: 火神干什么活-祝融-阿耆尼与赫淮斯托斯的三份差事
+    drafted_at: 2026-11-27T00:26:01.039Z
   - id: 2026-11-26-谁被允许下阴间-阎罗-阎摩与赫尔墨斯的三套规则
     topic: 谁被允许下阴间：阎罗、阎摩与赫尔墨斯的三套规则
     status: drafted
     source: demand:神话比较
     created: 2026-11-26
-    note:
-      "生死簿、阎摩的信使、冥河之门都是可逐格画出来的三套流程，还能带出中国地狱官僚源自印度阎摩、经《地藏菩萨本愿经》落地这一跨文明的发现，而这一区的日\
+    note: "生死簿、阎摩的信使、冥河之门都是可逐格画出来的三套流程，还能带出中国地狱官僚源自印度阎摩、经《地藏菩萨本愿经》落地这一跨文明的发现，而这一区的日\
       播与互动率都明显跑赢频道中位。 —
       把三套地下世界当成三套官僚机构来查：中国的十殿阎王与生死簿、印度的阎摩及其信使、希腊的冥河与引魂官，并追问为什么只有极少数人下得去、又为什么有人回\
       得来。 — ⚠ possible overlap: shadow-mode-how-ai-earns-the-right-to-ac
@@ -2651,8 +2562,7 @@ ideas:
     status: proposed
     source: demand:神话比较
     created: 2026-11-26
-    note:
-      "尧试舜、被追回的祭马、归乡的英雄都是有人物有动作的验王故事，区别于已发布的秩序正当性一集（那集讲德、命运与法的抽象比较），而这一区
+    note: "尧试舜、被追回的祭马、归乡的英雄都是有人物有动作的验王故事，区别于已发布的秩序正当性一集（那集讲德、命运与法的抽象比较），而这一区
       Bilibili 日播 45.0 与 2.7% 互动率支持这种更具体的讲法。 —
       比较三套具体的验王程序：中国尧以多年试用与家庭考验考察舜再禅让，印度以祭马走失、能否追回并施舍来考校王权，希腊以赫拉克勒斯后裔归乡与奥林匹亚祭典确\
       认王族血统。 — ⚠ possible overlap: llm的输入输出与首token (出来、程序);
@@ -2668,8 +2578,7 @@ ideas:
     status: proposed
     source: demand:AI可靠性与决策
     created: 2026-11-26
-    note:
-      "每次预测、实际对错和累计正确率都能同屏呈现，误差会非常直观；该区Bilibili互动率8.9%（频道3.8%）也显示出明确的受众兴趣。 —
+    note: "每次预测、实际对错和累计正确率都能同屏呈现，误差会非常直观；该区Bilibili互动率8.9%（频道3.8%）也显示出明确的受众兴趣。 —
       用一组可重复的问答把模型的自信程度与实际正确率排成校准曲线，解释为什么语言模型可能说得很肯定却系统性地高估自己。 — ⚠ possible
       overlap: AI时代的DevOps团队 (九成、它真、模型); agents-first (重复、模型);
       ai-代理-有三种使用模式-1-管道式-做完一步移交给下一步-2-编排式-通过编 (重复、模型) [按需采集·AI可靠性与决策；锚点待核实]
@@ -2680,11 +2589,10 @@ ideas:
       - Brier score
   - id: 2026-11-26-换个顺序-ai裁判就会改判吗
     topic: 换个顺序，AI裁判就会改判吗？
-    status: proposed
+    status: drafted
     source: demand:AI可靠性与决策
     created: 2026-11-26
-    note:
-      "屏幕上的答案只需左右互换，裁判分数就可能翻转，非常适合用直观实验追问AI评价AI是否可靠；该区YouTube最新12部最高23播放（频道中位3）\
+    note: "屏幕上的答案只需左右互换，裁判分数就可能翻转，非常适合用直观实验追问AI评价AI是否可靠；该区YouTube最新12部最高23播放（频道中位3）\
       ，仍有扩大触达的空间。 — 把同一批回答的A/B位置对调并交给多个模型互评，展示位置偏差、冗长偏好和自我偏好如何污染AI评分。 — ⚠
       possible overlap: AI时代的DevOps团队 (回答、模型);
       ai-era-software-engineering-11-shifts (回答、位置、模型);
@@ -2694,13 +2602,15 @@ ideas:
       - Judging LLM-as-a-Judge with MT-Bench and Chatbot Arena
       - MT-Bench
       - Chatbot Arena
+    drafting_at: 2026-11-27T05:00:03.057Z
+    project: 换个顺序-ai裁判就会改判吗
+    drafted_at: 2026-11-27T05:03:02.416Z
   - id: 2026-11-26-ai能不能先在暗处试错
     topic: AI能不能先在暗处试错？
     status: proposed
     source: demand:AI可靠性与决策
     created: 2026-11-26
-    note:
-      "当前决策、影子决策和分歧警报可以同时呈现在屏幕上，让观众看见AI犯错却没有伤害用户；该区Bilibili互动率8.9%（频道3.8%）高于频道整\
+    note: "当前决策、影子决策和分歧警报可以同时呈现在屏幕上，让观众看见AI犯错却没有伤害用户；该区Bilibili互动率8.9%（频道3.8%）高于频道整\
       体，值得优先投入。 — 追踪影子部署如何让新模型与线上模型同时处理真实请求、只记录而不实际操盘，并解释怎样发现两者之间的危险分歧。 — ⚠
       possible overlap: 3m与pfos的秘密 (影子、线上); AI时代的DevOps团队 (不能、能先、暗处);
       agents-first (能不、模型) [按需采集·AI可靠性与决策；锚点待核实] Bilibili 互动率 8.9%（频道
@@ -2709,3 +2619,4 @@ ideas:
       - Shadow deployment
       - Traffic mirroring
       - Netflix Interleaving
+

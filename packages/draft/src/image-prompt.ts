@@ -158,10 +158,7 @@ export interface ScenePromptContext {
 /** What `expandScenePrompt` needs beyond the brief context: where the
  *  角色圣经 lives. It resolves the identities itself and hands them to the
  *  brief, so the cache key and the brief body come from one resolution. */
-export interface ExpandSceneOptions extends Omit<
-  ScenePromptContext,
-  "identities"
-> {
+export interface ExpandSceneOptions extends ScenePromptContext {
   /** CS-12: the character bible root. Null when the project is not under
    *  a workspace `projects/` dir, or no bible exists. */
   characterRoot?: string | null | undefined;
@@ -304,10 +301,9 @@ export async function expandScenePrompt(
   // hashed the 角色圣经 while the brief silently dropped it, so a cached
   // brief could carry no anchors at all — the identity of the prompt and
   // the content of the prompt were derived separately.
-  const identities = resolveSceneIdentities(
-    scene.characters,
-    opts.characterRoot ?? null,
-  );
+  const identities =
+    opts.identities ??
+    resolveSceneIdentities(scene.characters, opts.characterRoot ?? null);
   const cacheKey = createHash("sha256");
   cacheKey.update(scene.visual ?? "");
   cacheKey.update("|");
@@ -332,6 +328,14 @@ export async function expandScenePrompt(
   // into the key — not just the character id.
   cacheKey.update("|");
   cacheKey.update(identityDigest(identities));
+  if (opts.identities !== undefined) {
+    cacheKey.update(
+      JSON.stringify([
+        identities.map((identity) => identity.name),
+        opts.format,
+      ]),
+    );
+  }
   // A reference picture changes what the brief may say about the subject,
   // so a brief written for one picture must not be served for another.
   cacheKey.update("|");
@@ -370,6 +374,7 @@ export async function expandScenePrompt(
     learned,
     setting: opts.setting,
     identities,
+    ...(opts.identities !== undefined ? { format: opts.format } : {}),
   });
   const model = "expanded-via-llm";
 

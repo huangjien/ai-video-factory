@@ -1,0 +1,24 @@
+schema: character-profile/1
+id: young_woman_02
+name: 青年女性 02（高髻）
+identity:
+  era_region: 20 世纪初的纽约格林威治村
+anchors:
+  face_shape:
+    value: 圆脸，下颌圆润，眉毛较宽
+    basis: inferred
+  silhouette:
+    value: 二十多岁，中等身材，站姿稳
+    basis: inferred
+  hair:
+    value: 深红棕色头发偏分，盘成高发髻
+    basis: inferred
+  costume:
+    value: 砖红高领长袖上衣、椭圆黄铜胸针、墨绿灰长裙、黑色系带靴
+    basis: inferred
+variants: []
+references:
+  - style: manga
+    version: v1
+    status: candidate
+    file: refs/manga/v1.png

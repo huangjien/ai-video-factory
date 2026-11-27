@@ -104,6 +104,7 @@ export interface ImageCacheKeyInput {
    *  the key. The value comes from the recorded source sidecar, so the
    *  impact table can compute the key offline. */
   sourceDigest: string;
+  castDigest?: string;
   width: number;
   height: number;
 }
@@ -128,6 +129,7 @@ export function imageCacheKey(input: ImageCacheKeyInput): string {
     // existed, or every existing image would be regenerated (and
     // re-bought) the first time a project runs with retrieval on.
     ...(input.sourceDigest === "" ? [] : [input.sourceDigest]),
+    ...(input.castDigest ? [{ cast: input.castDigest }] : []),
   ]);
   return "sha256:" + createHash("sha256").update(stable).digest("hex");
 }

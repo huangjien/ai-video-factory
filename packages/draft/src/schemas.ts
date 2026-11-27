@@ -81,6 +81,18 @@ export const ArticleFrontmatterSchema = z
      *  Western medieval. Optional and typo-tolerant like image_style; absent
      *  means unanchored, which is the pre-v0.10 behaviour. */
     setting: z.string().optional(),
+    cast: z
+      .record(
+        z
+          .object({
+            name: z.string().trim().min(1),
+            asset: z.string().regex(/^[a-z0-9][a-z0-9_-]*$/),
+            reference: z.string().regex(/^[a-z0-9][a-z0-9_-]*\/v[1-9]\d*$/),
+            wardrobe: z.string().trim().min(1).optional(),
+          })
+          .strict(),
+      )
+      .optional(),
     /** v0.8 (G4): when truthy, `video make` refuses to render until the
      *  current image set matches an approved visuals checkpoint
      *  (`video visuals` + `video approve visuals`). z.unknown + defensive

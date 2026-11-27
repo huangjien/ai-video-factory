@@ -400,6 +400,27 @@ describe("scoreTotal", () => {
 // ---------------------------------------------------------------------------
 
 describe("runScoredDraft", () => {
+  it("uses the preferred generator for the first round only", async () => {
+    const initial = new FakeProvider([GOOD_ARTICLE], "first-round");
+    const regular = new FakeProvider([GOOD_ARTICLE], "regular");
+    const judge = new FakeProvider([buildPassingRaw(2), buildPassingRaw(4)]);
+    const result = await runScoredDraft(INPUT, regular, null, {
+      candidates: 1,
+      minScore: 70,
+      maxAttempts: 2,
+      firstRound: { provider: initial, fallback: regular },
+      judgeProvider: judge,
+    });
+    expect(result.attempts.map(({ providerName }) => providerName)).toEqual([
+      "first-round",
+      "regular",
+    ]);
+    expect(result.attempts.map(({ passing }) => passing)).toEqual([
+      false,
+      true,
+    ]);
+  });
+
   it("records what each attempt's calls did on the wire", async () => {
     // A provider that reports its wire-level cost — the numbers the run
     // record needs to tell a slow model from a doomed request.

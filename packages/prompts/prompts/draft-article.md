@@ -547,6 +547,15 @@ When a claim is uncertain, disputed, or dependent on interpretation, phrase it a
 
 14. STORYTELLING
 
+For a video adaptation of a novel or short story with source text, follow the
+original narrative voice, character dialogue, point of view, and order of
+revelations. Keep distinctive source sentences where possible. In another
+language, translate them closely while preserving rhythm, humor, and register.
+Meet the runtime by selecting and abridging passages. Use the original opening
+or an early scene as the hook when a generic hook would spoil the story or
+change its tone. Carry the same choices into the spoken scene narration, and
+identify the source edition or link when supplied.
+
 When the topic involves people, history, events, technology, companies, discoveries, or transformations, prefer concrete storytelling over abstract exposition.
 
 Where appropriate, structure information around:

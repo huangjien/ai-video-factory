@@ -11,7 +11,6 @@ import {
 import { homedir, tmpdir } from "node:os";
 import path from "node:path";
 import { parse as parseYaml } from "yaml";
-import { loadProviderConfig } from "@video/llm";
 import type { Command } from "commander";
 import { formatRunId, writeRun, approveCheckpoint } from "@video/workflow";
 import { findRepoRoot } from "./learn-command.js";
@@ -34,16 +33,19 @@ import {
   loadBacklogStore,
   saveBacklogStore,
   type BacklogEntry,
+  type BacklogStore,
 } from "./backlog-store.js";
 import { runDraftFromBacklog } from "./backlog-draft.js";
 import { runMakeCli } from "./make-command.js";
 import { runTranslate } from "./translate-command.js";
-import { runBacklogJudge } from "./backlog-score.js";
+import {
+  runBacklogJudgeExperiment,
+  weightedJudgeFingerprint,
+  WEIGHTED_JUDGE_CACHE,
+} from "./backlog-judge-experiment.js";
 import { runBacklogSchedule } from "./backlog-schedule.js";
 import {
   expectedJudgeIds,
-  judgeFingerprint,
-  judgeRoute,
   readJudgeCache,
   removeLegacyJudgeCaches,
   validCachedRanking,
@@ -296,73 +298,58 @@ export function releaseAutoLock(repoRoot: string): void {
 
 // --- pick ---------------------------------------------------------------
 
-/** Highest-ranked entry from the current-input snapshot; stale/missing data
- *  triggers a judge run and is revalidated before auto can pick. */
+function readWeightedRanking(repoRoot: string, store: BacklogStore) {
+  const ranking = validCachedRanking(
+    readJudgeCache(repoRoot, WEIGHTED_JUDGE_CACHE),
+    weightedJudgeFingerprint(store),
+    expectedJudgeIds(store),
+  );
+  return ranking?.every((row) => typeof row.eligible === "boolean")
+    ? ranking
+    : null;
+}
+
+function topEligible(ranking: ReturnType<typeof readWeightedRanking>) {
+  return ranking?.find((row) => row.eligible === true);
+}
+
+/** Reuse a complete weighted ranking only while its scoring inputs match. */
 async function pickTopOpenId(
   repoRoot: string,
 ): Promise<{ id?: string; message: string }> {
   const store = loadBacklogStore(repoRoot);
-  const openIds = new Set(
-    store.ideas
-      .filter((e) => e.status === "idea" || e.status === "proposed")
-      .map((e) => e.id),
-  );
   removeLegacyJudgeCaches(repoRoot);
-  if (openIds.size === 0) {
+  if (expectedJudgeIds(store).length === 0) {
     return {
       message: "no open entries — the backlog needs new ideas (harvest or add)",
     };
   }
-  const route = judgeRoute(loadProviderConfig());
-  const fingerprint = judgeFingerprint(repoRoot, store, route);
-  let ranking = validCachedRanking(
-    readJudgeCache(repoRoot),
-    fingerprint,
-    expectedJudgeIds(store),
-  );
+  let ranking = readWeightedRanking(repoRoot, store);
   if (ranking === null) {
     console.log(
-      "  no valid ranking for current inputs — running the judge first",
+      "  no valid weighted ranking for current inputs — running the judge first",
     );
-    const code = await runBacklogJudge({ cwd: repoRoot });
+    const code = await runBacklogJudgeExperiment({
+      cwd: repoRoot,
+      background: true,
+    });
     if (code !== 0) {
       return {
-        message: `judge failed (exit ${code}) — no ranking to pick from`,
+        message: `weighted judge failed (exit ${code}) — no ranking to pick from`,
       };
     }
-    const currentStore = loadBacklogStore(repoRoot);
-    const currentFingerprint = judgeFingerprint(repoRoot, currentStore, route);
-    if (currentFingerprint !== fingerprint) {
-      return {
-        message:
-          "backlog or judge evidence changed while judging — refusing stale pick",
-      };
-    }
-    ranking = validCachedRanking(
-      readJudgeCache(repoRoot),
-      currentFingerprint,
-      expectedJudgeIds(currentStore),
-    );
+    ranking = readWeightedRanking(repoRoot, loadBacklogStore(repoRoot));
     if (ranking === null) {
       return {
         message:
-          "judge wrote no valid ranking for current inputs — cannot pick",
+          "weighted judge wrote no valid ranking for current inputs — cannot pick",
       };
     }
   }
-  const top = ranking[0];
-  if (top !== undefined && !openIds.has(top.id)) {
-    return {
-      message:
-        "validated ranking no longer matches open backlog — refusing stale pick",
-    };
-  }
-  if (top === undefined) {
-    return {
-      message: "every ranked idea is already drafted — harvest new ideas first",
-    };
-  }
-  return { id: top.id, message: `judge rank ${top.rank}` };
+  const top = topEligible(ranking);
+  return top === undefined
+    ? { message: "weighted judge found no eligible ideas" }
+    : { id: top.id, message: `weighted judge rank ${top.rank}, ${top.reason}` };
 }
 
 // --- publishing ---------------------------------------------------------
@@ -714,13 +701,7 @@ export async function runBacklogAuto(
       1,
     );
   }
-  const currentRoute = judgeRoute(loadProviderConfig());
-  const currentRanking = validCachedRanking(
-    readJudgeCache(repoRoot),
-    judgeFingerprint(repoRoot, store, currentRoute),
-    expectedJudgeIds(store),
-  );
-  if (currentRanking?.[0]?.id !== pick.id) {
+  if (topEligible(readWeightedRanking(repoRoot, store))?.id !== pick.id) {
     return refuse(
       "backlog or judge inputs changed after ranking — refusing stale pick",
     );
@@ -747,12 +728,7 @@ export async function runBacklogAuto(
       1,
     );
   }
-  const lockedRanking = validCachedRanking(
-    readJudgeCache(repoRoot),
-    judgeFingerprint(repoRoot, store, judgeRoute(loadProviderConfig())),
-    expectedJudgeIds(store),
-  );
-  if (lockedRanking?.[0]?.id !== pick.id) {
+  if (topEligible(readWeightedRanking(repoRoot, store))?.id !== pick.id) {
     releaseAutoLock(repoRoot);
     return refuse(
       "backlog or judge inputs changed before drafting — refusing stale pick",

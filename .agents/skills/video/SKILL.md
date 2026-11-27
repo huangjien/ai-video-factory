@@ -19,6 +19,7 @@ A pnpm TypeScript monorepo. Two human-edit files (`article.md`, `audio-config.ya
 ## Core principles and decision rules
 
 - `article.md` and `audio-config.yaml` are the human-editable sources. Treat storyboards and render outputs as derived; edit the source and regenerate derived files.
+- 小说改编默认忠实于原著。先核对底本，尽量保留原文的句子、对白、叙述语气和揭晓顺序。跨语言时做贴近原文的自译；时长有限时优先删节，保留人物口吻和关键段落。在 `article.md` 记录底本出处。
 - For end-to-end creation, follow [the project lifecycle](workflows/project-lifecycle.md). Load it when operating commands or handling draft/review/revise.
 - If a user asks about visuals, image generation, captions, or rendering behavior, load [rendering and visuals](references/rendering-and-visuals.md).
 - For provider selection, package boundaries, or runtime pitfalls, load [CLI and runtime reference](references/cli-and-runtime.md).

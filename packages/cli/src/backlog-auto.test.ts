@@ -59,8 +59,9 @@ vi.mock("./vertical-command.js", () => ({
   runVertical: (...a: unknown[]) =>
     (verticalMock as (...x: unknown[]) => unknown)(...a),
 }));
-vi.mock("./backlog-score.js", () => ({
-  runBacklogJudge: (...a: unknown[]) =>
+vi.mock("./backlog-judge-experiment.js", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("./backlog-judge-experiment.js")>()),
+  runBacklogJudgeExperiment: (...a: unknown[]) =>
     (judgeMock as (...x: unknown[]) => unknown)(...a),
 }));
 vi.mock("@video/workflow", () => ({
@@ -86,12 +87,13 @@ import {
 } from "./backlog-store.js";
 import {
   expectedJudgeIds,
-  judgeFingerprint,
-  judgeRoute,
   makeJudgeCacheRecord,
   writeJudgeCache,
 } from "./backlog-judge-cache.js";
-import { loadProviderConfig } from "@video/llm";
+import {
+  weightedJudgeFingerprint,
+  WEIGHTED_JUDGE_CACHE,
+} from "./backlog-judge-experiment.js";
 import { writeRun } from "@video/workflow";
 
 let repoRoot: string;
@@ -152,13 +154,9 @@ function seed(partial: Partial<BacklogEntry>): BacklogEntry {
 /** Write a judge cache the CURRENT contract accepts: one row per OPEN
  *  idea (the ranking length must match), under the fingerprint of the
  *  current inputs. `rankFirstId`, when still open, goes first. */
-function writeValidJudgeCache(rankFirstId?: string): void {
+function writeValidJudgeCache(rankFirstId?: string, eligible = true): void {
   const store = loadBacklogStore(repoRoot);
-  const fingerprint = judgeFingerprint(
-    repoRoot,
-    store,
-    judgeRoute(loadProviderConfig()),
-  );
+  const fingerprint = weightedJudgeFingerprint(store);
   const ids = expectedJudgeIds(store);
   const first =
     rankFirstId !== undefined && ids.includes(rankFirstId)
@@ -176,8 +174,10 @@ function writeValidJudgeCache(rankFirstId?: string): void {
         id,
         rank: index + 1,
         reason: "r",
+        eligible,
       })),
     }),
+    WEIGHTED_JUDGE_CACHE,
   );
 }
 
@@ -527,6 +527,15 @@ describe("runBacklogAuto — the pipeline", () => {
     expect(draftMock.mock.calls[0]?.[0]).toMatchObject({
       id: "2026-11-19-top-idea",
     });
+  });
+
+  it("skips production when the weighted ranking has no eligible idea", async () => {
+    const opts = readyToFire();
+    writeValidJudgeCache(undefined, false);
+    expect(await runBacklogAuto(opts)).toBe(0);
+    expect(judgeMock).not.toHaveBeenCalled();
+    expect(draftMock).not.toHaveBeenCalled();
+    expect(consoleOutput.join("\n")).toContain("no eligible");
   });
 
   it("runs the judge first when no cache exists", async () => {

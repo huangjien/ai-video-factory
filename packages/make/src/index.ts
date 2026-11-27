@@ -34,6 +34,7 @@ import {
   type TTSProvider,
 } from "@video/tts";
 import { resolveNarration } from "./narration.js";
+import { resolveSceneCast } from "./scene-cast.js";
 import {
   buildCaptionCues,
   mp3ToWav,
@@ -1083,7 +1084,10 @@ export async function generateSceneVisuals(
     mode: sourceMode,
     // Whether a reference picture can reach a provider at all. When it
     // cannot, the picture becomes the frame instead of being dropped.
-    referenceCapable: chain.some((c) => c.provider.supportsReferences === true),
+    // Keep archive routing as it was before OpenAI edits were enabled for cast.
+    referenceCapable: chain.some(
+      (c) => c.name !== "openai" && c.provider.supportsReferences === true,
+    ),
     ...(opts.sourcePlan !== undefined ? { plan: opts.sourcePlan } : {}),
     ...(opts.pictureSources !== undefined
       ? { sources: opts.pictureSources }
@@ -1150,7 +1154,8 @@ export async function generateSceneVisuals(
     // A borrowed historical picture is an image INPUT, so it joins the cache
     // key exactly like the visual line does. A different picture means a
     // different image.
-    const resolution = sourceResolutions.get(i + 1);
+    const cast = resolveSceneCast(projectRoot, article, i);
+    const resolution = cast === null ? sourceResolutions.get(i + 1) : undefined;
     let sourceDigest = resolution?.digest ?? "";
     const cacheKeyFor = (digest: string): string =>
       imageCacheKey({
@@ -1162,6 +1167,7 @@ export async function generateSceneVisuals(
         promptRevision: IMAGE_PROMPT_REVISION,
         bakeDigest: bakeDigestFor(i + 1, bakeManifest),
         sourceDigest: digest,
+        ...(cast === null ? {} : { castDigest: cast.digest }),
         width: reqWidth,
         height: reqHeight,
       });
@@ -1176,12 +1182,14 @@ export async function generateSceneVisuals(
       // A sidecar-less legacy image cannot be adopted when this scene bakes
       // text: the jpg on disk predates baking and its typography is unknown.
       const adoptable =
-        sidecar === null && bakeDigestFor(i + 1, bakeManifest) === "";
+        sidecar === null &&
+        cast === null &&
+        bakeDigestFor(i + 1, bakeManifest) === "";
       if (sidecar?.cacheKey === cacheKey || adoptable) {
         if (sidecar === null) writeImageCacheSidecar(imagePath, cacheKey);
         return { lines, generated: imagePath };
       }
-      await rm(imagePath, { force: true });
+      if (cast === null) await rm(imagePath, { force: true });
       lines.push(
         `scene_${i + 1}: stale image (visual/style changed) — regenerating`,
       );
@@ -1265,6 +1273,7 @@ export async function generateSceneVisuals(
               ? { format: article.frontmatter.format }
               : {}),
             characterRoot,
+            ...(cast === null ? {} : { identities: cast.identities }),
             // The borrowed picture is attached to the request; the brief
             // says what it is for.
             ...(borrowed !== null && resolution?.mode === "reference"
@@ -1289,6 +1298,16 @@ export async function generateSceneVisuals(
       }
     }
 
+    if (cast !== null) {
+      promptForImage +=
+        "\n" +
+        cast.identities
+          .map(
+            (identity, index) =>
+              `Reference image ${index + 1} is ${identity.name} (${identity.id}). Use only that person's likeness and proportions. Draw one person per role in the scene, never the turnaround layout. ${identity.anchorLines.join("; ")}`,
+          )
+          .join("\n");
+    }
     // `direct` mode: the borrowed picture IS the frame. No image model, no
     // spend — the archive's own picture becomes the scene.
     if (borrowed !== null && resolution?.mode === "direct") {
@@ -1307,15 +1326,17 @@ export async function generateSceneVisuals(
     }
 
     try {
-      const referenceImages =
-        borrowed !== null && resolution?.mode === "reference"
-          ? [
-              {
-                base64: Buffer.from(borrowed.bytes).toString("base64"),
-                contentType: "image/jpeg",
-              },
-            ]
-          : undefined;
+      const referenceImages = isMock
+        ? undefined
+        : (cast?.references ??
+          (borrowed !== null && resolution?.mode === "reference"
+            ? [
+                {
+                  base64: Buffer.from(borrowed.bytes).toString("base64"),
+                  contentType: "image/jpeg",
+                },
+              ]
+            : undefined));
       const { bytes, servedBy } = await heartbeat(
         itemLabel,
         () =>

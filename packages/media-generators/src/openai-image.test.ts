@@ -61,6 +61,25 @@ describe("OpenAIImageProvider — developers.openai.com/api/docs/guides/image-ge
     data: [{ b64_json: TINY_JPEG_B64 }],
   });
 
+  it("uploads all character references in order to the edits endpoint", async () => {
+    process.env["OPENAI_API_KEY"] = "test-key";
+    statusToSend = 200;
+    responseBody = okBody();
+    const provider = new OpenAIImageProvider({ apiBaseUrl: baseUrl });
+    await provider.generate({
+      prompt: "People in a studio",
+      width: 1920,
+      height: 1080,
+      referenceImages: [
+        { base64: TINY_JPEG_B64, contentType: "image/jpeg" },
+        { base64: TINY_JPEG_B64, contentType: "image/png" },
+      ],
+    });
+    expect(lastPath).toBe("/images/edits");
+    expect(lastBody?.match(/name="image\[\]"/g)).toHaveLength(2);
+    expect(lastBody).toMatch(/reference-1\.jpg[\s\S]+reference-2\.png/);
+  });
+
   it("sends Bearer auth to /images/generations with the 2.6 model and png output", async () => {
     process.env["OPENAI_API_KEY"] = "test-key";
     responseBody = okBody();

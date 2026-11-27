@@ -35,6 +35,7 @@ import {
   ttsScenesFromArticle,
 } from "./tts-cache.js";
 import { resolveImageProvider, workspaceRootFor } from "./index.js";
+import { resolveSceneCast } from "./scene-cast.js";
 
 /**
  * Read-only impact report for `video make --dry-run` (v0.8 plan G2).
@@ -137,12 +138,12 @@ export function computeMakeImpact(
       const n = i + 1;
       const visual = scene.visual ?? "";
       if (!visual.trim() || selfRendered.has(n)) return;
+      const cast = resolveSceneCast(projectRoot, article, i);
       // A borrowed historical picture is an image input, so the table must
       // read the digest the LAST run recorded — offline, from the source
       // sidecar, without re-running the retrieval.
       const sourceDigest =
-        readSceneSource(path.join(projectRoot, "assets", "images"), n)
-          ?.digest ?? "";
+        cast === null ? (readSceneSource(imageDir, n)?.digest ?? "") : "";
       const key = imageCacheKey({
         sceneNumber: n,
         visual,
@@ -152,6 +153,7 @@ export function computeMakeImpact(
         promptRevision: IMAGE_PROMPT_REVISION,
         bakeDigest: bakeDigestFor(n, bakeManifest),
         sourceDigest,
+        ...(cast === null ? {} : { castDigest: cast.digest }),
         width: reqWidth,
         height: reqHeight,
       });
@@ -161,8 +163,8 @@ export function computeMakeImpact(
         return;
       }
       const sidecar = readImageCacheSidecar(jpg);
-      if (sidecar === null) imageAdopt.push(n);
-      else if (sidecar.cacheKey === key) imageCached.push(n);
+      if (sidecar === null && cast === null) imageAdopt.push(n);
+      else if (sidecar?.cacheKey === key) imageCached.push(n);
       else imageRegenerate.push(n);
     });
   }

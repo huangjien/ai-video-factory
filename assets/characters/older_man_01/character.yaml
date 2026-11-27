@@ -1,0 +1,24 @@
+schema: character-profile/1
+id: older_man_01
+name: 老年男性 01（灰白长须）
+identity:
+  era_region: 20 世纪初的纽约格林威治村
+anchors:
+  face_shape:
+    value: 鼻梁明显弯曲，眉毛浓密，眼窝深
+    basis: inferred
+  silhouette:
+    value: 六十多岁，个子矮，体格结实
+    basis: inferred
+  hair:
+    value: 发际线后退，银灰色波浪短发，银灰长须下端分岔
+    basis: inferred
+  costume:
+    value: 棕色灯芯绒工作外套、褪色赭黄马甲、炭灰长裤、旧棕色系带靴
+    basis: inferred
+variants: []
+references:
+  - style: manga
+    version: v1
+    status: candidate
+    file: refs/manga/v1.png

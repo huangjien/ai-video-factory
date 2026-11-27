@@ -1,0 +1,24 @@
+schema: character-profile/1
+id: young_woman_01
+name: 青年女性 01（低辫）
+identity:
+  era_region: 20 世纪初的纽约格林威治村
+anchors:
+  face_shape:
+    value: 细长椭圆脸，深色平眉
+    basis: inferred
+  silhouette:
+    value: 二十多岁，身形纤细，肩窄
+    basis: inferred
+  hair:
+    value: 深栗色中分，后背垂一条低辫
+    basis: inferred
+  costume:
+    value: 米白长袖长睡裙、灰蓝色针织披肩、灰褐色软拖鞋
+    basis: inferred
+variants: []
+references:
+  - style: manga
+    version: v1
+    status: candidate
+    file: refs/manga/v1.png

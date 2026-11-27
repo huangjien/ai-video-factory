@@ -85,9 +85,12 @@ It also derives `storyboard/storyboard.yaml` (the VDSL form of the article),
 so the video's length follows the audio rather than a separate guess.
 
 Set `draft.generator_pool` in `config/llm.yaml` to choose which providers
-participate in automatic drafting. By default, the CLI picks randomly from
-OpenAI, Gemini, and GLM providers with API keys. `--model openai` pins that
-provider for one run. An `LL_CONFIG` override can replace the entire list.
+participate in automatic drafting. The CLI picks randomly from pool members
+with API keys. For fresh drafts, it uses OpenAI for the first round when
+OpenAI is available in the pool. The pool pick handles later rounds and can
+take over if the first OpenAI call fails with a retryable provider error.
+`--model openai` pins that provider for one run. An `LL_CONFIG` override
+can replace the entire list.
 
 `video draft` runs the audio-planning step on the fresh article
 automatically. Two guardrails matter:
@@ -955,9 +958,23 @@ public-domain clip. Scenes without a match follow the usual visual workflow.
 Disable retrieval with `--video-sources off` or `video_sources: "off"` in
 the article frontmatter. The command-line flag takes precedence.
 
-### The evidence the judge ranks by
+### Backlog judge experiment
 
-`video backlog judge` ranks every open idea in one LLM call, and it reads
+`video backlog judge` asks Gemini and OpenAI to rate the same open ideas for
+click appeal, retention, and payoff. It averages the two providers by axis and
+weights the axes 40%, 30%, and 30%. The report highlights ideas that place in the
+top five under that weighting, equal weighting, and a payoff-first weighting.
+Run artifacts are saved under `runs/backlog-judge-experiment/`.
+`video backlog auto` uses the highest-ranked eligible idea from the same
+weighted ranking. Each combined axis must reach 1 and both duplicate
+probabilities must be below 80%. Auto refreshes the ranking when its inputs
+change and skips production if scoring fails or no idea qualifies.
+
+`video backlog judge --legacy` runs the previous analytics-based ranking.
+
+### The evidence the analytics-based judge ranks by
+
+`video backlog judge --legacy` ranks every open idea in one LLM call, and it reads
 the channel's own numbers first. `video analytics` produces them: it pulls
 the public YouTube videos and the hundred most recent Bilibili videos —
 views, likes, comments, and on Bilibili coins, favorites, shares and

@@ -102,11 +102,11 @@ function supportsCustomSize(model: string): boolean {
  * models do not return image URLs. Bounded retry via @video/llm (no 4xx
  * retry). Credentials are never persisted or included in errors.
  *
- * `referenceImage` is not used: driving the `/images/edits` multipart
- * endpoint is a separate change.
+ * When references are supplied, POST multipart to `/images/edits`.
  */
 export class OpenAIImageProvider implements ImageProvider {
   readonly name = "openai-image";
+  readonly supportsReferences = true;
   private readonly apiBaseUrl: string;
   private readonly defaultModel: string;
   private readonly quality: string;
@@ -132,24 +132,46 @@ export class OpenAIImageProvider implements ImageProvider {
     }
     const data = await withRetry(
       async () => {
-        const res = await fetch(`${this.apiBaseUrl}/images/generations`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${key}`,
+        const payload = {
+          model: this.defaultModel,
+          prompt: req.prompt,
+          size: supportsCustomSize(this.defaultModel)
+            ? (customSize(req.width, req.height) ??
+              closestSize(req.width, req.height))
+            : closestSize(req.width, req.height),
+          quality: this.quality,
+          n: 1,
+          output_format: "png",
+        };
+        const references = req.referenceImages ?? [];
+        const form = references.length > 0 ? new FormData() : null;
+        if (form !== null) {
+          for (const [name, value] of Object.entries(payload)) {
+            form.append(name, String(value));
+          }
+          for (const [index, image] of references.entries()) {
+            const blob = new Blob(
+              [Uint8Array.from(Buffer.from(image.base64, "base64"))],
+              { type: image.contentType },
+            );
+            form.append(
+              "image[]",
+              blob,
+              `reference-${index + 1}.${image.contentType === "image/jpeg" ? "jpg" : "png"}`,
+            );
+          }
+        }
+        const res = await fetch(
+          `${this.apiBaseUrl}/images/${form === null ? "generations" : "edits"}`,
+          {
+            method: "POST",
+            headers: {
+              ...(form === null ? { "Content-Type": "application/json" } : {}),
+              Authorization: `Bearer ${key}`,
+            },
+            body: form ?? JSON.stringify(payload),
           },
-          body: JSON.stringify({
-            model: this.defaultModel,
-            prompt: req.prompt,
-            size: supportsCustomSize(this.defaultModel)
-              ? (customSize(req.width, req.height) ??
-                closestSize(req.width, req.height))
-              : closestSize(req.width, req.height),
-            quality: this.quality,
-            n: 1,
-            output_format: "png",
-          }),
-        });
+        );
         const text = await res.text();
         if (!res.ok) {
           const excerpt = text.slice(0, 200);

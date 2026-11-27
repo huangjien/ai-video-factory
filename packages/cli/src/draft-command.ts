@@ -742,6 +742,14 @@ export async function runDraft(opts: DraftOptions): Promise<number> {
         ? cfg.research.primary
         : undefined);
   const fallback = fallbackName ? providerInstance(fallbackName) : null;
+  const firstRound =
+    poolPick !== null &&
+    poolPick !== "openai" &&
+    pool.includes("openai") &&
+    opts.from === undefined &&
+    opts.fromReview === undefined
+      ? { provider: providerInstance("openai"), fallback: provider }
+      : undefined;
   // 2026-10-26 cross-model judging: the judge must grade with a different
   // provider than the generator. Judge slots come from the `review` role;
   // a collision flips to the role's fallback (pickJudgeProvider). An
@@ -771,7 +779,7 @@ export async function runDraft(opts: DraftOptions): Promise<number> {
     : null;
   if (poolPick !== null) {
     console.log(
-      `  generator: ${poolPick} (pool: ${pool.join(", ")}) · judge: ${judgePick.name}`,
+      `  generator: ${firstRound ? `openai first, then ${poolPick}` : poolPick} (pool: ${pool.join(", ")}) · judge: ${judgePick.name}`,
     );
   }
   const language = opts.lang ?? "zh-CN";
@@ -818,8 +826,10 @@ export async function runDraft(opts: DraftOptions): Promise<number> {
   let judgeModelName: string | null = null;
   let judgeSpend: { input: number; output: number } | null = null;
   if (opts.noReview === true) {
-    const draft = await withProgress(`drafting article (${chosenName})`, () =>
-      callDraft(draftInput, provider, fallback),
+    const initial = firstRound ?? { provider, fallback };
+    const draft = await withProgress(
+      `drafting article (${initial.provider.name})`,
+      () => callDraft(draftInput, initial.provider, initial.fallback),
     );
     markdown = draft.markdown;
     usage = draft.usage;
@@ -841,11 +851,12 @@ export async function runDraft(opts: DraftOptions): Promise<number> {
     const maxAttempts =
       opts.maxAttempts ?? (opts.fromReview !== undefined ? 2 : 8);
     const result = await withProgress(
-      `drafting article (${chosenName}, judged by ${judgePick.name})`,
+      `drafting article (${firstRound?.provider.name ?? chosenName}, judged by ${judgePick.name})`,
       async () => {
         return await runScoredDraft(draftInput, provider, fallback, {
           minScore,
           maxAttempts,
+          ...(firstRound !== undefined ? { firstRound } : {}),
           // Average the judge's noise: the product path asks for two
           // independent judgments per draft (the CLI's default). The
           // judge's spread on one draft is ±2.5 points and the bar sits
@@ -1365,7 +1376,7 @@ export function registerDraft(program: Command): void {
     .option("--cwd <dir>", "base directory for the project")
     .option(
       "--model <provider>",
-      "generator: auto (default — random pick from draft.generator_pool in config/llm.yaml, using providers with API keys) | openai | gemini | glm | minimax",
+      "generator: auto (default — OpenAI first for fresh drafts when available, then the configured pool pick) | openai | gemini | glm | minimax",
     )
     .option(
       "--judge-model <provider>",

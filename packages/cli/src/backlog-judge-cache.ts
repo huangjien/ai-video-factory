@@ -23,6 +23,7 @@ export interface JudgeRank {
   id: string;
   rank: number;
   reason: string;
+  eligible?: boolean;
 }
 
 export interface JudgeFailure {
@@ -39,8 +40,11 @@ export interface JudgeCacheRecord {
   failure?: JudgeFailure;
 }
 
-export function judgeCachePath(repoRoot: string): string {
-  return path.join(repoRoot, "runs", JUDGE_CACHE_FILENAME);
+export function judgeCachePath(
+  repoRoot: string,
+  filename = JUDGE_CACHE_FILENAME,
+): string {
+  return path.join(repoRoot, "runs", filename);
 }
 
 export function latestAnalyticsReport(
@@ -137,8 +141,11 @@ export function validCachedRanking(
   return [...record.ranking].sort((a, b) => a.rank - b.rank);
 }
 
-export function readJudgeCache(repoRoot: string): JudgeCacheRecord | null {
-  const file = judgeCachePath(repoRoot);
+export function readJudgeCache(
+  repoRoot: string,
+  filename?: string,
+): JudgeCacheRecord | null {
+  const file = judgeCachePath(repoRoot, filename);
   if (!existsSync(file)) return null;
   try {
     const parsed = parseYaml(
@@ -153,8 +160,9 @@ export function readJudgeCache(repoRoot: string): JudgeCacheRecord | null {
 export function writeJudgeCache(
   repoRoot: string,
   record: JudgeCacheRecord,
+  filename?: string,
 ): void {
-  const target = judgeCachePath(repoRoot);
+  const target = judgeCachePath(repoRoot, filename);
   mkdirSync(path.dirname(target), { recursive: true });
   const temporary = `${target}.${process.pid}.${Date.now()}.tmp`;
   try {

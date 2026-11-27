@@ -625,6 +625,44 @@ export const LANE_GLOSS: Readonly<Record<Lane, string>> = {
   其他: "none of the channel's subject lanes",
 };
 
+/** Who each lane is written FOR.
+ *
+ * The drafter's default audience is "developers" — right for the software
+ * lanes, wrong for the rest: a mythology episode drafted for developers
+ * comes back as an access-control explainer (the same proposal scored
+ * 81/100 that way and 97/100 once the audience was named). The lane
+ * knows who watches it, so the lane names the audience.
+ */
+export const LANE_AUDIENCE: Readonly<Record<Lane, string>> = {
+  神话比较:
+    "对世界神话、宗教信仰与跨文化比较感兴趣的一般观众，偏人文社科，不是技术读者",
+  军制与战争史: "对军事制度、战争史与兵制沿革感兴趣的一般读者与历史爱好者",
+  经济与就业: "关心就业、利率与经济政策的一般观众",
+  艺术考古与文明: "对艺术、考古与文明史感兴趣的一般观众，偏人文社科",
+  心理与沟通: "关心心理机制与沟通方式的一般读者",
+  叙事思维与数学: "对叙事、思考工具与数学趣味感兴趣的读者",
+  AI可靠性与决策: "关心 AI 判断是否可靠、决策如何落地的从业者与爱好者",
+  AI与软件工程: "做 AI 系统与软件工程的工程师与技术负责人",
+  组织与管理: "带团队、做组织与管理的人，以及关注它们的读者",
+  其他: "对该题材本身感兴趣的一般观众",
+};
+
+/** The audience a lane is written for, or null for a lane that has none. */
+export function audienceForLane(lane: Lane | undefined): string | null {
+  if (lane === undefined) return null;
+  return LANE_AUDIENCE[lane] ?? null;
+}
+
+/** Every lane name — the runtime list behind the type. */
+export const LANE_NAMES: readonly string[] = Object.keys(LANE_AUDIENCE);
+
+const LANE_SET: ReadonlySet<string> = new Set(LANE_NAMES);
+
+/** Is this string one of the lanes? */
+export function isLane(value: string): value is Lane {
+  return LANE_SET.has(value);
+}
+
 const emptyLanes = <T>(make: () => T): Record<Lane, T> => ({
   神话比较: make(),
   军制与战争史: make(),

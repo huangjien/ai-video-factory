@@ -125,6 +125,29 @@ describe("draftingContext — the drafter's context", () => {
 });
 
 describe("runDraftFromBacklog — guards", () => {
+  it("names the audience the proposal's lane is written for", async () => {
+    // A demand proposal knows its lane; the lane knows who watches it.
+    // Drafting a mythology episode for "developers" comes back as an
+    // access-control explainer.
+    seed({ source: "demand:神话比较" });
+    await runDraftFromBacklog({
+      id: "2026-11-18-停火线",
+      draft: DRAFT(),
+    });
+    const call = runDraft.mock.calls[0]?.[0] as { audience?: string };
+    expect(call.audience).toContain("神话");
+  });
+
+  it("leaves the audience alone for an entry with no lane", async () => {
+    seed({ source: "manual" });
+    await runDraftFromBacklog({
+      id: "2026-11-18-停火线",
+      draft: DRAFT(),
+    });
+    const call = runDraft.mock.calls[0]?.[0] as { audience?: string };
+    expect(call.audience).toBeUndefined();
+  });
+
   it("rejects unknown ids", async () => {
     expect(await runDraftFromBacklog({ id: "no-such", draft: DRAFT() })).toBe(
       1,

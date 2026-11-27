@@ -5,6 +5,7 @@ import { runDraft, type DraftOptions } from "./draft-command.js";
 import { findRepoRoot } from "./learn-command.js";
 import { ensureProject } from "./ensure-project.js";
 import { slugifyProjectName } from "./project-path.js";
+import { audienceForLane, isLane } from "./channel-analytics-analysis.js";
 import {
   assertTransition,
   isStaleDrafting,
@@ -24,6 +25,9 @@ import {
  * exit 2, where nothing was spent) revert the stamp. `runs/` records stay
  * untouched — the revert only restores the backlog state.
  */
+
+/** The source prefix a demand proposal carries: `demand:<lane>`. */
+const DEMAND_SOURCE_PREFIX = "demand:";
 
 export interface BacklogDraftOptions {
   id: string;
@@ -146,6 +150,17 @@ export async function runDraftFromBacklog(
     );
   }
 
+  // A demand proposal knows its lane (`source: demand:<lane>`), and the
+  // lane knows who watches it. The drafter's default audience is
+  // "developers" — for a mythology episode that turns the article into an
+  // access-control explainer (the same proposal scored 81/100 that way and
+  // 97/100 once the audience was named).
+  const lane = entry.source?.startsWith(DEMAND_SOURCE_PREFIX)
+    ? entry.source.slice(DEMAND_SOURCE_PREFIX.length)
+    : undefined;
+  const audience =
+    lane !== undefined && isLane(lane) ? audienceForLane(lane) : null;
+
   let code: number;
   try {
     const scaffolded = await ensureProject(
@@ -163,6 +178,7 @@ export async function runDraftFromBacklog(
         ...(entry.lang !== undefined && opts.draft.lang === undefined
           ? { lang: entry.lang }
           : {}),
+        ...(audience !== null ? { audience } : {}),
       });
     }
   } finally {

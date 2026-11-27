@@ -144,6 +144,14 @@ so it wrote links from memory — the Katha Upanishad's first chapter
 linked to the Brihadaranyaka index. A link must now be the exact work,
 and a named work without a link beats a wrong one.
 
+**A draft knows who it is written for.** The drafter's default audience
+is "developers" — right for the software lanes, wrong for the rest: a
+mythology proposal drafted that way came back as an access-control
+explainer (83/100), and the same proposal with the audience named scored
+97/100. A demand proposal carries its lane, and each lane now names its
+audience, so the auto-producer drafts a mythology episode for people who
+watch mythology.
+
 **The decision layer's measurement machinery is gone; the layer stays.**
 An audit of the modules the pipeline actually reaches found the layer's
 corpus side doing nothing for the pipeline: 371 labelled cases that

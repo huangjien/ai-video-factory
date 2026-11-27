@@ -515,7 +515,9 @@ async function defaultPublish(step: PublishStep): Promise<number> {
       "--tag",
       tags,
       "--tid",
-      "202",
+      // 人文历史 — the channel's history/mythology lane. (202 is 资讯
+      // now; the zone tree moved in 2025-11.)
+      "228",
       "--cover",
       path.join(
         "projects",

@@ -52,7 +52,7 @@ const CATEGORY_BY_TAG: ReadonlyArray<readonly [string, string]> = [
   ["软件开发", "计算机技术"],
   ["系统架构", "计算机技术"],
   ["科普", "科学科普"],
-  ["职场", "职场就业"],
+  ["职场", "职业职场"],
 ];
 
 export interface FallbackInput {

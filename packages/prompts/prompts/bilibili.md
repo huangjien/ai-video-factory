@@ -41,9 +41,10 @@ Not sentences, not the whole title split into fragments, not generic filler
 like "热门" or "推荐".
 
 `suggested_category` is the 分区 the video is filed under. Choose from the
-real Bilibili section names, e.g. 科技 / 计算机技术 / 科学科普 / 职场就业 /
-数码 / 知识. Pick the ONE closest match and return it as a bare name. If the
-article genuinely does not fit any of them, return null — the uploader picks.
+real Bilibili section names the uploader can post to: 科技 / 计算机技术 /
+科学科普 / 人文历史 / 职业职场 / 财经商业 / 军事 / 数码 / 知识. Pick the ONE
+closest match and return it as a bare name. If the article genuinely does
+not fit any of them, return null — the uploader picks.
 A wrong category is worse than no category: it files the video somewhere
 unrelated and nobody notices until after publishing.
 

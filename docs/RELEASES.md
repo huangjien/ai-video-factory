@@ -144,6 +144,16 @@ so it wrote links from memory — the Katha Upanishad's first chapter
 linked to the Brihadaranyaka index. A link must now be the exact work,
 and a named work without a link beats a wrong one.
 
+**Bilibili's zone numbers moved, and the repo's table did not.** The
+auto-producer's upload step failed on a zone it could not name: 人文历史
+was 202 and is 228 (202 is 资讯 now), 科技 was 122 and is 188, 短片 was
+181 and is 85, and 人工智能 / 编程开发 / 动物二创 / 小宠异宠 are gone. The
+uploader's table now carries the current tree, the packaging prompt
+lists the zones the uploader can post to, and the English upload asks
+for 人文历史 (228) instead of the old 202 — which was filing the
+channel's English films under 资讯. A zone the uploader cannot name is
+still refused rather than guessed.
+
 **A draft knows who it is written for.** The drafter's default audience
 is "developers" — right for the software lanes, wrong for the rest: a
 mythology proposal drafted that way came back as an access-control

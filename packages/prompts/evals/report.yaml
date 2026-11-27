@@ -17,17 +17,17 @@ cases:
     judged: skipped
   - case: feedback-revision-addresses-web-context
     agent: draft
-    prompt_hash: sha256:f629c22fd8e729b09af6689dec19153908f900e889b16adf6de662495efe0552
+    prompt_hash: sha256:66d47f3b9d287973b56ec0238d85fe8c9eada0715344e513c3bbfcdbb3bc5cda
     structural: pass
     judged: skipped
   - case: history-topic-opens-with-tension
     agent: draft
-    prompt_hash: sha256:419269816610bc7681e2685152db46087079349f7127c4083bd6cf894ba23125
+    prompt_hash: sha256:9b5325eb5ad3ebb636005ccb67010e7c949b9640d53dca8f97412a462cbb3e80
     structural: pass
     judged: skipped
   - case: user-idea-seed-preserved
     agent: draft
-    prompt_hash: sha256:f6229493a3e3fb8c3a7a9e9399080b9f4bd6407c422b72aa4efd4e31e6fb18c1
+    prompt_hash: sha256:dc490d2d582f50864dcd6d0ba3ed037f92c0f19864fdc795757b0a69ad324468
     structural: pass
     judged: skipped
   - case: era-poor-scene-stays-in-tang

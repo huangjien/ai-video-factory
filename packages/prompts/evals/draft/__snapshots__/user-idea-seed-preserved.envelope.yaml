@@ -1,10 +1,10 @@
 case: user-idea-seed-preserved
 agent: draft
-prompt_hash: sha256:f6229493a3e3fb8c3a7a9e9399080b9f4bd6407c422b72aa4efd4e31e6fb18c1
+prompt_hash: sha256:dc490d2d582f50864dcd6d0ba3ed037f92c0f19864fdc795757b0a69ad324468
 messages:
   - role: system
-    bytes: 28657
-    content_sha256: sha256:1a8e99b289c0667b234c1956e60d93f50fbb6b04d508be67c481c90bfb7a78be
+    bytes: 29245
+    content_sha256: sha256:4e115bf6f464e506ea6c2faf7c2e1054477a959256de10636812211eb9500b76
     blocks:
       - § 1a. HUMAN VOICE (no machine prose)
       - "Endings:"

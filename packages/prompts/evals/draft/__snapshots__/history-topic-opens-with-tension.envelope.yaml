@@ -1,10 +1,10 @@
 case: history-topic-opens-with-tension
 agent: draft
-prompt_hash: sha256:419269816610bc7681e2685152db46087079349f7127c4083bd6cf894ba23125
+prompt_hash: sha256:9b5325eb5ad3ebb636005ccb67010e7c949b9640d53dca8f97412a462cbb3e80
 messages:
   - role: system
-    bytes: 28657
-    content_sha256: sha256:1a8e99b289c0667b234c1956e60d93f50fbb6b04d508be67c481c90bfb7a78be
+    bytes: 29245
+    content_sha256: sha256:4e115bf6f464e506ea6c2faf7c2e1054477a959256de10636812211eb9500b76
     blocks:
       - § 1a. HUMAN VOICE (no machine prose)
       - "Endings:"
